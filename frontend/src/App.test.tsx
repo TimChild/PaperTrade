@@ -17,7 +17,7 @@ function createTestQueryClient() {
 describe('App', () => {
   it('renders without crashing', () => {
     const queryClient = createTestQueryClient()
-    
+
     render(
       <QueryClientProvider client={queryClient}>
         <App />
@@ -29,7 +29,7 @@ describe('App', () => {
 
   it('displays welcome message', () => {
     const queryClient = createTestQueryClient()
-    
+
     render(
       <QueryClientProvider client={queryClient}>
         <App />
@@ -41,7 +41,7 @@ describe('App', () => {
 
   it('includes system status section', () => {
     const queryClient = createTestQueryClient()
-    
+
     render(
       <QueryClientProvider client={queryClient}>
         <App />

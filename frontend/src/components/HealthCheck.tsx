@@ -22,7 +22,8 @@ export function HealthCheck() {
         <div className="flex items-center gap-2">
           <div className="h-3 w-3 rounded-full bg-red-500"></div>
           <span className="text-sm text-red-700 dark:text-red-400">
-            Backend unavailable: {error instanceof Error ? error.message : 'Unknown error'}
+            Backend unavailable:{' '}
+            {error instanceof Error ? error.message : 'Unknown error'}
           </span>
         </div>
       </div>

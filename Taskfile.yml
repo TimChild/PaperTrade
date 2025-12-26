@@ -36,7 +36,7 @@ tasks:
       - npm ci
       - echo "✓ Frontend dependencies installed"
     status:
-      - test -f {{.FRONTEND_DIR}}/package.json
+      - test -d node_modules
 
   dev:
     desc: "Start all development servers (docker services, backend, frontend)"
@@ -62,7 +62,7 @@ tasks:
       - echo "Starting frontend dev server..."
       - npm run dev
     preconditions:
-      - sh: test -f {{.FRONTEND_DIR}}/package.json
+      - sh: test -f package.json
         msg: "Frontend not found. Run 'task setup:frontend' first or create frontend directory."
 
   test:
@@ -84,8 +84,9 @@ tasks:
     cmds:
       - echo "Running frontend tests..."
       - npm run test
-    status:
-      - test ! -f {{.FRONTEND_DIR}}/package.json
+    preconditions:
+      - sh: test -f package.json
+        msg: "Frontend not found. Run 'task setup:frontend' first."
 
   lint:
     desc: "Run all linters (backend and frontend)"
@@ -114,8 +115,9 @@ tasks:
       - echo "Running TypeScript type check..."
       - npm run typecheck
       - echo "✓ Frontend linting passed"
-    status:
-      - test ! -f {{.FRONTEND_DIR}}/package.json
+    preconditions:
+      - sh: test -f package.json
+        msg: "Frontend not found. Run 'task setup:frontend' first."
 
   format:
     desc: "Auto-format all code"
@@ -139,8 +141,9 @@ tasks:
       - echo "Formatting frontend code..."
       - npm run format
       - echo "✓ Frontend code formatted"
-    status:
-      - test ! -f {{.FRONTEND_DIR}}/package.json
+    preconditions:
+      - sh: test -f package.json
+        msg: "Frontend not found. Run 'task setup:frontend' first."
 
   docker:up:
     desc: "Start Docker services (PostgreSQL, Redis)"
