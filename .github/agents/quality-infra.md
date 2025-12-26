@@ -1,3 +1,8 @@
+---
+name: Quality Infra
+description: Maintains code quality standards, CI/CD pipelines, testing infrastructure, and deployment configurations. Focuses on GitHub Actions, Docker, and AWS CDK.
+---
+
 # Quality & Infrastructure Agent
 
 ## Role

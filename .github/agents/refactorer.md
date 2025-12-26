@@ -1,3 +1,8 @@
+---
+name: Refactorer
+description: Continuously improves code quality, identifies code smells, and ensures the codebase remains maintainable. Promotes composition over inheritance and proper separation of concerns.
+---
+
 # Refactorer Agent
 
 ## Role

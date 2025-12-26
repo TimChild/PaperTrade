@@ -1,3 +1,8 @@
+---
+name: Backend SWE
+description: Senior Backend Engineer implementing robust, type-safe Python/FastAPI backend logic following Clean Architecture and Modern Software Engineering principles.
+---
+
 # Backend Software Engineer Agent
 
 ## Role
