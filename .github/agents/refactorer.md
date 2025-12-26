@@ -101,22 +101,15 @@ def execute_trade(
     # ...
 
 # After
-@dataclass(frozen=True)
-class Ticker:
-    symbol: str
-    
-    def __post_init__(self) -> None:
-        if not self.symbol or len(self.symbol) > 5:
-            raise ValueError(f"Invalid ticker: {self.symbol}")
+from pydantic import BaseModel, Field
 
-@dataclass(frozen=True)  
-class Money:
-    amount: Decimal
-    currency: str = "USD"
+class Ticker(BaseModel):
+    symbol: str = Field(..., max_length=5)
     
-    def __post_init__(self) -> None:
-        if self.amount <= 0:
-            raise ValueError("Amount must be positive")
+
+class Money(BaseModel):
+    amount: Decimal = Field(..., gt=0)
+    currency: str = "USD"
 
 def execute_trade(ticker: Ticker, amount: Money) -> None:
     # Validation already done by value objects
