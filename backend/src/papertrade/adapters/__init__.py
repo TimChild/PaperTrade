@@ -1,0 +1,1 @@
+"""Adapters layer - Interface implementations."""
