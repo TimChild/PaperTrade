@@ -6,6 +6,8 @@ services:
       POSTGRES_DB: papertrade_dev
       POSTGRES_USER: papertrade
       POSTGRES_PASSWORD: papertrade_dev_password
+      # WARNING: `trust` disables password verification and is intended for
+      # local development only. Do NOT use this setting in production.
       POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "5432:5432"
