@@ -21,7 +21,7 @@ src/papertrade/
 ### Prerequisites
 
 - Python 3.12 or higher
-- uv (Install with `pip install uv` or see [uv documentation](https://docs.astral.sh/uv/))
+- uv (Install with `curl -LsSf https://astral.sh/uv/install.sh | sh` or see [uv documentation](https://docs.astral.sh/uv/))
 
 ### Installation
 
@@ -36,10 +36,22 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 uv pip install -e ".[dev]"
 ```
 
+Alternatively, you can use `uv`'s automatic environment management:
+
+```bash
+# uv will automatically create and use a virtual environment
+# Use --extra dev to include development dependencies
+uv sync --extra dev
+```
+
 ### Running the Server
 
 ```bash
+# If you activated the virtual environment manually
 uvicorn papertrade.main:app --reload
+
+# Or use uv run to automatically use the virtual environment
+uv run uvicorn papertrade.main:app --reload
 ```
 
 The API will be available at:
@@ -53,15 +65,19 @@ The API will be available at:
 ```bash
 # Run linter
 ruff check .
+# Or with uv: uv run ruff check .
 
 # Run type checker
 pyright
+# Or with uv: uv run pyright
 
 # Run tests
 pytest
+# Or with uv: uv run pytest
 
 # Run tests with coverage
 pytest --cov=papertrade --cov-report=html
+# Or with uv: uv run pytest --cov=papertrade --cov-report=html
 ```
 
 ## Project Structure
