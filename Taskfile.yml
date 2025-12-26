@@ -1,0 +1,203 @@
+version: '3'
+
+vars:
+  BACKEND_DIR: ./backend
+  FRONTEND_DIR: ./frontend
+
+tasks:
+  setup:
+    desc: "Set up complete development environment"
+    cmds:
+      - task: setup:backend
+      - task: setup:frontend
+      - task: docker:up
+      - echo "✓ Development environment setup complete!"
+      - echo "  - Backend dependencies installed"
+      - echo "  - Frontend dependencies installed (if frontend exists)"
+      - echo "  - Docker services started (PostgreSQL, Redis)"
+      - echo ""
+      - echo "Next steps:"
+      - echo "  - Run 'task dev' to start development servers"
+      - echo "  - Run 'task test' to run all tests"
+
+  setup:backend:
+    desc: "Install backend dependencies"
+    dir: "{{.BACKEND_DIR}}"
+    cmds:
+      - echo "Installing backend dependencies with uv..."
+      - uv sync --all-extras
+      - echo "✓ Backend dependencies installed"
+
+  setup:frontend:
+    desc: "Install frontend dependencies"
+    dir: "{{.FRONTEND_DIR}}"
+    cmds:
+      - echo "Installing frontend dependencies with npm..."
+      - npm ci
+      - echo "✓ Frontend dependencies installed"
+    status:
+      - test ! -f {{.FRONTEND_DIR}}/package.json
+
+  dev:
+    desc: "Start all development servers (docker services, backend, frontend)"
+    deps: [docker:up]
+    cmds:
+      - echo "Starting development servers..."
+      - echo "Note: Run 'task dev:backend' and 'task dev:frontend' in separate terminals"
+
+  dev:backend:
+    desc: "Start backend development server"
+    dir: "{{.BACKEND_DIR}}"
+    deps: [docker:up]
+    cmds:
+      - echo "Starting backend server on http://localhost:8000"
+      - uv run uvicorn papertrade.main:app --reload --host 0.0.0.0 --port 8000
+
+  dev:frontend:
+    desc: "Start frontend development server"
+    dir: "{{.FRONTEND_DIR}}"
+    cmds:
+      - echo "Starting frontend dev server..."
+      - npm run dev
+    preconditions:
+      - test -f {{.FRONTEND_DIR}}/package.json
+
+  test:
+    desc: "Run all tests (backend and frontend)"
+    cmds:
+      - task: test:backend
+      - task: test:frontend
+
+  test:backend:
+    desc: "Run backend tests with coverage"
+    dir: "{{.BACKEND_DIR}}"
+    cmds:
+      - echo "Running backend tests..."
+      - uv run pytest --cov=papertrade --cov-report=term --cov-report=html
+
+  test:frontend:
+    desc: "Run frontend tests"
+    dir: "{{.FRONTEND_DIR}}"
+    cmds:
+      - echo "Running frontend tests..."
+      - npm run test
+    preconditions:
+      - test -f {{.FRONTEND_DIR}}/package.json
+
+  lint:
+    desc: "Run all linters (backend and frontend)"
+    cmds:
+      - task: lint:backend
+      - task: lint:frontend
+
+  lint:backend:
+    desc: "Run backend linters (ruff, pyright)"
+    dir: "{{.BACKEND_DIR}}"
+    cmds:
+      - echo "Running ruff check..."
+      - uv run ruff check .
+      - echo "Running ruff format check..."
+      - uv run ruff format --check .
+      - echo "Running pyright..."
+      - uv run pyright
+      - echo "✓ Backend linting passed"
+
+  lint:frontend:
+    desc: "Run frontend linters (eslint, tsc)"
+    dir: "{{.FRONTEND_DIR}}"
+    cmds:
+      - echo "Running ESLint..."
+      - npm run lint
+      - echo "Running TypeScript type check..."
+      - npm run typecheck
+      - echo "✓ Frontend linting passed"
+    preconditions:
+      - test -f {{.FRONTEND_DIR}}/package.json
+
+  format:
+    desc: "Auto-format all code"
+    cmds:
+      - task: format:backend
+      - task: format:frontend
+
+  format:backend:
+    desc: "Auto-format backend code with ruff"
+    dir: "{{.BACKEND_DIR}}"
+    cmds:
+      - echo "Formatting backend code..."
+      - uv run ruff format .
+      - uv run ruff check --fix .
+      - echo "✓ Backend code formatted"
+
+  format:frontend:
+    desc: "Auto-format frontend code"
+    dir: "{{.FRONTEND_DIR}}"
+    cmds:
+      - echo "Formatting frontend code..."
+      - npm run format
+      - echo "✓ Frontend code formatted"
+    preconditions:
+      - test -f {{.FRONTEND_DIR}}/package.json
+
+  docker:up:
+    desc: "Start Docker services (PostgreSQL, Redis)"
+    cmds:
+      - docker compose up -d
+      - echo "✓ Docker services started"
+      - echo "  - PostgreSQL: localhost:5432"
+      - echo "  - Redis: localhost:6379"
+
+  docker:down:
+    desc: "Stop Docker services"
+    cmds:
+      - docker compose down
+      - echo "✓ Docker services stopped"
+
+  docker:logs:
+    desc: "Show Docker service logs"
+    cmds:
+      - docker compose logs -f
+
+  docker:clean:
+    desc: "Stop and remove Docker volumes (WARNING: deletes all data)"
+    cmds:
+      - docker compose down -v
+      - echo "✓ Docker services stopped and volumes removed"
+
+  clean:
+    desc: "Clean build artifacts and caches"
+    cmds:
+      - task: clean:backend
+      - task: clean:frontend
+      - echo "✓ Build artifacts and caches cleaned"
+
+  clean:backend:
+    desc: "Clean backend build artifacts and caches"
+    dir: "{{.BACKEND_DIR}}"
+    cmds:
+      - echo "Cleaning backend artifacts..."
+      - rm -rf .pytest_cache .ruff_cache htmlcov .coverage
+      - find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+      - echo "✓ Backend cleaned"
+
+  clean:frontend:
+    desc: "Clean frontend build artifacts and caches"
+    dir: "{{.FRONTEND_DIR}}"
+    cmds:
+      - echo "Cleaning frontend artifacts..."
+      - rm -rf node_modules/.cache dist coverage
+      - echo "✓ Frontend cleaned"
+    preconditions:
+      - test -d {{.FRONTEND_DIR}}
+
+  precommit:install:
+    desc: "Install pre-commit hooks"
+    cmds:
+      - pip install pre-commit
+      - pre-commit install
+      - echo "✓ Pre-commit hooks installed"
+
+  precommit:run:
+    desc: "Run pre-commit hooks on all files"
+    cmds:
+      - pre-commit run --all-files
