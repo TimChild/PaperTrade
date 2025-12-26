@@ -36,11 +36,12 @@ tasks:
       - npm ci
       - echo "✓ Frontend dependencies installed"
     status:
-      - test -f {{.FRONTEND_DIR}}/package.json
+      - test -d node_modules
 
   dev:
     desc: "Start all development servers (docker services, backend, frontend)"
-    deps: [docker:up]
+    deps:
+      - docker:up
     cmds:
       - echo "Starting development servers..."
       - 'echo "Note: Run ''task dev:backend'' and ''task dev:frontend'' in separate terminals"'
@@ -48,7 +49,8 @@ tasks:
   dev:backend:
     desc: "Start backend development server"
     dir: "{{.BACKEND_DIR}}"
-    deps: [docker:up]
+    deps:
+      - docker:up
     cmds:
       - 'echo "Starting backend server on http://localhost:8000"'
       - uv run uvicorn papertrade.main:app --reload --host 0.0.0.0 --port 8000
@@ -60,7 +62,8 @@ tasks:
       - echo "Starting frontend dev server..."
       - npm run dev
     preconditions:
-      - test -f {{.FRONTEND_DIR}}/package.json
+      - sh: test -f package.json
+        msg: "Frontend not found. Run 'task setup:frontend' first or create frontend directory."
 
   test:
     desc: "Run all tests (backend and frontend)"
@@ -82,7 +85,8 @@ tasks:
       - echo "Running frontend tests..."
       - npm run test
     preconditions:
-      - test -f {{.FRONTEND_DIR}}/package.json
+      - sh: test -f package.json
+        msg: "Frontend not found. Run 'task setup:frontend' first."
 
   lint:
     desc: "Run all linters (backend and frontend)"
@@ -112,7 +116,8 @@ tasks:
       - npm run typecheck
       - echo "✓ Frontend linting passed"
     preconditions:
-      - test -f {{.FRONTEND_DIR}}/package.json
+      - sh: test -f package.json
+        msg: "Frontend not found. Run 'task setup:frontend' first."
 
   format:
     desc: "Auto-format all code"
@@ -137,7 +142,8 @@ tasks:
       - npm run format
       - echo "✓ Frontend code formatted"
     preconditions:
-      - test -f {{.FRONTEND_DIR}}/package.json
+      - sh: test -f package.json
+        msg: "Frontend not found. Run 'task setup:frontend' first."
 
   docker:up:
     desc: "Start Docker services (PostgreSQL, Redis)"
@@ -193,11 +199,11 @@ tasks:
   precommit:install:
     desc: "Install pre-commit hooks"
     cmds:
-      - pip install pre-commit
-      - pre-commit install
+      - uv tool install pre-commit
+      - uv tool run pre-commit install
       - echo "✓ Pre-commit hooks installed"
 
   precommit:run:
     desc: "Run pre-commit hooks on all files"
     cmds:
-      - pre-commit run --all-files
+      - uv tool run pre-commit run --all-files
