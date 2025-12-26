@@ -7,5 +7,3 @@ export const healthService = {
     return response.data
   },
 }
-
-export default healthService
