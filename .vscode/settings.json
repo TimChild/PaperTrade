@@ -32,6 +32,7 @@
         "git grep": true,
         "git branch": true,
         "git checkout": true,
+        "gh pr": true,
         "/^git branch\\b.*-(d|D|m|M|-delete|-force)\\b/": false,
         "Get-ChildItem": true,
         "Get-Content": true,
