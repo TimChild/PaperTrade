@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 
 vars:
   BACKEND_DIR: ./backend
@@ -16,9 +16,9 @@ tasks:
       - echo "  - Frontend dependencies installed (if frontend exists)"
       - echo "  - Docker services started (PostgreSQL, Redis)"
       - echo ""
-      - echo "Next steps:"
-      - echo "  - Run 'task dev' to start development servers"
-      - echo "  - Run 'task test' to run all tests"
+      - 'echo "Next steps:"'
+      - 'echo "  - Run ''task dev'' to start development servers"'
+      - 'echo "  - Run ''task test'' to run all tests"'
 
   setup:backend:
     desc: "Install backend dependencies"
@@ -43,14 +43,14 @@ tasks:
     deps: [docker:up]
     cmds:
       - echo "Starting development servers..."
-      - echo "Note: Run 'task dev:backend' and 'task dev:frontend' in separate terminals"
+      - 'echo "Note: Run ''task dev:backend'' and ''task dev:frontend'' in separate terminals"'
 
   dev:backend:
     desc: "Start backend development server"
     dir: "{{.BACKEND_DIR}}"
     deps: [docker:up]
     cmds:
-      - echo "Starting backend server on http://localhost:8000"
+      - 'echo "Starting backend server on http://localhost:8000"'
       - uv run uvicorn papertrade.main:app --reload --host 0.0.0.0 --port 8000
 
   dev:frontend:
@@ -144,8 +144,8 @@ tasks:
     cmds:
       - docker compose up -d
       - echo "✓ Docker services started"
-      - echo "  - PostgreSQL: localhost:5432"
-      - echo "  - Redis: localhost:6379"
+      - 'echo "  - PostgreSQL: localhost:5432"'
+      - 'echo "  - Redis: localhost:6379"'
 
   docker:down:
     desc: "Stop Docker services"
