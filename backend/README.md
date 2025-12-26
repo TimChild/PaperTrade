@@ -21,13 +21,19 @@ src/papertrade/
 ### Prerequisites
 
 - Python 3.12 or higher
-- pip
+- uv (Install with `pip install uv` or see [uv documentation](https://docs.astral.sh/uv/))
 
 ### Installation
 
 ```bash
+# Create a virtual environment
+uv venv
+
+# Activate the virtual environment
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
 # Install the package in development mode
-pip install -e ".[dev]"
+uv pip install -e ".[dev]"
 ```
 
 ### Running the Server
