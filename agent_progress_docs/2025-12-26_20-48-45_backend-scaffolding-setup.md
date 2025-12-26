@@ -103,9 +103,7 @@ All success criteria verified:
 
 ### ✅ Installation
 ```bash
-uv venv
-source .venv/bin/activate
-uv pip install -e ".[dev]"
+uv sync --dev
 ```
 Successfully installed all dependencies.
 

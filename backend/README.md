@@ -26,22 +26,9 @@ src/papertrade/
 ### Installation
 
 ```bash
-# Create a virtual environment
-uv venv
-
-# Activate the virtual environment
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install the package in development mode
-uv pip install -e ".[dev]"
-```
-
-Alternatively, you can use `uv`'s automatic environment management:
-
-```bash
 # uv will automatically create and use a virtual environment
 # Use --extra dev to include development dependencies
-uv sync --extra dev
+uv sync --dev
 ```
 
 ### Running the Server
