@@ -1,5 +1,7 @@
 # PaperTrade 📈
 
+[![CI](https://github.com/TimChild/PaperTrade/actions/workflows/pr.yml/badge.svg)](https://github.com/TimChild/PaperTrade/actions/workflows/pr.yml)
+
 A stock market emulation platform for practicing trading strategies without risking real money.
 
 > **Status**: 🚧 Early Development - Setting up foundations
@@ -91,28 +93,40 @@ Dependencies point INWARD only
 git clone https://github.com/TimChild/PaperTrade.git
 cd PaperTrade
 
-# Set up development environment
+# Copy environment variables template
+cp .env.example .env
+
+# Set up development environment (installs dependencies and starts Docker services)
 task setup  # or follow manual steps below
 
-# Start development servers
-task dev
+# Start development servers (in separate terminals)
+task dev:backend   # Backend API on http://localhost:8000
+task dev:frontend  # Frontend (when available)
 ```
 
 ### Manual Setup
 
+If you don't have Task installed, you can set up manually:
+
 ```bash
-# Backend
+# 1. Install uv (Python package manager)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 2. Backend setup
 cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
+uv sync --all-extras  # Install dependencies with uv
 
-# Frontend
+# 3. Frontend setup (when available)
 cd ../frontend
-npm install
+npm ci
 
-# Start services
-docker compose up -d  # PostgreSQL, Redis
+# 4. Start Docker services (PostgreSQL, Redis)
+cd ..
+docker compose up -d
+
+# 5. Start backend development server
+cd backend
+uv run uvicorn papertrade.main:app --reload
 ```
 
 ## Project Structure
@@ -142,32 +156,87 @@ PaperTrade/
 
 ## Development Workflow
 
+### Available Tasks
+
+```bash
+# Setup & Installation
+task setup              # Complete development environment setup
+task setup:backend      # Install backend dependencies only
+task setup:frontend     # Install frontend dependencies only
+
+# Development
+task dev:backend        # Start backend dev server
+task dev:frontend       # Start frontend dev server
+
+# Testing
+task test              # Run all tests
+task test:backend      # Run backend tests with coverage
+task test:frontend     # Run frontend tests
+
+# Code Quality
+task lint              # Run all linters
+task lint:backend      # Run ruff and pyright
+task lint:frontend     # Run ESLint and TypeScript check
+task format            # Auto-format all code
+task format:backend    # Format backend with ruff
+task format:frontend   # Format frontend
+
+# Docker Services
+task docker:up         # Start PostgreSQL and Redis
+task docker:down       # Stop Docker services
+task docker:logs       # Show service logs
+task docker:clean      # Stop and remove volumes (⚠️ deletes data)
+
+# Utilities
+task clean             # Clean build artifacts and caches
+task precommit:install # Install pre-commit hooks
+task precommit:run     # Run pre-commit on all files
+```
+
 ### Running Tests
 
 ```bash
-# Backend
-task test:backend
-# or
-cd backend && pytest
+# All tests
+task test
 
-# Frontend
+# Backend only
+task test:backend
+
+# Frontend only
 task test:frontend
-# or
-cd frontend && npm test
+
+# With coverage report
+cd backend && uv run pytest --cov=papertrade --cov-report=html
+# Open htmlcov/index.html in browser
 ```
 
 ### Linting & Type Checking
 
 ```bash
-# Backend
-task lint:backend
-# or
-cd backend && ruff check . && pyright
+# Run all linters and type checkers
+task lint
 
-# Frontend
+# Backend only (ruff + pyright)
+task lint:backend
+
+# Frontend only (ESLint + tsc)
 task lint:frontend
+
+# Auto-fix issues
+task format
+```
+
+### Pre-commit Hooks
+
+Install pre-commit hooks to automatically check code quality before commits:
+
+```bash
+task precommit:install
 # or
-cd frontend && npm run lint && npm run typecheck
+pip install pre-commit && pre-commit install
+
+# Run manually on all files
+task precommit:run
 ```
 
 ### Creating a PR
