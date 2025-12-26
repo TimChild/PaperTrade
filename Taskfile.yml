@@ -36,7 +36,7 @@ tasks:
       - npm ci
       - echo "✓ Frontend dependencies installed"
     status:
-      - test ! -f {{.FRONTEND_DIR}}/package.json
+      - test -f {{.FRONTEND_DIR}}/package.json
 
   dev:
     desc: "Start all development servers (docker services, backend, frontend)"
