@@ -85,6 +85,7 @@ We start monolithic for simplicity but strictly modularized by domain contexts. 
 | **Language** | Python 3.13+ | Rich ecosystem for financial data, clean syntax, strong typing support |
 | **Framework** | FastAPI | High performance, native async, auto-generated OpenAPI docs |
 | **ORM** | SQLModel | Bridges Pydantic (validation) and SQLAlchemy (ORM) elegantly |
+| **Validation** | Pydantic BaseModel | Built-in validation, JSON serialization, frozen models for immutability |
 | **Database** | PostgreSQL | ACID compliance non-negotiable for financial ledgers |
 | **Cache** | Redis | Pub/sub for live updates, caching for API rate limits |
 | **Type Checking** | Pyright (strict) | Catch errors early, improve IDE experience |
@@ -158,16 +159,16 @@ async def get_portfolio_value(
     repository: PortfolioRepository,
 ) -> PortfolioValuation:
     effective_time = as_of or datetime.now(UTC)
-    
+
     # Get holdings as of the effective time
     holdings = await repository.get_holdings_at(portfolio_id, effective_time)
-    
+
     # Get prices as of the effective time
     prices = await market_data.get_prices_at(
-        [h.ticker for h in holdings], 
+        [h.ticker for h in holdings],
         effective_time
     )
-    
+
     return calculate_valuation(holdings, prices)
 ```
 
@@ -321,6 +322,7 @@ Key architectural decisions are recorded here:
 | Decision | Rationale | Date |
 |----------|-----------|------|
 | Modular monolith over microservices | Simpler deployment, extract later if needed | Phase 0 |
+| Pydantic BaseModel over dataclasses | Built-in validation, better error messages, JSON serialization | Phase 0 |
 | SQLModel over raw SQLAlchemy | Better Pydantic integration, cleaner models | Phase 0 |
 | Ledger pattern for balances | Audit trail, point-in-time queries, immutability | Phase 0 |
 | React over Reflex | Better ecosystem for financial dashboards | Phase 0 |

@@ -21,9 +21,12 @@ The Architect creates high-level architecture plans, designs interfaces, and doc
 
 ### DO NOT ❌
 - Write implementation code (Python, TypeScript, etc.)
+- Include Python class definitions, function implementations, or decorators
+- Use specific Python syntax like `@dataclass`, `def __init__`, etc.
 - Create source files in `backend/src/` or `frontend/src/`
-- Implement interfaces or classes
-- Write tests (beyond pseudocode examples)
+- Implement interfaces or classes with actual code
+- Write tests (beyond describing what should be tested)
+- Include extensive code examples (keep to minimal pseudocode only)
 
 ## Primary Objectives
 1. Document architectural decisions and rationale
@@ -84,8 +87,12 @@ Represents a monetary amount with currency for financial calculations.
 ### Example Usage (Pseudocode)
 ```
 price = Money(150.00, "USD")
-quantity_cost = price.multiply(10)  # $1500.00
+quantity_cost = price.multiply(10)  # Result: $1500.00
 ```
+
+**NOTE:** Use high-level pseudocode only. Do NOT include Python-specific syntax,
+class definitions, decorators, or implementation details. The backend-swe agent
+will implement the actual code based on these specifications.
 ```
 
 ### Interface Specification
@@ -153,7 +160,14 @@ What becomes easier or more difficult to do because of this change?
 └─────────────────────────────────────────┘
 
 Dependencies point INWARD only.
-```
+```ocumentation Style
+- **High-level specifications, not implementation code**
+- Use tables, bullet points, and prose descriptions
+- Pseudocode should be language-agnostic (no Python/TypeScript specific syntax)
+- Focus on WHAT needs to be built, not HOW to build it
+- Example: "Use Pydantic BaseModel with frozen=True" not `@dataclass(frozen=True)`
+
+### D
 
 ## Guiding Principles
 
