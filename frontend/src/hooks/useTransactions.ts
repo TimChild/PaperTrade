@@ -10,6 +10,7 @@ export function useTransactions(portfolioId: string) {
     queryKey: ['transactions', portfolioId],
     queryFn: () => portfolioService.getTransactions(portfolioId),
     staleTime: 30_000,
+    enabled: !!portfolioId,
   })
 }
 
