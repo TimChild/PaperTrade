@@ -8,6 +8,7 @@ export function useHoldings(portfolioId: string) {
   return useQuery({
     queryKey: ['holdings', portfolioId],
     queryFn: () => portfolioService.getHoldings(portfolioId),
+    enabled: Boolean(portfolioId),
     staleTime: 30_000, // 30 seconds for financial data
   })
 }
