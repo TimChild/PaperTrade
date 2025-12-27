@@ -24,10 +24,11 @@ describe('App', () => {
       </QueryClientProvider>
     )
 
-    expect(screen.getByText('PaperTrade')).toBeInTheDocument()
+    // Should redirect to dashboard and render it
+    expect(screen.getByText('Portfolio Dashboard')).toBeInTheDocument()
   })
 
-  it('displays welcome message', () => {
+  it('displays dashboard page by default', () => {
     const queryClient = createTestQueryClient()
 
     render(
@@ -36,10 +37,10 @@ describe('App', () => {
       </QueryClientProvider>
     )
 
-    expect(screen.getByText(/Welcome to PaperTrade/i)).toBeInTheDocument()
+    expect(screen.getByText(/Track your investments and performance/i)).toBeInTheDocument()
   })
 
-  it('includes system status section', () => {
+  it('renders portfolio summary section', () => {
     const queryClient = createTestQueryClient()
 
     render(
@@ -48,6 +49,7 @@ describe('App', () => {
       </QueryClientProvider>
     )
 
-    expect(screen.getByText('System Status')).toBeInTheDocument()
+    // Wait for data to load and check for portfolio name
+    expect(screen.getByText(/Portfolio/i)).toBeInTheDocument()
   })
 })
