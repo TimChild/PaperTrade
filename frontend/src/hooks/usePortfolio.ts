@@ -20,5 +20,6 @@ export function usePortfolio(portfolioId: string) {
     queryKey: ['portfolio', portfolioId],
     queryFn: () => portfolioService.getById(portfolioId),
     staleTime: 30_000,
+    enabled: Boolean(portfolioId),
   })
 }
