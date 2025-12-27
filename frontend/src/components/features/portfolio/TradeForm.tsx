@@ -96,6 +96,7 @@ export function TradeForm({
             className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-400"
             disabled={isSubmitting}
             required
+            maxLength={5}
           />
         </div>
 
