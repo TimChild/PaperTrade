@@ -6,8 +6,8 @@ The Domain layer is the heart of PaperTrade and contains the core business logic
 
 ### Key Principles
 
-1. **Pure Python**: No dependencies on external frameworks or infrastructure
-2. **Immutable by Default**: Value objects and ledger entries are frozen dataclasses
+1. **Pure Python**: Minimal dependencies on external frameworks or infrastructure
+2. **Immutable by Default**: Value objects and ledger entries use Pydantic with frozen=True
 3. **Explicit Invariants**: Business rules enforced through types and validation
 4. **Testability**: Pure functions and domain logic testable without I/O
 
@@ -148,20 +148,19 @@ Value objects provide:
 - **Domain Semantics**: `Money(100, "USD")` is clearer than `100.0`
 - **Validation**: Rules enforced at construction time
 
-### Why Frozen Dataclasses?
+### Why Pydantic BaseModel?
 
-```python
-@dataclass(frozen=True)
-class Money:
-    amount: Decimal
-    currency: str = "USD"
-```
+We use Pydantic BaseModel (with `frozen=True` for value objects) instead of dataclasses:
 
 Benefits:
-- Immutable by default (thread-safe)
-- Hashable (can use in sets/dict keys)
-- Clear intent: "this should never change"
-- Auto-generated `__eq__`, `__hash__`, `__repr__`
+- **Built-in Validation**: Automatic field type and constraint validation
+- **Field Validators**: Custom validation logic with `@field_validator`
+- **Model Validators**: Cross-field validation with `@model_validator`
+- **JSON Serialization**: Built-in `.model_dump()` and `.model_validate()`
+- **Immutability**: Supports `frozen=True` like dataclasses
+- **Clear Error Messages**: Detailed validation errors for API responses
+
+Perfect for domain objects that need strong validation and API integration.
 
 ### Why Protocol for Repository Interfaces?
 
@@ -233,12 +232,12 @@ def calculate_total_value(
     cash_balance: Money,
 ) -> Money:
     """Calculate total portfolio value.
-    
+
     Args:
         holdings: Current holdings
         prices: Current market prices per ticker
         cash_balance: Available cash
-        
+
     Returns:
         Total portfolio value (holdings + cash)
     """
