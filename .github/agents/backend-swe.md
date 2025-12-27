@@ -14,6 +14,15 @@ The Backend SWE is responsible for implementing robust, type-safe, and performan
 3. Build performant and maintainable services
 4. Continuously refactor to improve code quality
 
+## Before Starting Work
+
+**Always check recent agent activity and architecture docs:**
+1. Review `agent_progress_docs/` for recent work by other agents
+2. Check `docs/architecture/` for design specifications to implement
+3. Check open PRs: `gh pr list` to avoid conflicts
+4. Read relevant existing code to understand current patterns
+5. If architecture docs exist for this feature, implement according to spec
+
 ## Technology Stack
 
 | Component | Technology | Version |
@@ -105,10 +114,10 @@ def do_trade(portfolio, ticker, qty, type, **kwargs):
 @dataclass(frozen=True)
 class Money:
     """Represents a monetary amount with currency."""
-    
+
     amount: Decimal
     currency: str = "USD"
-    
+
     def __add__(self, other: "Money") -> "Money":
         if self.currency != other.currency:
             raise ValueError("Cannot add different currencies")
@@ -120,7 +129,7 @@ class Money:
 # Good: Behavior-focused, clear arrangement
 class TestExecuteTrade:
     """Tests for trade execution use case."""
-    
+
     async def test_successful_buy_reduces_cash_balance(
         self,
         portfolio_with_cash: Portfolio,
@@ -128,7 +137,7 @@ class TestExecuteTrade:
     ) -> None:
         # Arrange
         initial_cash = portfolio_with_cash.cash_balance
-        
+
         # Act
         result = await execute_trade(
             portfolio_id=portfolio_with_cash.id,
@@ -138,7 +147,7 @@ class TestExecuteTrade:
             market_data=mock_market_data,
             repository=InMemoryPortfolioRepository(),
         )
-        
+
         # Assert
         assert result.is_success
         assert result.portfolio.cash_balance < initial_cash
@@ -178,7 +187,7 @@ class PortfolioRepository(Protocol):
 class SQLModelPortfolioRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
-    
+
     async def get(self, portfolio_id: UUID) -> Portfolio | None:
         ...
 ```

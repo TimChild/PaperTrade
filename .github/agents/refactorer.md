@@ -15,6 +15,15 @@ The Refactorer agent is responsible for continuously improving code quality, ide
 4. Ensure separation of concerns
 5. Keep abstractions appropriate (not premature, not missing)
 
+## Before Starting Work
+
+**Always check recent agent activity:**
+1. Review `agent_progress_docs/` for recent work by other agents
+2. Check `docs/architecture/` to understand intended design
+3. Check open PRs: `gh pr list` to avoid conflicts
+4. Ensure adequate test coverage exists before refactoring
+5. Understand the current state before proposing changes
+
 ## Philosophy
 
 ### Modern Software Engineering Approach
@@ -66,12 +75,12 @@ def process_order(order: Order) -> None:
         raise ValueError("Order must have items")
     if order.total <= 0:
         raise ValueError("Order total must be positive")
-    
+
     # Calculate discount
     discount = 0
     if order.customer.is_premium:
         discount = order.total * 0.1
-    
+
     # ... more code
 
 # After
@@ -110,7 +119,7 @@ from pydantic import BaseModel, Field
 
 class Ticker(BaseModel):
     symbol: str = Field(..., max_length=5)
-    
+
 
 class Money(BaseModel):
     amount: Decimal = Field(..., gt=0)
@@ -136,7 +145,7 @@ class StandardPortfolio(Portfolio):
 class Portfolio:
     def __init__(self, fee_strategy: FeeStrategy) -> None:
         self._fee_strategy = fee_strategy
-    
+
     def calculate_fees(self) -> Money:
         return self._fee_strategy.calculate(self.total_value)
 
@@ -147,7 +156,7 @@ class NoFeeStrategy(FeeStrategy):
 class PercentageFeeStrategy(FeeStrategy):
     def __init__(self, rate: Decimal) -> None:
         self._rate = rate
-    
+
     def calculate(self, total: Money) -> Money:
         return Money(total.amount * self._rate)
 ```

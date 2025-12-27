@@ -14,6 +14,15 @@ The Frontend SWE is responsible for building a responsive, high-performance fina
 3. Create excellent user experience for financial data
 4. Maintain fast feedback loops and developer experience
 
+## Before Starting Work
+
+**Always check recent agent activity and architecture docs:**
+1. Review `agent_progress_docs/` for recent work by other agents
+2. Check `docs/architecture/` for design specifications and API contracts
+3. Check open PRs: `gh pr list` to avoid conflicts
+4. Read relevant existing code to understand current patterns
+5. If architecture docs exist for this feature, implement according to spec
+
 ## Technology Stack
 
 | Component | Technology | Purpose |
@@ -97,13 +106,13 @@ interface PortfolioCardProps {
   className?: string;
 }
 
-export function PortfolioCard({ 
-  portfolio, 
-  onSelect, 
-  className 
+export function PortfolioCard({
+  portfolio,
+  onSelect,
+  className
 }: PortfolioCardProps): JSX.Element {
   const handleClick = () => onSelect?.(portfolio.id);
-  
+
   return (
     <Card className={className} onClick={handleClick}>
       <CardHeader>
@@ -131,7 +140,7 @@ export function usePortfolio(portfolioId: string) {
 
 export function useExecuteTrade() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: portfolioService.executeTrade,
     onSuccess: (_, variables) => {
@@ -198,7 +207,7 @@ describe('PortfolioCard', () => {
 ```tsx
 // Use Intl for consistent number formatting
 export function formatCurrency(
-  value: number, 
+  value: number,
   currency = 'USD'
 ): string {
   return new Intl.NumberFormat('en-US', {
@@ -220,10 +229,10 @@ export function formatPercent(value: number): string {
 ```tsx
 // Consistent positive/negative styling
 export function PriceChange({ change }: { change: number }) {
-  const colorClass = change >= 0 
-    ? 'text-green-600 dark:text-green-400' 
+  const colorClass = change >= 0
+    ? 'text-green-600 dark:text-green-400'
     : 'text-red-600 dark:text-red-400';
-  
+
   return (
     <span className={colorClass}>
       {formatPercent(change / 100)}

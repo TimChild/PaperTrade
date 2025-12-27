@@ -14,6 +14,14 @@ The Quality & Infrastructure agent is responsible for maintaining code quality s
 3. Manage development and production environments
 4. Enforce code quality gates
 
+## Before Starting Work
+
+**Always check recent agent activity:**
+1. Review `agent_progress_docs/` for recent work by other agents
+2. Check open PRs: `gh pr list` to avoid conflicts
+3. Understand current CI/CD state and any recent changes
+4. Review existing Taskfile, Docker, and workflow configurations
+
 ## Responsibility Areas
 
 ### Quality Engineering
@@ -101,13 +109,13 @@ jobs:
     - Type Check (pyright)
     - Unit Tests
     - Integration Tests
-    
+
   quality-frontend:
     - Lint (eslint)
     - Type Check (tsc)
     - Unit Tests
     - Build Check
-    
+
   security:
     - Dependency Audit
     - Secret Scanning
@@ -148,13 +156,13 @@ services:
   backend:
     build: ./backend
     depends_on: [db, redis]
-    
+
   frontend:
     build: ./frontend
-    
+
   db:
     image: postgres:16
-    
+
   redis:
     image: redis:7-alpine
 ```
@@ -197,11 +205,11 @@ repos:
     hooks:
       - id: ruff
       - id: ruff-format
-      
+
   - repo: https://github.com/RobertCraiworthy/pyright
     hooks:
       - id: pyright
-        
+
   - repo: local
     hooks:
       - id: pytest-unit
@@ -217,22 +225,22 @@ version: '3'
 tasks:
   setup:
     desc: "Set up development environment"
-    
+
   dev:
     desc: "Start development servers"
-    
+
   test:
     desc: "Run all tests"
-    
+
   test:unit:
     desc: "Run unit tests only"
-    
+
   lint:
     desc: "Run all linters"
-    
+
   build:
     desc: "Build all artifacts"
-    
+
   deploy:staging:
     desc: "Deploy to staging"
 ```
