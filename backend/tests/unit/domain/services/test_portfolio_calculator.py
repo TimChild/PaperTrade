@@ -4,10 +4,12 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
 
+import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
 from papertrade.domain.entities import Holding, Transaction, TransactionType
+from papertrade.domain.exceptions import InsufficientSharesError
 from papertrade.domain.services import PortfolioCalculator
 from papertrade.domain.value_objects import Money, Quantity, Ticker
 
@@ -376,6 +378,34 @@ class TestCalculateHoldings:
         ]
         holdings = PortfolioCalculator.calculate_holdings(txns)
         assert holdings == []
+
+    def test_short_selling_raises_error(self) -> None:
+        """Test that attempting to sell more shares than owned raises error."""
+        portfolio_id = uuid4()
+        txns = [
+            Transaction(
+                id=uuid4(),
+                portfolio_id=portfolio_id,
+                type=TransactionType.BUY,
+                amount=Money(Decimal("500.00"), "USD"),
+                ticker=Ticker("AAPL"),
+                quantity=Quantity(Decimal("5")),
+                price_per_share=Money(Decimal("100.00"), "USD"),
+                timestamp=datetime.now(UTC),
+            ),
+            Transaction(
+                id=uuid4(),
+                portfolio_id=portfolio_id,
+                type=TransactionType.SELL,
+                amount=Money(Decimal("1000.00"), "USD"),
+                ticker=Ticker("AAPL"),
+                quantity=Quantity(Decimal("10")),  # Trying to sell more than owned
+                price_per_share=Money(Decimal("100.00"), "USD"),
+                timestamp=datetime.now(UTC),
+            ),
+        ]
+        with pytest.raises(InsufficientSharesError, match="Cannot sell 10"):
+            PortfolioCalculator.calculate_holdings(txns)
 
 
 class TestCalculateTotalValue:

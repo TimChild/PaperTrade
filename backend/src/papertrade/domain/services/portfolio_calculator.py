@@ -2,10 +2,20 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from decimal import Decimal
 
 from papertrade.domain.entities import Holding, Transaction, TransactionType
+from papertrade.domain.exceptions import InsufficientSharesError
 from papertrade.domain.value_objects import Money, Quantity, Ticker
+
+
+@dataclass
+class _Position:
+    """Internal class to track position state during calculation."""
+
+    quantity: Decimal
+    total_cost: Decimal
 
 
 class PortfolioCalculator:
@@ -68,50 +78,67 @@ class PortfolioCalculator:
 
         Note:
             Holdings with zero quantity are excluded from the result.
+
+        Raises:
+            InsufficientSharesError: If attempting to sell more shares than owned.
         """
         # Track shares and total cost per ticker
-        positions: dict[Ticker, dict[str, Decimal]] = {}
+        positions: dict[Ticker, _Position] = {}
 
         for txn in transactions:
             if txn.type not in (TransactionType.BUY, TransactionType.SELL):
                 continue
 
-            # These should always be present for BUY/SELL transactions
-            assert txn.ticker is not None
-            assert txn.quantity is not None
-            assert txn.price_per_share is not None
+            # Type narrowing: these fields are guaranteed non-None for BUY/SELL
+            if (
+                txn.ticker is None
+                or txn.quantity is None
+                or txn.price_per_share is None
+            ):
+                raise ValueError(
+                    f"BUY/SELL transaction missing required fields: "
+                    f"ticker={txn.ticker}, quantity={txn.quantity}, "
+                    f"price_per_share={txn.price_per_share}"
+                )
 
             ticker = txn.ticker
 
             # Initialize position if needed
             if ticker not in positions:
-                positions[ticker] = {
-                    "quantity": Decimal("0"),
-                    "total_cost": Decimal("0.00"),
-                }
+                positions[ticker] = _Position(
+                    quantity=Decimal("0"), total_cost=Decimal("0.00")
+                )
 
             if txn.type == TransactionType.BUY:
                 # Add shares and cost
-                positions[ticker]["quantity"] += txn.quantity.value
-                positions[ticker]["total_cost"] += txn.amount.amount
+                positions[ticker].quantity += txn.quantity.value
+                positions[ticker].total_cost += txn.amount.amount
             elif txn.type == TransactionType.SELL:
+                current_qty = positions[ticker].quantity
+
+                # Prevent short selling - validate before processing
+                if txn.quantity.value > current_qty:
+                    raise InsufficientSharesError(
+                        f"Cannot sell {txn.quantity.value} shares of {ticker}. "
+                        f"Only {current_qty} shares available."
+                    )
+
                 # Remove shares proportionally from cost basis
-                current_qty = positions[ticker]["quantity"]
                 if current_qty > 0:
                     # Reduce cost basis proportionally
                     sell_ratio = txn.quantity.value / current_qty
-                    positions[ticker]["total_cost"] -= (
-                        positions[ticker]["total_cost"] * sell_ratio
+                    positions[ticker].total_cost -= (
+                        positions[ticker].total_cost * sell_ratio
                     )
-                positions[ticker]["quantity"] -= txn.quantity.value
+                positions[ticker].quantity -= txn.quantity.value
 
         # Convert to Holding objects
         holdings: list[Holding] = []
         for ticker, position in positions.items():
-            qty = position["quantity"]
+            qty = position.quantity
             if qty > 0:
                 # Calculate average cost per share
-                avg_cost = (position["total_cost"] / qty).quantize(Decimal("0.01"))
+                avg_cost = (position.total_cost / qty).quantize(Decimal("0.01"))
                 holdings.append(
                     Holding(
                         ticker=ticker,

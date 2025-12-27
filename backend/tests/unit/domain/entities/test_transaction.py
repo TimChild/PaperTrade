@@ -181,6 +181,30 @@ class TestTransactionCreation:
         with pytest.raises(FrozenInstanceError):
             txn.amount = Money(Decimal("2000.00"), "USD")  # type: ignore
 
+    def test_dividend_with_ticker_raises_error(self) -> None:
+        """Test that dividend transaction with ticker raises error."""
+        with pytest.raises(ValueError, match="should not have a ticker"):
+            Transaction(
+                id=uuid4(),
+                portfolio_id=uuid4(),
+                type=TransactionType.DIVIDEND,
+                amount=Money(Decimal("50.00"), "USD"),
+                ticker=Ticker("AAPL"),
+                timestamp=datetime.now(UTC),
+            )
+
+    def test_fee_with_quantity_raises_error(self) -> None:
+        """Test that fee transaction with quantity raises error."""
+        with pytest.raises(ValueError, match="should not have a quantity"):
+            Transaction(
+                id=uuid4(),
+                portfolio_id=uuid4(),
+                type=TransactionType.FEE,
+                amount=Money(Decimal("10.00"), "USD"),
+                quantity=Quantity(Decimal("5")),
+                timestamp=datetime.now(UTC),
+            )
+
 
 class TestTransactionStringRepresentation:
     """Test Transaction string representations."""

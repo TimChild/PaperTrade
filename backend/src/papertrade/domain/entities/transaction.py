@@ -52,8 +52,14 @@ class Transaction:
                     f"{self.type.value} transaction requires a price_per_share"
                 )
 
-        # DEPOSIT and WITHDRAWAL should not have ticker, quantity, or price_per_share
-        if self.type in (TransactionType.DEPOSIT, TransactionType.WITHDRAWAL):
+        # DEPOSIT, WITHDRAWAL, DIVIDEND, and FEE should not have ticker,
+        # quantity, or price_per_share
+        if self.type in (
+            TransactionType.DEPOSIT,
+            TransactionType.WITHDRAWAL,
+            TransactionType.DIVIDEND,
+            TransactionType.FEE,
+        ):
             if self.ticker is not None:
                 raise ValueError(
                     f"{self.type.value} transaction should not have a ticker"

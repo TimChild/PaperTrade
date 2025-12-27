@@ -61,14 +61,14 @@ class TestQuantityArithmetic:
         """Test that subtracting to zero raises error."""
         q1 = Quantity(Decimal("100"))
         q2 = Quantity(Decimal("100"))
-        with pytest.raises(ValueError, match="positive"):
+        with pytest.raises(ArithmeticError, match="positive"):
             _ = q1 - q2
 
     def test_subtract_to_negative_raises_error(self) -> None:
         """Test that subtracting to negative raises error."""
         q1 = Quantity(Decimal("50"))
         q2 = Quantity(Decimal("100"))
-        with pytest.raises(ValueError, match="positive"):
+        with pytest.raises(ArithmeticError, match="positive"):
             _ = q1 - q2
 
     def test_multiply_by_decimal(self) -> None:
@@ -98,13 +98,13 @@ class TestQuantityArithmetic:
     def test_multiply_to_zero_raises_error(self) -> None:
         """Test that multiplying to zero raises error."""
         qty = Quantity(Decimal("100"))
-        with pytest.raises(ValueError, match="positive"):
+        with pytest.raises(ArithmeticError, match="positive"):
             _ = qty * Decimal("0")
 
     def test_multiply_to_negative_raises_error(self) -> None:
         """Test that multiplying to negative raises error."""
         qty = Quantity(Decimal("100"))
-        with pytest.raises(ValueError, match="positive"):
+        with pytest.raises(ArithmeticError, match="positive"):
             _ = qty * Decimal("-1")
 
 

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 
 @dataclass(frozen=True)
@@ -30,26 +30,30 @@ class Money:
         if quantized != self.amount:
             raise ValueError("Amount must have at most 2 decimal places")
 
-    def __add__(self, other: Money) -> Money:
+    def __add__(self, other: object) -> Money:
         """Add two Money values.
 
         Raises:
-            ValueError: If currencies don't match.
+            TypeError: If currencies don't match or other is not Money.
         """
+        if not isinstance(other, Money):
+            return NotImplemented
         if self.currency != other.currency:
-            raise ValueError(
+            raise TypeError(
                 f"Cannot add different currencies: {self.currency} and {other.currency}"
             )
         return Money(self.amount + other.amount, self.currency)
 
-    def __sub__(self, other: Money) -> Money:
+    def __sub__(self, other: object) -> Money:
         """Subtract two Money values.
 
         Raises:
-            ValueError: If currencies don't match.
+            TypeError: If currencies don't match or other is not Money.
         """
+        if not isinstance(other, Money):
+            return NotImplemented
         if self.currency != other.currency:
-            raise ValueError(
+            raise TypeError(
                 f"Cannot subtract different currencies: "
                 f"{self.currency} and {other.currency}"
             )
@@ -67,45 +71,71 @@ class Money:
         if isinstance(scalar, (int, float)):
             scalar = Decimal(str(scalar))
 
-        # Multiply and quantize to 2 decimal places
-        result = (self.amount * scalar).quantize(Decimal("0.01"))
+        # Multiply and quantize to 2 decimal places with explicit rounding mode
+        result = (self.amount * scalar).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
         return Money(result, self.currency)
 
     def __rmul__(self, scalar: Decimal | int | float) -> Money:
         """Multiply Money by a scalar value (reverse operation)."""
         return self.__mul__(scalar)
 
-    def __lt__(self, other: Money) -> bool:
-        """Less than comparison."""
+    def __lt__(self, other: object) -> bool:
+        """Less than comparison.
+
+        Raises:
+            TypeError: If currencies don't match or other is not Money.
+        """
+        if not isinstance(other, Money):
+            return NotImplemented
         if self.currency != other.currency:
-            raise ValueError(
+            raise TypeError(
                 f"Cannot compare different currencies: "
                 f"{self.currency} and {other.currency}"
             )
         return self.amount < other.amount
 
-    def __le__(self, other: Money) -> bool:
-        """Less than or equal comparison."""
+    def __le__(self, other: object) -> bool:
+        """Less than or equal comparison.
+
+        Raises:
+            TypeError: If currencies don't match or other is not Money.
+        """
+        if not isinstance(other, Money):
+            return NotImplemented
         if self.currency != other.currency:
-            raise ValueError(
+            raise TypeError(
                 f"Cannot compare different currencies: "
                 f"{self.currency} and {other.currency}"
             )
         return self.amount <= other.amount
 
-    def __gt__(self, other: Money) -> bool:
-        """Greater than comparison."""
+    def __gt__(self, other: object) -> bool:
+        """Greater than comparison.
+
+        Raises:
+            TypeError: If currencies don't match or other is not Money.
+        """
+        if not isinstance(other, Money):
+            return NotImplemented
         if self.currency != other.currency:
-            raise ValueError(
+            raise TypeError(
                 f"Cannot compare different currencies: "
                 f"{self.currency} and {other.currency}"
             )
         return self.amount > other.amount
 
-    def __ge__(self, other: Money) -> bool:
-        """Greater than or equal comparison."""
+    def __ge__(self, other: object) -> bool:
+        """Greater than or equal comparison.
+
+        Raises:
+            TypeError: If currencies don't match or other is not Money.
+        """
+        if not isinstance(other, Money):
+            return NotImplemented
         if self.currency != other.currency:
-            raise ValueError(
+            raise TypeError(
                 f"Cannot compare different currencies: "
                 f"{self.currency} and {other.currency}"
             )

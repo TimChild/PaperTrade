@@ -62,7 +62,7 @@ class TestMoneyArithmetic:
         """Test adding money with different currency raises error."""
         m1 = Money(Decimal("100.00"), "USD")
         m2 = Money(Decimal("50.00"), "EUR")
-        with pytest.raises(ValueError, match="different currencies"):
+        with pytest.raises(TypeError, match="different currencies"):
             _ = m1 + m2
 
     def test_subtract_same_currency(self) -> None:
@@ -77,7 +77,7 @@ class TestMoneyArithmetic:
         """Test subtracting money with different currency raises error."""
         m1 = Money(Decimal("100.00"), "USD")
         m2 = Money(Decimal("30.00"), "EUR")
-        with pytest.raises(ValueError, match="different currencies"):
+        with pytest.raises(TypeError, match="different currencies"):
             _ = m1 - m2
 
     def test_multiply_by_decimal(self) -> None:
@@ -137,7 +137,7 @@ class TestMoneyComparison:
         """Test less than comparison with different currency raises error."""
         m1 = Money(Decimal("50.00"), "USD")
         m2 = Money(Decimal("100.00"), "EUR")
-        with pytest.raises(ValueError, match="different currencies"):
+        with pytest.raises(TypeError, match="different currencies"):
             _ = m1 < m2
 
     def test_less_than_or_equal(self) -> None:
