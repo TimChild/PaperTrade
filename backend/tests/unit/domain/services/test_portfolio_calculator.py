@@ -1,10 +1,9 @@
 """Tests for PortfolioCalculator service."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
 
-import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
@@ -29,7 +28,7 @@ class TestCalculateCashBalance:
             portfolio_id=portfolio_id,
             type=TransactionType.DEPOSIT,
             amount=Money(Decimal("1000.00"), "USD"),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
         balance = PortfolioCalculator.calculate_cash_balance([txn])
         assert balance == Money(Decimal("1000.00"), "USD")
@@ -43,14 +42,14 @@ class TestCalculateCashBalance:
                 portfolio_id=portfolio_id,
                 type=TransactionType.DEPOSIT,
                 amount=Money(Decimal("1000.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
             Transaction(
                 id=uuid4(),
                 portfolio_id=portfolio_id,
                 type=TransactionType.WITHDRAWAL,
                 amount=Money(Decimal("300.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
         ]
         balance = PortfolioCalculator.calculate_cash_balance(txns)
@@ -65,7 +64,7 @@ class TestCalculateCashBalance:
                 portfolio_id=portfolio_id,
                 type=TransactionType.DEPOSIT,
                 amount=Money(Decimal("1000.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
             Transaction(
                 id=uuid4(),
@@ -75,7 +74,7 @@ class TestCalculateCashBalance:
                 ticker=Ticker("AAPL"),
                 quantity=Quantity(Decimal("10")),
                 price_per_share=Money(Decimal("50.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
         ]
         balance = PortfolioCalculator.calculate_cash_balance(txns)
@@ -90,7 +89,7 @@ class TestCalculateCashBalance:
                 portfolio_id=portfolio_id,
                 type=TransactionType.DEPOSIT,
                 amount=Money(Decimal("1000.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
             Transaction(
                 id=uuid4(),
@@ -100,7 +99,7 @@ class TestCalculateCashBalance:
                 ticker=Ticker("AAPL"),
                 quantity=Quantity(Decimal("10")),
                 price_per_share=Money(Decimal("60.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
         ]
         balance = PortfolioCalculator.calculate_cash_balance(txns)
@@ -115,14 +114,14 @@ class TestCalculateCashBalance:
                 portfolio_id=portfolio_id,
                 type=TransactionType.DEPOSIT,
                 amount=Money(Decimal("1000.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
             Transaction(
                 id=uuid4(),
                 portfolio_id=portfolio_id,
                 type=TransactionType.DIVIDEND,
                 amount=Money(Decimal("50.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
         ]
         balance = PortfolioCalculator.calculate_cash_balance(txns)
@@ -137,14 +136,14 @@ class TestCalculateCashBalance:
                 portfolio_id=portfolio_id,
                 type=TransactionType.DEPOSIT,
                 amount=Money(Decimal("1000.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
             Transaction(
                 id=uuid4(),
                 portfolio_id=portfolio_id,
                 type=TransactionType.FEE,
                 amount=Money(Decimal("10.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
         ]
         balance = PortfolioCalculator.calculate_cash_balance(txns)
@@ -159,7 +158,7 @@ class TestCalculateCashBalance:
                 portfolio_id=portfolio_id,
                 type=TransactionType.DEPOSIT,
                 amount=Money(Decimal("10000.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
             Transaction(
                 id=uuid4(),
@@ -169,7 +168,7 @@ class TestCalculateCashBalance:
                 ticker=Ticker("AAPL"),
                 quantity=Quantity(Decimal("10")),
                 price_per_share=Money(Decimal("150.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
             Transaction(
                 id=uuid4(),
@@ -179,7 +178,7 @@ class TestCalculateCashBalance:
                 ticker=Ticker("GOOGL"),
                 quantity=Quantity(Decimal("1")),
                 price_per_share=Money(Decimal("2800.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
             Transaction(
                 id=uuid4(),
@@ -189,14 +188,14 @@ class TestCalculateCashBalance:
                 ticker=Ticker("AAPL"),
                 quantity=Quantity(Decimal("5")),
                 price_per_share=Money(Decimal("160.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
             Transaction(
                 id=uuid4(),
                 portfolio_id=portfolio_id,
                 type=TransactionType.WITHDRAWAL,
                 amount=Money(Decimal("1000.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
         ]
         balance = PortfolioCalculator.calculate_cash_balance(txns)
@@ -223,7 +222,7 @@ class TestCalculateHoldings:
             ticker=Ticker("AAPL"),
             quantity=Quantity(Decimal("10")),
             price_per_share=Money(Decimal("150.00"), "USD"),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
         holdings = PortfolioCalculator.calculate_holdings([txn])
         assert len(holdings) == 1
@@ -243,7 +242,7 @@ class TestCalculateHoldings:
                 ticker=Ticker("AAPL"),
                 quantity=Quantity(Decimal("10")),
                 price_per_share=Money(Decimal("150.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
             Transaction(
                 id=uuid4(),
@@ -253,7 +252,7 @@ class TestCalculateHoldings:
                 ticker=Ticker("AAPL"),
                 quantity=Quantity(Decimal("10")),
                 price_per_share=Money(Decimal("160.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
         ]
         holdings = PortfolioCalculator.calculate_holdings(txns)
@@ -275,7 +274,7 @@ class TestCalculateHoldings:
                 ticker=Ticker("AAPL"),
                 quantity=Quantity(Decimal("10")),
                 price_per_share=Money(Decimal("150.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
             Transaction(
                 id=uuid4(),
@@ -285,7 +284,7 @@ class TestCalculateHoldings:
                 ticker=Ticker("AAPL"),
                 quantity=Quantity(Decimal("5")),
                 price_per_share=Money(Decimal("160.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
         ]
         holdings = PortfolioCalculator.calculate_holdings(txns)
@@ -309,7 +308,7 @@ class TestCalculateHoldings:
                 ticker=Ticker("AAPL"),
                 quantity=Quantity(Decimal("10")),
                 price_per_share=Money(Decimal("150.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
             Transaction(
                 id=uuid4(),
@@ -319,7 +318,7 @@ class TestCalculateHoldings:
                 ticker=Ticker("AAPL"),
                 quantity=Quantity(Decimal("10")),
                 price_per_share=Money(Decimal("160.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
         ]
         holdings = PortfolioCalculator.calculate_holdings(txns)
@@ -337,7 +336,7 @@ class TestCalculateHoldings:
                 ticker=Ticker("AAPL"),
                 quantity=Quantity(Decimal("10")),
                 price_per_share=Money(Decimal("150.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
             Transaction(
                 id=uuid4(),
@@ -347,7 +346,7 @@ class TestCalculateHoldings:
                 ticker=Ticker("GOOGL"),
                 quantity=Quantity(Decimal("1")),
                 price_per_share=Money(Decimal("2800.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
         ]
         holdings = PortfolioCalculator.calculate_holdings(txns)
@@ -365,14 +364,14 @@ class TestCalculateHoldings:
                 portfolio_id=portfolio_id,
                 type=TransactionType.DEPOSIT,
                 amount=Money(Decimal("1000.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
             Transaction(
                 id=uuid4(),
                 portfolio_id=portfolio_id,
                 type=TransactionType.DIVIDEND,
                 amount=Money(Decimal("50.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
         ]
         holdings = PortfolioCalculator.calculate_holdings(txns)
@@ -475,7 +474,7 @@ class TestPortfolioCalculatorPropertyBased:
                 portfolio_id=portfolio_id,
                 type=TransactionType.DEPOSIT,
                 amount=Money(amount, "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             )
             for amount in deposits
         ]
@@ -509,7 +508,7 @@ class TestPortfolioCalculatorPropertyBased:
                 ticker=Ticker("AAPL"),
                 quantity=Quantity(buy_quantity),
                 price_per_share=Money(Decimal("100.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
             Transaction(
                 id=uuid4(),
@@ -519,7 +518,7 @@ class TestPortfolioCalculatorPropertyBased:
                 ticker=Ticker("AAPL"),
                 quantity=Quantity(sell_quantity),
                 price_per_share=Money(Decimal("100.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             ),
         ]
         holdings = PortfolioCalculator.calculate_holdings(txns)

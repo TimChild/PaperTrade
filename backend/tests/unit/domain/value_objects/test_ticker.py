@@ -1,5 +1,7 @@
 """Tests for Ticker value object."""
 
+from dataclasses import FrozenInstanceError
+
 import pytest
 from hypothesis import given
 from hypothesis import strategies as st
@@ -58,7 +60,7 @@ class TestTickerCreation:
     def test_ticker_is_immutable(self) -> None:
         """Test that Ticker is immutable."""
         ticker = Ticker("AAPL")
-        with pytest.raises(Exception):  # FrozenInstanceError
+        with pytest.raises(FrozenInstanceError):
             ticker.symbol = "GOOGL"  # type: ignore
 
 

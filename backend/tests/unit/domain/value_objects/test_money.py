@@ -1,5 +1,6 @@
 """Tests for Money value object."""
 
+from dataclasses import FrozenInstanceError
 from decimal import Decimal
 
 import pytest
@@ -42,7 +43,7 @@ class TestMoneyCreation:
     def test_money_is_immutable(self) -> None:
         """Test that Money is immutable."""
         money = Money(Decimal("100.00"), "USD")
-        with pytest.raises(Exception):  # FrozenInstanceError
+        with pytest.raises(FrozenInstanceError):
             money.amount = Decimal("200.00")  # type: ignore
 
 

@@ -1,5 +1,6 @@
 """Tests for Quantity value object."""
 
+from dataclasses import FrozenInstanceError
 from decimal import Decimal
 
 import pytest
@@ -35,7 +36,7 @@ class TestQuantityCreation:
     def test_quantity_is_immutable(self) -> None:
         """Test that Quantity is immutable."""
         qty = Quantity(Decimal("100"))
-        with pytest.raises(Exception):  # FrozenInstanceError
+        with pytest.raises(FrozenInstanceError):
             qty.value = Decimal("200")  # type: ignore
 
 

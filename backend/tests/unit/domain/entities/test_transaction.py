@@ -1,6 +1,7 @@
 """Tests for Transaction entity."""
 
-from datetime import datetime, timezone
+from dataclasses import FrozenInstanceError
+from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
 
@@ -20,7 +21,7 @@ class TestTransactionCreation:
             portfolio_id=uuid4(),
             type=TransactionType.DEPOSIT,
             amount=Money(Decimal("1000.00"), "USD"),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
         assert txn.type == TransactionType.DEPOSIT
         assert txn.amount == Money(Decimal("1000.00"), "USD")
@@ -35,7 +36,7 @@ class TestTransactionCreation:
             portfolio_id=uuid4(),
             type=TransactionType.WITHDRAWAL,
             amount=Money(Decimal("500.00"), "USD"),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
         assert txn.type == TransactionType.WITHDRAWAL
         assert txn.amount == Money(Decimal("500.00"), "USD")
@@ -50,7 +51,7 @@ class TestTransactionCreation:
             ticker=Ticker("AAPL"),
             quantity=Quantity(Decimal("10")),
             price_per_share=Money(Decimal("150.00"), "USD"),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
         assert txn.type == TransactionType.BUY
         assert txn.ticker == Ticker("AAPL")
@@ -67,7 +68,7 @@ class TestTransactionCreation:
             ticker=Ticker("AAPL"),
             quantity=Quantity(Decimal("10")),
             price_per_share=Money(Decimal("160.00"), "USD"),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
         assert txn.type == TransactionType.SELL
 
@@ -81,7 +82,7 @@ class TestTransactionCreation:
                 amount=Money(Decimal("1500.00"), "USD"),
                 quantity=Quantity(Decimal("10")),
                 price_per_share=Money(Decimal("150.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             )
 
     def test_create_buy_without_quantity_raises_error(self) -> None:
@@ -94,7 +95,7 @@ class TestTransactionCreation:
                 amount=Money(Decimal("1500.00"), "USD"),
                 ticker=Ticker("AAPL"),
                 price_per_share=Money(Decimal("150.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             )
 
     def test_create_buy_without_price_raises_error(self) -> None:
@@ -107,7 +108,7 @@ class TestTransactionCreation:
                 amount=Money(Decimal("1500.00"), "USD"),
                 ticker=Ticker("AAPL"),
                 quantity=Quantity(Decimal("10")),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             )
 
     def test_create_deposit_with_ticker_raises_error(self) -> None:
@@ -119,7 +120,7 @@ class TestTransactionCreation:
                 type=TransactionType.DEPOSIT,
                 amount=Money(Decimal("1000.00"), "USD"),
                 ticker=Ticker("AAPL"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             )
 
     def test_create_deposit_with_quantity_raises_error(self) -> None:
@@ -131,7 +132,7 @@ class TestTransactionCreation:
                 type=TransactionType.DEPOSIT,
                 amount=Money(Decimal("1000.00"), "USD"),
                 quantity=Quantity(Decimal("10")),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             )
 
     def test_create_transaction_negative_amount_raises_error(self) -> None:
@@ -142,7 +143,7 @@ class TestTransactionCreation:
                 portfolio_id=uuid4(),
                 type=TransactionType.DEPOSIT,
                 amount=Money(Decimal("-100.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             )
 
     def test_create_transaction_zero_amount_raises_error(self) -> None:
@@ -153,7 +154,7 @@ class TestTransactionCreation:
                 portfolio_id=uuid4(),
                 type=TransactionType.DEPOSIT,
                 amount=Money(Decimal("0.00"), "USD"),
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
             )
 
     def test_transaction_with_notes(self) -> None:
@@ -163,7 +164,7 @@ class TestTransactionCreation:
             portfolio_id=uuid4(),
             type=TransactionType.DEPOSIT,
             amount=Money(Decimal("1000.00"), "USD"),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             notes="Initial deposit",
         )
         assert txn.notes == "Initial deposit"
@@ -175,9 +176,9 @@ class TestTransactionCreation:
             portfolio_id=uuid4(),
             type=TransactionType.DEPOSIT,
             amount=Money(Decimal("1000.00"), "USD"),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
-        with pytest.raises(Exception):  # FrozenInstanceError
+        with pytest.raises(FrozenInstanceError):
             txn.amount = Money(Decimal("2000.00"), "USD")  # type: ignore
 
 
@@ -191,7 +192,7 @@ class TestTransactionStringRepresentation:
             portfolio_id=uuid4(),
             type=TransactionType.DEPOSIT,
             amount=Money(Decimal("1000.00"), "USD"),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
         assert "DEPOSIT" in str(txn)
         assert "1000.00" in str(txn)
@@ -206,7 +207,7 @@ class TestTransactionStringRepresentation:
             ticker=Ticker("AAPL"),
             quantity=Quantity(Decimal("10")),
             price_per_share=Money(Decimal("150.00"), "USD"),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
         assert "BUY" in str(txn)
         assert "AAPL" in str(txn)
@@ -219,7 +220,7 @@ class TestTransactionStringRepresentation:
             portfolio_id=uuid4(),
             type=TransactionType.DEPOSIT,
             amount=Money(Decimal("1000.00"), "USD"),
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
         )
         assert "Transaction" in repr(txn)
         assert "DEPOSIT" in repr(txn)
