@@ -70,7 +70,7 @@ class BuyStockHandler:
         self._portfolio_repository = portfolio_repository
         self._transaction_repository = transaction_repository
 
-    def execute(self, command: BuyStockCommand) -> BuyStockResult:
+    async def execute(self, command: BuyStockCommand) -> BuyStockResult:
         """Execute the BuyStock command.
 
         Args:
@@ -87,7 +87,7 @@ class BuyStockHandler:
             InsufficientFundsError: If purchase exceeds available cash
         """
         # Verify portfolio exists
-        portfolio = self._portfolio_repository.get(command.portfolio_id)
+        portfolio = await self._portfolio_repository.get(command.portfolio_id)
         if portfolio is None:
             raise InvalidPortfolioError(f"Portfolio not found: {command.portfolio_id}")
 
@@ -102,7 +102,7 @@ class BuyStockHandler:
         total_cost = price_per_share.multiply(quantity.shares)
 
         # Get all transactions to calculate current balance
-        transactions = self._transaction_repository.get_by_portfolio(
+        transactions = await self._transaction_repository.get_by_portfolio(
             command.portfolio_id
         )
 
@@ -133,6 +133,6 @@ class BuyStockHandler:
         )
 
         # Persist transaction
-        self._transaction_repository.save(transaction)
+        await self._transaction_repository.save(transaction)
 
         return BuyStockResult(transaction_id=transaction_id, total_cost=total_cost)

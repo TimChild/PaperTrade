@@ -46,10 +46,10 @@ def handler(portfolio_repo, transaction_repo):
 
 
 @pytest.fixture
-def portfolio_with_cash(portfolio_repo, transaction_repo):
+async def portfolio_with_cash(portfolio_repo, transaction_repo):
     """Create a portfolio with $1000 initial deposit."""
     create_handler = CreatePortfolioHandler(portfolio_repo, transaction_repo)
-    result = create_handler.execute(
+    result = await create_handler.execute(
         CreatePortfolioCommand(
             user_id=uuid4(),
             name="Test Portfolio",
@@ -62,7 +62,7 @@ def portfolio_with_cash(portfolio_repo, transaction_repo):
 class TestWithdrawCash:
     """Tests for WithdrawCash command handler."""
 
-    def test_valid_withdrawal_succeeds(
+    async def test_valid_withdrawal_succeeds(
         self, handler, transaction_repo, portfolio_with_cash
     ):
         """Test that valid withdrawal succeeds."""
@@ -71,17 +71,17 @@ class TestWithdrawCash:
             amount=Decimal("100.00"),
         )
 
-        result = handler.execute(command)
+        result = await handler.execute(command)
 
         assert result.transaction_id is not None
 
         # Verify transaction was saved
-        transaction = transaction_repo.get(result.transaction_id)
+        transaction = await transaction_repo.get(result.transaction_id)
         assert transaction is not None
         assert transaction.transaction_type == TransactionType.WITHDRAWAL
         assert transaction.cash_change.amount == Decimal("-100.00")
 
-    def test_withdrawal_entire_balance_succeeds(
+    async def test_withdrawal_entire_balance_succeeds(
         self, handler, transaction_repo, portfolio_with_cash
     ):
         """Test that withdrawing entire balance succeeds."""
@@ -90,14 +90,14 @@ class TestWithdrawCash:
             amount=Decimal("1000.00"),  # Exact balance
         )
 
-        result = handler.execute(command)
+        result = await handler.execute(command)
 
         assert result.transaction_id is not None
 
-        transaction = transaction_repo.get(result.transaction_id)
+        transaction = await transaction_repo.get(result.transaction_id)
         assert transaction.cash_change.amount == Decimal("-1000.00")
 
-    def test_insufficient_funds_raises_error(self, handler, portfolio_with_cash):
+    async def test_insufficient_funds_raises_error(self, handler, portfolio_with_cash):
         """Test that withdrawing more than balance raises error."""
         command = WithdrawCashCommand(
             portfolio_id=portfolio_with_cash,
@@ -105,12 +105,12 @@ class TestWithdrawCash:
         )
 
         with pytest.raises(InsufficientFundsError) as exc_info:
-            handler.execute(command)
+            await handler.execute(command)
 
         assert "Cannot withdraw" in str(exc_info.value)
         assert "$1,001.00" in str(exc_info.value)  # Money formats with comma
 
-    def test_zero_withdrawal_raises_error(self, handler, portfolio_with_cash):
+    async def test_zero_withdrawal_raises_error(self, handler, portfolio_with_cash):
         """Test that zero withdrawal raises error."""
         command = WithdrawCashCommand(
             portfolio_id=portfolio_with_cash,
@@ -118,9 +118,9 @@ class TestWithdrawCash:
         )
 
         with pytest.raises(InvalidTransactionError):
-            handler.execute(command)
+            await handler.execute(command)
 
-    def test_negative_withdrawal_raises_error(self, handler, portfolio_with_cash):
+    async def test_negative_withdrawal_raises_error(self, handler, portfolio_with_cash):
         """Test that negative withdrawal raises error."""
         command = WithdrawCashCommand(
             portfolio_id=portfolio_with_cash,
@@ -128,9 +128,9 @@ class TestWithdrawCash:
         )
 
         with pytest.raises(InvalidTransactionError):
-            handler.execute(command)
+            await handler.execute(command)
 
-    def test_portfolio_not_found_raises_error(self, handler):
+    async def test_portfolio_not_found_raises_error(self, handler):
         """Test that withdrawing from non-existent portfolio raises error."""
         command = WithdrawCashCommand(
             portfolio_id=uuid4(),  # Random ID that doesn't exist
@@ -138,9 +138,9 @@ class TestWithdrawCash:
         )
 
         with pytest.raises(InvalidPortfolioError):
-            handler.execute(command)
+            await handler.execute(command)
 
-    def test_withdrawal_with_notes(
+    async def test_withdrawal_with_notes(
         self, handler, transaction_repo, portfolio_with_cash
     ):
         """Test that withdrawal can include notes."""
@@ -150,18 +150,18 @@ class TestWithdrawCash:
             notes="Test withdrawal",
         )
 
-        result = handler.execute(command)
+        result = await handler.execute(command)
 
-        transaction = transaction_repo.get(result.transaction_id)
+        transaction = await transaction_repo.get(result.transaction_id)
         assert transaction.notes == "Test withdrawal"
 
-    def test_different_currencies_supported(
+    async def test_different_currencies_supported(
         self, portfolio_repo, transaction_repo, handler
     ):
         """Test that different currencies can be used for withdrawal."""
         # Create portfolio with EUR
         create_handler = CreatePortfolioHandler(portfolio_repo, transaction_repo)
-        result = create_handler.execute(
+        result = await create_handler.execute(
             CreatePortfolioCommand(
                 user_id=uuid4(),
                 name="EUR Portfolio",
@@ -176,7 +176,7 @@ class TestWithdrawCash:
             currency="EUR",
         )
 
-        withdraw_result = handler.execute(command)
+        withdraw_result = await handler.execute(command)
 
-        transaction = transaction_repo.get(withdraw_result.transaction_id)
+        transaction = await transaction_repo.get(withdraw_result.transaction_id)
         assert transaction.cash_change.currency == "EUR"

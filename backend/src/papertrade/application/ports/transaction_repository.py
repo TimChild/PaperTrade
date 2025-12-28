@@ -17,7 +17,7 @@ class TransactionRepository(Protocol):
     modified or deleted. This maintains the integrity of the audit ledger.
     """
 
-    def get(self, transaction_id: UUID) -> Transaction | None:
+    async def get(self, transaction_id: UUID) -> Transaction | None:
         """Retrieve a single transaction by ID.
 
         Args:
@@ -31,7 +31,7 @@ class TransactionRepository(Protocol):
         """
         ...
 
-    def get_by_portfolio(
+    async def get_by_portfolio(
         self,
         portfolio_id: UUID,
         limit: int | None = None,
@@ -57,7 +57,7 @@ class TransactionRepository(Protocol):
         """
         ...
 
-    def count_by_portfolio(
+    async def count_by_portfolio(
         self,
         portfolio_id: UUID,
         transaction_type: TransactionType | None = None,
@@ -78,7 +78,7 @@ class TransactionRepository(Protocol):
         """
         ...
 
-    def save(self, transaction: Transaction) -> None:
+    async def save(self, transaction: Transaction) -> None:
         """Persist a new transaction (append-only, no updates).
 
         This method ONLY creates new records. Attempting to save a transaction

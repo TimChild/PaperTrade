@@ -17,7 +17,7 @@ class PortfolioRepository(Protocol):
     from the application layer. Implementations can use any storage mechanism.
     """
 
-    def get(self, portfolio_id: UUID) -> Portfolio | None:
+    async def get(self, portfolio_id: UUID) -> Portfolio | None:
         """Retrieve a single portfolio by ID.
 
         Args:
@@ -31,7 +31,7 @@ class PortfolioRepository(Protocol):
         """
         ...
 
-    def get_by_user(self, user_id: UUID) -> list[Portfolio]:
+    async def get_by_user(self, user_id: UUID) -> list[Portfolio]:
         """Retrieve all portfolios owned by a user.
 
         Args:
@@ -46,7 +46,7 @@ class PortfolioRepository(Protocol):
         """
         ...
 
-    def save(self, portfolio: Portfolio) -> None:
+    async def save(self, portfolio: Portfolio) -> None:
         """Persist a portfolio (create if new, update if exists).
 
         This method implements upsert behavior - it creates a new record if
@@ -60,7 +60,7 @@ class PortfolioRepository(Protocol):
         """
         ...
 
-    def exists(self, portfolio_id: UUID) -> bool:
+    async def exists(self, portfolio_id: UUID) -> bool:
         """Check if a portfolio exists without loading it.
 
         This is more efficient than calling get() when you only need to verify

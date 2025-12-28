@@ -66,7 +66,7 @@ class ListTransactionsHandler:
         self._portfolio_repository = portfolio_repository
         self._transaction_repository = transaction_repository
 
-    def execute(self, query: ListTransactionsQuery) -> ListTransactionsResult:
+    async def execute(self, query: ListTransactionsQuery) -> ListTransactionsResult:
         """Execute the ListTransactions query.
 
         Args:
@@ -80,7 +80,7 @@ class ListTransactionsHandler:
             ValueError: If pagination parameters are invalid
         """
         # Verify portfolio exists
-        portfolio = self._portfolio_repository.get(query.portfolio_id)
+        portfolio = await self._portfolio_repository.get(query.portfolio_id)
         if portfolio is None:
             raise InvalidPortfolioError(f"Portfolio not found: {query.portfolio_id}")
 
@@ -91,7 +91,7 @@ class ListTransactionsHandler:
             raise ValueError("Offset must be non-negative")
 
         # Get transactions with pagination
-        transactions = self._transaction_repository.get_by_portfolio(
+        transactions = await self._transaction_repository.get_by_portfolio(
             portfolio_id=query.portfolio_id,
             limit=query.limit,
             offset=query.offset,
@@ -99,7 +99,7 @@ class ListTransactionsHandler:
         )
 
         # Get total count
-        total_count = self._transaction_repository.count_by_portfolio(
+        total_count = await self._transaction_repository.count_by_portfolio(
             portfolio_id=query.portfolio_id,
             transaction_type=query.transaction_type,
         )

@@ -22,12 +22,12 @@ class InMemoryPortfolioRepository:
         self._portfolios: dict[UUID, Portfolio] = {}
         self._lock = Lock()
 
-    def get(self, portfolio_id: UUID) -> Portfolio | None:
+    async def get(self, portfolio_id: UUID) -> Portfolio | None:
         """Retrieve a portfolio by ID."""
         with self._lock:
             return self._portfolios.get(portfolio_id)
 
-    def get_by_user(self, user_id: UUID) -> list[Portfolio]:
+    async def get_by_user(self, user_id: UUID) -> list[Portfolio]:
         """Retrieve all portfolios for a user, ordered by creation date."""
         with self._lock:
             user_portfolios = [
@@ -35,12 +35,12 @@ class InMemoryPortfolioRepository:
             ]
             return sorted(user_portfolios, key=lambda p: p.created_at)
 
-    def save(self, portfolio: Portfolio) -> None:
+    async def save(self, portfolio: Portfolio) -> None:
         """Save a portfolio (idempotent upsert)."""
         with self._lock:
             self._portfolios[portfolio.id] = portfolio
 
-    def exists(self, portfolio_id: UUID) -> bool:
+    async def exists(self, portfolio_id: UUID) -> bool:
         """Check if a portfolio exists."""
         with self._lock:
             return portfolio_id in self._portfolios

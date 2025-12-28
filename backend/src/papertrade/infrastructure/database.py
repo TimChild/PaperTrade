@@ -9,8 +9,8 @@ from typing import Annotated
 
 from fastapi import Depends
 from sqlmodel import SQLModel, create_engine
-from sqlmodel.ext.asyncio.session import AsyncEngine, AsyncSession
-from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine, async_sessionmaker
 
 
 # Database URL configuration
@@ -22,12 +22,10 @@ DATABASE_URL = "sqlite+aiosqlite:///./papertrade.db"
 # Create async engine
 # echo=True logs all SQL statements (useful for development)
 # connect_args for SQLite compatibility
-engine = AsyncEngine(
-    create_engine(
-        DATABASE_URL,
-        echo=True,  # Log SQL statements
-        connect_args={"check_same_thread": False},  # SQLite specific
-    )
+engine = create_async_engine(
+    DATABASE_URL,
+    echo=True,  # Log SQL statements
+    connect_args={"check_same_thread": False},  # SQLite specific
 )
 
 
