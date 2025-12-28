@@ -1,5 +1,11 @@
-import { useQuery } from '@tanstack/react-query'
-import { portfolioService } from '@/services/portfolio'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { portfoliosApi } from '@/services/api'
+import type {
+  CreatePortfolioRequest,
+  DepositRequest,
+  WithdrawRequest,
+  TradeRequest,
+} from '@/services/api/types'
 
 /**
  * Hook to fetch all portfolios
@@ -7,7 +13,7 @@ import { portfolioService } from '@/services/portfolio'
 export function usePortfolios() {
   return useQuery({
     queryKey: ['portfolios'],
-    queryFn: () => portfolioService.getAll(),
+    queryFn: () => portfoliosApi.list(),
     staleTime: 30_000, // 30 seconds
   })
 }
@@ -18,8 +24,80 @@ export function usePortfolios() {
 export function usePortfolio(portfolioId: string) {
   return useQuery({
     queryKey: ['portfolio', portfolioId],
-    queryFn: () => portfolioService.getById(portfolioId),
+    queryFn: () => portfoliosApi.getById(portfolioId),
     staleTime: 30_000,
     enabled: Boolean(portfolioId),
+  })
+}
+
+/**
+ * Hook to fetch portfolio cash balance
+ */
+export function usePortfolioBalance(portfolioId: string) {
+  return useQuery({
+    queryKey: ['portfolio', portfolioId, 'balance'],
+    queryFn: () => portfoliosApi.getBalance(portfolioId),
+    enabled: Boolean(portfolioId),
+    refetchInterval: 30_000, // Refetch every 30 seconds
+  })
+}
+
+/**
+ * Hook to create a new portfolio
+ */
+export function useCreatePortfolio() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: CreatePortfolioRequest) => portfoliosApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['portfolios'] })
+    },
+  })
+}
+
+/**
+ * Hook to deposit cash into a portfolio
+ */
+export function useDeposit(portfolioId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: DepositRequest) => portfoliosApi.deposit(portfolioId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['portfolio', portfolioId, 'balance'] })
+      queryClient.invalidateQueries({ queryKey: ['portfolio', portfolioId, 'transactions'] })
+    },
+  })
+}
+
+/**
+ * Hook to withdraw cash from a portfolio
+ */
+export function useWithdraw(portfolioId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: WithdrawRequest) => portfoliosApi.withdraw(portfolioId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['portfolio', portfolioId, 'balance'] })
+      queryClient.invalidateQueries({ queryKey: ['portfolio', portfolioId, 'transactions'] })
+    },
+  })
+}
+
+/**
+ * Hook to execute a trade (buy or sell)
+ */
+export function useExecuteTrade(portfolioId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (data: TradeRequest) => portfoliosApi.executeTrade(portfolioId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['portfolio', portfolioId, 'balance'] })
+      queryClient.invalidateQueries({ queryKey: ['portfolio', portfolioId, 'holdings'] })
+      queryClient.invalidateQueries({ queryKey: ['portfolio', portfolioId, 'transactions'] })
+    },
   })
 }
