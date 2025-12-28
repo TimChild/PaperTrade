@@ -38,11 +38,13 @@ class Ticker:
             # Check if it's a length issue or character issue
             if len(normalized) == 0 or len(normalized) > 5:
                 raise InvalidTickerError(
-                    f"Ticker symbol must be 1 to 5 characters long, got: '{self.symbol}'"
+                    f"Ticker symbol must be 1 to 5 characters long, "
+                    f"got: '{self.symbol}'"
                 )
             else:
                 raise InvalidTickerError(
-                    f"Ticker symbol must contain only uppercase letters A-Z, got: '{self.symbol}'"
+                    f"Ticker symbol must contain only uppercase letters A-Z, "
+                    f"got: '{self.symbol}'"
                 )
 
     def __str__(self) -> str:

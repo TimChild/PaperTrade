@@ -71,8 +71,8 @@ class Money:
         """
         if self.currency != other.currency:
             raise InvalidMoneyError(
-                f"Cannot add different currencies: {self.currency} and {other.currency}. "
-                f"Both amounts must have the same currency."
+                f"Cannot add different currencies: {self.currency} and "
+                f"{other.currency}. Both amounts must have the same currency."
             )
         return Money(self.amount + other.amount, self.currency)
 
@@ -90,8 +90,8 @@ class Money:
         """
         if self.currency != other.currency:
             raise InvalidMoneyError(
-                f"Cannot subtract different currencies: {self.currency} and {other.currency}. "
-                f"Both amounts must have the same currency."
+                f"Cannot subtract different currencies: {self.currency} and "
+                f"{other.currency}. Both amounts must have the same currency."
             )
         return Money(self.amount - other.amount, self.currency)
 
@@ -185,8 +185,8 @@ class Money:
         """
         if self.currency != other.currency:
             raise InvalidMoneyError(
-                f"Cannot compare different currencies: {self.currency} and {other.currency}. "
-                f"Both amounts must have the same currency."
+                f"Cannot compare different currencies: {self.currency} and "
+                f"{other.currency}. Both amounts must have the same currency."
             )
         return self.amount < other.amount
 
@@ -194,7 +194,8 @@ class Money:
         """Compare if self is less than or equal to other."""
         if self.currency != other.currency:
             raise InvalidMoneyError(
-                f"Cannot compare different currencies: {self.currency} and {other.currency}"
+                f"Cannot compare different currencies: {self.currency} and "
+                f"{other.currency}"
             )
         return self.amount <= other.amount
 
@@ -202,7 +203,8 @@ class Money:
         """Compare if self is greater than other."""
         if self.currency != other.currency:
             raise InvalidMoneyError(
-                f"Cannot compare different currencies: {self.currency} and {other.currency}"
+                f"Cannot compare different currencies: {self.currency} and "
+                f"{other.currency}"
             )
         return self.amount > other.amount
 
@@ -210,7 +212,8 @@ class Money:
         """Compare if self is greater than or equal to other."""
         if self.currency != other.currency:
             raise InvalidMoneyError(
-                f"Cannot compare different currencies: {self.currency} and {other.currency}"
+                f"Cannot compare different currencies: {self.currency} and "
+                f"{other.currency}"
             )
         return self.amount >= other.amount
 

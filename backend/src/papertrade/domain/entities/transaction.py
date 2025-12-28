@@ -35,7 +35,8 @@ class Transaction:
         cash_change: Change in cash balance (can be positive or negative)
         ticker: Stock symbol (required for BUY/SELL, None otherwise)
         quantity: Number of shares (required for BUY/SELL, None otherwise)
-        price_per_share: Share price at execution (required for BUY/SELL, None otherwise)
+        price_per_share: Share price at execution (required for BUY/SELL,
+            None otherwise)
         notes: Optional description (max 500 characters)
 
     Raises:
@@ -79,7 +80,11 @@ class Transaction:
             )
 
         # Must not have ticker, quantity, or price
-        if self.ticker is not None or self.quantity is not None or self.price_per_share is not None:
+        if (
+            self.ticker is not None
+            or self.quantity is not None
+            or self.price_per_share is not None
+        ):
             raise InvalidTransactionError(
                 "DEPOSIT transaction must not have ticker, quantity, or price_per_share"
             )
@@ -93,9 +98,14 @@ class Transaction:
             )
 
         # Must not have ticker, quantity, or price
-        if self.ticker is not None or self.quantity is not None or self.price_per_share is not None:
+        if (
+            self.ticker is not None
+            or self.quantity is not None
+            or self.price_per_share is not None
+        ):
             raise InvalidTransactionError(
-                "WITHDRAWAL transaction must not have ticker, quantity, or price_per_share"
+                "WITHDRAWAL transaction must not have ticker, quantity, "
+                "or price_per_share"
             )
 
     def _validate_buy(self) -> None:
@@ -121,7 +131,8 @@ class Transaction:
         )
         if self.cash_change != expected_cash_change:
             raise InvalidTransactionError(
-                f"BUY transaction cash_change must equal -(quantity × price_per_share). "
+                f"BUY transaction cash_change must equal "
+                f"-(quantity × price_per_share). "
                 f"Expected {expected_cash_change}, got {self.cash_change}"
             )
 
@@ -148,7 +159,8 @@ class Transaction:
         )
         if self.cash_change != expected_cash_change:
             raise InvalidTransactionError(
-                f"SELL transaction cash_change must equal (quantity × price_per_share). "
+                f"SELL transaction cash_change must equal "
+                f"(quantity × price_per_share). "
                 f"Expected {expected_cash_change}, got {self.cash_change}"
             )
 
@@ -192,6 +204,9 @@ class Transaction:
         """
         base = f"Transaction(id={self.id}, type={self.transaction_type.value}"
         if self.ticker:
-            base += f", ticker={self.ticker.symbol}, quantity={self.quantity}, price={self.price_per_share}"
+            base += (
+                f", ticker={self.ticker.symbol}, quantity={self.quantity}, "
+                f"price={self.price_per_share}"
+            )
         base += f", cash_change={self.cash_change})"
         return base
