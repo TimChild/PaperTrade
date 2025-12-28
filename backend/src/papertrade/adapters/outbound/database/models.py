@@ -6,11 +6,9 @@ to/from domain entities.
 
 from datetime import datetime
 from decimal import Decimal
-from typing import Optional
 from uuid import UUID
 
-from sqlmodel import Column, Field, Index, SQLModel
-from sqlalchemy import UniqueConstraint
+from sqlmodel import Field, Index, SQLModel
 
 from papertrade.domain.entities.portfolio import Portfolio
 from papertrade.domain.entities.transaction import Transaction, TransactionType
@@ -109,15 +107,15 @@ class TransactionModel(SQLModel, table=True):
     timestamp: datetime
     cash_change_amount: Decimal = Field(max_digits=15, decimal_places=2)
     cash_change_currency: str = Field(max_length=3)
-    ticker: Optional[str] = Field(default=None, max_length=5)
-    quantity: Optional[Decimal] = Field(
+    ticker: str | None = Field(default=None, max_length=5)
+    quantity: Decimal | None = Field(
         default=None, max_digits=15, decimal_places=4
     )
-    price_per_share_amount: Optional[Decimal] = Field(
+    price_per_share_amount: Decimal | None = Field(
         default=None, max_digits=15, decimal_places=2
     )
-    price_per_share_currency: Optional[str] = Field(default=None, max_length=3)
-    notes: Optional[str] = Field(default=None, max_length=500)
+    price_per_share_currency: str | None = Field(default=None, max_length=3)
+    notes: str | None = Field(default=None, max_length=500)
     created_at: datetime = Field(default_factory=datetime.now)
 
     def to_domain(self) -> Transaction:

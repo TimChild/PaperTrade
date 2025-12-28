@@ -6,7 +6,7 @@ Provides REST endpoints for transaction history queries.
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from papertrade.adapters.inbound.api.dependencies import (
     CurrentUserDep,

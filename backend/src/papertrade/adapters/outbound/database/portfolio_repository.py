@@ -3,6 +3,7 @@
 Provides portfolio persistence using SQLModel ORM with SQLite/PostgreSQL.
 """
 
+from datetime import datetime
 from uuid import UUID
 
 from sqlmodel import select
@@ -96,7 +97,3 @@ class SQLModelPortfolioRepository:
         )
         result = await self._session.execute(statement)
         return result.scalar() is not None
-
-
-# Import datetime for updated_at
-from datetime import datetime

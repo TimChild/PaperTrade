@@ -5,9 +5,9 @@ Provides transaction persistence using SQLModel ORM with append-only semantics.
 
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlalchemy.exc import IntegrityError
 
 from papertrade.adapters.outbound.database.models import TransactionModel
 from papertrade.domain.entities.transaction import Transaction, TransactionType

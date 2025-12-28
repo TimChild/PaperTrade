@@ -29,13 +29,14 @@ from papertrade.application.commands.deposit_cash import (
     DepositCashCommand,
     DepositCashHandler,
 )
-from papertrade.application.commands.sell_stock import SellStockCommand, SellStockHandler
+from papertrade.application.commands.sell_stock import (
+    SellStockCommand,
+    SellStockHandler,
+)
 from papertrade.application.commands.withdraw_cash import (
     WithdrawCashCommand,
     WithdrawCashHandler,
 )
-from papertrade.application.dtos.portfolio_dto import PortfolioDTO
-from papertrade.application.dtos.holding_dto import HoldingDTO
 from papertrade.application.queries.get_portfolio import (
     GetPortfolioHandler,
     GetPortfolioQuery,
@@ -197,7 +198,7 @@ async def get_portfolio(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Portfolio not found: {portfolio_id}",
-        )
+        ) from None
 
     # Verify user owns this portfolio
     if portfolio_dto.user_id != current_user:
