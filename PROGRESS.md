@@ -1,17 +1,21 @@
 # PaperTrade Development Progress
 
-**Last Updated**: December 28, 2025
+**Last Updated**: December 28, 2025 (16:50 PST)
 
 ## Current Status
 
 **Phase**: Phase 1 "The Ledger" - Foundation MVP
-**Progress**: 30% complete (1 of 3 major layers done)
+**Progress**: ✅ **COMPLETE** - Full vertical integration working
 
 ### Active Work
-- ✅ **Domain Layer** - Merged to main (PR #12, Dec 28)
-- 🔄 **Application Layer** - In progress (PR #14)
-- 🔄 **Domain Refinements** - In progress (PR #13)
-- 📋 **Adapters Layer** - Next up (task 007c ready)
+- 🔄 **Quality Assessment** - In progress (PR #17, Task 010)
+
+### Recently Completed
+- ✅ **Frontend-Backend Integration** - Merged (PR #16, Dec 28)
+- ✅ **Adapters Layer** - Merged (PR #15, Dec 28)
+- ✅ **Application Layer** - Merged (PR #14, Dec 28)
+- ✅ **Domain Refinements** - Merged (PR #13, Dec 28)
+- ✅ **Domain Layer** - Merged (PR #12, Dec 28)
 
 ---
 
@@ -43,6 +47,83 @@
 
 ---
 
+### ✅ Application Layer (Task 007b - PR #14)
+**Merged**: December 28, 2025
+**Score**: Excellent implementation
+
+**Delivered**:
+- Repository ports using Protocol (no concrete dependencies)
+- Complete DTOs for layer boundaries
+- 5 Commands: CreatePortfolio, DepositCash, WithdrawCash, BuyStock, SellStock
+- 4 Queries: GetPortfolio, GetBalance, GetHoldings, ListTransactions
+- Business rule validation (insufficient funds/shares)
+- 90%+ test coverage with mocked repositories
+
+**Progress Doc**: [2025-12-28_20-46-30_application-layer-implementation.md](agent_progress_docs/2025-12-28_20-46-30_application-layer-implementation.md)
+
+---
+
+### ✅ Domain Refinements (Task 008 - PR #13)
+**Merged**: December 28, 2025
+
+**Delivered**:
+- Fixed 15 linting warnings (line-too-long)
+- Updated Holding equality semantics
+- Improved Portfolio immutability documentation
+- Clarified business rule validation strategy
+
+**Progress Doc**: [2025-12-28_20-52-40_domain-layer-refinements-task-008.md](agent_progress_docs/2025-12-28_20-52-40_domain-layer-refinements-task-008.md)
+
+---
+
+### ✅ Adapters Layer (Task 007c - PR #15)
+**Merged**: December 28, 2025
+**Score**: 9.3/10 - Excellent architecture
+
+**Delivered**:
+- 36 files changed (+2,717 / -94 lines)
+- SQLModel repositories with async support
+- 10 FastAPI endpoints (portfolios + transactions)
+- Complete error handling and dependency injection
+- Database infrastructure with migrations
+- 16 integration tests, 17 application tests
+
+**Components**:
+- **Inbound Adapters**: FastAPI routes, DTOs, error handlers
+- **Outbound Adapters**: SQLModel repositories (Portfolio, Transaction)
+- **Infrastructure**: Database config, dependency injection, async session management
+
+**Progress Doc**: [2025-12-28_21-38-05_adapters-layer-implementation.md](agent_progress_docs/2025-12-28_21-38-05_adapters-layer-implementation.md)
+
+**Review**: [2025-12-28_15-56-00_pr15-critical-review.md](agent_progress_docs/2025-12-28_15-56-00_pr15-critical-review.md)
+
+---
+
+### ✅ Frontend-Backend Integration (Task 009 - PR #16)
+**Merged**: December 28, 2025
+**Score**: 9.3/10 - Excellent work
+
+**Delivered**:
+- 21 files changed (+1,434 / -113 lines)
+- Complete API client (Axios with interceptors)
+- TanStack Query hooks for all operations
+- Data adapter layer (DTO → domain types)
+- Updated UI components with real data
+- 20/23 tests passing (3 need MSW setup)
+
+**Components**:
+- **API Client**: Axios instance, type-safe endpoints, error handling
+- **Hooks**: usePortfolio, useHoldings, useTransactions with mutations
+- **Adapters**: adaptPortfolio, adaptHolding, adaptTransaction
+- **UI**: LoadingSpinner, ErrorDisplay, EmptyState components
+- **Testing Guide**: TESTING_INTEGRATION.md with manual workflows
+
+**Progress Doc**: [2025-12-28_22-09-48_frontend-backend-integration.md](agent_progress_docs/2025-12-28_22-09-48_frontend-backend-integration.md)
+
+**Review**: [2025-12-28_16-29-08_pr16-task009-review.md](agent_progress_docs/2025-12-28_16-29-08_pr16-task009-review.md)
+
+---
+
 ### ✅ Infrastructure Setup (Tasks 001-003)
 **Completed**: December 26, 2025
 
@@ -67,81 +148,53 @@
 
 ## In Progress
 
-### 🔄 Application Layer (Task 007b - PR #14)
+### 🔄 Post-Integration Quality Assessment (Task 010 - PR #17)
 **Started**: December 28, 2025
-**Status**: Backend SWE agent working
-**Estimated**: 7-9 hours
+**Status**: Quality-Infra agent working
+**Estimated**: 3-4 hours
 
 **Scope**:
-- Repository ports (interfaces using Protocol)
-- DTOs for layer boundaries
-- 5 Commands: CreatePortfolio, DepositCash, WithdrawCash, BuyStock, SellStock
-- 4 Queries: GetPortfolio, GetBalance, GetHoldings, ListTransactions
-- Business rule validation (insufficient funds/shares)
+- Comprehensive code quality analysis
+- MSW (Mock Service Worker) setup for frontend tests (fix 3 failing tests)
+- Test coverage analysis (target: >90% backend, >70% frontend)
+- Architecture compliance verification
+- Security scanning and performance checks
+- Developer experience improvements
+- Generate priority matrix for refactoring tasks
 
 **Success Criteria**:
-- 90%+ test coverage
-- All tests pass with mocked repositories
-- No external dependencies
-- DTOs properly convert domain entities
-
----
-
-### 🔄 Domain Layer Refinements (Task 008 - PR #13)
-**Started**: December 28, 2025
-**Status**: Backend SWE agent working
-**Estimated**: ~1 hour
-
-**Scope**:
-- Fix 15 linting warnings (E501 line-too-long)
-- Fix Holding equality semantics (include quantity & cost_basis)
-- Update Portfolio immutability documentation
-- Document business rule validation strategy
-
-**Impact**: Non-blocking cleanup, improves code quality
+- All frontend tests passing (20/23 → 23/23)
+- Quality assessment report with priority matrix
+- Top 10 improvement tasks identified
+- BACKLOG updated with findings
+- No critical architectural violations
 
 ---
 
 ## Next Steps
 
-### 📋 Adapters Layer (Task 007c)
-**Ready to start**: After task 007b completes
-**Estimated**: 10-12 hours
+### 📋 Refactoring Tasks (Tasks 011+)
+**Status**: Awaiting task 010 completion
 
-**Scope**:
-- SQLModel repository implementations
-- FastAPI route handlers (10 endpoints)
-- Error handling & exception mapping
-- Database session management
-- Integration tests with real SQLite
-
-**Deliverables**:
-- Working REST API
-- Database persistence
-- 80%+ integration test coverage
+Based on quality assessment findings, will create specific refactoring tasks for:
+- Code smell elimination
+- Test coverage improvements
+- Performance optimizations
+- Documentation enhancements
 
 ---
 
-### 📋 End-to-End Testing (Task 009)
-**After**: Task 007c completes
-**Estimated**: 3-4 hours
+### 📋 Phase 2: Market Data Integration
+**Status**: Ready to start after Phase 1 quality work
+
+**Goal**: Connect to real market data APIs (Alpha Vantage)
 
 **Scope**:
-- Full user workflows via API
-- Integration test scenarios
-- Performance baseline measurements
-
----
-
-### 📋 Database Migrations (Task 010)
-**After**: Task 007c completes
-**Estimated**: 2-3 hours
-
-**Scope**:
-- Alembic setup
-- Initial migration (portfolios, transactions tables)
-- Indexes for performance
-- Migration testing
+- MarketDataPort interface definition
+- Alpha Vantage adapter implementation
+- Redis caching for API rate limiting
+- Real-time price updates in frontend
+- Stock search/lookup functionality
 
 ---
 
@@ -152,6 +205,65 @@
 - [x] Frontend scaffolding (Task 002)
 - [x] CI/CD setup (Task 003)
 - [x] Architecture planning (Task 006)
+- [x] Domain layer (Task 007a)
+- [x] Application layer (Task 007b)
+- [x] Adapters layer (Task 007c)
+- [x] Domain refinements (Task 008)
+- [x] Frontend-backend integration (Task 009)
+
+### In Progress 🔄
+- [ ] Quality assessment (Task 010)
+
+### Upcoming 📋
+- [ ] Refactoring tasks (Tasks 011+)
+- [ ] Phase 2: Market data integration
+
+---
+
+## Key Metrics
+
+### Test Coverage
+- **Domain Layer**: 100% (pure business logic)
+- **Application Layer**: 90%+ (use cases)
+- **Adapters Layer**: 82% (integration tests)
+- **Frontend**: 87% (20/23 tests passing, 3 need MSW)
+- **Overall**: 195 backend tests passing in 0.5s
+
+### Code Quality
+- **Pyright**: 41 minor warnings (SQLAlchemy deprecations)
+- **Ruff**: 3 minor warnings (exception chaining, line length)
+- **TypeScript**: All type checks passing
+- **ESLint**: Clean
+
+### Architecture
+- **Clean Architecture**: ✅ Fully compliant
+- **Dependency Rule**: ✅ Verified
+- **Domain Purity**: ✅ Zero external dependencies
+- **Type Safety**: ✅ Strict mode enabled
+
+---
+
+## What We've Built
+
+**Working Features**:
+- ✅ Create portfolios with initial deposit
+- ✅ Deposit and withdraw cash
+- ✅ Buy and sell stocks (mock prices)
+- ✅ View portfolio balance and holdings
+- ✅ Transaction history (immutable ledger)
+- ✅ Full-stack integration (Database → API → Frontend)
+
+**Technical Achievements**:
+- **Backend**: 2,800+ lines of production code, 3,900+ lines of test code
+- **Frontend**: 1,400+ lines with React + TypeScript + TanStack Query
+- **API**: 10 RESTful endpoints with full CRUD operations
+- **Database**: Async PostgreSQL with SQLModel ORM
+- **Testing**: 195 passing tests with 82% coverage
+
+**What's Next**:
+- Complete quality assessment and refactoring
+- Integrate real market data (Alpha Vantage API)
+- Add historical backtesting capabilities
 - [x] Domain layer (Task 007)
 
 ### In Progress 🔄

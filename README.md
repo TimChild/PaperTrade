@@ -4,17 +4,19 @@
 
 A stock market emulation platform for practicing trading strategies without risking real money.
 
-> **Status**: � Phase 1 "The Ledger" - Domain layer complete, Application layer in progress
+> **Status**: ✅ Phase 1 "The Ledger" - Complete vertical integration (Database → API → Frontend)
 >
-> **Latest**: Domain layer with 158 passing tests merged to main (Dec 28, 2025)
+> **Latest**: Frontend-backend integration merged to main (Dec 28, 2025)
 
 ## Overview
 
 PaperTrade allows users to:
-- Start with virtual cash ($10K default) and practice investing
-- Track portfolio performance with real market data
-- Backtest strategies against historical data
-- (Future) Implement automated trading algorithms
+- ✅ Start with virtual cash and practice investing
+- ✅ Create portfolios and execute trades
+- ✅ Track holdings and transaction history
+- 🚧 Real-time market data integration (Phase 2)
+- 📋 Backtest strategies against historical data (Phase 3)
+- 📋 Implement automated trading algorithms (Phase 4)
 
 ## Philosophy
 
