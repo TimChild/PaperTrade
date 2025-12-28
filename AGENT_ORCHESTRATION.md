@@ -445,6 +445,44 @@ git push --force-with-lease
 4. Consider updating agent instructions in `.github/agents/`
 5. If repeatedly problematic, refine task templates
 
+### GitHub CLI Commands Hang (Interactive Pager)
+
+**Problem**: Commands like `gh pr list`, `gh agent-task list` appear to produce no output and hang indefinitely.
+
+**Cause**: The GitHub CLI uses an interactive pager (like `less`) by default, waiting for user input (press 'q' to quit).
+
+**Solution**: Disable the pager by setting `GH_PAGER=""` environment variable:
+
+```bash
+# Single command
+GH_PAGER="" gh pr list --state open --limit 5
+
+# Multiple commands in a script
+export GH_PAGER=""
+gh pr list
+gh agent-task list
+gh pr view 15
+```
+
+**Best Practice for Agents/Automation**:
+Always use `GH_PAGER=""` when running `gh` commands in scripts or automated workflows:
+
+```bash
+# ✅ CORRECT - Non-interactive
+GH_PAGER="" gh pr list --json number,title,state
+
+# ✅ CORRECT - With formatting
+GH_PAGER="" gh agent-task list --limit 3
+
+# ❌ WRONG - Will hang waiting for 'q' keypress
+gh pr list  # Hangs in automation!
+```
+
+**Alternative**: Use `| cat` to force non-interactive mode:
+```bash
+gh pr list | cat
+```
+
 ### Terminal Hangs on Long Commands
 
 **Problem**: `gh agent-task create` with long arguments causes terminal to freeze.
