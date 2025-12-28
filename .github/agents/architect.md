@@ -160,14 +160,14 @@ What becomes easier or more difficult to do because of this change?
 └─────────────────────────────────────────┘
 
 Dependencies point INWARD only.
-```ocumentation Style
+```
+
+### Documentation Style
 - **High-level specifications, not implementation code**
 - Use tables, bullet points, and prose descriptions
 - Pseudocode should be language-agnostic (no Python/TypeScript specific syntax)
 - Focus on WHAT needs to be built, not HOW to build it
 - Example: "Use Pydantic BaseModel with frozen=True" not `@dataclass(frozen=True)`
-
-### D
 
 ## Guiding Principles
 

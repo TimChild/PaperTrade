@@ -164,16 +164,17 @@ Perfect for domain objects that need strong validation and API integration.
 
 ### Why Protocol for Repository Interfaces?
 
-```python
-class PortfolioRepository(Protocol):
-    async def get(self, portfolio_id: UUID) -> Portfolio | None: ...
-```
+Repository interfaces use Python's `Protocol` for structural typing:
 
-Benefits:
+- Define contract using `Protocol` class with method signatures
+- Implementations don't need to inherit from Protocol (structural typing)
+- Multiple implementations possible (in-memory, PostgreSQL, mock)
+
+**Benefits:**
 - Structural typing (duck typing with types)
 - No runtime overhead
 - Clear contract without coupling to implementation
-- Multiple implementations (in-memory, PostgreSQL, mock)
+- Enables dependency injection without inheritance
 
 ## Core Invariants
 
@@ -199,17 +200,10 @@ Using Hypothesis to verify:
 - Portfolio balance consistency
 - Holdings quantity = Σ(buys) - Σ(sells)
 
-### Example
-```python
-from hypothesis import given
-from hypothesis.strategies import decimals
-
-@given(decimals(min_value=0, max_value=1_000_000, places=2))
-def test_money_addition_commutative(amount: Decimal):
-    a = Money(amount, "USD")
-    b = Money(amount, "USD")
-    assert a + b == b + a
-```
+**Example test properties:**
+- Money addition is commutative: `a + b == b + a`
+- Money addition is associative: `(a + b) + c == a + (b + c)`
+- Multiply then divide returns original: `(money * factor) / factor == money`
 
 ## Implementation Guidelines
 
@@ -225,24 +219,11 @@ def test_money_addition_commutative(amount: Decimal):
 ### Type Annotations
 All domain code must have complete type hints:
 
-```python
-def calculate_total_value(
-    holdings: list[Holding],
-    prices: dict[Ticker, Money],
-    cash_balance: Money,
-) -> Money:
-    """Calculate total portfolio value.
-
-    Args:
-        holdings: Current holdings
-        prices: Current market prices per ticker
-        cash_balance: Available cash
-
-    Returns:
-        Total portfolio value (holdings + cash)
-    """
-    ...
-```
+**Requirements:**
+- Every function has parameter types and return type
+- Use domain types (Money, Ticker, Holding) not primitives
+- Generic collections should specify element types (e.g., `list[Holding]`, `dict[Ticker, Money]`)
+- All functions include docstrings with Args and Returns sections
 
 ### No `Any` Types
 The domain should never use `Any`. If you need flexibility, use:
