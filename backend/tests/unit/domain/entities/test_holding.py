@@ -65,8 +65,23 @@ class TestHoldingCalculations:
 class TestHoldingEquality:
     """Tests for Holding equality semantics."""
 
-    def test_equality_based_on_ticker(self) -> None:
-        """Two holdings with same ticker should be equal."""
+    def test_equality_based_on_all_fields(self) -> None:
+        """Holdings should be equal only if ticker, quantity, AND cost_basis match."""
+        h1 = Holding(
+            ticker=Ticker("AAPL"),
+            quantity=Quantity(Decimal("10")),
+            cost_basis=Money(Decimal("1000.00")),
+        )
+        h2 = Holding(
+            ticker=Ticker("AAPL"),
+            quantity=Quantity(Decimal("10")),
+            cost_basis=Money(Decimal("1000.00")),
+        )
+
+        assert h1 == h2
+
+    def test_inequality_different_quantity(self) -> None:
+        """Holdings with same ticker but different quantity should not be equal."""
         h1 = Holding(
             ticker=Ticker("AAPL"),
             quantity=Quantity(Decimal("10")),
@@ -75,10 +90,25 @@ class TestHoldingEquality:
         h2 = Holding(
             ticker=Ticker("AAPL"),
             quantity=Quantity(Decimal("20")),  # Different quantity
-            cost_basis=Money(Decimal("2000.00")),  # Different cost
+            cost_basis=Money(Decimal("2000.00")),
         )
 
-        assert h1 == h2
+        assert h1 != h2
+
+    def test_inequality_different_cost_basis(self) -> None:
+        """Holdings with same ticker and quantity but different cost should not be equal."""
+        h1 = Holding(
+            ticker=Ticker("AAPL"),
+            quantity=Quantity(Decimal("10")),
+            cost_basis=Money(Decimal("1000.00")),
+        )
+        h2 = Holding(
+            ticker=Ticker("AAPL"),
+            quantity=Quantity(Decimal("10")),
+            cost_basis=Money(Decimal("1500.00")),  # Different cost
+        )
+
+        assert h1 != h2
 
     def test_inequality_different_tickers(self) -> None:
         """Holdings with different tickers should not be equal."""

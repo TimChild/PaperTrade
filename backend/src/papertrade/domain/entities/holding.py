@@ -46,25 +46,29 @@ class Holding:
         return Money(rounded, self.cost_basis.currency)
 
     def __eq__(self, other: object) -> bool:
-        """Equality based on ticker only (one holding per ticker per portfolio).
+        """Equality based on ticker, quantity, and cost_basis.
 
         Args:
             other: Object to compare
 
         Returns:
-            True if other is Holding with same ticker
+            True if other is Holding with same ticker, quantity, and cost_basis
         """
         if not isinstance(other, Holding):
             return False
-        return self.ticker == other.ticker
+        return (
+            self.ticker == other.ticker
+            and self.quantity == other.quantity
+            and self.cost_basis == other.cost_basis
+        )
 
     def __hash__(self) -> int:
-        """Hash based on ticker for use in dicts/sets.
+        """Hash based on ticker, quantity, and cost_basis for use in dicts/sets.
 
         Returns:
-            Hash of ticker
+            Hash of (ticker, quantity, cost_basis)
         """
-        return hash(self.ticker)
+        return hash((self.ticker, self.quantity.shares, self.cost_basis.amount))
 
     def __repr__(self) -> str:
         """Return repr for debugging.
