@@ -124,6 +124,72 @@ This file tracks minor improvements, tech debt, and enhancement tasks that don't
 
 ---
 
+---
+
+## New Items (From Task 010: Code Quality Assessment - 2025-12-28)
+
+### P3: Code Improvements
+
+**Context**: Post-integration quality assessment identified minor improvements that don't block Phase 2.
+
+**Tasks**:
+
+1. **Extract Portfolio Verification Helper** - ~30 minutes
+   - **Issue**: Same 4-line pattern in all 5 command handlers (CreatePortfolio, Deposit, Withdraw, BuyStock, SellStock)
+   - **Solution**: Create utility function or base class method
+   - **Example**:
+     ```python
+     async def verify_portfolio_exists(
+         repository: PortfolioRepository, 
+         portfolio_id: UUID
+     ) -> Portfolio:
+         portfolio = await repository.get(portfolio_id)
+         if portfolio is None:
+             raise InvalidPortfolioError(f"Portfolio not found: {portfolio_id}")
+         return portfolio
+     ```
+   - **Impact**: Reduces duplication from 20 lines → 5 lines
+   - **Files**: All command handlers in `backend/src/papertrade/application/commands/`
+   - **Priority**: P3 (low priority - only 4 lines duplicated)
+
+2. **Add Database Indexes** - ~1 hour
+   - **Issue**: No indexes defined for common queries
+   - **Solution**: Add indexes to SQLModel models
+   - **Indexes needed**:
+     - `Transaction.portfolio_id` (for transaction queries)
+     - `Transaction.timestamp` (for sorting)
+   - **Example**:
+     ```python
+     from sqlmodel import Index
+     
+     class TransactionModel(SQLModel, table=True):
+         # ... fields
+         
+         __table_args__ = (
+             Index('idx_portfolio_id', 'portfolio_id'),
+             Index('idx_timestamp', 'timestamp'),
+         )
+     ```
+   - **Files**: `backend/src/papertrade/adapters/outbound/database/models.py`
+   - **Testing**: Verify queries still work, add migration
+   - **Priority**: P3 (nice for performance, not critical for MVP)
+
+3. **Bundle Size Analysis** - ~30 minutes
+   - **Goal**: Understand frontend bundle composition
+   - **Commands**:
+     ```bash
+     cd frontend
+     npm run build
+     npx vite-bundle-visualizer
+     ```
+   - **Actions**: Document findings, identify large dependencies
+   - **Priority**: P4 (informational, optimization if needed)
+
+**Estimated Total Time**: ~2 hours
+**Priority**: P3-P4 (optional improvements)
+
+---
+
 ## Future Enhancements (Phase 2+)
 
 From domain layer progress doc:
@@ -135,4 +201,13 @@ From domain layer progress doc:
 5. **Split Handling**: Adjust prices for stock splits
 6. **Performance**: Cache holdings calculations
 
-**Status**: Deferred to Phase 2
+From quality assessment (Task 010):
+
+7. **Architecture Decision Records (ADRs)**: Document key architectural decisions
+8. **Error Scenario Tests**: Add MSW-based error handling tests
+9. **Form Interaction Tests**: Test trade form with user events
+10. **Create Portfolio UI**: Add UI component for portfolio creation
+11. **Multiple Portfolio Support**: List and switch between portfolios
+12. **WebSocket Integration**: Real-time price updates (Phase 3)
+
+**Status**: Deferred to Phase 2+
