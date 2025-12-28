@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { portfoliosApi } from '@/services/api'
+import { portfoliosApi } from '@/services/api/portfolios'
 
 /**
  * Hook to fetch holdings for a portfolio

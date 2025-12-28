@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { portfoliosApi } from '@/services/api'
+import { portfoliosApi } from '@/services/api/portfolios'
 import type {
   CreatePortfolioRequest,
   DepositRequest,

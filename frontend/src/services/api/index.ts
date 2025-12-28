@@ -3,5 +3,5 @@
  */
 export { apiClient } from './client'
 export { portfoliosApi } from './portfolios'
-export { transactionsApi } from './transactions'
+export { transactionsApi, type ListTransactionsParams } from './transactions'
 export type * from './types'
