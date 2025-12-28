@@ -170,20 +170,85 @@ Continue with the next task!
 
 ## Running Multiple Agents in Parallel
 
-Agents can work simultaneously on independent tasks:
+Agents can work simultaneously on independent tasks. This is a **powerful technique** that significantly speeds up development.
 
+### Successful Parallel Patterns
+
+**Pattern 1: Quick Fixes + Major Work** ✅ (Proven Dec 28, 2025)
 ```bash
-# Example: Start domain work and UI work in parallel
-gh agent-task create --custom-agent architect -F agent_tasks/004_domain-entities.md
-gh agent-task create --custom-agent frontend-swe -F agent_tasks/005_portfolio-ui.md
+# Start cleanup/refinements (1 hour)
+gh agent-task create --custom-agent backend-swe -F agent_tasks/008_domain-layer-refinements.md
+
+# Start major feature work (7-9 hours)
+gh agent-task create --custom-agent backend-swe -F agent_tasks/007b_implement-application-layer.md
+```
+**Result**: Quick fixes merge first, major work continues unaffected. Both agents work independently.
+
+**Pattern 2: Frontend + Backend (Independent Layers)**
+```bash
+# Backend domain layer (pure logic, no UI dependencies)
+gh agent-task create --custom-agent backend-swe -F agent_tasks/007_implement-domain-layer.md
+
+# Frontend with mock data (no backend dependencies yet)
+gh agent-task create --custom-agent frontend-swe -F agent_tasks/005_portfolio-dashboard-ui.md
+```
+**Result**: Both work with mocked boundaries, integrate later.
+
+**Pattern 3: Architecture + Infrastructure**
+```bash
+# Architect designs the domain model
+gh agent-task create --custom-agent architect -F agent_tasks/004_domain-architecture-design.md
+
+# Quality/infra improves CI pipeline
+gh agent-task create --custom-agent quality-infra -F agent_tasks/003_setup-cicd.md
+```
+**Result**: Different concerns, no conflicts.
+
+### Rules for Safe Parallelization
+
+✅ **DO run in parallel when:**
+- Tasks modify different layers (domain vs adapters vs infrastructure)
+- One task is quick cleanup/docs, other is major feature work
+- Tasks work on completely separate features/modules
+- Tasks are in different tech stacks (backend Python vs frontend TypeScript)
+- Tasks have mocked boundaries (frontend mocks API, backend mocks DB)
+
+❌ **DON'T run in parallel when:**
+- One task depends on another's output (adapters need application layer ports)
+- Both modify the same files or modules
+- Sequential work is inherently required by architecture
+- Both modify shared configuration (though usually handled by git merge)
+
+### Managing Parallel Work
+
+**Before Starting**:
+1. Merge any completed PRs to main first
+2. Commit task files to main
+3. Start agents in quick succession
+
+**During Execution**:
+```bash
+# Monitor all active tasks
+gh agent-task list --limit 5
+
+# Check specific task progress
+gh pr view <PR_NUMBER> --web
 ```
 
-**Rules for parallelization:**
-- ✅ Tasks that don't modify the same files
-- ✅ Frontend (mock data) + Backend (domain layer)
-- ✅ Different features in different directories
-- ❌ Tasks where one depends on another's output
-- ❌ Both modifying the same configuration files
+**After Completion**:
+1. Merge quick tasks first (less merge conflict risk)
+2. Pull main before merging longer tasks
+3. Resolve any conflicts in longer task's PR if needed
+
+### Real Example (December 28, 2025)
+
+Started in parallel:
+- **PR #13**: Domain refinements (linting, docs) - ~1 hour
+- **PR #14**: Application layer (commands, queries) - 7-9 hours
+
+**Result**: PR #13 merged quickly, PR #14 continues independently. Zero conflicts because they modified different parts of the codebase.
+
+**Throughput gain**: Instead of 10 total hours sequential, we get 9 hours wall time (10% improvement). More importantly, we get immediate value from quick fixes while major work proceeds.
 
 ---
 
@@ -232,7 +297,178 @@ task lint           # All linters
 
 ---
 
-## Important Terminal Limitations
+## Best Practices (Lessons Learned)
+
+### Task Creation
+
+**✅ DO**:
+- Create detailed task files with clear success criteria
+- Include code examples and file structures
+- Reference architecture plans explicitly
+- Commit tasks to main before starting agents
+- Number tasks sequentially (001, 002, 003...)
+
+**❌ DON'T**:
+- Give vague instructions ("make it better")
+- Assume agent knows implicit context
+- Start agents without committed task files
+- Skip documentation of expected outputs
+
+### Agent Review
+
+**✅ DO**:
+- Review PRs critically - agents aren't perfect
+- Test locally when possible (pull branch, run tests)
+- Check adherence to architecture plans
+- Verify no forbidden dependencies (domain layer purity)
+- Score agent work objectively (0-10 scale)
+
+**❌ DON'T**:
+- Merge without review
+- Assume tests passing = good design
+- Skip checking for architectural violations
+- Ignore code quality metrics
+
+### Workflow Efficiency
+
+**✅ DO**:
+- Run independent tasks in parallel
+- Merge quick wins immediately
+- Create BACKLOG.md for minor improvements
+- Prepare next task while agents work
+- Use PROGRESS.md to track completed work
+
+**❌ DON'T**:
+- Wait for one agent when you could start another
+- Let minor issues block major work
+- Forget to document agent decisions
+- Skip updating project status
+
+### Communication with Agents
+
+**✅ DO**:
+- Be specific about requirements
+- Provide architecture documents
+- Set clear success criteria
+- Reference existing patterns to follow
+- Give agents examples of good code
+
+**❌ DON'T**:
+- Assume agents remember previous context
+- Use ambiguous language
+- Change requirements mid-task
+- Expect agents to "figure it out"
+
+### Quality Gates
+
+**Before Merging**:
+- [ ] All tests pass
+- [ ] Type checking passes (pyright/tsc)
+- [ ] Linting passes (ruff/eslint)
+- [ ] Code follows architecture plan
+- [ ] No forbidden dependencies
+- [ ] Progress documented
+
+**Exception**: Minor linting warnings (E501 line-too-long) can be fixed in follow-up if non-blocking.
+
+### Critical Review Process
+
+When reviewing agent work:
+
+1. **Check Alignment**: Does it match the architecture plan?
+2. **Test Quality**: Are tests comprehensive? Do they test behavior, not implementation?
+3. **Code Quality**: Is it readable, maintainable, idiomatic?
+4. **Dependencies**: Are layers properly isolated?
+5. **Documentation**: Is the agent's work self-documenting?
+
+**Scoring Guide**:
+- 10/10: Perfect, production-ready
+- 9/10: Excellent, minor cosmetic issues
+- 7-8/10: Good, needs improvements before merge
+- 5-6/10: Acceptable, significant refactoring needed
+- <5/10: Needs major rework
+
+### Real Example: Domain Layer Review (Dec 28, 2025)
+
+**Task**: Implement domain layer (task 007)
+**Agent**: backend-swe
+**PR**: #12
+
+**Review Process**:
+1. ✅ Ran tests: 158/158 passing
+2. ✅ Checked dependencies: `grep` for forbidden imports
+3. ✅ Verified architecture: Compared to domain-layer.md spec
+4. ✅ Reviewed code quality: Immutability, validation, error handling
+5. ⚠️ Found minor issues: 15 E501 linting warnings, Holding equality semantics
+
+**Score**: 9/10 - Excellent foundation
+
+**Action**: Merged PR, created task 008 for minor fixes to run in parallel with next major work.
+
+---
+
+## Troubleshooting
+
+### Agent Task Fails to Start
+
+```bash
+# Check if agent exists
+ls .github/agents/
+
+# Verify task file is committed
+git log --oneline agent_tasks/NNN_task-name.md
+
+# Check gh CLI is authenticated
+gh auth status
+```
+
+### PR Has Conflicts
+
+```bash
+# Pull latest main
+git checkout main
+git pull origin main
+
+# Rebase PR branch
+git checkout <branch-name>
+git rebase main
+
+# If agent created the PR, may need to force push (be careful)
+git push --force-with-lease
+```
+
+### Agent Output Doesn't Match Expectations
+
+1. Review the task file - was it clear enough?
+2. Check if agent followed instructions
+3. Provide feedback in PR comments
+4. Consider updating agent instructions in `.github/agents/`
+5. If repeatedly problematic, refine task templates
+
+### Terminal Hangs on Long Commands
+
+**Problem**: `gh agent-task create` with long arguments causes terminal to freeze.
+
+**Solution**: Use temp files for long task descriptions:
+
+```bash
+# For very long task descriptions
+cat > /tmp/task_description.txt << 'EOF'
+[Long task description here...]
+EOF
+
+gh agent-task create --custom-agent backend-swe -F /tmp/task_description.txt
+```
+
+Or use the file-based approach (recommended):
+```bash
+# Always use -F with task files
+gh agent-task create --custom-agent backend-swe -F agent_tasks/007_task-name.md
+```
+
+---
+
+## Quick Reference Commands
 
 ### Long Command Workaround
 

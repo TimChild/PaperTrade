@@ -4,7 +4,9 @@
 
 A stock market emulation platform for practicing trading strategies without risking real money.
 
-> **Status**: 🚧 Early Development - Setting up foundations
+> **Status**: � Phase 1 "The Ledger" - Domain layer complete, Application layer in progress
+>
+> **Latest**: Domain layer with 158 passing tests merged to main (Dec 28, 2025)
 
 ## Overview
 
