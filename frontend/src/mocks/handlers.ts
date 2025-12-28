@@ -1,0 +1,108 @@
+/**
+ * Mock Service Worker (MSW) handlers for testing
+ * These handlers intercept HTTP requests during tests and return mock responses
+ */
+import { http, HttpResponse } from 'msw'
+
+const API_BASE_URL = 'http://localhost:8000/api/v1'
+
+// Mock data matching backend DTOs
+const mockPortfolio = {
+  id: '00000000-0000-0000-0000-000000000001',
+  user_id: '00000000-0000-0000-0000-000000000001',
+  name: 'Test Portfolio',
+  created_at: '2024-01-01T00:00:00Z',
+}
+
+const mockBalance = {
+  amount: '10000.00',
+  currency: 'USD',
+  as_of: '2024-01-01T00:00:00Z',
+}
+
+const mockHoldings = {
+  holdings: [
+    {
+      ticker: 'AAPL',
+      quantity: '10.00',
+      cost_basis: '1500.00',
+      average_cost_per_share: '150.00',
+    },
+  ],
+}
+
+const mockTransactions = {
+  transactions: [
+    {
+      id: '00000000-0000-0000-0000-000000000002',
+      portfolio_id: '00000000-0000-0000-0000-000000000001',
+      transaction_type: 'DEPOSIT',
+      timestamp: '2024-01-01T00:00:00Z',
+      cash_change: '10000.00',
+      ticker: null,
+      quantity: null,
+      price_per_share: null,
+      notes: 'Initial deposit',
+    },
+  ],
+  total_count: 1,
+  limit: 50,
+  offset: 0,
+}
+
+// API handlers
+export const handlers = [
+  // List portfolios
+  http.get(`${API_BASE_URL}/portfolios`, () => {
+    return HttpResponse.json([mockPortfolio])
+  }),
+
+  // Get portfolio by ID
+  http.get(`${API_BASE_URL}/portfolios/:id`, () => {
+    return HttpResponse.json(mockPortfolio)
+  }),
+
+  // Get portfolio balance
+  http.get(`${API_BASE_URL}/portfolios/:id/balance`, () => {
+    return HttpResponse.json(mockBalance)
+  }),
+
+  // Get portfolio holdings
+  http.get(`${API_BASE_URL}/portfolios/:id/holdings`, () => {
+    return HttpResponse.json(mockHoldings)
+  }),
+
+  // Get portfolio transactions
+  http.get(`${API_BASE_URL}/portfolios/:id/transactions`, () => {
+    return HttpResponse.json(mockTransactions)
+  }),
+
+  // Create portfolio
+  http.post(`${API_BASE_URL}/portfolios`, async () => {
+    return HttpResponse.json({
+      portfolio_id: '00000000-0000-0000-0000-000000000001',
+      transaction_id: '00000000-0000-0000-0000-000000000002',
+    })
+  }),
+
+  // Deposit cash
+  http.post(`${API_BASE_URL}/portfolios/:id/deposit`, () => {
+    return HttpResponse.json({
+      transaction_id: '00000000-0000-0000-0000-000000000003',
+    })
+  }),
+
+  // Withdraw cash
+  http.post(`${API_BASE_URL}/portfolios/:id/withdraw`, () => {
+    return HttpResponse.json({
+      transaction_id: '00000000-0000-0000-0000-000000000004',
+    })
+  }),
+
+  // Execute trade
+  http.post(`${API_BASE_URL}/portfolios/:id/trades`, () => {
+    return HttpResponse.json({
+      transaction_id: '00000000-0000-0000-0000-000000000005',
+    })
+  }),
+]

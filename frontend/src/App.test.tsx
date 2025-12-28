@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from '@/App'
 
@@ -15,7 +15,7 @@ function createTestQueryClient() {
 }
 
 describe('App', () => {
-  it('renders without crashing', () => {
+  it('renders without crashing', async () => {
     const queryClient = createTestQueryClient()
 
     render(
@@ -24,11 +24,13 @@ describe('App', () => {
       </QueryClientProvider>
     )
 
-    // Should redirect to dashboard and render it
-    expect(screen.getByText('Portfolio Dashboard')).toBeInTheDocument()
+    // Wait for data to load (MSW will respond)
+    await waitFor(() => {
+      expect(screen.getByText('Portfolio Dashboard')).toBeInTheDocument()
+    })
   })
 
-  it('displays dashboard page by default', () => {
+  it('displays dashboard page by default', async () => {
     const queryClient = createTestQueryClient()
 
     render(
@@ -37,10 +39,12 @@ describe('App', () => {
       </QueryClientProvider>
     )
 
-    expect(screen.getByText(/Track your investments and performance/i)).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText(/Track your investments and performance/i)).toBeInTheDocument()
+    })
   })
 
-  it('renders portfolio summary section', () => {
+  it('renders portfolio summary section', async () => {
     const queryClient = createTestQueryClient()
 
     render(
@@ -49,7 +53,9 @@ describe('App', () => {
       </QueryClientProvider>
     )
 
-    // Wait for data to load and check for portfolio name
-    expect(screen.getByText(/Portfolio/i)).toBeInTheDocument()
+    // Wait for portfolio data to load
+    await waitFor(() => {
+      expect(screen.getByText('Test Portfolio')).toBeInTheDocument()
+    })
   })
 })
