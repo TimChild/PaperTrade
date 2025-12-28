@@ -196,7 +196,7 @@ Portfolio entities are mostly data holders. Business logic is in Use Cases and D
 
 | Operation | Parameters | Returns | Description | Constraints |
 |-----------|-----------|---------|-------------|-------------|
-| None | N/A | N/A | Portfolio is largely immutable | Only name can be updated |
+| None | N/A | N/A | Portfolio is fully immutable after creation | All fields are immutable |
 
 #### Equality Semantics
 Two Portfolio entities are equal if they have the same ID.

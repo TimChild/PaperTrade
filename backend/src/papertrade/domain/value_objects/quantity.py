@@ -81,9 +81,7 @@ class Quantity:
             InvalidQuantityError: If factor is negative
         """
         if factor < 0:
-            raise InvalidQuantityError(
-                f"Factor must be non-negative, got: {factor}"
-            )
+            raise InvalidQuantityError(f"Factor must be non-negative, got: {factor}")
         result = self.shares * factor
         # Quantize to 4 decimal places
         quantized = result.quantize(Decimal("0.0001"))

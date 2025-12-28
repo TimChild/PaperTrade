@@ -662,6 +662,122 @@ FastAPI routes use Pydantic models for requests and responses. Use cases return 
 
 ---
 
+## ADR-012: Business Rule Validation Location
+
+### Status
+**Accepted**
+
+### Context
+
+We need to determine where business rule validation happens (e.g., "cannot sell shares you don't own"). Options:
+
+**Option 1: Validation in Domain Services**
+- Domain services (e.g., PortfolioCalculator) validate business rules
+- Raises exceptions for invalid operations
+- Domain layer enforces all business logic
+
+**Option 2: Validation in Application Layer**
+- Domain services are pure calculators (no validation)
+- Application layer Use Cases validate before calling domain
+- Separation of calculation from validation
+
+**Option 3: Mixed Validation**
+- Some validation in domain, some in application
+- No clear separation of concerns
+
+### Decision
+
+We chose **Option 2: Validation in Application Layer**.
+
+Portfolio state calculations (PortfolioCalculator) do NOT validate business rules like "cannot sell shares you don't own". Domain services are pure calculators - they derive state from inputs. Business rule enforcement belongs in Application layer Use Cases.
+
+### Rationale
+
+1. **Domain Services as Calculators**: Domain services compute state from transaction history without judgment
+2. **Separation of Concerns**: Calculation logic separate from business rule enforcement
+3. **Flexibility**: Calculators work with any transaction history (even invalid ones) for audit/analysis
+4. **Clear Boundaries**: Application layer is responsible for orchestrating and validating operations
+5. **Testability**: Can test calculation logic independently from validation rules
+
+### Consequences
+
+#### What Becomes Easier
+- ✅ Testing domain services (pure functions, deterministic)
+- ✅ Auditing and analysis (can calculate state from any transaction history)
+- ✅ Understanding responsibilities (calculation vs validation)
+- ✅ Changing business rules (no need to modify domain services)
+
+#### What Becomes Harder
+- ❌ Must remember to validate in Use Cases (not automatic)
+- ❌ Potential for duplicate validation code across Use Cases
+
+#### Implementation Guidelines
+
+Application layer Use Cases will validate BEFORE creating transactions:
+
+**Example Use Case Implementation:**
+```python
+# Application Layer (Use Case)
+async def execute_sell_command(
+    portfolio_id: UUID,
+    ticker: Ticker,
+    quantity: Quantity,
+    price_per_share: Money,
+    repository: PortfolioRepository,
+    transaction_repository: TransactionRepository,
+) -> SellResult:
+    # 1. Get portfolio and transactions
+    portfolio = await repository.get(portfolio_id)
+    transactions = await transaction_repository.list_by_portfolio(portfolio_id)
+    
+    # 2. Calculate current holdings
+    calculator = PortfolioCalculator()
+    current_holding = calculator.calculate_holding_for_ticker(transactions, ticker)
+    
+    # 3. VALIDATE business rule
+    if current_holding is None or current_holding.quantity < quantity:
+        raise InsufficientSharesError(
+            f"Cannot sell {quantity.shares} shares of {ticker.symbol}, "
+            f"only {current_holding.quantity.shares if current_holding else 0} owned"
+        )
+    
+    # 4. Create transaction (validation passed)
+    transaction = Transaction.create_sell(
+        portfolio_id=portfolio_id,
+        ticker=ticker,
+        quantity=quantity,
+        price_per_share=price_per_share,
+    )
+    
+    # 5. Persist
+    await transaction_repository.save(transaction)
+    return SellResult(success=True, transaction_id=transaction.id)
+```
+
+**Domain Layer Remains Pure:**
+```python
+# Domain Layer (Calculator) - NO validation
+class PortfolioCalculator:
+    def calculate_holding_for_ticker(
+        self,
+        transactions: list[Transaction],
+        ticker: Ticker,
+    ) -> Holding | None:
+        """Calculate current holding for a ticker from transactions.
+        
+        Returns holding even if it has negative quantity (invalid state).
+        Caller is responsible for validation.
+        """
+        # Pure calculation - no validation
+        ...
+```
+
+### Related Decisions
+- ADR-001: Immutable Transaction Ledger (domain services calculate from ledger)
+- ADR-006: CQRS-Light (commands handle validation)
+
+---
+
 ## Design Trade-Offs Summary
 
 | Decision | Gain | Cost | Mitigation |

@@ -14,10 +14,14 @@ class Portfolio:
     Portfolio serves as the aggregate root for all trading activity. It has identity
     and lifecycle, with equality based on ID rather than properties.
 
+    Portfolio is fully immutable after creation. If changes are needed (e.g., renaming),
+    create a new Portfolio instance with the updated values and persist it via the
+    repository.
+
     Attributes:
         id: Unique portfolio identifier
         user_id: Owner of the portfolio (immutable)
-        name: Display name for portfolio (1-100 characters)
+        name: Display name for portfolio (1-100 characters, immutable)
         created_at: When portfolio was created (UTC timezone, immutable)
 
     Raises:
