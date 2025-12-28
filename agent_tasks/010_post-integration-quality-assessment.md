@@ -117,6 +117,14 @@ Check for:
 - [ ] Error cases tested
 - [ ] No brittle tests (timing, order dependency)
 
+**Frontend Testing** (CRITICAL from PR #16):
+- [ ] **MSW (Mock Service Worker) setup** - Required to fix 3 failing App.test.tsx tests
+  - Install MSW: `npm install -D msw@latest`
+  - Create `frontend/src/mocks/handlers.ts` for API mocking
+  - Configure MSW in test setup
+  - Update App.test.tsx to work with mocked API responses
+  - Verify all frontend tests passing (should go from 20/23 → 23/23)
+
 ### 4. Developer Experience
 
 **Documentation**:
