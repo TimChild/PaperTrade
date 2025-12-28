@@ -232,6 +232,48 @@ task lint           # All linters
 
 ---
 
+## Important Terminal Limitations
+
+### Long Command Workaround
+
+**⚠️ CRITICAL**: The terminal hangs when executing very long commands directly.
+
+**Solution**: Write long commands to a temporary file and use that file:
+
+```bash
+# DON'T do this (will hang):
+# gh agent-task create --custom-agent architect -F <very-long-file-path-or-content>
+
+# DO this instead:
+cat > /tmp/task_cmd.txt << 'EOF'
+gh agent-task create \
+  --custom-agent architect \
+  -F agent_tasks/very_long_filename.md
+EOF
+
+bash /tmp/task_cmd.txt
+rm /tmp/task_cmd.txt
+```
+
+Or for heredoc content:
+```bash
+# Write content to temp file
+cat > /tmp/temp_task.md << 'EOF'
+[long task content here]
+EOF
+
+# Use the temp file
+gh agent-task create --custom-agent architect -F /tmp/temp_task.md
+rm /tmp/temp_task.md
+```
+
+**When to use this workaround:**
+- Commands longer than ~200 characters
+- Commands with heredocs or multi-line strings
+- Any command that seems to "hang" without output
+
+---
+
 ## Troubleshooting
 
 ### Agent task fails to start
