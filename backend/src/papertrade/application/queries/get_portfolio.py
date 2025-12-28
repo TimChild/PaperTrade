@@ -44,7 +44,7 @@ class GetPortfolioHandler:
         """
         self._portfolio_repository = portfolio_repository
 
-    def execute(self, query: GetPortfolioQuery) -> GetPortfolioResult:
+    async def execute(self, query: GetPortfolioQuery) -> GetPortfolioResult:
         """Execute the GetPortfolio query.
 
         Args:
@@ -56,7 +56,7 @@ class GetPortfolioHandler:
         Raises:
             InvalidPortfolioError: If portfolio doesn't exist
         """
-        portfolio = self._portfolio_repository.get(query.portfolio_id)
+        portfolio = await self._portfolio_repository.get(query.portfolio_id)
         if portfolio is None:
             raise InvalidPortfolioError(f"Portfolio not found: {query.portfolio_id}")
 

@@ -28,12 +28,12 @@ class InMemoryTransactionRepository:
         self._transactions: dict[UUID, Transaction] = {}
         self._lock = Lock()
 
-    def get(self, transaction_id: UUID) -> Transaction | None:
+    async def get(self, transaction_id: UUID) -> Transaction | None:
         """Retrieve a transaction by ID."""
         with self._lock:
             return self._transactions.get(transaction_id)
 
-    def get_by_portfolio(
+    async def get_by_portfolio(
         self,
         portfolio_id: UUID,
         limit: int | None = None,
@@ -65,7 +65,7 @@ class InMemoryTransactionRepository:
             end = None if limit is None else offset + limit
             return sorted_transactions[start:end]
 
-    def count_by_portfolio(
+    async def count_by_portfolio(
         self,
         portfolio_id: UUID,
         transaction_type: TransactionType | None = None,
@@ -85,7 +85,7 @@ class InMemoryTransactionRepository:
 
             return len(portfolio_transactions)
 
-    def save(self, transaction: Transaction) -> None:
+    async def save(self, transaction: Transaction) -> None:
         """Save a transaction (append-only, raises error if already exists)."""
         with self._lock:
             if transaction.id in self._transactions:

@@ -63,7 +63,7 @@ class CreatePortfolioHandler:
         self._portfolio_repository = portfolio_repository
         self._transaction_repository = transaction_repository
 
-    def execute(self, command: CreatePortfolioCommand) -> CreatePortfolioResult:
+    async def execute(self, command: CreatePortfolioCommand) -> CreatePortfolioResult:
         """Execute the CreatePortfolio command.
 
         Args:
@@ -105,8 +105,8 @@ class CreatePortfolioHandler:
         )
 
         # Persist both entities
-        self._portfolio_repository.save(portfolio)
-        self._transaction_repository.save(transaction)
+        await self._portfolio_repository.save(portfolio)
+        await self._transaction_repository.save(transaction)
 
         return CreatePortfolioResult(
             portfolio_id=portfolio_id,

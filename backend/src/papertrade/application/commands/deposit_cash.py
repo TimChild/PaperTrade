@@ -60,7 +60,7 @@ class DepositCashHandler:
         self._portfolio_repository = portfolio_repository
         self._transaction_repository = transaction_repository
 
-    def execute(self, command: DepositCashCommand) -> DepositCashResult:
+    async def execute(self, command: DepositCashCommand) -> DepositCashResult:
         """Execute the DepositCash command.
 
         Args:
@@ -74,7 +74,7 @@ class DepositCashHandler:
             InvalidTransactionError: If amount is invalid (zero, negative)
         """
         # Verify portfolio exists
-        portfolio = self._portfolio_repository.get(command.portfolio_id)
+        portfolio = await self._portfolio_repository.get(command.portfolio_id)
         if portfolio is None:
             raise InvalidPortfolioError(f"Portfolio not found: {command.portfolio_id}")
 
@@ -95,6 +95,6 @@ class DepositCashHandler:
         )
 
         # Persist transaction
-        self._transaction_repository.save(transaction)
+        await self._transaction_repository.save(transaction)
 
         return DepositCashResult(transaction_id=transaction_id)
