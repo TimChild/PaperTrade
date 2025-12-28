@@ -1,14 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
-import { portfolioService } from '@/services/portfolio'
+import { portfoliosApi } from '@/services/api/portfolios'
 
 /**
  * Hook to fetch holdings for a portfolio
  */
 export function useHoldings(portfolioId: string) {
   return useQuery({
-    queryKey: ['holdings', portfolioId],
-    queryFn: () => portfolioService.getHoldings(portfolioId),
+    queryKey: ['portfolio', portfolioId, 'holdings'],
+    queryFn: () => portfoliosApi.getHoldings(portfolioId),
     enabled: Boolean(portfolioId),
     staleTime: 30_000, // 30 seconds for financial data
+    refetchInterval: 30_000, // Refetch every 30 seconds
   })
 }

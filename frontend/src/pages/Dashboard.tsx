@@ -1,32 +1,46 @@
 import { Link } from 'react-router-dom'
-import { usePortfolios } from '@/hooks/usePortfolio'
+import { usePortfolios, usePortfolioBalance } from '@/hooks/usePortfolio'
 import { useHoldings } from '@/hooks/useHoldings'
 import { useTransactions } from '@/hooks/useTransactions'
 import { PortfolioSummaryCard } from '@/components/features/portfolio/PortfolioSummaryCard'
 import { HoldingsTable } from '@/components/features/portfolio/HoldingsTable'
 import { TransactionList } from '@/components/features/portfolio/TransactionList'
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { ErrorDisplay } from '@/components/ui/ErrorDisplay'
+import { adaptPortfolio, adaptHolding, adaptTransaction } from '@/utils/adapters'
 
 export function Dashboard(): React.JSX.Element {
   const { data: portfolios, isLoading: portfoliosLoading, isError, error } = usePortfolios()
 
   // For the dashboard, we'll show the first portfolio
-  const primaryPortfolio = portfolios?.[0]
-  const portfolioId = primaryPortfolio?.id || ''
+  const primaryPortfolioDTO = portfolios?.[0]
+  const portfolioId = primaryPortfolioDTO?.id || ''
 
-  const { data: holdings, isLoading: holdingsLoading } = useHoldings(portfolioId)
-  const { data: transactions, isLoading: transactionsLoading } = useTransactions(portfolioId)
+  const { data: balanceData, isLoading: balanceLoading } = usePortfolioBalance(portfolioId)
+  const { data: holdingsData, isLoading: holdingsLoading } = useHoldings(portfolioId)
+  const { data: transactionsData, isLoading: transactionsLoading } = useTransactions(portfolioId)
+
+  // Adapt backend DTOs to frontend types
+  const primaryPortfolio = primaryPortfolioDTO
+    ? adaptPortfolio(primaryPortfolioDTO, balanceData || null)
+    : null
+
+  const holdings = holdingsData?.holdings.map(adaptHolding) || []
+  const transactions = transactionsData?.transactions.map(adaptTransaction) || []
 
   if (isError) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="rounded-lg border border-red-300 bg-red-50 p-6 dark:border-red-700 dark:bg-red-900/20">
-          <h2 className="text-xl font-semibold text-red-700 dark:text-red-400">
-            Error Loading Portfolio
-          </h2>
-          <p className="mt-2 text-red-600 dark:text-red-500">
-            {error instanceof Error ? error.message : 'Failed to load portfolio data'}
-          </p>
-        </div>
+        <ErrorDisplay error={error} />
+      </div>
+    )
+  }
+
+  // Show loading spinner while initial data loads
+  if (portfoliosLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <LoadingSpinner size="lg" className="py-12" />
       </div>
     )
   }
@@ -45,7 +59,7 @@ export function Dashboard(): React.JSX.Element {
       <div className="space-y-8">
         {/* Portfolio Summary */}
         <section>
-          {portfoliosLoading ? (
+          {balanceLoading ? (
             <PortfolioSummaryCard
               portfolio={{
                 id: '',
@@ -99,10 +113,7 @@ export function Dashboard(): React.JSX.Element {
                 View all
               </Link>
             </div>
-            <HoldingsTable
-              holdings={holdings || []}
-              isLoading={holdingsLoading}
-            />
+            <HoldingsTable holdings={holdings} isLoading={holdingsLoading} />
           </section>
         )}
 
@@ -121,7 +132,7 @@ export function Dashboard(): React.JSX.Element {
               </Link>
             </div>
             <TransactionList
-              transactions={transactions || []}
+              transactions={transactions}
               limit={5}
               isLoading={transactionsLoading}
             />

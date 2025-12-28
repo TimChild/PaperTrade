@@ -1,33 +1,32 @@
 import { useState } from 'react'
-import type { TradeRequest } from '@/types/portfolio'
+import type { TradeRequest } from '@/services/api/types'
 
 interface TradeFormProps {
-  portfolioId: string
   onSubmit: (trade: TradeRequest) => void
   isSubmitting?: boolean
 }
 
 export function TradeForm({
-  portfolioId,
   onSubmit,
   isSubmitting = false,
 }: TradeFormProps): React.JSX.Element {
-  const [action, setAction] = useState<'buy' | 'sell'>('buy')
+  const [action, setAction] = useState<'BUY' | 'SELL'>('BUY')
   const [ticker, setTicker] = useState('')
   const [quantity, setQuantity] = useState('')
+  const [price, setPrice] = useState('')
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!ticker || !quantity) {
+    if (!ticker || !quantity || !price) {
       return
     }
 
     const trade: TradeRequest = {
-      portfolioId,
       action,
       ticker: ticker.trim().toUpperCase(),
-      quantity: parseInt(quantity, 10),
+      quantity: quantity,
+      price: price,
     }
 
     onSubmit(trade)
@@ -35,9 +34,18 @@ export function TradeForm({
     // Reset form
     setTicker('')
     setQuantity('')
+    setPrice('')
   }
 
-  const isValid = ticker.trim() !== '' && quantity !== '' && parseInt(quantity, 10) > 0
+  const isValid =
+    ticker.trim() !== '' &&
+    quantity !== '' &&
+    parseFloat(quantity) > 0 &&
+    price !== '' &&
+    parseFloat(price) > 0
+
+  const estimatedTotal =
+    isValid ? parseFloat(quantity) * parseFloat(price) : 0
 
   return (
     <div className="rounded-lg border border-gray-300 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -54,9 +62,9 @@ export function TradeForm({
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => setAction('buy')}
+              onClick={() => setAction('BUY')}
               className={`flex-1 rounded-lg px-4 py-2 font-medium transition-colors ${
-                action === 'buy'
+                action === 'BUY'
                   ? 'bg-blue-600 text-white hover:bg-blue-700'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
               }`}
@@ -66,9 +74,9 @@ export function TradeForm({
             </button>
             <button
               type="button"
-              onClick={() => setAction('sell')}
+              onClick={() => setAction('SELL')}
               className={`flex-1 rounded-lg px-4 py-2 font-medium transition-colors ${
-                action === 'sell'
+                action === 'SELL'
                   ? 'bg-negative text-white hover:bg-negative-dark'
                   : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
               }`}
@@ -111,8 +119,8 @@ export function TradeForm({
           <input
             id="quantity"
             type="number"
-            min="1"
-            step="1"
+            min="0.0001"
+            step="0.0001"
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
             placeholder="100"
@@ -122,15 +130,37 @@ export function TradeForm({
           />
         </div>
 
-        {/* Preview (placeholder) */}
+        {/* Price Per Share Input */}
+        <div>
+          <label
+            htmlFor="price"
+            className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          >
+            Price Per Share ($)
+          </label>
+          <input
+            id="price"
+            type="number"
+            min="0.01"
+            step="0.01"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            placeholder="150.00"
+            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-400"
+            disabled={isSubmitting}
+            required
+          />
+        </div>
+
+        {/* Preview */}
         {isValid && (
           <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-900">
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              {action === 'buy' ? 'Buying' : 'Selling'} {quantity} shares of{' '}
-              {ticker.toUpperCase()}
+              {action === 'BUY' ? 'Buying' : 'Selling'} {quantity} shares of{' '}
+              {ticker.toUpperCase()} at ${price}
             </p>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
-              Estimated price will be calculated at execution
+            <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+              Total: ${estimatedTotal.toFixed(2)}
             </p>
           </div>
         )}
@@ -140,14 +170,14 @@ export function TradeForm({
           type="submit"
           disabled={!isValid || isSubmitting}
           className={`w-full rounded-lg px-4 py-3 font-semibold text-white transition-colors ${
-            action === 'buy'
+            action === 'BUY'
               ? 'bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400'
               : 'bg-negative hover:bg-negative-dark disabled:bg-gray-400'
           } disabled:cursor-not-allowed`}
         >
           {isSubmitting
             ? 'Processing...'
-            : action === 'buy'
+            : action === 'BUY'
               ? 'Execute Buy Order'
               : 'Execute Sell Order'}
         </button>
