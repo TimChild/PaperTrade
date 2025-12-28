@@ -2,9 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import datetime
-from decimal import Decimal
 from enum import Enum
-from typing import Optional
 from uuid import UUID
 
 from papertrade.domain.exceptions import InvalidTransactionError
@@ -49,10 +47,10 @@ class Transaction:
     transaction_type: TransactionType
     timestamp: datetime
     cash_change: Money
-    ticker: Optional[Ticker] = None
-    quantity: Optional[Quantity] = None
-    price_per_share: Optional[Money] = None
-    notes: Optional[str] = None
+    ticker: Ticker | None = None
+    quantity: Quantity | None = None
+    price_per_share: Money | None = None
+    notes: str | None = None
 
     def __post_init__(self) -> None:
         """Validate Transaction type-specific invariants."""

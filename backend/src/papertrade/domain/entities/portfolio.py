@@ -1,7 +1,7 @@
 """Portfolio entity - Aggregate root for trading activity."""
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 from papertrade.domain.exceptions import InvalidPortfolioError
@@ -43,12 +43,12 @@ class Portfolio:
 
         # Validate created_at is not in future
         # Get current time in UTC for comparison
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         # Handle both timezone-aware and naive datetimes
         created_at_utc = (
             self.created_at
             if self.created_at.tzinfo is not None
-            else self.created_at.replace(tzinfo=timezone.utc)
+            else self.created_at.replace(tzinfo=UTC)
         )
 
         if created_at_utc > now:

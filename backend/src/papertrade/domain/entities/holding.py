@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import Optional
 
 from papertrade.domain.value_objects.money import Money
 from papertrade.domain.value_objects.quantity import Quantity
@@ -31,7 +30,7 @@ class Holding:
     cost_basis: Money
 
     @property
-    def average_cost_per_share(self) -> Optional[Money]:
+    def average_cost_per_share(self) -> Money | None:
         """Calculate average cost per share.
 
         Returns:
