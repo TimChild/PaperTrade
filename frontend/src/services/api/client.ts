@@ -7,15 +7,34 @@ import type { ErrorResponse } from './types'
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
 
-// Default user ID for mock authentication (Phase 1)
-// TODO: Replace with real authentication in Phase 2
-const DEFAULT_USER_ID = '00000000-0000-0000-0000-000000000001'
+/**
+ * Get or create a stable mock user ID for Phase 1.
+ * Stored in localStorage to persist across sessions.
+ *
+ * TODO: Replace with real authentication in Phase 2
+ */
+function getMockUserId(): string {
+  const STORAGE_KEY = 'papertrade_mock_user_id'
+
+  // Check localStorage for existing ID
+  const stored = localStorage.getItem(STORAGE_KEY)
+  if (stored) {
+    return stored
+  }
+
+  // Generate new ID and store it
+  const newId = crypto.randomUUID()
+  localStorage.setItem(STORAGE_KEY, newId)
+  return newId
+}
+
+const MOCK_USER_ID = getMockUserId()
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
-    'X-User-Id': DEFAULT_USER_ID, // Mock authentication header
+    'X-User-Id': MOCK_USER_ID, // Mock authentication header (persisted in localStorage)
   },
   timeout: 10000,
 })
