@@ -57,7 +57,9 @@ class GetPortfolioHoldingsHandler:
         self._portfolio_repository = portfolio_repository
         self._transaction_repository = transaction_repository
 
-    async def execute(self, query: GetPortfolioHoldingsQuery) -> GetPortfolioHoldingsResult:
+    async def execute(
+        self, query: GetPortfolioHoldingsQuery
+    ) -> GetPortfolioHoldingsResult:
         """Execute the GetPortfolioHoldings query.
 
         Args:
@@ -75,7 +77,9 @@ class GetPortfolioHoldingsHandler:
             raise InvalidPortfolioError(f"Portfolio not found: {query.portfolio_id}")
 
         # Get all transactions
-        transactions = await self._transaction_repository.get_by_portfolio(query.portfolio_id)
+        transactions = await self._transaction_repository.get_by_portfolio(
+            query.portfolio_id
+        )
 
         # Calculate holdings
         holdings = PortfolioCalculator.calculate_holdings(transactions)

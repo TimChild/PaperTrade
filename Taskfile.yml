@@ -8,10 +8,12 @@ tasks:
   setup:
     desc: "Set up complete development environment"
     cmds:
+      - task: precommit:install
       - task: setup:backend
       - task: setup:frontend
       - task: docker:up
       - echo "✓ Development environment setup complete!"
+      - echo "  - Pre-commit hooks installed"
       - echo "  - Backend dependencies installed"
       - echo "  - Frontend dependencies installed (if frontend exists)"
       - echo "  - Docker services started (PostgreSQL, Redis)"

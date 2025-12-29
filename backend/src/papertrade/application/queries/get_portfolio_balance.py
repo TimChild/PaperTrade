@@ -59,7 +59,9 @@ class GetPortfolioBalanceHandler:
         self._portfolio_repository = portfolio_repository
         self._transaction_repository = transaction_repository
 
-    async def execute(self, query: GetPortfolioBalanceQuery) -> GetPortfolioBalanceResult:
+    async def execute(
+        self, query: GetPortfolioBalanceQuery
+    ) -> GetPortfolioBalanceResult:
         """Execute the GetPortfolioBalance query.
 
         Args:
@@ -77,7 +79,9 @@ class GetPortfolioBalanceHandler:
             raise InvalidPortfolioError(f"Portfolio not found: {query.portfolio_id}")
 
         # Get all transactions
-        transactions = await self._transaction_repository.get_by_portfolio(query.portfolio_id)
+        transactions = await self._transaction_repository.get_by_portfolio(
+            query.portfolio_id
+        )
 
         # Calculate cash balance
         cash_balance = PortfolioCalculator.calculate_cash_balance(transactions)

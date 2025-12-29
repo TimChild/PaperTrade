@@ -37,7 +37,7 @@ async def test_engine() -> AsyncGenerator[AsyncEngine, None]:
 @pytest.fixture
 def client(test_engine: AsyncEngine) -> TestClient:
     """Create a test client with test database.
-    
+
     Overrides the application's database session to use an in-memory test database.
     This allows integration tests to run against a clean database for each test.
     """

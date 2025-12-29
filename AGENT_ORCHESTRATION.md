@@ -4,7 +4,31 @@ This document describes the workflow for orchestrating AI agents to develop Pape
 
 ## Quick Start for New Sessions
 
-### 1. Get Up to Speed
+### 1. Set Up Your Environment
+
+**IMPORTANT**: Before starting any work, run the setup script to configure your environment:
+
+```bash
+# Option 1: Use the setup script (recommended for agents)
+./.github/copilot-setup.sh
+
+# Option 2: Use Taskfile (if you have Task installed)
+task setup
+```
+
+This will:
+- Install pre-commit hooks (run on push, not commit)
+- Sync backend dependencies with uv
+- Install frontend dependencies with npm
+- Start Docker services (PostgreSQL, Redis)
+
+**Why this matters**: Without proper setup, you'll have:
+- Missing dependencies
+- No pre-commit hooks
+- No Docker services running
+- Tests may fail unexpectedly
+
+### 2. Get Up to Speed
 
 Read these files to understand current project state:
 
@@ -24,7 +48,7 @@ ls -la agent_progress_docs/
 gh pr list
 ```
 
-### 2. Check Running Agent Tasks
+### 3. Check Running Agent Tasks
 
 ```bash
 # List recent agent tasks
@@ -34,11 +58,49 @@ gh agent-task list
 gh agent-task view <PR_NUMBER>
 ```
 
-### 3. Pull Latest Changes
+### 4. Pull Latest Changes
 
 ```bash
 git checkout main
 git pull origin main
+```
+
+---
+
+## Pre-commit Hooks
+
+Pre-commit hooks are configured to run on **push** (not commit) to prevent the "double commit" problem where auto-formatters require you to commit twice.
+
+### How It Works
+
+```bash
+# Commit works immediately (no auto-fixes)
+git commit -m "feat: add new feature"
+
+# Push triggers formatters and type checking
+git push  # Runs ruff, ruff-format, pyright, etc.
+```
+
+If the pre-push hooks make changes, you'll need to:
+1. Review the changes
+2. Commit them: `git commit -am "style: apply auto-formatting"`
+3. Push again: `git push`
+
+### Skipping Hooks
+
+If you need to skip hooks (not recommended):
+```bash
+git push --no-verify
+```
+
+### Running Hooks Manually
+
+```bash
+# Run all hooks on all files
+pre-commit run --all-files
+
+# Or use Taskfile
+task precommit:run
 ```
 
 ---

@@ -100,35 +100,46 @@ cd PaperTrade
 # Copy environment variables template
 cp .env.example .env
 
-# Set up development environment (installs dependencies and starts Docker services)
-task setup  # or follow manual steps below
+# OPTION 1: Automated setup (recommended)
+# This installs pre-commit hooks, dependencies, and starts Docker services
+task setup  # If you have Task installed
+# OR
+./.github/copilot-setup.sh  # Standalone setup script
+
+# OPTION 2: Manual setup (see below)
 
 # Start development servers (in separate terminals)
 task dev:backend   # Backend API on http://localhost:8000
-task dev:frontend  # Frontend (when available)
+task dev:frontend  # Frontend on http://localhost:5173
 ```
 
 ### Manual Setup
 
-If you don't have Task installed, you can set up manually:
+If you prefer to set up manually or don't have Task installed:
 
 ```bash
 # 1. Install uv (Python package manager)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# 2. Backend setup
+# 2. Install pre-commit hooks
+pip install pre-commit  # or: uv tool install pre-commit
+pre-commit install
+pre-commit install --hook-type pre-push
+
+# 3. Backend setup
 cd backend
 uv sync --all-extras  # Install dependencies with uv
-
-# 3. Frontend setup (when available)
-cd ../frontend
-npm ci
-
-# 4. Start Docker services (PostgreSQL, Redis)
 cd ..
+
+# 4. Frontend setup
+cd frontend
+npm ci
+cd ..
+
+# 5. Start Docker services (PostgreSQL, Redis)
 docker compose up -d
 
-# 5. Start backend development server
+# 6. Start backend development server
 cd backend
 uv run uvicorn papertrade.main:app --reload
 ```
@@ -248,16 +259,31 @@ task format
 
 ### Pre-commit Hooks
 
-Install pre-commit hooks to automatically check code quality before commits:
+Pre-commit hooks run automatically on **push** (not commit) to format code and catch issues:
 
 ```bash
+# Installation (already done if you ran 'task setup')
 task precommit:install
 # or
-pip install pre-commit && pre-commit install
+pre-commit install && pre-commit install --hook-type pre-push
+
+# Commits work immediately without triggering formatters
+git commit -m "feat: add new feature"
+
+# Push triggers auto-formatters and type checking
+git push  # Runs ruff, pyright, etc.
 
 # Run manually on all files
 task precommit:run
+# or
+pre-commit run --all-files
+
+# Skip hooks if needed (not recommended)
+git push --no-verify
 ```
+
+**Why pre-push instead of pre-commit?**
+This prevents the "double commit" problem where auto-formatters modify files, requiring you to write the same commit message twice. With pre-push, you commit immediately and formatters run before pushing.
 
 ### Creating a PR
 

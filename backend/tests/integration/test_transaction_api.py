@@ -247,7 +247,7 @@ def test_transaction_pagination(
     portfolio_id = response.json()["portfolio_id"]
 
     # Create multiple transactions (10 trades)
-    for i in range(10):
+    for _i in range(10):
         client.post(
             f"/api/v1/portfolios/{portfolio_id}/trades",
             headers={"X-User-Id": str(default_user_id)},

@@ -139,7 +139,11 @@ class HoldingsResponse(BaseModel):
 # Routes
 
 
-@router.post("", response_model=CreatePortfolioResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=CreatePortfolioResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_portfolio(
     request: CreatePortfolioRequest,
     current_user: CurrentUserDep,
@@ -219,7 +223,11 @@ async def get_portfolio(
     )
 
 
-@router.post("/{portfolio_id}/deposit", response_model=TransactionResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{portfolio_id}/deposit",
+    response_model=TransactionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def deposit_cash(
     portfolio_id: UUID,
     request: DepositRequest,
@@ -243,7 +251,11 @@ async def deposit_cash(
     return TransactionResponse(transaction_id=result.transaction_id)
 
 
-@router.post("/{portfolio_id}/withdraw", response_model=TransactionResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{portfolio_id}/withdraw",
+    response_model=TransactionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def withdraw_cash(
     portfolio_id: UUID,
     request: WithdrawRequest,
@@ -269,7 +281,11 @@ async def withdraw_cash(
     return TransactionResponse(transaction_id=result.transaction_id)
 
 
-@router.post("/{portfolio_id}/trades", response_model=TransactionResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{portfolio_id}/trades",
+    response_model=TransactionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def execute_trade(
     portfolio_id: UUID,
     request: TradeRequest,

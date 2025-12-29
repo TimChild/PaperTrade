@@ -1,26 +1,55 @@
+# Pre-commit Configuration
+#
+# Hooks are organized by stage:
+# - pre-commit: Fast checks that don't modify files
+# - pre-push: Auto-fixers and formatters that modify files
+#
+# This approach prevents the "double commit" problem where auto-fixes
+# require committing twice with the same message.
+#
+# To skip hooks: git push --no-verify
+# To run manually: pre-commit run --all-files
+
 repos:
-  # General hooks
+  # ============================================================================
+  # PRE-COMMIT STAGE: Fast checks (no file modifications)
+  # ============================================================================
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-yaml
+        name: Check YAML syntax
+        args: ['--unsafe']  # Allow custom tags
+        stages: [commit]
+      - id: check-added-large-files
+        name: Check for large files
+        args: ['--maxkb=1000']
+        stages: [commit]
+      - id: check-json
+        name: Check JSON syntax
+        stages: [commit]
+      - id: check-toml
+        name: Check TOML syntax
+        stages: [commit]
+      - id: check-merge-conflict
+        name: Check for merge conflicts
+        stages: [commit]
+      - id: detect-private-key
+        name: Detect private keys
+        stages: [commit]
+
+  # ============================================================================
+  # PRE-PUSH STAGE: Auto-fixers and formatters
+  # ============================================================================
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:
       - id: trailing-whitespace
         name: Trim trailing whitespace
+        stages: [push]
       - id: end-of-file-fixer
         name: Fix end of files
-      - id: check-yaml
-        name: Check YAML syntax
-        args: ['--unsafe']  # Allow custom tags
-      - id: check-added-large-files
-        name: Check for large files
-        args: ['--maxkb=1000']
-      - id: check-json
-        name: Check JSON syntax
-      - id: check-toml
-        name: Check TOML syntax
-      - id: check-merge-conflict
-        name: Check for merge conflicts
-      - id: detect-private-key
-        name: Detect private keys
+        stages: [push]
 
   # Python - Ruff linting and formatting
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -30,9 +59,11 @@ repos:
         name: Ruff lint (backend)
         args: [--fix]
         files: ^backend/
+        stages: [push]
       - id: ruff-format
         name: Ruff format (backend)
         files: ^backend/
+        stages: [push]
 
   # Python - Type checking with Pyright
   - repo: https://github.com/RobertCraigie/pyright-python
@@ -42,4 +73,5 @@ repos:
         name: Pyright type check (backend)
         files: ^backend/
         additional_dependencies: []
+        stages: [push]
         # Note: This will use the project's pyproject.toml configuration
