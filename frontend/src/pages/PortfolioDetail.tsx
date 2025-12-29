@@ -1,15 +1,18 @@
 import { useParams, Link } from 'react-router-dom'
+import { useMemo } from 'react'
 import { usePortfolio, usePortfolioBalance, useExecuteTrade } from '@/hooks/usePortfolio'
 import { useHoldings } from '@/hooks/useHoldings'
 import { useTransactions } from '@/hooks/useTransactions'
+import { useBatchPricesQuery, usePriceStaleness } from '@/hooks/usePriceQuery'
 import { PortfolioSummaryCard } from '@/components/features/portfolio/PortfolioSummaryCard'
 import { HoldingsTable } from '@/components/features/portfolio/HoldingsTable'
 import { TransactionList } from '@/components/features/portfolio/TransactionList'
 import { TradeForm } from '@/components/features/portfolio/TradeForm'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { ErrorDisplay } from '@/components/ui/ErrorDisplay'
-import { adaptPortfolio, adaptHolding, adaptTransaction } from '@/utils/adapters'
+import { adaptPortfolio, adaptHoldingWithPrice, adaptTransaction } from '@/utils/adapters'
 import type { TradeRequest } from '@/services/api/types'
+import type { Portfolio } from '@/types/portfolio'
 
 export function PortfolioDetail(): React.JSX.Element {
   const { id } = useParams<{ id: string }>()
@@ -21,10 +24,53 @@ export function PortfolioDetail(): React.JSX.Element {
   const { data: transactionsData, isLoading: transactionsLoading } = useTransactions(portfolioId)
   const executeTrade = useExecuteTrade(portfolioId)
 
-  // Adapt backend DTOs to frontend types
-  const portfolio = portfolioDTO ? adaptPortfolio(portfolioDTO, balanceData || null) : null
-  const holdings = holdingsData?.holdings.map(adaptHolding) || []
+  // Extract tickers from holdings for price fetching
+  const tickers = useMemo(
+    () => holdingsData?.holdings.map((h) => h.ticker) || [],
+    [holdingsData]
+  )
+
+  // Fetch prices for all holdings
+  const { data: priceMap, isLoading: pricesLoading } = useBatchPricesQuery(tickers)
+
+  // Adapt backend DTOs to frontend types with real prices
+  const basePortfolio = portfolioDTO ? adaptPortfolio(portfolioDTO, balanceData || null) : null
+  
+  const holdings = useMemo(() => {
+    if (!holdingsData?.holdings) return []
+    return holdingsData.holdings.map((dto) => 
+      adaptHoldingWithPrice(dto, priceMap?.get(dto.ticker))
+    )
+  }, [holdingsData, priceMap])
+
+  // Calculate total portfolio value with real prices
+  const portfolio: Portfolio | null = useMemo(() => {
+    if (!basePortfolio) return null
+    
+    const holdingsValue = holdings.reduce((sum, holding) => sum + holding.marketValue, 0)
+    const totalValue = basePortfolio.cashBalance + holdingsValue
+
+    return {
+      ...basePortfolio,
+      totalValue,
+    }
+  }, [basePortfolio, holdings])
+
   const transactions = transactionsData?.transactions.map(adaptTransaction) || []
+
+  // Get staleness from most stale price
+  const stalestPrice = useMemo(() => {
+    if (!priceMap || priceMap.size === 0) return undefined
+    
+    const prices = Array.from(priceMap.values())
+    return prices.reduce((oldest, current) => {
+      return new Date(current.timestamp) < new Date(oldest.timestamp)
+        ? current
+        : oldest
+    }, prices[0])
+  }, [priceMap])
+
+  const staleness = usePriceStaleness(stalestPrice)
 
   const handleTradeSubmit = (trade: TradeRequest) => {
     executeTrade.mutate(trade, {
@@ -72,6 +118,11 @@ export function PortfolioDetail(): React.JSX.Element {
         <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
           {portfolio?.name || 'Portfolio Details'}
         </h1>
+        {staleness && (
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            Prices updated {staleness}
+          </p>
+        )}
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
@@ -94,7 +145,7 @@ export function PortfolioDetail(): React.JSX.Element {
                 isLoading={true}
               />
             ) : (
-              <PortfolioSummaryCard portfolio={portfolio} />
+              <PortfolioSummaryCard portfolio={portfolio} isLoading={pricesLoading} />
             )}
           </section>
 

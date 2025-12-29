@@ -2,7 +2,7 @@
  * Adapter functions to convert backend DTOs to frontend types
  */
 import type { Portfolio, Holding, Transaction } from '@/types/portfolio'
-import type { PortfolioDTO, HoldingDTO, TransactionDTO, BalanceResponse } from '@/services/api/types'
+import type { PortfolioDTO, HoldingDTO, TransactionDTO, BalanceResponse, PricePoint } from '@/services/api/types'
 
 /**
  * Convert backend PortfolioDTO to frontend Portfolio type
@@ -25,19 +25,19 @@ export function adaptPortfolio(
 }
 
 /**
- * Convert backend HoldingDTO to frontend Holding type
- * Note: currentPrice is not available from backend yet (Phase 2 - market data integration)
+ * Convert backend HoldingDTO to frontend Holding type with real price data
  */
-export function adaptHolding(dto: HoldingDTO): Holding {
+export function adaptHoldingWithPrice(dto: HoldingDTO, pricePoint: PricePoint | undefined): Holding {
   const quantity = parseFloat(dto.quantity)
   const costBasis = parseFloat(dto.cost_basis)
   const averageCost = dto.average_cost_per_share
     ? parseFloat(dto.average_cost_per_share)
     : costBasis / quantity
 
-  // Mock current price until real market data is available
-  // In Phase 2, this will come from Alpha Vantage API
-  const currentPrice = averageCost * (1 + (Math.random() * 0.1 - 0.05)) // +/- 5% mock variance
+  // Use real price if available, otherwise use mock price
+  const currentPrice = pricePoint 
+    ? pricePoint.price.amount
+    : averageCost * (1 + (Math.random() * 0.1 - 0.05)) // +/- 5% mock variance
 
   const marketValue = currentPrice * quantity
   const gainLoss = marketValue - costBasis
@@ -52,6 +52,14 @@ export function adaptHolding(dto: HoldingDTO): Holding {
     gainLoss,
     gainLossPercent,
   }
+}
+
+/**
+ * Convert backend HoldingDTO to frontend Holding type
+ * Note: currentPrice is not available from backend yet (Phase 2 - market data integration)
+ */
+export function adaptHolding(dto: HoldingDTO): Holding {
+  return adaptHoldingWithPrice(dto, undefined)
 }
 
 /**

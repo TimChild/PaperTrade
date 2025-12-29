@@ -3,6 +3,32 @@
  * These types mirror the FastAPI Pydantic models
  */
 
+// Money type (matches backend Money value object)
+export interface Money {
+  amount: number
+  currency: string
+}
+
+// Ticker type (matches backend Ticker value object)
+export interface Ticker {
+  symbol: string
+}
+
+// PricePoint type (matches backend PricePoint DTO)
+export interface PricePoint {
+  ticker: Ticker
+  price: Money
+  timestamp: string // ISO 8601 datetime
+  source: string // "alpha_vantage" | "cache" | "database"
+  interval?: string // "real-time" | "1day" | "1hour" | "5min" | "1min"
+  // Optional OHLCV fields
+  open?: Money
+  high?: Money
+  low?: Money
+  close?: Money
+  volume?: number
+}
+
 // Portfolio types
 export interface PortfolioDTO {
   id: string

@@ -105,4 +105,37 @@ export const handlers = [
       transaction_id: '00000000-0000-0000-0000-000000000005',
     })
   }),
+
+  // Get current price for a ticker
+  http.get(`${API_BASE_URL}/prices/:ticker`, ({ params }) => {
+    const { ticker } = params
+
+    // Mock prices for common stocks
+    const mockPrices: Record<string, number> = {
+      AAPL: 192.53,
+      GOOGL: 140.93,
+      MSFT: 374.58,
+      TSLA: 248.48,
+      AMZN: 178.25,
+      NVDA: 502.65,
+      META: 340.0,
+      AMD: 151.675,
+    }
+
+    const price = mockPrices[ticker as string]
+    if (!price) {
+      return HttpResponse.json(
+        { error: 'Ticker not found', ticker },
+        { status: 404 }
+      )
+    }
+
+    return HttpResponse.json({
+      ticker: { symbol: ticker },
+      price: { amount: price, currency: 'USD' },
+      timestamp: new Date().toISOString(),
+      source: 'mock',
+      interval: 'current',
+    })
+  }),
 ]
