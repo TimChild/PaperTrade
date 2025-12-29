@@ -94,7 +94,10 @@ export function PortfolioDetail(): React.JSX.Element {
                 isLoading={true}
               />
             ) : (
-              <PortfolioSummaryCard portfolio={portfolio} />
+              <PortfolioSummaryCard
+                portfolio={portfolio}
+                holdingsDTO={holdingsData?.holdings}
+              />
             )}
           </section>
 
@@ -115,7 +118,11 @@ export function PortfolioDetail(): React.JSX.Element {
             <h2 className="mb-4 text-2xl font-semibold text-gray-900 dark:text-white">
               Holdings
             </h2>
-            <HoldingsTable holdings={holdings} isLoading={holdingsLoading} />
+            <HoldingsTable
+              holdings={holdings}
+              holdingsDTO={holdingsData?.holdings}
+              isLoading={holdingsLoading}
+            />
           </section>
 
           {/* Transaction History */}
