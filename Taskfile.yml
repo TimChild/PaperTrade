@@ -78,14 +78,14 @@ tasks:
     dir: "{{.BACKEND_DIR}}"
     cmds:
       - echo "Running backend tests..."
-      - uv run pytest --cov=papertrade --cov-report=term --cov-report=html
+      - uv run pytest --cov=papertrade --cov-report=term --cov-report=html --cov-report=xml
 
   test:frontend:
     desc: "Run frontend tests"
     dir: "{{.FRONTEND_DIR}}"
     cmds:
       - echo "Running frontend tests..."
-      - npm run test
+      - npm run test -- --coverage
     preconditions:
       - sh: test -f package.json
         msg: "Frontend not found. Run 'task setup:frontend' first."
@@ -209,3 +209,53 @@ tasks:
     desc: "Run pre-commit hooks on all files"
     cmds:
       - uv tool run pre-commit run --all-files
+
+  build:
+    desc: "Build all production artifacts"
+    cmds:
+      - task: build:backend
+      - task: build:frontend
+      - echo "✓ All builds completed successfully"
+
+  build:backend:
+    desc: "Build backend (check import structure, no syntax errors)"
+    dir: "{{.BACKEND_DIR}}"
+    cmds:
+      - echo "Checking backend imports and structure..."
+      - uv run python -m compileall -q .
+      - echo "✓ Backend build check passed"
+
+  build:frontend:
+    desc: "Build frontend for production"
+    dir: "{{.FRONTEND_DIR}}"
+    cmds:
+      - echo "Building frontend..."
+      - npm run build
+      - echo "✓ Frontend built successfully"
+    preconditions:
+      - sh: test -f package.json
+        msg: "Frontend not found. Run 'task setup:frontend' first."
+
+  test:e2e:
+    desc: "Run end-to-end tests with Playwright"
+    dir: "{{.FRONTEND_DIR}}"
+    cmds:
+      - echo "Running E2E tests..."
+      - npm run test:e2e
+    preconditions:
+      - sh: test -f package.json
+        msg: "Frontend not found"
+
+  ci:
+    desc: "Run all CI checks locally (same as GitHub Actions)"
+    cmds:
+      - task: lint
+      - task: test
+      - task: build
+      - echo "✓ All CI checks passed!"
+
+  ci:fast:
+    desc: "Run fast CI checks (lint only, skip tests)"
+    cmds:
+      - task: lint
+      - echo "✓ Fast checks passed. Run 'task ci' for full suite."

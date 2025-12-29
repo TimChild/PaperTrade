@@ -285,6 +285,24 @@ git push --no-verify
 **Why pre-push instead of pre-commit?**
 This prevents the "double commit" problem where auto-formatters modify files, requiring you to write the same commit message twice. With pre-push, you commit immediately and formatters run before pushing.
 
+### Running CI Checks Locally
+
+Before pushing, you can run the same checks that CI runs in GitHub Actions:
+
+```bash
+# Run all CI checks (lint + test + build)
+task ci
+
+# Or run specific checks
+task lint           # All linters
+task test           # All tests
+task build          # Build checks
+```
+
+**Why this matters**: These are the **exact same commands** that run in GitHub Actions CI. If `task ci` passes locally, CI should pass too.
+
+**Fast iteration**: Use `task ci:fast` to run only linters (skips tests) for quick feedback during development.
+
 ### Creating a PR
 
 1. Create a feature branch: `git checkout -b feat/your-feature`

@@ -105,6 +105,81 @@ task precommit:run
 
 ---
 
+## Debugging CI Failures
+
+When CI fails on a PR, you can reproduce the failure locally using the same commands that run in GitHub Actions.
+
+### Quick Reproduction
+
+```bash
+# Run ALL CI checks locally (same as GitHub Actions)
+task ci
+
+# Or run specific checks
+task lint:backend
+task test:frontend
+task build
+```
+
+### Step-by-Step Debugging
+
+1. **Pull the PR branch**: 
+   ```bash
+   gh pr checkout <PR_NUMBER>
+   ```
+
+2. **Run the failing job** (check CI logs for which job failed):
+   ```bash
+   # Backend checks failed?
+   task lint:backend
+   task test:backend
+   
+   # Frontend checks failed?
+   task lint:frontend
+   task test:frontend
+   task build:frontend
+   
+   # E2E tests failed?
+   task docker:up
+   task test:e2e
+   ```
+
+3. **Fix the issue** based on the error output
+
+4. **Verify fix**:
+   ```bash
+   task ci  # Runs all checks
+   ```
+
+5. **Commit and push** the fix
+
+### CI Job to Task Mapping
+
+| CI Job | Task Command | What It Does |
+|--------|-------------|--------------|
+| `backend-checks` | `task lint:backend` | Ruff + Pyright checks |
+| `backend-checks` | `task test:backend` | Pytest with coverage |
+| `frontend-checks` | `task lint:frontend` | ESLint + TypeScript |
+| `frontend-checks` | `task test:frontend` | Vitest unit tests |
+| `frontend-checks` | `task build:frontend` | Production build check |
+| `e2e-tests` | `task docker:up && task test:e2e` | Playwright E2E tests |
+
+### Fast Iteration
+
+For quick iterations without running full test suite:
+
+```bash
+# Fast checks (lint only, no tests)
+task ci:fast
+
+# Individual checks
+task lint           # All linters
+task test           # All tests
+task build          # All builds
+```
+
+---
+
 ## The Orchestration Workflow
 
 ### Overview
