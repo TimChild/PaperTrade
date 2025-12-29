@@ -76,11 +76,11 @@ async def get_current_user_id(
 
     try:
         return UUID(x_user_id)
-    except ValueError:
+    except ValueError as e:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid X-User-Id header: must be a valid UUID, got '{x_user_id}'",
-        )
+        ) from e
 
 
 # Type aliases for route dependency injection

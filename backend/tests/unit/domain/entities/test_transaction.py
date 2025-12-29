@@ -1,6 +1,6 @@
 """Tests for Transaction entity."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
 
@@ -40,7 +40,7 @@ class TestTransactionConstruction:
             id=uuid4(),
             portfolio_id=uuid4(),
             transaction_type=TransactionType.DEPOSIT,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             cash_change=Money(Decimal("1000.00")),
             ticker=None,
             quantity=None,
@@ -60,7 +60,7 @@ class TestTransactionConstruction:
             id=uuid4(),
             portfolio_id=uuid4(),
             transaction_type=TransactionType.WITHDRAWAL,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             cash_change=Money(Decimal("-500.00")),
             ticker=None,
             quantity=None,
@@ -82,7 +82,7 @@ class TestTransactionConstruction:
             id=uuid4(),
             portfolio_id=uuid4(),
             transaction_type=TransactionType.BUY,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             cash_change=cash_change,
             ticker=Ticker("AAPL"),
             quantity=quantity,
@@ -107,7 +107,7 @@ class TestTransactionConstruction:
             id=uuid4(),
             portfolio_id=uuid4(),
             transaction_type=TransactionType.SELL,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             cash_change=cash_change,
             ticker=Ticker("AAPL"),
             quantity=quantity,
@@ -125,7 +125,7 @@ class TestTransactionConstruction:
                 id=uuid4(),
                 portfolio_id=uuid4(),
                 transaction_type=TransactionType.DEPOSIT,
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 cash_change=Money(Decimal("-100.00")),
                 ticker=None,
                 quantity=None,
@@ -139,7 +139,7 @@ class TestTransactionConstruction:
                 id=uuid4(),
                 portfolio_id=uuid4(),
                 transaction_type=TransactionType.WITHDRAWAL,
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 cash_change=Money(Decimal("100.00")),
                 ticker=None,
                 quantity=None,
@@ -153,7 +153,7 @@ class TestTransactionConstruction:
                 id=uuid4(),
                 portfolio_id=uuid4(),
                 transaction_type=TransactionType.BUY,
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 cash_change=Money(Decimal("-100.00")),
                 ticker=None,
                 quantity=Quantity(Decimal("1")),
@@ -167,7 +167,7 @@ class TestTransactionConstruction:
                 id=uuid4(),
                 portfolio_id=uuid4(),
                 transaction_type=TransactionType.BUY,
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 cash_change=Money(Decimal("-100.00")),
                 ticker=Ticker("AAPL"),
                 quantity=None,
@@ -181,7 +181,7 @@ class TestTransactionConstruction:
                 id=uuid4(),
                 portfolio_id=uuid4(),
                 transaction_type=TransactionType.BUY,
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 cash_change=Money(Decimal("-100.00")),
                 ticker=Ticker("AAPL"),
                 quantity=Quantity(Decimal("1")),
@@ -195,7 +195,7 @@ class TestTransactionConstruction:
                 id=uuid4(),
                 portfolio_id=uuid4(),
                 transaction_type=TransactionType.BUY,
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 cash_change=Money(Decimal("100.00")),
                 ticker=Ticker("AAPL"),
                 quantity=Quantity(Decimal("1")),
@@ -209,7 +209,7 @@ class TestTransactionConstruction:
                 id=uuid4(),
                 portfolio_id=uuid4(),
                 transaction_type=TransactionType.BUY,
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 cash_change=Money(Decimal("-99.00")),  # Should be -100.00
                 ticker=Ticker("AAPL"),
                 quantity=Quantity(Decimal("1")),
@@ -223,7 +223,7 @@ class TestTransactionConstruction:
                 id=uuid4(),
                 portfolio_id=uuid4(),
                 transaction_type=TransactionType.SELL,
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 cash_change=Money(Decimal("-100.00")),
                 ticker=Ticker("AAPL"),
                 quantity=Quantity(Decimal("1")),
@@ -237,7 +237,7 @@ class TestTransactionConstruction:
                 id=uuid4(),
                 portfolio_id=uuid4(),
                 transaction_type=TransactionType.SELL,
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 cash_change=Money(Decimal("99.00")),  # Should be 100.00
                 ticker=Ticker("AAPL"),
                 quantity=Quantity(Decimal("1")),
@@ -251,7 +251,7 @@ class TestTransactionConstruction:
                 id=uuid4(),
                 portfolio_id=uuid4(),
                 transaction_type=TransactionType.DEPOSIT,
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 cash_change=Money(Decimal("100.00")),
                 ticker=Ticker("AAPL"),
                 quantity=None,
@@ -264,7 +264,7 @@ class TestTransactionConstruction:
             id=uuid4(),
             portfolio_id=uuid4(),
             transaction_type=TransactionType.DEPOSIT,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             cash_change=Money(Decimal("100.00")),
             ticker=None,
             quantity=None,
@@ -280,7 +280,7 @@ class TestTransactionConstruction:
             id=uuid4(),
             portfolio_id=uuid4(),
             transaction_type=TransactionType.DEPOSIT,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             cash_change=Money(Decimal("100.00")),
             ticker=None,
             quantity=None,
@@ -296,7 +296,7 @@ class TestTransactionConstruction:
                 id=uuid4(),
                 portfolio_id=uuid4(),
                 transaction_type=TransactionType.DEPOSIT,
-                timestamp=datetime.now(timezone.utc),
+                timestamp=datetime.now(UTC),
                 cash_change=Money(Decimal("100.00")),
                 ticker=None,
                 quantity=None,
@@ -312,7 +312,7 @@ class TestTransactionEquality:
         """Two transactions with same ID should be equal."""
         transaction_id = uuid4()
         portfolio_id = uuid4()
-        timestamp = datetime.now(timezone.utc)
+        timestamp = datetime.now(UTC)
 
         t1 = Transaction(
             id=transaction_id,
@@ -334,7 +334,7 @@ class TestTransactionEquality:
     def test_inequality_different_ids(self) -> None:
         """Transactions with different IDs should not be equal."""
         portfolio_id = uuid4()
-        timestamp = datetime.now(timezone.utc)
+        timestamp = datetime.now(UTC)
 
         t1 = Transaction(
             id=uuid4(),
@@ -362,7 +362,7 @@ class TestTransactionOrdering:
         from datetime import timedelta
 
         portfolio_id = uuid4()
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         t1 = Transaction(
             id=uuid4(),
@@ -392,7 +392,7 @@ class TestTransactionImmutability:
             id=uuid4(),
             portfolio_id=uuid4(),
             transaction_type=TransactionType.DEPOSIT,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             cash_change=Money(Decimal("100.00")),
         )
 
@@ -409,7 +409,7 @@ class TestTransactionStringRepresentation:
             id=uuid4(),
             portfolio_id=uuid4(),
             transaction_type=TransactionType.BUY,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime.now(UTC),
             cash_change=Money(Decimal("-1000.00")),
             ticker=Ticker("AAPL"),
             quantity=Quantity(Decimal("10")),

@@ -18,7 +18,10 @@ from papertrade.application.queries.list_transactions import (
     ListTransactionsQuery,
 )
 
-router = APIRouter(prefix="/portfolios/{portfolio_id}/transactions", tags=["transactions"])
+router = APIRouter(
+    prefix="/portfolios/{portfolio_id}/transactions",
+    tags=["transactions"],
+)
 
 
 # Response Models
@@ -104,7 +107,11 @@ async def list_transactions(
             timestamp=tx.timestamp.isoformat(),
             cash_change=f"{tx.cash_change_amount:.2f}",
             ticker=tx.ticker_symbol,
-            quantity=f"{tx.quantity_shares:.4f}" if tx.quantity_shares is not None else None,
+            quantity=(
+                f"{tx.quantity_shares:.4f}"
+                if tx.quantity_shares is not None
+                else None
+            ),
             price_per_share=f"{tx.price_per_share_amount:.2f}"
             if tx.price_per_share_amount is not None
             else None,

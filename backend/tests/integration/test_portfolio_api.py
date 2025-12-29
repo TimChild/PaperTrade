@@ -13,7 +13,10 @@ def test_create_portfolio_with_initial_deposit(
     client: TestClient,
     default_user_id: UUID,
 ) -> None:
-    """Test creating a portfolio with initial deposit creates portfolio and transaction."""
+    """Test creating a portfolio with initial deposit.
+
+    Creates portfolio and transaction.
+    """
     response = client.post(
         "/api/v1/portfolios",
         headers={"X-User-Id": str(default_user_id)},

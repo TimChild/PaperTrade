@@ -1,10 +1,9 @@
 """Integration test fixtures for database testing."""
 
-import pytest
 import pytest_asyncio
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 
 @pytest_asyncio.fixture

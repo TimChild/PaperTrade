@@ -2,8 +2,6 @@
 
 from decimal import Decimal
 
-import pytest
-
 from papertrade.domain.entities.holding import Holding
 from papertrade.domain.value_objects.money import Money
 from papertrade.domain.value_objects.quantity import Quantity
@@ -96,7 +94,10 @@ class TestHoldingEquality:
         assert h1 != h2
 
     def test_inequality_different_cost_basis(self) -> None:
-        """Holdings with same ticker and quantity but different cost should not be equal."""
+        """Holdings with same ticker and quantity.
+
+        But different cost should not be equal.
+        """
         h1 = Holding(
             ticker=Ticker("AAPL"),
             quantity=Quantity(Decimal("10")),

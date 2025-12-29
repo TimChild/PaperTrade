@@ -1,7 +1,7 @@
 """Tests for Portfolio entity."""
 
-from datetime import datetime, timezone
-from uuid import UUID, uuid4
+from datetime import UTC, datetime
+from uuid import uuid4
 
 import pytest
 
@@ -17,7 +17,7 @@ class TestPortfolioConstruction:
         portfolio_id = uuid4()
         user_id = uuid4()
         name = "My Investment Portfolio"
-        created_at = datetime.now(timezone.utc)
+        created_at = datetime.now(UTC)
 
         portfolio = Portfolio(
             id=portfolio_id, user_id=user_id, name=name, created_at=created_at
@@ -32,7 +32,7 @@ class TestPortfolioConstruction:
         """Should allow name up to 100 characters."""
         name = "A" * 100
         portfolio = Portfolio(
-            id=uuid4(), user_id=uuid4(), name=name, created_at=datetime.now(timezone.utc)
+            id=uuid4(), user_id=uuid4(), name=name, created_at=datetime.now(UTC)
         )
         assert portfolio.name == name
 
@@ -43,7 +43,7 @@ class TestPortfolioConstruction:
                 id=uuid4(),
                 user_id=uuid4(),
                 name="",
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             )
 
     def test_invalid_construction_with_whitespace_only_name(self) -> None:
@@ -53,7 +53,7 @@ class TestPortfolioConstruction:
                 id=uuid4(),
                 user_id=uuid4(),
                 name="   ",
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             )
 
     def test_invalid_construction_with_too_long_name(self) -> None:
@@ -63,14 +63,14 @@ class TestPortfolioConstruction:
                 id=uuid4(),
                 user_id=uuid4(),
                 name="A" * 101,
-                created_at=datetime.now(timezone.utc),
+                created_at=datetime.now(UTC),
             )
 
     def test_invalid_construction_with_future_created_at(self) -> None:
         """Should raise error if created_at is in the future."""
         from datetime import timedelta
 
-        future_time = datetime.now(timezone.utc) + timedelta(days=1)
+        future_time = datetime.now(UTC) + timedelta(days=1)
         with pytest.raises(InvalidPortfolioError, match="cannot be in the future"):
             Portfolio(id=uuid4(), user_id=uuid4(), name="Test", created_at=future_time)
 
@@ -82,7 +82,7 @@ class TestPortfolioEquality:
         """Two portfolios with same ID should be equal."""
         portfolio_id = uuid4()
         user_id = uuid4()
-        created_at = datetime.now(timezone.utc)
+        created_at = datetime.now(UTC)
 
         p1 = Portfolio(
             id=portfolio_id, user_id=user_id, name="Portfolio 1", created_at=created_at
@@ -96,7 +96,7 @@ class TestPortfolioEquality:
     def test_inequality_different_ids(self) -> None:
         """Portfolios with different IDs should not be equal."""
         user_id = uuid4()
-        created_at = datetime.now(timezone.utc)
+        created_at = datetime.now(UTC)
 
         p1 = Portfolio(
             id=uuid4(), user_id=user_id, name="Portfolio 1", created_at=created_at
@@ -113,13 +113,13 @@ class TestPortfolioEquality:
             id=uuid4(),
             user_id=uuid4(),
             name="Test",
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         p2 = Portfolio(
             id=uuid4(),
             user_id=uuid4(),
             name="Test",
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
 
         portfolio_dict = {p1: "First", p2: "Second"}
@@ -130,7 +130,7 @@ class TestPortfolioEquality:
         """Equal portfolios should have same hash."""
         portfolio_id = uuid4()
         user_id = uuid4()
-        created_at = datetime.now(timezone.utc)
+        created_at = datetime.now(UTC)
 
         p1 = Portfolio(
             id=portfolio_id, user_id=user_id, name="Portfolio 1", created_at=created_at
@@ -151,7 +151,7 @@ class TestPortfolioImmutability:
             id=uuid4(),
             user_id=uuid4(),
             name="Test",
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         with pytest.raises(AttributeError):
             portfolio.id = uuid4()  # type: ignore
@@ -162,7 +162,7 @@ class TestPortfolioImmutability:
             id=uuid4(),
             user_id=uuid4(),
             name="Test",
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         with pytest.raises(AttributeError):
             portfolio.user_id = uuid4()  # type: ignore
@@ -173,10 +173,10 @@ class TestPortfolioImmutability:
             id=uuid4(),
             user_id=uuid4(),
             name="Test",
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         with pytest.raises(AttributeError):
-            portfolio.created_at = datetime.now(timezone.utc)  # type: ignore
+            portfolio.created_at = datetime.now(UTC)  # type: ignore
 
     def test_name_is_mutable(self) -> None:
         """Name should be the only mutable property (per architecture plan)."""
@@ -184,7 +184,7 @@ class TestPortfolioImmutability:
             id=uuid4(),
             user_id=uuid4(),
             name="Original Name",
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         # Per the architecture, name CAN be updated (it's the only mutable property)
         # But we're using frozen dataclass, so this should also be immutable
@@ -201,7 +201,7 @@ class TestPortfolioStringRepresentation:
             id=uuid4(),
             user_id=uuid4(),
             name="Test Portfolio",
-            created_at=datetime.now(timezone.utc),
+            created_at=datetime.now(UTC),
         )
         repr_str = repr(portfolio)
         assert "Portfolio" in repr_str

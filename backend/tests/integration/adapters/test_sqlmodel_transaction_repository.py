@@ -149,7 +149,9 @@ class TestSQLModelTransactionRepository:
                 portfolio_id=portfolio_id,
                 transaction_type=TransactionType.DEPOSIT,
                 timestamp=datetime.now(),
-                cash_change=Money(Decimal(f"{(i + 1) * 100}.00"), "USD"),  # Start from 100, not 0
+                cash_change=Money(
+                    Decimal(f"{(i + 1) * 100}.00"), "USD"
+                ),  # Start from 100, not 0
                 ticker=None,
                 quantity=None,
                 price_per_share=None,
@@ -224,7 +226,7 @@ class TestSQLModelTransactionRepository:
         portfolio_id = uuid4()
 
         # Create 3 transactions
-        for i in range(3):
+        for _i in range(3):
             t = Transaction(
                 id=uuid4(),
                 portfolio_id=portfolio_id,
