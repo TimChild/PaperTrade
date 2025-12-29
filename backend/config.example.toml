@@ -1,0 +1,129 @@
+# PaperTrade Backend Configuration
+# This is an EXAMPLE configuration file. Copy to config.toml and customize.
+
+[app]
+# Application environment
+environment = "development"  # Options: "development", "staging", "production"
+debug = true
+log_level = "INFO"  # Options: "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+
+[database]
+# Database connection
+# Set actual connection string in .env file: DATABASE_URL
+url = "${DATABASE_URL}"
+
+# Connection pool settings
+pool_size = 10
+pool_timeout = 30
+pool_recycle = 3600  # Recycle connections after 1 hour
+
+# Debug settings
+echo_sql = false  # Set to true to log all SQL queries (very verbose)
+
+[market_data]
+# Market data provider selection
+provider = "alpha_vantage"  # Options: "alpha_vantage", (future: "finnhub", "polygon")
+
+# Alpha Vantage API settings
+[market_data.alpha_vantage]
+# API key (set in .env file: ALPHA_VANTAGE_API_KEY)
+# Get your free key at: https://www.alphavantage.co/support/#api-key
+api_key = "${ALPHA_VANTAGE_API_KEY}"
+
+base_url = "https://www.alphavantage.co/query"
+timeout_seconds = 5
+retry_attempts = 3
+retry_delay_seconds = 1
+
+# Rate limiting configuration
+[market_data.rate_limit]
+# API tier: "free" or "premium"
+# Free tier: 5 calls/min, 500 calls/day
+# Premium tier: 75 calls/min, 100,000 calls/day
+tier = "free"
+
+# Free tier limits
+free_calls_per_minute = 5
+free_calls_per_day = 500
+
+# Premium tier limits (when upgraded)
+premium_calls_per_minute = 75
+premium_calls_per_day = 100000
+
+# Active limits (automatically set based on tier)
+calls_per_minute = 5
+calls_per_day = 500
+
+# Safety margins (reserve tokens for critical operations)
+minute_reserve = 1
+day_reserve = 50
+
+[cache]
+# Redis cache configuration
+redis_url = "redis://localhost:6379"
+redis_db = 0
+redis_password = "${REDIS_PASSWORD}"  # Optional, set in .env if needed
+
+# Price cache settings
+price_ttl_seconds = 3600  # 1 hour (during market hours)
+price_key_prefix = "papertrade:price"
+
+# Rate limiter cache settings
+ratelimit_key_prefix = "papertrade:ratelimit"
+
+[scheduler]
+# Background job scheduler settings
+enabled = true  # Set to false to disable background jobs
+
+# Daily price refresh schedule (cron expression)
+# Format: "minute hour day month day_of_week"
+# Default: "0 0 * * *" = Midnight UTC every day
+refresh_cron = "0 0 * * *"
+
+# Job persistence
+jobstore = "postgresql"  # Options: "postgresql", "sqlite"
+jobstore_url = "${DATABASE_URL}"
+timezone = "UTC"
+max_instances = 1  # Only one refresh job at a time
+
+# Refresh job configuration
+[scheduler.refresh]
+# Which ticker sources to refresh
+sources = ["portfolio", "common", "recent"]
+
+# Staleness threshold (refresh if older than this)
+max_age_hours = 24
+
+# Batch processing settings
+batch_size = 5  # Match rate limit per minute
+batch_delay_seconds = 60  # Delay between batches
+
+# Error handling
+max_error_rate = 0.15  # Alert if >15% of refreshes fail
+retry_failed_after_hours = 6
+
+[logging]
+# Logging configuration
+format = "json"  # Options: "json", "text"
+level = "INFO"
+file = "/var/log/papertrade/app.log"  # Log file path
+
+# Log rotation
+max_bytes = 10485760  # 10 MB
+backup_count = 5
+
+[api]
+# FastAPI settings
+title = "PaperTrade API"
+version = "1.0.0"
+description = "Stock market paper trading platform"
+
+# CORS settings
+cors_origins = [
+    "http://localhost:5173",  # Vite dev server
+    "http://localhost:3000",  # Alternative dev port
+]
+
+# API rate limiting (separate from market data)
+api_rate_limit_per_minute = 100
+api_rate_limit_per_hour = 1000

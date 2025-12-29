@@ -1,0 +1,85 @@
+# PaperTrade Frontend Configuration
+# This is an EXAMPLE configuration file. Copy to config.toml and customize.
+
+[app]
+# Application environment
+environment = "development"  # Options: "development", "staging", "production"
+name = "PaperTrade"
+version = "1.0.0"
+
+[api]
+# Backend API base URL
+# Development: http://localhost:8000/api/v1
+# Production: Set via VITE_API_URL environment variable
+base_url = "http://localhost:8000/api/v1"
+
+# API timeout (milliseconds)
+timeout_ms = 10000  # 10 seconds
+
+[features]
+# Feature flags for gradual rollout
+# Phase 2a: Real prices
+enable_real_prices = true
+
+# Phase 2b: Price charts and historical data
+enable_price_charts = false
+
+# Phase 3: Backtesting
+enable_backtesting = false
+
+# Phase 5: Automation
+enable_automation = false
+
+[cache]
+# Frontend caching settings (TanStack Query)
+
+# How often to poll for price updates (milliseconds)
+price_update_interval_ms = 60000  # 1 minute
+
+# Query stale time (data considered fresh for this long)
+query_stale_time_ms = 300000  # 5 minutes
+
+# Query cache time (data kept in cache for this long)
+query_cache_time_ms = 600000  # 10 minutes
+
+[ui]
+# UI preferences and defaults
+
+# Default currency for display
+default_currency = "USD"
+
+# Date format
+date_format = "YYYY-MM-DD"
+
+# Theme
+theme = "light"  # Options: "light", "dark", "auto"
+
+# Number formatting
+decimal_places = 2
+thousands_separator = ","
+
+[portfolio]
+# Portfolio-specific settings
+
+# Default portfolio name
+default_name = "My Portfolio"
+
+# Default initial deposit
+default_initial_deposit = 10000
+
+# Display settings
+show_percentage_change = true
+show_chart = true
+chart_timeframe = "1D"  # Options: "1D", "1W", "1M", "3M", "1Y", "ALL"
+
+[trading]
+# Trading UI settings
+
+# Show confirmation dialog before trade
+confirm_trades = true
+
+# Default trade quantity
+default_quantity = 1
+
+# Show price impact warning threshold (%)
+price_impact_warning_threshold = 5.0
