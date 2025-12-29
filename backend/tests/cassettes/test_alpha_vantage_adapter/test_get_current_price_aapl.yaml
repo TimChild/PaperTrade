@@ -1,0 +1,40 @@
+interactions:
+- request:
+    body: null
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      host:
+      - www.alphavantage.co
+      user-agent:
+      - python-httpx/0.27.0
+    method: GET
+    uri: https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey=demo
+  response:
+    body:
+      string: |-
+        {
+            "Global Quote": {
+                "01. symbol": "AAPL",
+                "02. open": "192.9000",
+                "03. high": "195.4000",
+                "04. low": "192.5200",
+                "05. price": "194.50",
+                "06. volume": "45789300",
+                "07. latest trading day": "2025-12-27",
+                "08. previous close": "191.4500",
+                "09. change": "3.0500",
+                "10. change percent": "1.5933%"
+            }
+        }
+    headers:
+      content-type:
+      - application/json
+    status:
+      code: 200
+      message: OK
+version: 1

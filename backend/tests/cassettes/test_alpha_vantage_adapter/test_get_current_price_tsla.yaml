@@ -1,0 +1,40 @@
+interactions:
+- request:
+    body: null
+    headers:
+      accept:
+      - '*/*'
+      accept-encoding:
+      - gzip, deflate
+      connection:
+      - keep-alive
+      host:
+      - www.alphavantage.co
+      user-agent:
+      - python-httpx/0.27.0
+    method: GET
+    uri: https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=TSLA&apikey=demo
+  response:
+    body:
+      string: |-
+        {
+            "Global Quote": {
+                "01. symbol": "TSLA",
+                "02. open": "381.5000",
+                "03. high": "385.2500",
+                "04. low": "380.1000",
+                "05. price": "383.75",
+                "06. volume": "98456200",
+                "07. latest trading day": "2025-12-27",
+                "08. previous close": "379.2000",
+                "09. change": "4.5500",
+                "10. change percent": "1.2002%"
+            }
+        }
+    headers:
+      content-type:
+      - application/json
+    status:
+      code: 200
+      message: OK
+version: 1
