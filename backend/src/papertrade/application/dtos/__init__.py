@@ -6,6 +6,7 @@ They decouple the API from the domain model and provide serialization-friendly f
 
 from papertrade.application.dtos.holding_dto import HoldingDTO
 from papertrade.application.dtos.portfolio_dto import PortfolioDTO
+from papertrade.application.dtos.price_point import PricePoint
 from papertrade.application.dtos.transaction_dto import TransactionDTO
 
-__all__ = ["HoldingDTO", "PortfolioDTO", "TransactionDTO"]
+__all__ = ["HoldingDTO", "PortfolioDTO", "PricePoint", "TransactionDTO"]
