@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 from papertrade.adapters.inbound.api.dependencies import (
     CurrentUserDep,
+    MarketDataDep,
     PortfolioRepositoryDep,
     TransactionRepositoryDep,
 )
@@ -327,13 +328,14 @@ async def get_balance(
     current_user: CurrentUserDep,
     portfolio_repo: PortfolioRepositoryDep,
     transaction_repo: TransactionRepositoryDep,
+    market_data: MarketDataDep,
 ) -> BalanceResponse:
     """Get current cash balance for a portfolio."""
     # Verify user owns this portfolio
     await _verify_portfolio_ownership(portfolio_id, current_user, portfolio_repo)
 
     query = GetPortfolioBalanceQuery(portfolio_id=portfolio_id)
-    handler = GetPortfolioBalanceHandler(portfolio_repo, transaction_repo)
+    handler = GetPortfolioBalanceHandler(portfolio_repo, transaction_repo, market_data)
     result = await handler.execute(query)
 
     return BalanceResponse(
@@ -349,13 +351,14 @@ async def get_holdings(
     current_user: CurrentUserDep,
     portfolio_repo: PortfolioRepositoryDep,
     transaction_repo: TransactionRepositoryDep,
+    market_data: MarketDataDep,
 ) -> HoldingsResponse:
     """Get current stock holdings for a portfolio."""
     # Verify user owns this portfolio
     await _verify_portfolio_ownership(portfolio_id, current_user, portfolio_repo)
 
     query = GetPortfolioHoldingsQuery(portfolio_id=portfolio_id)
-    handler = GetPortfolioHoldingsHandler(portfolio_repo, transaction_repo)
+    handler = GetPortfolioHoldingsHandler(portfolio_repo, transaction_repo, market_data)
     result = await handler.execute(query)
 
     holdings = [
