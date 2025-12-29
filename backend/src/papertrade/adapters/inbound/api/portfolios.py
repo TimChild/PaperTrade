@@ -196,7 +196,8 @@ async def get_portfolio(
     handler = GetPortfolioHandler(portfolio_repo)
 
     try:
-        portfolio_dto = await handler.execute(query)
+        result = await handler.execute(query)
+        portfolio_dto = result.portfolio
     except InvalidPortfolioError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -344,13 +345,11 @@ async def get_holdings(
     holdings = [
         HoldingResponse(
             ticker=h.ticker_symbol,
-            quantity=str(h.quantity_shares),
-            cost_basis=str(h.cost_basis_amount),
-            average_cost_per_share=(
-                str(h.average_cost_per_share_amount)
-                if h.average_cost_per_share_amount is not None
-                else None
-            ),
+            quantity=f"{h.quantity_shares:.4f}",
+            cost_basis=f"{h.cost_basis_amount:.2f}",
+            average_cost_per_share=f"{h.average_cost_per_share_amount:.2f}"
+            if h.average_cost_per_share_amount is not None
+            else None,
         )
         for h in result.holdings
     ]

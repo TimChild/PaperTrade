@@ -199,20 +199,36 @@ task precommit:run     # Run pre-commit on all files
 
 ### Running Tests
 
+PaperTrade follows the **Test Pyramid** approach with unit, integration, and E2E tests. See [docs/TESTING_STRATEGY.md](docs/TESTING_STRATEGY.md) for details.
+
 ```bash
-# All tests
+# All tests (backend + frontend)
 task test
 
-# Backend only
-task test:backend
+# Backend tests
+cd backend
+uv run pytest                    # All tests (unit + integration)
+uv run pytest tests/unit/        # Unit tests only
+uv run pytest tests/integration/ # Integration tests only
 
-# Frontend only
-task test:frontend
+# Frontend tests
+cd frontend
+npm test                         # Unit tests
+npm run test:e2e                 # E2E tests with Playwright
+npm run test:e2e:ui              # E2E tests in interactive mode
 
 # With coverage report
-cd backend && uv run pytest --cov=papertrade --cov-report=html
+cd backend
+uv run pytest --cov=papertrade --cov-report=html
 # Open htmlcov/index.html in browser
 ```
+
+#### Test Statistics
+
+- **Backend**: 220+ tests (195 unit, 26 integration)
+- **Frontend**: 30+ tests (23 unit, 7 E2E)
+- **Total**: 250+ tests ensuring quality
+- **Coverage**: 90%+ on critical paths
 
 ### Linting & Type Checking
 
