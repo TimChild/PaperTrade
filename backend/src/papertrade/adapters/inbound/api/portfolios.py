@@ -53,6 +53,9 @@ from papertrade.domain.exceptions import InvalidPortfolioError
 
 router = APIRouter(prefix="/portfolios", tags=["portfolios"])
 
+# Default currency for Phase 1 (hardcoded until multi-currency support added)
+DEFAULT_CURRENCY = "USD"
+
 
 # Request/Response Models
 
@@ -283,7 +286,7 @@ async def execute_trade(
             ticker_symbol=request.ticker,
             quantity_shares=request.quantity,
             price_per_share_amount=request.price,
-            price_per_share_currency="USD",
+            price_per_share_currency=DEFAULT_CURRENCY,
         )
         handler = BuyStockHandler(portfolio_repo, transaction_repo)
         result = await handler.execute(command)
@@ -293,7 +296,7 @@ async def execute_trade(
             ticker_symbol=request.ticker,
             quantity_shares=request.quantity,
             price_per_share_amount=request.price,
-            price_per_share_currency="USD",
+            price_per_share_currency=DEFAULT_CURRENCY,
         )
         handler = SellStockHandler(portfolio_repo, transaction_repo)
         result = await handler.execute(command)
@@ -343,9 +346,11 @@ async def get_holdings(
             ticker=h.ticker_symbol,
             quantity=str(h.quantity_shares),
             cost_basis=str(h.cost_basis_amount),
-            average_cost_per_share=str(h.average_cost_per_share_amount)
-            if h.average_cost_per_share_amount is not None
-            else None,
+            average_cost_per_share=(
+                str(h.average_cost_per_share_amount)
+                if h.average_cost_per_share_amount is not None
+                else None
+            ),
         )
         for h in result.holdings
     ]
