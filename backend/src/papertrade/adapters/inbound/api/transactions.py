@@ -101,11 +101,13 @@ async def list_transactions(
             id=str(tx.id),
             portfolio_id=str(tx.portfolio_id),
             transaction_type=tx.transaction_type,
-            timestamp=tx.timestamp,
-            cash_change=tx.cash_change,
-            ticker=tx.ticker,
-            quantity=tx.quantity,
-            price_per_share=tx.price_per_share,
+            timestamp=tx.timestamp.isoformat(),
+            cash_change=f"{tx.cash_change_amount:.2f}",
+            ticker=tx.ticker_symbol,
+            quantity=f"{tx.quantity_shares:.4f}" if tx.quantity_shares is not None else None,
+            price_per_share=f"{tx.price_per_share_amount:.2f}"
+            if tx.price_per_share_amount is not None
+            else None,
             notes=tx.notes,
         )
         for tx in result.transactions
