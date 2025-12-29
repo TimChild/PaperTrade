@@ -7,7 +7,6 @@ from papertrade.application.exceptions import (
     MarketDataUnavailableError,
     TickerNotFoundError,
 )
-from papertrade.application.ports.market_data_port import MarketDataPort
 from papertrade.domain.value_objects.ticker import Ticker
 
 
@@ -139,9 +138,7 @@ class InMemoryMarketDataAdapter:
             ValueError: If end is before start
         """
         if end < start:
-            raise ValueError(
-                f"End time ({end}) cannot be before start time ({start})"
-            )
+            raise ValueError(f"End time ({end}) cannot be before start time ({start})")
 
         ticker_symbol = ticker.symbol
         if ticker_symbol not in self._prices:

@@ -8,7 +8,6 @@ The implementation is Redis-backed for distributed rate limiting across multiple
 Uses Lua scripts for atomic check-and-consume operations to prevent race conditions.
 """
 
-from datetime import datetime, timezone
 from typing import Protocol
 
 from redis.asyncio import Redis
@@ -16,7 +15,7 @@ from redis.asyncio import Redis
 
 class RedisClient(Protocol):
     """Protocol for Redis client interface.
-    
+
     This allows using either real Redis or fakeredis for testing.
     """
 
@@ -40,22 +39,22 @@ class RedisClient(Protocol):
 
 class RateLimiter:
     """Token bucket rate limiter with dual time windows.
-    
+
     Enforces rate limits for external API calls using a token bucket algorithm.
     Supports two time windows (minute and day) to match Alpha Vantage quotas.
-    
+
     The limiter maintains two independent token buckets:
     - Minute bucket: Refills every 60 seconds
     - Day bucket: Refills every 86400 seconds (24 hours)
-    
+
     Both buckets must have tokens available for a request to proceed.
-    
+
     Attributes:
         redis: Redis client for token storage
         key_prefix: Prefix for Redis keys (e.g., "papertrade:ratelimit")
         calls_per_minute: Maximum calls allowed per minute
         calls_per_day: Maximum calls allowed per day
-    
+
     Example:
         >>> limiter = RateLimiter(redis, "api:limit", 5, 500)
         >>> if await limiter.can_make_request():
@@ -111,13 +110,13 @@ class RateLimiter:
         calls_per_day: int,
     ) -> None:
         """Initialize rate limiter.
-        
+
         Args:
             redis: Redis client (real or fake)
             key_prefix: Prefix for Redis keys (e.g., "papertrade:ratelimit")
             calls_per_minute: Maximum calls allowed per minute
             calls_per_day: Maximum calls allowed per day
-            
+
         Raises:
             ValueError: If limits are not positive integers
         """
@@ -125,12 +124,12 @@ class RateLimiter:
             raise ValueError("calls_per_minute must be positive")
         if calls_per_day <= 0:
             raise ValueError("calls_per_day must be positive")
-        
+
         self.redis = redis
         self.key_prefix = key_prefix
         self.calls_per_minute = calls_per_minute
         self.calls_per_day = calls_per_day
-        
+
         # Time windows in seconds
         self._minute_window = 60
         self._day_window = 86400  # 24 hours
@@ -145,13 +144,13 @@ class RateLimiter:
 
     async def can_make_request(self) -> bool:
         """Check if a request can be made without consuming tokens.
-        
+
         This is a read-only check that doesn't modify token counts.
         Use consume_token() to actually consume a token.
-        
+
         Returns:
             True if both minute and day buckets have tokens available
-            
+
         Example:
             >>> if await limiter.can_make_request():
             ...     await limiter.consume_token()
@@ -159,29 +158,27 @@ class RateLimiter:
         """
         minute_key = self._get_minute_key()
         day_key = self._get_day_key()
-        
+
         # Get current token counts
         minute_tokens_bytes = await self.redis.get(minute_key)
         minute_tokens = (
             int(minute_tokens_bytes) if minute_tokens_bytes else self.calls_per_minute
         )
-        
+
         day_tokens_bytes = await self.redis.get(day_key)
-        day_tokens = (
-            int(day_tokens_bytes) if day_tokens_bytes else self.calls_per_day
-        )
-        
+        day_tokens = int(day_tokens_bytes) if day_tokens_bytes else self.calls_per_day
+
         return minute_tokens > 0 and day_tokens > 0
 
     async def consume_token(self) -> bool:
         """Atomically check and consume a token if available.
-        
+
         This method atomically checks both buckets and consumes a token from each
         if both have tokens available. If either bucket is empty, no tokens are consumed.
-        
+
         Returns:
             True if token was consumed, False if insufficient tokens
-            
+
         Example:
             >>> if await limiter.consume_token():
             ...     # Token consumed, proceed with API call
@@ -191,8 +188,8 @@ class RateLimiter:
         """
         minute_key = self._get_minute_key()
         day_key = self._get_day_key()
-        
-        result = await self.redis.eval(
+
+        result = await self.redis.eval(  # type: ignore[misc]
             self._CONSUME_SCRIPT,
             2,  # Number of keys
             minute_key,
@@ -202,18 +199,18 @@ class RateLimiter:
             str(self._minute_window),
             str(self._day_window),
         )
-        
+
         return bool(result)
 
     async def wait_time(self) -> float:
         """Calculate seconds until next token will be available.
-        
+
         Returns the minimum wait time before a token will be available in either bucket.
         If tokens are currently available, returns 0.0.
-        
+
         Returns:
             Seconds to wait (0.0 if tokens available now)
-            
+
         Example:
             >>> wait = await limiter.wait_time()
             >>> if wait > 0:
@@ -222,25 +219,23 @@ class RateLimiter:
         """
         minute_key = self._get_minute_key()
         day_key = self._get_day_key()
-        
+
         # Get current token counts
         minute_tokens_bytes = await self.redis.get(minute_key)
         minute_tokens = (
             int(minute_tokens_bytes) if minute_tokens_bytes else self.calls_per_minute
         )
-        
+
         day_tokens_bytes = await self.redis.get(day_key)
-        day_tokens = (
-            int(day_tokens_bytes) if day_tokens_bytes else self.calls_per_day
-        )
-        
+        day_tokens = int(day_tokens_bytes) if day_tokens_bytes else self.calls_per_day
+
         # If both have tokens, no wait needed
         if minute_tokens > 0 and day_tokens > 0:
             return 0.0
-        
+
         # Get TTLs to determine when tokens will refill
         wait_times: list[float] = []
-        
+
         if minute_tokens <= 0:
             minute_ttl = await self.redis.ttl(minute_key)
             if minute_ttl > 0:
@@ -248,7 +243,7 @@ class RateLimiter:
             else:
                 # Key expired or doesn't exist, tokens available immediately
                 wait_times.append(0.0)
-        
+
         if day_tokens <= 0:
             day_ttl = await self.redis.ttl(day_key)
             if day_ttl > 0:
@@ -256,36 +251,34 @@ class RateLimiter:
             else:
                 # Key expired or doesn't exist, tokens available immediately
                 wait_times.append(0.0)
-        
+
         # Return minimum wait time (when first bucket refills)
         return min(wait_times) if wait_times else 0.0
 
     async def get_remaining_tokens(self) -> dict[str, int]:
         """Get remaining token counts for monitoring.
-        
+
         Returns current token counts for both time windows.
         Useful for monitoring, logging, and displaying quota status to users.
-        
+
         Returns:
             Dict with "minute" and "day" token counts
-            
+
         Example:
             >>> tokens = await limiter.get_remaining_tokens()
             >>> print(f"Tokens left: {tokens['minute']}/min, {tokens['day']}/day")
         """
         minute_key = self._get_minute_key()
         day_key = self._get_day_key()
-        
+
         minute_tokens_bytes = await self.redis.get(minute_key)
         minute_tokens = (
             int(minute_tokens_bytes) if minute_tokens_bytes else self.calls_per_minute
         )
-        
+
         day_tokens_bytes = await self.redis.get(day_key)
-        day_tokens = (
-            int(day_tokens_bytes) if day_tokens_bytes else self.calls_per_day
-        )
-        
+        day_tokens = int(day_tokens_bytes) if day_tokens_bytes else self.calls_per_day
+
         return {
             "minute": minute_tokens,
             "day": day_tokens,

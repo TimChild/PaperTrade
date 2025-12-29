@@ -81,7 +81,8 @@ def vcr_config() -> dict[str, object]:
     """
     return {
         "filter_headers": ["authorization", "x-api-key"],
-        "record_mode": "once",  # Record once, replay after
+        "record_mode": "none",  # Never record, only playback
         "match_on": ["uri", "method"],
         "decode_compressed_response": True,
+        "cassette_library_dir": "tests/cassettes",
     }

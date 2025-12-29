@@ -19,7 +19,7 @@ from papertrade.domain.value_objects.ticker import Ticker
 
 class RedisClient(Protocol):
     """Protocol for Redis client interface.
-    
+
     This allows using either real Redis or fakeredis for testing.
     """
 
@@ -51,20 +51,20 @@ class RedisClient(Protocol):
 
 class PriceCache:
     """Redis-based cache for stock price data.
-    
+
     Provides simple CRUD operations for PricePoint objects with automatic
     JSON serialization/deserialization. Supports configurable TTL to control
     cache freshness.
-    
+
     Attributes:
         redis: Redis client for cache storage
         key_prefix: Prefix for cache keys (e.g., "papertrade:price")
         default_ttl: Default TTL in seconds (None = no expiration)
-    
+
     Key Format:
         {key_prefix}:{ticker.symbol}
         Example: "papertrade:price:AAPL"
-    
+
     Example:
         >>> cache = PriceCache(redis, "papertrade:price", 3600)
         >>> price = PricePoint(...)
@@ -79,7 +79,7 @@ class PriceCache:
         default_ttl: int | None = None,
     ) -> None:
         """Initialize price cache.
-        
+
         Args:
             redis: Redis client (real or fake)
             key_prefix: Prefix for cache keys (e.g., "papertrade:price")
@@ -91,10 +91,10 @@ class PriceCache:
 
     def _get_key(self, ticker: Ticker) -> str:
         """Generate Redis key for ticker.
-        
+
         Args:
             ticker: Stock ticker
-            
+
         Returns:
             Redis key like "papertrade:price:AAPL"
         """
@@ -102,10 +102,10 @@ class PriceCache:
 
     def _serialize_price(self, price: PricePoint) -> str:
         """Serialize PricePoint to JSON string.
-        
+
         Args:
             price: PricePoint to serialize
-            
+
         Returns:
             JSON string representation
         """
@@ -131,40 +131,40 @@ class PriceCache:
 
     def _deserialize_price(self, json_str: str) -> PricePoint:
         """Deserialize JSON string to PricePoint.
-        
+
         Args:
             json_str: JSON string to deserialize
-            
+
         Returns:
             Reconstructed PricePoint
-            
+
         Raises:
             ValueError: If JSON is malformed or invalid
         """
         from datetime import datetime
         from decimal import Decimal
-        
+
         data = json.loads(json_str)
-        
+
         # Reconstruct Money objects
         price = Money(Decimal(data["price_amount"]), data["price_currency"])
-        
+
         open_price = None
         if data.get("open_amount") is not None:
             open_price = Money(Decimal(data["open_amount"]), data["open_currency"])
-        
+
         high_price = None
         if data.get("high_amount") is not None:
             high_price = Money(Decimal(data["high_amount"]), data["high_currency"])
-        
+
         low_price = None
         if data.get("low_amount") is not None:
             low_price = Money(Decimal(data["low_amount"]), data["low_currency"])
-        
+
         close_price = None
         if data.get("close_amount") is not None:
             close_price = Money(Decimal(data["close_amount"]), data["close_currency"])
-        
+
         # Reconstruct PricePoint
         return PricePoint(
             ticker=Ticker(data["ticker"]),
@@ -181,16 +181,16 @@ class PriceCache:
 
     async def get(self, ticker: Ticker) -> PricePoint | None:
         """Get cached price for ticker.
-        
+
         Args:
             ticker: Stock ticker to get price for
-            
+
         Returns:
             Cached PricePoint if exists, None if cache miss
-            
+
         Raises:
             ValueError: If cached data is corrupted
-            
+
         Example:
             >>> price = await cache.get(Ticker("AAPL"))
             >>> if price is None:
@@ -198,10 +198,10 @@ class PriceCache:
         """
         key = self._get_key(ticker)
         value = await self.redis.get(key)
-        
+
         if value is None:
             return None
-        
+
         # Deserialize from JSON
         json_str = value.decode("utf-8") if isinstance(value, bytes) else value
         return self._deserialize_price(json_str)
@@ -212,29 +212,29 @@ class PriceCache:
         ttl: int | None = None,
     ) -> None:
         """Store price in cache.
-        
+
         Args:
             price: PricePoint to cache
             ttl: Time-to-live in seconds (overrides default_ttl if provided)
-            
+
         Example:
             >>> price = PricePoint(...)
             >>> await cache.set(price, ttl=3600)  # Cache for 1 hour
         """
         key = self._get_key(price.ticker)
         value = self._serialize_price(price)
-        
+
         # Use provided TTL or default
         expiration = ttl if ttl is not None else self.default_ttl
-        
+
         await self.redis.set(key, value, ex=expiration)
 
     async def delete(self, ticker: Ticker) -> None:
         """Delete cached price for ticker.
-        
+
         Args:
             ticker: Ticker to delete from cache
-            
+
         Example:
             >>> await cache.delete(Ticker("AAPL"))
         """
@@ -243,13 +243,13 @@ class PriceCache:
 
     async def exists(self, ticker: Ticker) -> bool:
         """Check if ticker has cached price.
-        
+
         Args:
             ticker: Ticker to check
-            
+
         Returns:
             True if price is cached, False otherwise
-            
+
         Example:
             >>> if await cache.exists(Ticker("AAPL")):
             ...     price = await cache.get(Ticker("AAPL"))
@@ -260,15 +260,15 @@ class PriceCache:
 
     async def get_ttl(self, ticker: Ticker) -> int:
         """Get remaining TTL for cached price.
-        
+
         Args:
             ticker: Ticker to check TTL for
-            
+
         Returns:
             Remaining seconds until expiration
             -1 if key has no expiration
             -2 if key doesn't exist
-            
+
         Example:
             >>> ttl = await cache.get_ttl(Ticker("AAPL"))
             >>> if ttl > 0:
