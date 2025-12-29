@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { usePortfolios, usePortfolioBalance } from '@/hooks/usePortfolio'
 import { useHoldings } from '@/hooks/useHoldings'
@@ -7,9 +8,13 @@ import { HoldingsTable } from '@/components/features/portfolio/HoldingsTable'
 import { TransactionList } from '@/components/features/portfolio/TransactionList'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { ErrorDisplay } from '@/components/ui/ErrorDisplay'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { Dialog } from '@/components/ui/Dialog'
+import { CreatePortfolioForm } from '@/components/features/portfolio/CreatePortfolioForm'
 import { adaptPortfolio, adaptHolding, adaptTransaction } from '@/utils/adapters'
 
 export function Dashboard(): React.JSX.Element {
+  const [showCreateModal, setShowCreateModal] = useState(false)
   const { data: portfolios, isLoading: portfoliosLoading, isError, error } = usePortfolios()
 
   // For the dashboard, we'll show the first portfolio
@@ -47,13 +52,21 @@ export function Dashboard(): React.JSX.Element {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <header className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-          Portfolio Dashboard
-        </h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
-          Track your investments and performance
-        </p>
+      <header className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
+            Portfolio Dashboard
+          </h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
+            Track your investments and performance
+          </p>
+        </div>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        >
+          Create Portfolio
+        </button>
       </header>
 
       <div className="space-y-8">
@@ -91,11 +104,17 @@ export function Dashboard(): React.JSX.Element {
               )}
             </div>
           ) : (
-            <div className="rounded-lg border border-gray-300 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-              <p className="text-gray-600 dark:text-gray-400">
-                No portfolios found. Create your first portfolio to get started.
-              </p>
-            </div>
+            <EmptyState
+              message="No portfolios found. Create your first portfolio to get started!"
+              action={
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
+                  Create Your First Portfolio
+                </button>
+              }
+            />
           )}
         </section>
 
@@ -162,6 +181,22 @@ export function Dashboard(): React.JSX.Element {
           </section>
         )}
       </div>
+
+      {/* Portfolio Creation Modal */}
+      <Dialog
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Create New Portfolio"
+        className="max-w-md"
+      >
+        <CreatePortfolioForm
+          onSuccess={() => {
+            setShowCreateModal(false)
+            // Portfolio list will be automatically refreshed via query invalidation
+          }}
+          onCancel={() => setShowCreateModal(false)}
+        />
+      </Dialog>
     </div>
   )
 }
