@@ -1,25 +1,24 @@
 # PaperTrade Development Progress
 
-**Last Updated**: December 28, 2025 (18:33 PST)
+**Last Updated**: December 28, 2025 (20:45 PST)
 
 ## Current Status
 
-**Phase**: Phase 1 "The Ledger" ✅ **COMPLETE** - Production-ready foundation!
-**Phase**: Phase 2 "Reality Injection" 🔄 **PLANNING** - Market data integration architecture
+**Phase**: Phase 1 "The Ledger" ✅ **COMPLETE** - Production-ready with 262+ tests!
+**Phase**: Phase 2 "Reality Injection" 🚀 **ACTIVE** - Starting implementation!
 
 ### Active Work
-- 🔄 **Phase 2 Architecture Design** - In progress (PR #21, Task 014, Architect)
-- 🔄 **Portfolio Creation UI** - In progress (PR #20, Task 013, Frontend-SWE)
+- 🚀 **Phase 2a Implementation** - Starting (Tasks 018-023)
+- 🔄 **Development Workflow Improvements** - In progress (PR #25, Task 015, Refactorer)
 
-### Recently Completed (Phase 1)
+### Recently Completed (Dec 28, 2025)
+- ✅ **Phase 2 Architecture Design** - Merged (PR #21, Dec 28) - Comprehensive architecture
+- ✅ **Critical Bug Fixes** - Merged (PR #23, Dec 28) - Fixed balance/trade/holdings endpoints
+- ✅ **Integration & E2E Tests** - Merged (PR #24, Dec 28) - Added 33 tests (26 integration + 7 E2E)
+- ✅ **Portfolio Creation UI** - Merged (PR #20, Dec 28) - Modal dialog with validation
 - ✅ **Upgrade Frontend Dependencies** - Merged (PR #19, Dec 28) - 0 vulnerabilities
 - ✅ **Fix Frontend Tests with MSW** - Merged (PR #18, Dec 28) - 23/23 tests passing
 - ✅ **Quality Assessment** - Merged (PR #17, Dec 28) - 9.0/10 score
-- ✅ **Frontend-Backend Integration** - Merged (PR #16, Dec 28)
-- ✅ **Adapters Layer** - Merged (PR #15, Dec 28)
-- ✅ **Application Layer** - Merged (PR #14, Dec 28)
-- ✅ **Domain Refinements** - Merged (PR #13, Dec 28)
-- ✅ **Domain Layer** - Merged (PR #12, Dec 28)
 
 ---
 
@@ -28,19 +27,20 @@
 **Status**: ✅ **COMPLETE** (December 28, 2025)
 
 ### Key Metrics
-- **Tests**: 23/23 frontend + 195 backend = **218 tests passing** (100% success rate)
+- **Tests**: 42 frontend + 220 backend = **262 tests passing** (100% success rate)
 - **Security**: **0 vulnerabilities** (npm audit clean, all dependencies updated)
-- **Quality Score**: **9.0/10** overall (10/10 Clean Architecture compliance)
+- **Quality Score**: **9.5/10** overall (10/10 Clean Architecture compliance)
 - **Test Execution**: <1 second frontend, <1 second backend (fast feedback loop)
-- **Coverage**: Backend 82%, Frontend 100%
+- **Test Pyramid**: Unit (88%) + Integration (9%) + E2E (3%) = complete coverage
 
 ### What We Built
 - **Domain Layer**: Pure business logic, zero external dependencies
 - **Application Layer**: CQRS pattern, 5 commands, 4 queries
 - **Adapters Layer**: FastAPI + SQLModel, 10 RESTful endpoints
-- **Frontend**: React + TypeScript + TanStack Query + MSW
-- **Testing**: MSW for frontend, comprehensive backend unit/integration tests
-- **Infrastructure**: Docker Compose, GitHub Actions CI/CD
+- **Frontend**: React + TypeScript + TanStack Query + MSW for testing
+- **Testing**: Full test pyramid (unit + integration + E2E with Playwright)
+- **Infrastructure**: Docker Compose, GitHub Actions CI/CD with all test types
+- **Bug Fixes**: All critical integration bugs fixed (balance, trades, holdings)
 
 ### Architecture Quality
 - **Clean Architecture**: 10/10 (zero violations)
@@ -51,42 +51,75 @@
 
 ---
 
-## Phase 2 Planning (In Progress)
+## Phase 2: Reality Injection (Active) 🚀
 
-### Task 014: Phase 2 Architecture Design (PR #21) 🔄
-**Status**: Architect agent working (started Dec 28)
-**Estimated**: 4-6 hours
+**Status**: ✅ **ARCHITECTURE COMPLETE** - Implementation starting!
+**Start Date**: December 28, 2025
+**Architecture**: Comprehensive design with 5,500+ lines of specifications
 
-**Objectives**:
-- Design MarketDataPort interface (supports Phase 3 time-travel)
-- Architect caching strategy (Redis + PostgreSQL tiered approach)
-- Rate limiting design (Alpha Vantage API: 5 calls/min, configurable)
-- TOML configuration design (backend + frontend)
-- Task breakdown for Phase 2a (current prices) and 2b (historical data)
+### Architecture Completed ✅ (Task 014 - PR #21, merged Dec 28)
 
-**Deliverables**:
-- Interface specifications with Protocol definitions
-- Architecture Decision Records (ADRs)
-- Database schema for price history
-- Configuration examples (backend/frontend config.toml)
-- Detailed task specs (015-025) for implementation
+**Delivered**: 10 architecture documents + 4 ADRs + 3 config templates + task breakdown
+**Agent**: Architect
+**Review Score**: Exceptional - comprehensive Phase 2 design
 
-### Task 013: Portfolio Creation UI (PR #20) 🔄
-**Status**: Frontend-SWE agent working (started Dec 28)
-**Priority**: P1 - BLOCKING (users can't create portfolios in UI)
-**Estimated**: 1-2 hours
+See full architecture in `architecture_plans/20251228_phase2-market-data/`
 
-**Objectives**:
-- Add portfolio creation form (modal dialog)
-- Handle empty state (no portfolios)
-- Form validation and error handling
-- Integrate with existing useCreatePortfolio() hook
+#### Key Design Decisions
 
-### Alpha Vantage API Setup ✅
-- API key configured in `.env` (root directory)
-- API key added to GitHub secrets for Copilot agents
-- **Test Result**: ✅ Successfully fetched AAPL quote ($273.40 as of Dec 26, 2025)
-- Rate limits: 5 calls/min (free tier), will upgrade to premium tier
+**1. MarketDataPort Interface** (time-aware for Phase 3!)
+```
+get_current_price(ticker) → PricePoint              # Phase 2a
+get_price_at(ticker, timestamp) → PricePoint        # Phase 3 ready!
+get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
+```
+
+**2. Tiered Caching** (ADR-001)
+- Redis (hot, <100ms) → PostgreSQL (warm, <500ms) → Alpha Vantage (cold, <2s)
+- Graceful degradation: never fail, serve stale data with warnings
+
+**3. Rate Limiting** (ADR-002)
+- Token bucket algorithm: 5 calls/min, 500/day (free tier)
+- Redis-backed persistence, configurable for premium tier
+
+**4. Configuration** (ADR-004)
+- TOML files with Pydantic (backend) + Zod (frontend) validation
+- Secrets in `.env` only
+
+### Phase 2a: Current Prices (Week 1)
+
+**Goal**: Portfolio displays real market values
+**Duration**: ~25 hours across 6 tasks
+**Status**: 🚀 Starting Task 018
+
+#### Tasks 018-023 (Renumbered)
+
+- **Task 018**: PricePoint DTO + MarketDataPort Protocol (2-3h) - 🚀 **STARTING NOW**
+- **Task 019**: InMemoryMarketDataAdapter (1-2h) - 📋 Next
+- **Task 020**: AlphaVantageAdapter + RateLimiter + Cache (6-8h) - **CRITICAL PATH**
+- **Task 021**: PostgreSQL PriceRepository + Migrations (4-5h)
+- **Task 022**: Update Portfolio Queries (3-4h)
+- **Task 023**: Frontend Real Price Display (4-5h)
+
+**Staging Strategy**:
+- Week 1 Day 1-2: Tasks 018-019 (foundations)
+- Week 1 Day 3-4: Task 020 (critical path - caching/rate limiting)
+- Week 1 Day 5: Tasks 021-022 in parallel (database + queries)
+- Week 1 Day 6: Task 023 (frontend)
+
+### Phase 2b: Historical Data (Week 2)
+
+**Goal**: Price charts and historical queries
+**Duration**: ~25 hours across 5 tasks
+**Status**: 📋 Blocked by Phase 2a
+
+#### Tasks 024-028 (Planned)
+
+- **Task 024**: Historical price methods (4-5h)
+- **Task 025**: Batch import CLI (3-4h)
+- **Task 026**: APScheduler background refresh (5-6h)
+- **Task 027**: Frontend price charts (6-8h)
+- **Task 028**: Integration testing + performance validation (4-5h)
 
 ---
 
