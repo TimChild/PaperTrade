@@ -469,6 +469,111 @@ When reviewing agent work:
 
 ---
 
+## Debugging CI Failures
+
+When CI fails on a PR, you can reproduce the failure locally using the Taskfile commands that CI uses.
+
+### Quick Reproduction
+
+```bash
+# Run ALL CI checks locally (same as GitHub Actions)
+task ci
+
+# Or run specific checks
+task lint:backend
+task test:frontend
+task build
+```
+
+### Step-by-Step Debugging
+
+1. **Pull the PR branch:**
+   ```bash
+   gh pr checkout <PR_NUMBER>
+   ```
+
+2. **Run the failing job:**
+   Look at the CI logs to see which task failed, then run it locally:
+   ```bash
+   # Example: backend linting failed
+   task lint:backend
+   
+   # Example: frontend tests failed
+   task test:frontend
+   ```
+
+3. **Fix the issue:**
+   Make your changes to fix the failing tests or linting errors.
+
+4. **Verify the fix:**
+   ```bash
+   # Run just the task that was failing
+   task lint:backend
+   
+   # Or run all CI checks to be sure
+   task ci
+   ```
+
+5. **Commit and push:**
+   ```bash
+   git add .
+   git commit -m "fix: resolve CI failure"
+   git push
+   ```
+
+### CI Job to Task Mapping
+
+Our CI workflow uses Taskfile commands, so local and CI environments are identical:
+
+| CI Job | Runs These Tasks | Local Command |
+|--------|------------------|---------------|
+| `backend-checks` | `task lint:backend && task test:backend` | Same |
+| `frontend-checks` | `task lint:frontend && task test:frontend && task build:frontend` | Same |
+| `e2e-tests` | `task docker:up && task test:e2e` | Same |
+
+### Quick CI Checks
+
+Before pushing, run a quick lint check:
+
+```bash
+# Fast checks (lint only, skip tests)
+task ci:fast
+
+# Full CI suite (takes longer)
+task ci
+```
+
+### Common CI Failures
+
+**Linting errors:**
+```bash
+# Auto-fix most linting issues
+task format
+
+# Then verify
+task lint
+```
+
+**Test failures:**
+```bash
+# Run tests with verbose output
+cd backend && uv run pytest -vv
+
+# Or for frontend
+cd frontend && npm run test
+```
+
+**Build failures:**
+```bash
+# Check backend imports
+task build:backend
+
+# Check frontend build
+task build:frontend
+```
+
+---
+
 ## Troubleshooting
 
 ### Agent Task Fails to Start

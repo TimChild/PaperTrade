@@ -202,6 +202,14 @@ task docker:down       # Stop Docker services
 task docker:logs       # Show service logs
 task docker:clean      # Stop and remove volumes (⚠️ deletes data)
 
+# CI & Build
+task ci                # Run all CI checks locally (same as GitHub Actions)
+task ci:fast           # Run fast checks (lint only, skip tests)
+task build             # Build all production artifacts
+task build:backend     # Check backend imports and structure
+task build:frontend    # Build frontend for production
+task test:e2e          # Run end-to-end tests with Playwright
+
 # Utilities
 task clean             # Clean build artifacts and caches
 task precommit:install # Install pre-commit hooks
@@ -284,6 +292,30 @@ git push --no-verify
 
 **Why pre-push instead of pre-commit?**
 This prevents the "double commit" problem where auto-formatters modify files, requiring you to write the same commit message twice. With pre-push, you commit immediately and formatters run before pushing.
+
+### Running CI Checks Locally
+
+Before pushing, you can run the same checks that CI runs in GitHub Actions:
+
+```bash
+# Run all CI checks (lint + test + build)
+task ci
+
+# Or run specific checks
+task lint           # All linters
+task test           # All tests
+task build          # Build checks
+
+# Fast checks (lint only, skip tests)
+task ci:fast
+```
+
+**Why this matters**: These are the **exact same commands** that run in GitHub Actions CI. If `task ci` passes locally, CI should pass too.
+
+**CI Job Mapping:**
+- `backend-checks` job → `task lint:backend && task test:backend`
+- `frontend-checks` job → `task lint:frontend && task test:frontend && task build:frontend`
+- `e2e-tests` job → `task docker:up && task test:e2e`
 
 ### Creating a PR
 
