@@ -56,3 +56,9 @@ async def health_check() -> dict[str, str]:
 async def root() -> dict[str, str]:
     """API root endpoint."""
     return {"message": "Welcome to PaperTrade API v1"}
+
+
+@app.get("/api/v1/")
+async def api_v1_root() -> dict[str, str]:
+    """API v1 root endpoint."""
+    return {"message": "Welcome to PaperTrade API v1"}

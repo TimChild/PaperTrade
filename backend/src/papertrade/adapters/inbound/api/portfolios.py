@@ -280,20 +280,20 @@ async def execute_trade(
     if request.action == "BUY":
         command = BuyStockCommand(
             portfolio_id=portfolio_id,
-            ticker=request.ticker,
-            quantity=request.quantity,
-            price_per_share=request.price,
-            price_currency="USD",
+            ticker_symbol=request.ticker,
+            quantity_shares=request.quantity,
+            price_per_share_amount=request.price,
+            price_per_share_currency="USD",
         )
         handler = BuyStockHandler(portfolio_repo, transaction_repo)
         result = await handler.execute(command)
     else:  # SELL
         command = SellStockCommand(
             portfolio_id=portfolio_id,
-            ticker=request.ticker,
-            quantity=request.quantity,
-            price_per_share=request.price,
-            price_currency="USD",
+            ticker_symbol=request.ticker,
+            quantity_shares=request.quantity,
+            price_per_share_amount=request.price,
+            price_per_share_currency="USD",
         )
         handler = SellStockHandler(portfolio_repo, transaction_repo)
         result = await handler.execute(command)
@@ -317,8 +317,8 @@ async def get_balance(
     result = await handler.execute(query)
 
     return BalanceResponse(
-        amount=str(result.balance.amount),
-        currency=result.balance.currency,
+        amount=str(result.cash_balance.amount),
+        currency=result.cash_balance.currency,
         as_of=result.as_of.isoformat(),
     )
 
@@ -340,10 +340,12 @@ async def get_holdings(
 
     holdings = [
         HoldingResponse(
-            ticker=h.ticker,
-            quantity=h.quantity,
-            cost_basis=h.cost_basis,
-            average_cost_per_share=h.average_cost_per_share,
+            ticker=h.ticker_symbol,
+            quantity=str(h.quantity_shares),
+            cost_basis=str(h.cost_basis_amount),
+            average_cost_per_share=str(h.average_cost_per_share_amount)
+            if h.average_cost_per_share_amount is not None
+            else None,
         )
         for h in result.holdings
     ]
