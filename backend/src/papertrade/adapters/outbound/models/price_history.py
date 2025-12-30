@@ -118,10 +118,15 @@ class PriceHistoryModel(SQLModel, table=True):
         if self.close_amount is not None and self.close_currency is not None:
             close_money = Money(amount=self.close_amount, currency=self.close_currency)
 
+        # Ensure timestamp is UTC-aware (SQLite stores naive datetimes)
+        timestamp = self.timestamp
+        if timestamp.tzinfo is None:
+            timestamp = timestamp.replace(tzinfo=UTC)
+
         return PricePoint(
             ticker=Ticker(self.ticker),
             price=price,
-            timestamp=self.timestamp,
+            timestamp=timestamp,
             source=self.source,
             interval=self.interval,
             open=open_money,

@@ -75,8 +75,10 @@ class WatchlistManager:
             if priority < existing.priority:
                 existing.priority = priority
                 existing.refresh_interval_seconds = int(refresh_interval.total_seconds())
-                existing.updated_at = datetime.now(UTC)
-                await self.session.flush()
+            # Re-activate if currently inactive
+            existing.is_active = True
+            existing.updated_at = datetime.now(UTC)
+            await self.session.flush()
         else:
             # Create new watchlist entry
             model = TickerWatchlistModel.from_ticker(

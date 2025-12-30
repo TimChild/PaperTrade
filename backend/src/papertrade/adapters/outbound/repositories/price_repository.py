@@ -49,7 +49,7 @@ class PriceRepository:
     async def upsert_price(self, price: PricePoint) -> None:
         """Insert or update price (ON CONFLICT DO UPDATE).
 
-        Uses PostgreSQL's ON CONFLICT DO UPDATE to handle duplicate price entries.
+        Uses database upsert semantics to handle duplicate price entries.
         If a price already exists for the same ticker/timestamp/source/interval,
         it will be updated with the new values.
 
@@ -65,13 +65,34 @@ class PriceRepository:
             ...     interval="real-time"
             ... ))
         """
-        # Convert PricePoint to database model
-        model = PriceHistoryModel.from_price_point(price)
+        # Check if a price already exists
+        query = select(PriceHistoryModel).where(
+            PriceHistoryModel.ticker == price.ticker.symbol,
+            PriceHistoryModel.timestamp == price.timestamp,
+            PriceHistoryModel.source == price.source,
+            PriceHistoryModel.interval == price.interval,
+        )
+        result = await self.session.execute(query)
+        existing = result.scalar_one_or_none()
 
-        # Merge handles both insert and update
-        # If a row with the same unique constraint exists, it updates
-        # Otherwise, it inserts a new row
-        self.session.add(model)
+        if existing:
+            # Update existing record
+            existing.price_amount = price.price.amount
+            existing.price_currency = price.price.currency
+            existing.open_amount = price.open.amount if price.open else None
+            existing.open_currency = price.open.currency if price.open else None
+            existing.high_amount = price.high.amount if price.high else None
+            existing.high_currency = price.high.currency if price.high else None
+            existing.low_amount = price.low.amount if price.low else None
+            existing.low_currency = price.low.currency if price.low else None
+            existing.close_amount = price.close.amount if price.close else None
+            existing.close_currency = price.close.currency if price.close else None
+            existing.volume = price.volume
+        else:
+            # Insert new record
+            model = PriceHistoryModel.from_price_point(price)
+            self.session.add(model)
+
         await self.session.flush()
 
     async def get_latest_price(
