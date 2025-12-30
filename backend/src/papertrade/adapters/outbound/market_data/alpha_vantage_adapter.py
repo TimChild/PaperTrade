@@ -84,7 +84,7 @@ class AlphaVantageAdapter:
         base_url: str = "https://www.alphavantage.co/query",
         timeout: float = 5.0,
         max_retries: int = 3,
-        price_repository: "PriceRepository | None" = None,
+        price_repository: PriceRepository | None = None,
     ) -> None:
         """Initialize Alpha Vantage adapter.
 

@@ -9,7 +9,6 @@ from decimal import Decimal
 
 import pytest
 
-from papertrade.adapters.outbound.models.price_history import PriceHistoryModel
 from papertrade.adapters.outbound.repositories.price_repository import PriceRepository
 from papertrade.application.dtos.price_point import PricePoint
 from papertrade.domain.value_objects.money import Money
@@ -185,9 +184,7 @@ class TestPriceRepositoryGetLatest:
         await session.commit()
 
         # Act - get with 1 hour max age
-        result = await repo.get_latest_price(
-            Ticker("AAPL"), max_age=timedelta(hours=1)
-        )
+        result = await repo.get_latest_price(Ticker("AAPL"), max_age=timedelta(hours=1))
 
         # Assert - should return recent price
         assert result is not None

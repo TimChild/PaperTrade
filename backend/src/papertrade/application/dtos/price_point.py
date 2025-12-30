@@ -1,7 +1,7 @@
 """PricePoint DTO for representing stock price observations."""
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from papertrade.domain.value_objects.money import Money
 from papertrade.domain.value_objects.ticker import Ticker
@@ -66,10 +66,9 @@ class PricePoint:
         # Validate timestamp is timezone-aware UTC
         if self.timestamp.tzinfo is None:
             raise ValueError(
-                "Timestamp must be timezone-aware (UTC). "
-                "Got naive datetime instead."
+                "Timestamp must be timezone-aware (UTC). Got naive datetime instead."
             )
-        if self.timestamp.tzinfo != timezone.utc:
+        if self.timestamp.tzinfo != UTC:
             raise ValueError(
                 f"Timestamp must be in UTC timezone. "
                 f"Got timezone: {self.timestamp.tzinfo}"
@@ -77,9 +76,7 @@ class PricePoint:
 
         # Validate price is positive (Money object already enforces numeric validity)
         if not self.price.is_positive():
-            raise ValueError(
-                f"Price must be positive, got: {self.price.amount}"
-            )
+            raise ValueError(f"Price must be positive, got: {self.price.amount}")
 
         # Collect all Money values for currency consistency check
         money_values = [self.price]
@@ -129,9 +126,7 @@ class PricePoint:
 
         # Validate volume is non-negative if present
         if self.volume is not None and self.volume < 0:
-            raise ValueError(
-                f"Volume must be non-negative, got: {self.volume}"
-            )
+            raise ValueError(f"Volume must be non-negative, got: {self.volume}")
 
     def is_stale(self, max_age: timedelta) -> bool:
         """Check if this price observation is stale.
@@ -142,7 +137,7 @@ class PricePoint:
         Returns:
             True if timestamp is older than max_age from now (UTC)
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         age = now - self.timestamp
         return age > max_age
 

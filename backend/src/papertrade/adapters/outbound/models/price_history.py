@@ -6,7 +6,6 @@ It includes conversion methods to/from the PricePoint DTO.
 
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Optional
 
 from sqlmodel import Field, Index, SQLModel
 
@@ -21,8 +20,9 @@ class PriceHistoryModel(SQLModel, table=True):
     Stores all historical and current price data for stocks. This table is append-mostly
     (updates only for corrections via upsert, never deletes).
 
-    The model flattens Money value objects into separate amount/currency columns for
-    database storage. OHLCV data is optional and only populated for interval-based prices.
+    The model flattens Money value objects into separate amount/currency columns
+    for database storage. OHLCV data is optional and only populated for
+    interval-based prices.
 
     Attributes:
         id: Auto-incrementing primary key
@@ -66,7 +66,7 @@ class PriceHistoryModel(SQLModel, table=True):
     )
 
     # Primary key
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
 
     # Core price data
     ticker: str = Field(max_length=10, index=True)
@@ -77,15 +77,15 @@ class PriceHistoryModel(SQLModel, table=True):
     interval: str = Field(max_length=10)
 
     # Optional OHLCV data
-    open_amount: Optional[Decimal] = Field(default=None, decimal_places=2)
-    open_currency: Optional[str] = Field(default=None, max_length=3)
-    high_amount: Optional[Decimal] = Field(default=None, decimal_places=2)
-    high_currency: Optional[str] = Field(default=None, max_length=3)
-    low_amount: Optional[Decimal] = Field(default=None, decimal_places=2)
-    low_currency: Optional[str] = Field(default=None, max_length=3)
-    close_amount: Optional[Decimal] = Field(default=None, decimal_places=2)
-    close_currency: Optional[str] = Field(default=None, max_length=3)
-    volume: Optional[int] = None
+    open_amount: Decimal | None = Field(default=None, decimal_places=2)
+    open_currency: str | None = Field(default=None, max_length=3)
+    high_amount: Decimal | None = Field(default=None, decimal_places=2)
+    high_currency: str | None = Field(default=None, max_length=3)
+    low_amount: Decimal | None = Field(default=None, decimal_places=2)
+    low_currency: str | None = Field(default=None, max_length=3)
+    close_amount: Decimal | None = Field(default=None, decimal_places=2)
+    close_currency: str | None = Field(default=None, max_length=3)
+    volume: int | None = None
 
     # Metadata
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

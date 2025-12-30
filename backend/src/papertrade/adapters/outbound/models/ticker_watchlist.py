@@ -5,7 +5,6 @@ background jobs.
 """
 
 from datetime import UTC, datetime
-from typing import Optional
 
 from sqlmodel import Field, Index, SQLModel
 
@@ -41,15 +40,15 @@ class TickerWatchlistModel(SQLModel, table=True):
     )
 
     # Primary key
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
 
     # Ticker identification
     ticker: str = Field(unique=True, max_length=10)
 
     # Refresh scheduling
     priority: int = Field(default=100)  # Lower = higher priority
-    last_refresh_at: Optional[datetime] = None
-    next_refresh_at: Optional[datetime] = None
+    last_refresh_at: datetime | None = None
+    next_refresh_at: datetime | None = None
     refresh_interval_seconds: int = Field(default=300)  # 5 minutes default
 
     # Status

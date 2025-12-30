@@ -6,7 +6,6 @@ layer in the tiered market data architecture.
 """
 
 from datetime import UTC, datetime, timedelta
-from typing import Optional
 
 from sqlalchemy import desc, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -25,7 +24,7 @@ class PriceRepository:
 
     Performance targets:
         - get_latest_price: <100ms
-        - get_price_at: <100ms  
+        - get_price_at: <100ms
         - get_price_history: <100ms for 1 year of daily data
         - upsert_price: <50ms
 
@@ -114,7 +113,7 @@ class PriceRepository:
         Example:
             >>> # Get latest price regardless of age
             >>> price = await repo.get_latest_price(Ticker("AAPL"))
-            >>> 
+            >>>
             >>> # Get latest price only if within 4 hours
             >>> price = await repo.get_latest_price(
             ...     Ticker("AAPL"),
@@ -246,8 +245,10 @@ class PriceRepository:
             ['AAPL', 'AMZN', 'GOOGL', 'MSFT', 'TSLA']
         """
         # Query for distinct tickers
-        query = select(PriceHistoryModel.ticker).distinct().order_by(
-            PriceHistoryModel.ticker
+        query = (
+            select(PriceHistoryModel.ticker)
+            .distinct()
+            .order_by(PriceHistoryModel.ticker)
         )
 
         # Execute query

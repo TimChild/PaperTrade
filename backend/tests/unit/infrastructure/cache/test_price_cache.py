@@ -1,6 +1,6 @@
 """Tests for PriceCache with Redis backend."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -24,7 +24,7 @@ def sample_price() -> PricePoint:
     return PricePoint(
         ticker=Ticker("AAPL"),
         price=Money(Decimal("150.25"), "USD"),
-        timestamp=datetime(2025, 12, 29, 14, 0, 0, tzinfo=timezone.utc),
+        timestamp=datetime(2025, 12, 29, 14, 0, 0, tzinfo=UTC),
         source="alpha_vantage",
         interval="real-time",
     )
@@ -144,7 +144,7 @@ class TestPriceCacheSerialization:
         price_with_ohlcv = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("150.25"), "USD"),
-            timestamp=datetime(2025, 12, 29, 14, 0, 0, tzinfo=timezone.utc),
+            timestamp=datetime(2025, 12, 29, 14, 0, 0, tzinfo=UTC),
             source="alpha_vantage",
             interval="1day",
             open=Money(Decimal("148.50"), "USD"),
@@ -173,7 +173,7 @@ class TestPriceCacheSerialization:
         price_partial = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("150.25"), "USD"),
-            timestamp=datetime(2025, 12, 29, 14, 0, 0, tzinfo=timezone.utc),
+            timestamp=datetime(2025, 12, 29, 14, 0, 0, tzinfo=UTC),
             source="alpha_vantage",
             interval="1day",
             open=Money(Decimal("148.50"), "USD"),

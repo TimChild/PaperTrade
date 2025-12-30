@@ -6,7 +6,6 @@ tickers and finding stale tickers that need updates.
 """
 
 from datetime import UTC, datetime, timedelta
-from typing import Optional
 
 from sqlalchemy import select, update
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -74,7 +73,9 @@ class WatchlistManager:
             # Update priority if the new priority is higher (lower number)
             if priority < existing.priority:
                 existing.priority = priority
-                existing.refresh_interval_seconds = int(refresh_interval.total_seconds())
+                existing.refresh_interval_seconds = int(
+                    refresh_interval.total_seconds()
+                )
             # Re-activate if currently inactive
             existing.is_active = True
             existing.updated_at = datetime.now(UTC)

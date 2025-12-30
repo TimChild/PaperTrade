@@ -10,7 +10,7 @@ We use the `respx` library to mock HTTP responses for httpx, which works seamles
 with async code and is more reliable than VCR cassettes for CI/CD environments.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import httpx
@@ -108,7 +108,7 @@ class TestAlphaVantageAdapterCacheMiss:
         assert price.price.currency == "USD"
         assert price.source == "alpha_vantage"
         assert price.interval == "1day"
-        assert price.timestamp.tzinfo == timezone.utc
+        assert price.timestamp.tzinfo == UTC
 
     @respx.mock
     async def test_get_current_price_tsla(
@@ -219,7 +219,7 @@ class TestAlphaVantageAdapterCacheHit:
         stale_price = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("100.00"), "USD"),
-            timestamp=datetime.now(timezone.utc) - timedelta(hours=2),
+            timestamp=datetime.now(UTC) - timedelta(hours=2),
             source="alpha_vantage",
             interval="1day",
         )
@@ -262,7 +262,7 @@ class TestAlphaVantageAdapterRateLimiting:
         stale_price = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("100.00"), "USD"),
-            timestamp=datetime.now(timezone.utc) - timedelta(hours=2),
+            timestamp=datetime.now(UTC) - timedelta(hours=2),
             source="alpha_vantage",
             interval="1day",
         )
@@ -306,15 +306,15 @@ class TestAlphaVantageAdapterErrorHandling:
         with pytest.raises(NotImplementedError):
             await adapter.get_price_at(
                 Ticker("AAPL"),
-                datetime.now(timezone.utc),
+                datetime.now(UTC),
             )
 
         # get_price_history
         with pytest.raises(NotImplementedError):
             await adapter.get_price_history(
                 Ticker("AAPL"),
-                datetime.now(timezone.utc) - timedelta(days=7),
-                datetime.now(timezone.utc),
+                datetime.now(UTC) - timedelta(days=7),
+                datetime.now(UTC),
             )
 
     async def test_get_supported_tickers_returns_empty(

@@ -108,9 +108,7 @@ class TransactionModel(SQLModel, table=True):
     cash_change_amount: Decimal = Field(max_digits=15, decimal_places=2)
     cash_change_currency: str = Field(max_length=3)
     ticker: str | None = Field(default=None, max_length=5)
-    quantity: Decimal | None = Field(
-        default=None, max_digits=15, decimal_places=4
-    )
+    quantity: Decimal | None = Field(default=None, max_digits=15, decimal_places=4)
     price_per_share_amount: Decimal | None = Field(
         default=None, max_digits=15, decimal_places=2
     )
