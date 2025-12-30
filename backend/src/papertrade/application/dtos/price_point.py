@@ -174,7 +174,7 @@ class PricePoint:
         """Check if this price observation is stale.
 
         A price is considered stale if its age has reached or exceeded max_age.
-        
+
         Args:
             max_age: Maximum age before price is considered stale
 
