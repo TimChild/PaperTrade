@@ -5,6 +5,7 @@ Provides factory functions for repositories and other dependencies used by API r
 
 import os
 from typing import Annotated
+from uuid import UUID
 
 import httpx
 from fastapi import Depends, Header
@@ -177,7 +178,5 @@ PortfolioRepositoryDep = Annotated[
 TransactionRepositoryDep = Annotated[
     SQLModelTransactionRepository, Depends(get_transaction_repository)
 ]
-from uuid import UUID
-
 CurrentUserDep = Annotated[UUID, Depends(get_current_user_id)]
 MarketDataDep = Annotated[MarketDataPort, Depends(get_market_data)]
