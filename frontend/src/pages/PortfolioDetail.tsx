@@ -6,6 +6,7 @@ import { PortfolioSummaryCard } from '@/components/features/portfolio/PortfolioS
 import { HoldingsTable } from '@/components/features/portfolio/HoldingsTable'
 import { TransactionList } from '@/components/features/portfolio/TransactionList'
 import { TradeForm } from '@/components/features/portfolio/TradeForm'
+import { PriceChart } from '@/components/features/PriceChart'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { ErrorDisplay } from '@/components/ui/ErrorDisplay'
 import { adaptPortfolio, adaptHolding, adaptTransaction } from '@/utils/adapters'
@@ -101,17 +102,24 @@ export function PortfolioDetail(): React.JSX.Element {
             )}
           </section>
 
-          {/* Performance Chart Placeholder */}
-          <section>
-            <h2 className="mb-4 text-2xl font-semibold text-gray-900 dark:text-white">
-              Performance
-            </h2>
-            <div className="flex h-64 items-center justify-center rounded-lg border border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
-              <p className="text-gray-600 dark:text-gray-400">
-                Performance chart coming soon
-              </p>
-            </div>
-          </section>
+          {/* Performance Chart - Show charts for each holding */}
+          {holdings.length > 0 && (
+            <section>
+              <h2 className="mb-4 text-2xl font-semibold text-gray-900 dark:text-white">
+                Performance
+              </h2>
+              <div className="space-y-6">
+                {holdings.map((holding) => (
+                  <div
+                    key={holding.ticker}
+                    className="rounded-lg border border-gray-300 bg-white p-6 dark:border-gray-700 dark:bg-gray-800"
+                  >
+                    <PriceChart ticker={holding.ticker} initialTimeRange="1M" />
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Holdings */}
           <section>
