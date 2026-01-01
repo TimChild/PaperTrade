@@ -7,29 +7,45 @@
 | Phase | Status | Metrics |
 |-------|--------|---------|
 | Phase 1: The Ledger | ✅ Complete | 262 tests, 6 days |
-| Phase 2a: Current Prices | ✅ Complete | 435+ tests, 4 days |
-| Phase 2b: Historical Data | 📋 Ready | Planned: ~25 hours |
+| Phase 2a: Current Prices | ⚠️  Critical Bug Found | 435+ tests, 4 days |
+| Phase 2b: Historical Data | 📋 Blocked | Waiting for Phase 2a fix |
 
-### Recent Work (Dec 29 - Jan 1)
-- ✅ PRs #37, #38 merged - CI workflow fix, test isolation fix
-- ✅ MCP tools exploration and documentation
-- 🔄 Documentation reorganization (this PR)
+### Recent Work (Jan 1)
+- ✅ Created E2E testing procedures in `orchestrator_procedures/`
+- ⚠️  **CRITICAL BUG DISCOVERED**: Trade API requires client to send price (security vulnerability)
+- 🔄 PR #40: Task 030 - Fix trade API to fetch prices on backend
+- 📋 Phase 2b tasks ready, blocked until trade functionality works
 
-### Next Up
+### Active PRs
+- PR #40: Fix trade API - backend should fetch prices (CRITICAL)
+
+### Next Up (After PR #40)
 - Phase 2b: Historical price data, background refresh, price charts
 
 ---
 
-## Phase 2a: Current Prices ✅
+## Phase 2a: Current Prices ⚠️
 
-**Completed**: December 29, 2025 (4 days, ahead of 7-day estimate)
+**Status**: Critical bug found during E2E testing (January 1, 2026)
 
-**Key Achievements**:
+**Completed Work** (December 29, 2025 - 4 days):
 - Real market data via Alpha Vantage API
 - 3-tier caching: Redis (<100ms) → PostgreSQL (<500ms) → API (<2s)
 - Rate limiting (5/min, 500/day free tier)
 - Portfolio valuations with live prices
 - Graceful degradation (stale data with warnings)
+
+**Critical Issue Discovered**:
+- ❌ Trade API requires client to provide price parameter
+- Security vulnerability: client could manipulate prices
+- Poor UX: frontend must fetch price before each trade
+- Architectural flaw: price fetching is backend responsibility
+- **Fix in progress**: PR #40 - Backend will fetch prices using MarketDataPort
+
+**Impact**:
+- Core trading functionality non-functional until fixed
+- All other features (portfolio management, price display, caching) work correctly
+- Tests pass but don't catch this issue (API schema mismatch)
 
 **Merged PRs**: #33 (Price Repository), #34 (Portfolio Integration), #35 (Test Fixes), #36 (E2E Config)
 
