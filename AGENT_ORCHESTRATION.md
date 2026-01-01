@@ -124,18 +124,11 @@ task lint           # Run linters
 ## Troubleshooting
 
 ### Long CLI Commands
-Terminal hangs with long commands. Use temp files:
+Terminal hangs with long commands (e.g., PR bodies). Use the `create_file` tool to write content to a temp file first, then reference it:
 
 ```bash
-# Create temp file with content
-cat > .tmp_body.md << 'EOF'
-Your long content here...
-EOF
-
-# Use temp file in command
+# After using create_file to write .tmp_body.md
 gh pr create --title "title" --body-file .tmp_body.md
-
-# Clean up
 rm .tmp_body.md
 ```
 
