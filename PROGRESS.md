@@ -417,7 +417,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 - **Hooks**: usePortfolio, useHoldings, useTransactions with mutations
 - **Adapters**: adaptPortfolio, adaptHolding, adaptTransaction
 - **UI**: LoadingSpinner, ErrorDisplay, EmptyState components
-- **Testing Guide**: TESTING_INTEGRATION.md with manual workflows
+- **Testing Guide**: `docs/testing-integration.md` with manual workflows
 
 **Progress Doc**: [2025-12-28_22-09-48_frontend-backend-integration.md](agent_progress_docs/2025-12-28_22-09-48_frontend-backend-integration.md)
 

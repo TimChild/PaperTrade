@@ -7,7 +7,7 @@ This document tracks ideas for future features, integrations, and improvements t
 | Idea | Link | Description | Priority |
 |------|------|-------------|----------|
 | Alpha Vantage MCP Server | https://mcp.alphavantage.co/ | Model Context Protocol server for AI-assisted market data access. Could enable agents to directly query market data during development. | Medium |
-| Additional Market Data APIs | See [DOCUMENTATION.md](DOCUMENTATION.md) | Explore Finnhub, Yahoo Finance, or Polygon.io as alternatives/backups | Low |
+| Additional Market Data APIs | See [external-resources.md](external-resources.md) | Explore Finnhub, Yahoo Finance, or Polygon.io as alternatives/backups | Low |
 
 ## Feature Ideas
 
