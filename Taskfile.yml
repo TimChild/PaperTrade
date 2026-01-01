@@ -81,11 +81,11 @@ tasks:
       - uv run pytest --cov=papertrade --cov-report=term --cov-report=html --cov-report=xml
 
   test:frontend:
-    desc: "Run frontend tests"
+    desc: "Run frontend unit tests (Vitest only)"
     dir: "{{.FRONTEND_DIR}}"
     cmds:
-      - echo "Running frontend tests..."
-      - npm run test
+      - echo "Running frontend unit tests..."
+      - npm run test:unit
     preconditions:
       - sh: test -f package.json
         msg: "Frontend not found. Run 'task setup:frontend' first."
@@ -244,6 +244,24 @@ tasks:
     preconditions:
       - sh: test -f package.json
         msg: "Frontend not found"
+
+  test:e2e:ui:
+    desc: "Run E2E tests with Playwright UI"
+    dir: "{{.FRONTEND_DIR}}"
+    cmds:
+      - echo "Running E2E tests with UI..."
+      - npm run test:e2e:ui
+    preconditions:
+      - sh: test -f package.json
+        msg: "Frontend not found"
+
+  test:all:
+    desc: "Run all tests (backend + frontend unit + E2E)"
+    cmds:
+      - task: test:backend
+      - task: test:frontend
+      - task: test:e2e
+
 
   ci:
     desc: "Run all CI checks locally (same as GitHub Actions)"
