@@ -13,19 +13,28 @@ Model Context Protocol (MCP) servers provide enhanced AI capabilities. Configura
 | `pylanceFileSyntaxErrors` | Validate specific Python file |
 | `pylanceSyntaxErrors` | Validate code snippet |
 | `pylanceWorkspaceUserFiles` | List all Python files |
-| `pylancePythonEnvironments` | Check active interpreter |
+| `pylancePythonEnvironments` | Check/list available interpreters |
+| `pylanceUpdatePythonEnvironment` | Switch to different Python interpreter |
+| `pylanceInstalledTopLevelModules` | List installed packages |
 | `pylanceInvokeRefactoring` | Auto-fix (unused imports, type annotations) |
 | `pylanceSettings` | View Pylance configuration |
 
-**When to use**: Run Python snippets, validate code, analyze imports.
+**⚠️ Important: Python Environment Setup**
 
-**Example**:
+Pylance may default to global Python. To use project venv:
+
 ```
-pylanceRunCodeSnippet(
-  workspaceRoot: "file:///Users/timchild/github/PaperTrade",
-  codeSnippet: "print('Hello')"
+# Check current environment
+pylancePythonEnvironments(workspaceRoot: "file:///path/to/project")
+
+# Switch to project venv
+pylanceUpdatePythonEnvironment(
+  workspaceRoot: "file:///path/to/project",
+  pythonEnvironment: "/path/to/project/backend/.venv/bin/python"
 )
 ```
+
+**When to use**: Run Python snippets, validate code, analyze imports.
 
 ### Container MCP (Docker)
 
@@ -44,16 +53,28 @@ pylanceRunCodeSnippet(
 
 **PaperTrade containers**: `papertrade-postgres` (5432), `papertrade-redis` (6379)
 
-## Configured but Unused
+### GitHub PR MCP (Pull Request Management)
 
-| Server | Purpose | Notes |
-|--------|---------|-------|
-| Playwright | Browser automation | E2E testing potential |
-| GitHub | GitHub API | Needs GITHUB_TOKEN |
-| PostgreSQL | Direct DB access | Connection configured |
+| Tool | Purpose |
+|------|---------|
+| `activePullRequest` | Get details of checked-out PR |
+| `openPullRequest` | Get details of currently viewed PR |
+| `formSearchQuery` | Convert natural language to GitHub search |
+| `doSearch` | Execute GitHub search query |
+| `issue_fetch` | Get issue/PR details by number |
+| `suggest-fix` | Summarize and suggest fix for issue |
+
+**When to use**: Review PRs, search issues, understand PR changes.
+
+## Other Configured Servers
+
+| Server | Purpose | Status |
+|--------|---------|--------|
+| Playwright | Browser automation | Configured, untested |
+| PostgreSQL | Direct DB queries | Configured (check credentials) |
 | Filesystem | File operations | Overlaps with built-ins |
-| Memory | Persistent memory | Cross-session state |
-| Sequential Thinking | Complex reasoning | Problem decomposition |
+| Memory | Persistent memory | Configured, untested |
+| Sequential Thinking | Complex reasoning | Configured, untested |
 
 ## MCP vs Terminal
 
