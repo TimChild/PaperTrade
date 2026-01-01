@@ -191,3 +191,66 @@ Refer to individual agent files in `.github/agents/` for specific role instructi
 - `quality-infra.md` - Testing, CI/CD, and infrastructure
 - `refactorer.md` - Code quality and refactoring
 - `copilot-instructions-updater.md` - Meta-agent for improving these instructions
+
+## MCP Tools (Model Context Protocol)
+
+This workspace has MCP servers configured in `.vscode/mcp.json` that provide enhanced capabilities.
+
+### Pylance MCP - Python Intelligence
+
+**PREFER these tools over terminal commands for Python work:**
+
+| Tool | Use For | Instead Of |
+|------|---------|------------|
+| `pylanceRunCodeSnippet` | Run Python code | `python -c "..."` (avoids shell escaping) |
+| `pylanceImports` | Find missing dependencies | Manual grep for imports |
+| `pylanceFileSyntaxErrors` | Validate Python files | Running and checking errors |
+| `pylanceInvokeRefactoring` | Auto-fix code issues | Manual refactoring |
+
+**Example - Run Python code safely:**
+```
+mcp_pylance_mcp_s_pylanceRunCodeSnippet:
+  workspaceRoot: "file:///Users/timchild/github/PaperTrade"
+  codeSnippet: "from papertrade.domain.entities import Portfolio; print('Import works!')"
+```
+
+### Container MCP - Docker Management
+
+**PREFER these tools for container operations:**
+
+| Tool | Use For | Instead Of |
+|------|---------|------------|
+| `list_containers` | See all containers | `docker ps -a` |
+| `logs_for_container` | View container logs | `docker logs <name>` |
+| `inspect_container` | Get container details | `docker inspect <name>` |
+| `act_container` | Start/stop/restart | `docker start/stop <name>` |
+
+**Example - Check if database is healthy:**
+```
+mcp_copilot_conta_inspect_container:
+  containerNameOrId: "papertrade-postgres"
+```
+
+### When to Use MCP vs Terminal
+
+| Scenario | Use MCP | Use Terminal |
+|----------|---------|--------------|
+| Run Python snippet | ✅ `pylanceRunCodeSnippet` | ❌ Escaping issues |
+| Check container status | ✅ `list_containers` | ❌ Parsing text output |
+| Run pytest | ❌ | ✅ `task test:backend` |
+| Install packages | ❌ | ✅ `uv add <package>` |
+| Complex shell pipelines | ❌ | ✅ Terminal |
+
+### MCP Quick Reference
+
+```
+# Python analysis
+mcp_pylance_mcp_s_pylanceWorkspaceUserFiles  # List all Python files
+mcp_pylance_mcp_s_pylanceImports             # Find unresolved imports
+mcp_pylance_mcp_s_pylancePythonEnvironments  # Check Python environment
+
+# Container management
+mcp_copilot_conta_list_containers            # List all containers
+mcp_copilot_conta_list_images                # List images
+mcp_copilot_conta_logs_for_container         # Get container logs
+```

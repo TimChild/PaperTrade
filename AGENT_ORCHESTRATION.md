@@ -314,6 +314,75 @@ Started in parallel:
 
 ---
 
+## MCP Tools (Model Context Protocol)
+
+The workspace has MCP servers configured in `.vscode/mcp.json` that provide enhanced capabilities for the orchestrator.
+
+### Available MCP Servers
+
+| Server | Purpose | Status |
+|--------|---------|--------|
+| **Pylance** | Python code analysis, execution, refactoring | ✅ Active |
+| **Container** | Docker container management | ✅ Active |
+| **Playwright** | Browser automation | Configured |
+| **GitHub** | GitHub API integration | Configured (needs PAT) |
+| **PostgreSQL** | Direct database access | Configured |
+| **Filesystem** | Enhanced file operations | Configured |
+| **Memory** | Persistent memory | Configured |
+| **Sequential Thinking** | Complex reasoning | Configured |
+
+### Key MCP Tools for Orchestrators
+
+**Python Development** (Pylance MCP):
+```bash
+# Run Python code without shell escaping issues
+pylanceRunCodeSnippet(workspaceRoot, codeSnippet)
+
+# Check for missing imports
+pylanceImports(workspaceRoot)
+
+# Validate Python file syntax
+pylanceFileSyntaxErrors(workspaceRoot, fileUri)
+
+# List all Python files in project
+pylanceWorkspaceUserFiles(workspaceRoot)
+```
+
+**Container Management** (Container MCP):
+```bash
+# Check container status
+list_containers()
+
+# View logs
+logs_for_container(containerNameOrId)
+
+# Get detailed info
+inspect_container(containerNameOrId)
+
+# Start/stop containers
+act_container(containerNameOrId, action)  # action: start, stop, restart, remove
+```
+
+### When to Use MCP vs Terminal
+
+| Task | Use MCP | Use Terminal |
+|------|---------|--------------|
+| Run Python snippet | ✅ `pylanceRunCodeSnippet` | ❌ Shell escaping issues |
+| Check container health | ✅ `inspect_container` | ❌ Parse docker output |
+| Run tests | ❌ | ✅ `task test:backend` |
+| Git operations | ❌ | ✅ `gh pr list`, `git commit` |
+| Install dependencies | ❌ | ✅ `uv add`, `npm install` |
+
+### Current Container Status
+
+Quick health check for PaperTrade:
+- `papertrade-postgres` - PostgreSQL database (port 5432)
+- `papertrade-redis` - Redis cache (port 6379)
+
+Use `list_containers()` MCP tool or `task docker:status` to verify.
+
+---
+
 ## Local Development & Verification
 
 ### Start Development Environment
