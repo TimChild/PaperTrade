@@ -82,8 +82,8 @@ class GetActiveTickersHandler:
             .distinct()
         )
 
-        result = await self._session.exec(stmt)
-        ticker_symbols = result.all()
+        result = await self._session.execute(stmt)
+        ticker_symbols = result.scalars().all()
 
         # Convert to Ticker objects and remove duplicates
         unique_tickers = list({Ticker(symbol) for symbol in ticker_symbols if symbol})

@@ -10,22 +10,18 @@ automatically with the application.
 
 import logging
 from datetime import UTC, datetime, timedelta
-from typing import Any
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from papertrade.adapters.inbound.api.dependencies import get_market_data
 from papertrade.adapters.outbound.repositories.watchlist_manager import (
     WatchlistManager,
 )
-from papertrade.application.ports.market_data_port import MarketDataPort
 from papertrade.application.queries.get_active_tickers import (
     GetActiveTickersHandler,
     GetActiveTickersQuery,
 )
-from papertrade.domain.value_objects.ticker import Ticker
 from papertrade.infrastructure.database import async_session_maker
 
 logger = logging.getLogger(__name__)
@@ -123,10 +119,10 @@ async def refresh_active_stocks(config: SchedulerConfig) -> None:
             market_data = get_market_data()
 
             # Process tickers in batches
-            batch_num = 0
-            for i in range(0, len(all_tickers), config.batch_size):
+            for batch_num, i in enumerate(
+                range(0, len(all_tickers), config.batch_size), start=1
+            ):
                 batch = all_tickers[i : i + config.batch_size]
-                batch_num += 1
 
                 logger.info(
                     f"Processing batch {batch_num} "

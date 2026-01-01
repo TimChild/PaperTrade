@@ -21,7 +21,7 @@ async def lifespan(app: FastAPI):  # type: ignore
     """Application lifespan manager - runs on startup and shutdown."""
     # Startup: Initialize database
     await init_db()
-    
+
     # Startup: Initialize and start background scheduler
     # Configuration can be customized by creating SchedulerConfig instance
     # For now, using defaults (disabled in tests via config override)
@@ -33,9 +33,9 @@ async def lifespan(app: FastAPI):  # type: ignore
         active_stock_days=30,  # Consider stocks traded in last 30 days
     )
     await start_scheduler(scheduler_config)
-    
+
     yield
-    
+
     # Shutdown: Stop background scheduler
     await stop_scheduler()
 
