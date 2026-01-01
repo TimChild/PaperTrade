@@ -9,6 +9,11 @@ from papertrade.adapters.inbound.api.error_handlers import register_exception_ha
 from papertrade.adapters.inbound.api.portfolios import router as portfolios_router
 from papertrade.adapters.inbound.api.transactions import router as transactions_router
 from papertrade.infrastructure.database import init_db
+from papertrade.infrastructure.scheduler import (
+    SchedulerConfig,
+    start_scheduler,
+    stop_scheduler,
+)
 
 
 @asynccontextmanager
@@ -16,8 +21,23 @@ async def lifespan(app: FastAPI):  # type: ignore
     """Application lifespan manager - runs on startup and shutdown."""
     # Startup: Initialize database
     await init_db()
+
+    # Startup: Initialize and start background scheduler
+    # Configuration can be customized by creating SchedulerConfig instance
+    # For now, using defaults (disabled in tests via config override)
+    scheduler_config = SchedulerConfig(
+        enabled=True,  # Set to False to disable scheduler
+        refresh_cron="0 0 * * *",  # Midnight UTC daily
+        batch_size=5,  # 5 calls/min rate limit
+        batch_delay_seconds=12,  # ~5 calls/min (12 seconds between calls)
+        active_stock_days=30,  # Consider stocks traded in last 30 days
+    )
+    await start_scheduler(scheduler_config)
+
     yield
-    # Shutdown: Clean up resources (if needed)
+
+    # Shutdown: Stop background scheduler
+    await stop_scheduler()
 
 
 app = FastAPI(

@@ -13,6 +13,18 @@ from sqlmodel import SQLModel
 from papertrade.infrastructure.database import get_session
 from papertrade.main import app
 
+# Import all models to ensure they're registered with SQLModel metadata
+from papertrade.adapters.outbound.database.models import (  # noqa: F401
+    PortfolioModel,
+    TransactionModel,
+)
+from papertrade.adapters.outbound.models.price_history import (  # noqa: F401
+    PriceHistoryModel,
+)
+from papertrade.adapters.outbound.models.ticker_watchlist import (  # noqa: F401
+    TickerWatchlistModel,
+)
+
 
 @pytest_asyncio.fixture
 async def test_engine() -> AsyncGenerator[AsyncEngine, None]:
