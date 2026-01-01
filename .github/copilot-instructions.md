@@ -109,6 +109,21 @@ Get timestamp: `date "+%Y-%m-%d_%H-%M-%S"`
 
 **All agents MUST use git and the GitHub CLI (`gh`) appropriately.**
 
+### Environment Setup for Copilot Agents
+
+If you need to set up or verify your development environment, you can use:
+
+- **Shell script** (recommended for local setup): `./.github/copilot-setup.sh`
+- **Task command**: `task setup` (uses Taskfile)
+- **GitHub Actions workflow**: `.github/workflows/copilot-setup.yml` (for automated/CI setup)
+
+The setup process installs:
+- Python 3.13 and uv (package manager)
+- Node.js 20 and npm
+- Task (task runner)
+- pre-commit hooks
+- Docker services (PostgreSQL, Redis)
+
 ### Branch Management
 1. **Check current branch status** before starting work:
    ```bash
