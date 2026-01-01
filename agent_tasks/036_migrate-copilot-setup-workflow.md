@@ -1,8 +1,8 @@
 # Task 036: Migrate to GitHub's Official Copilot Setup Workflow
 
-**Agent**: quality-infra  
-**Priority**: HIGH  
-**Created**: 2026-01-01  
+**Agent**: quality-infra
+**Priority**: HIGH
+**Created**: 2026-01-01
 **Status**: Not Started
 
 ## Objective
@@ -74,35 +74,35 @@ jobs:
   # Job MUST be called `copilot-setup-steps` or Copilot won't use it
   copilot-setup-steps:
     runs-on: ubuntu-latest
-    
+
     # Minimal permissions - Copilot gets its own token
     permissions:
       contents: read  # For actions/checkout
-    
+
     # Maximum timeout for setup
     timeout-minutes: 30
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-      
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'  # Match README
-      
+
       - name: Install uv
         uses: astral-sh/setup-uv@v4
         with:
           version: "latest"
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
-      
+
       - name: Cache uv dependencies
         uses: actions/cache@v4
         with:
@@ -110,30 +110,30 @@ jobs:
           key: ${{ runner.os }}-uv-${{ hashFiles('backend/uv.lock') }}
           restore-keys: |
             ${{ runner.os }}-uv-
-      
+
       - name: Install Task
         uses: arduino/setup-task@v2
         with:
           version: 3.x
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Install pre-commit
         run: |
           python3 -m pip install --user pre-commit
           pre-commit install
-      
+
       - name: Setup backend dependencies
         run: task setup:backend
-      
+
       - name: Setup frontend dependencies
         run: task setup:frontend
-      
+
       - name: Start Docker services
         run: task docker:up
-      
+
       - name: Wait for services
         run: sleep 5
-      
+
       - name: Verify Docker services healthy
         run: |
           if docker compose ps | grep -q "Up"; then
@@ -142,7 +142,7 @@ jobs:
             echo "⚠️  Docker services may not be healthy"
             docker compose ps
           fi
-      
+
       - name: Verify backend imports
         working-directory: backend
         run: |
@@ -152,7 +152,7 @@ jobs:
             echo "⚠️  Backend imports failed"
             exit 0  # Don't fail setup
           fi
-      
+
       - name: Summary
         run: |
           echo "=== Copilot Environment Ready ==="
