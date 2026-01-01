@@ -1,6 +1,12 @@
 # Agent Orchestration Workflow
 
-Guide for orchestrating AI coding agents to develop PaperTrade.
+Guide for orchestrating AI coding agents to develop PaperTrade (a stock market paper trading platform).
+
+## Starting a New Session
+
+1. **Read project context**: `.github/copilot-instructions.md` (includes MCP setup)
+2. **Check current status**: `PROGRESS.md` (phases, recent work, next steps)
+3. **Review open work**: `GH_PAGER="" gh pr list`
 
 ## Quick Start
 
@@ -9,9 +15,9 @@ Guide for orchestrating AI coding agents to develop PaperTrade.
 task setup                    # or ./.github/copilot-setup.sh
 
 # 2. Get current state
+cat PROGRESS.md               # Current status and next steps
 cat project_plan.md           # Development phases
 GH_PAGER="" gh pr list        # Open PRs
-GH_PAGER="" gh agent-task list # Running agents
 
 # 3. Pull latest
 git checkout main && git pull origin main
@@ -95,11 +101,14 @@ task lint           # Run linters
 
 | File | Purpose |
 |------|---------|
+| `PROGRESS.md` | **Current status**, recent work, next steps |
+| `.github/copilot-instructions.md` | Agent guidelines, MCP setup |
 | `project_plan.md` | Development phases |
 | `project_strategy.md` | Architecture decisions |
 | `agent_tasks/*.md` | Task definitions |
-| `.github/agents/*.md` | Agent instructions |
+| `.github/agents/*.md` | Role-specific agent instructions |
 | `Taskfile.yml` | Commands (`task --list`) |
+| `docs/mcp-tools.md` | MCP tools reference |
 
 ## Best Practices
 
