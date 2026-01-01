@@ -144,15 +144,6 @@ echo ""
 echo "✅ Setup complete!"
 echo ""
 
-# Important PATH note if tools were installed
-if ! command -v uv &> /dev/null; then
-    echo "⚠️  IMPORTANT: To use newly installed tools, run:"
-    echo "   export PATH=\"\$HOME/.local/bin:\$PATH\""
-    echo ""
-    echo "   Or add this line to your ~/.bashrc or ~/.zshrc for persistence."
-    echo ""
-fi
-
 echo "Next steps:"
 echo "  - Backend: cd backend && uv run uvicorn papertrade.main:app --reload"
 echo "  - Frontend: cd frontend && npm run dev"
