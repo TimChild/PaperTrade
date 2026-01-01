@@ -4,8 +4,6 @@ These tests verify that the price endpoints work correctly end-to-end,
 including proper error handling and response formatting.
 """
 
-from uuid import UUID
-
 from fastapi.testclient import TestClient
 
 
@@ -17,7 +15,7 @@ def test_get_current_price_aapl(
 
     assert response.status_code == 200
     data = response.json()
-    
+
     # Verify response structure
     assert "ticker" in data
     assert "price" in data
@@ -25,7 +23,7 @@ def test_get_current_price_aapl(
     assert "timestamp" in data
     assert "source" in data
     assert "is_stale" in data
-    
+
     # Verify values (seeded in conftest)
     assert data["ticker"] == "AAPL"
     assert data["price"] == "150.00"
@@ -52,11 +50,11 @@ def test_get_supported_tickers(
 
     assert response.status_code == 200
     data = response.json()
-    
+
     # Verify response structure
     assert "tickers" in data
     assert "count" in data
-    
+
     # Should include seeded tickers
     assert isinstance(data["tickers"], list)
     assert "AAPL" in data["tickers"]
@@ -91,7 +89,7 @@ def test_get_price_history_valid_request(
 
     assert response.status_code == 200
     data = response.json()
-    
+
     # Verify response structure
     assert "ticker" in data
     assert "prices" in data
@@ -99,7 +97,7 @@ def test_get_price_history_valid_request(
     assert "end" in data
     assert "interval" in data
     assert "count" in data
-    
+
     # Verify values
     assert data["ticker"] == "AAPL"
     assert data["interval"] == "1day"
@@ -111,7 +109,7 @@ def test_get_price_history_valid_interval_accepted(
     client: TestClient,
 ) -> None:
     """Test price history endpoint accepts valid intervals.
-    
+
     Note: InMemoryAdapter doesn't validate intervals, so this just
     ensures the API doesn't reject valid interval values.
     """
