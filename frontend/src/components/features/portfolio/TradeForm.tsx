@@ -18,7 +18,7 @@ export function TradeForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!ticker || !quantity || !price) {
+    if (!ticker || !quantity) {
       return
     }
 
@@ -26,7 +26,6 @@ export function TradeForm({
       action,
       ticker: ticker.trim().toUpperCase(),
       quantity: quantity,
-      price: price,
     }
 
     onSubmit(trade)
@@ -40,12 +39,12 @@ export function TradeForm({
   const isValid =
     ticker.trim() !== '' &&
     quantity !== '' &&
-    parseFloat(quantity) > 0 &&
-    price !== '' &&
-    parseFloat(price) > 0
+    parseFloat(quantity) > 0
 
   const estimatedTotal =
-    isValid ? parseFloat(quantity) * parseFloat(price) : 0
+    isValid && price !== '' && parseFloat(price) > 0
+      ? parseFloat(quantity) * parseFloat(price)
+      : 0
 
   return (
     <div className="rounded-lg border border-gray-300 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
@@ -130,13 +129,13 @@ export function TradeForm({
           />
         </div>
 
-        {/* Price Per Share Input */}
+        {/* Price Per Share Input (Optional - For Estimation Only) */}
         <div>
           <label
             htmlFor="price"
             className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
           >
-            Price Per Share ($)
+            Price Per Share ($) <span className="text-gray-500">(Optional - for estimation)</span>
           </label>
           <input
             id="price"
@@ -148,8 +147,10 @@ export function TradeForm({
             placeholder="150.00"
             className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-400"
             disabled={isSubmitting}
-            required
           />
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Actual trade will execute at current market price
+          </p>
         </div>
 
         {/* Preview */}
@@ -157,10 +158,16 @@ export function TradeForm({
           <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-900">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {action === 'BUY' ? 'Buying' : 'Selling'} {quantity} shares of{' '}
-              {ticker.toUpperCase()} at ${price}
+              {ticker.toUpperCase()}
+              {price !== '' && parseFloat(price) > 0 ? ` at ~$${price}` : ''}
             </p>
-            <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
-              Total: ${estimatedTotal.toFixed(2)}
+            {estimatedTotal > 0 && (
+              <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                Estimated Total: ${estimatedTotal.toFixed(2)}
+              </p>
+            )}
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Trade will execute at current market price
             </p>
           </div>
         )}

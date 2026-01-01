@@ -62,7 +62,6 @@ export interface TradeRequest {
   action: 'BUY' | 'SELL'
   ticker: string
   quantity: string // Decimal as string
-  price: string // Decimal as string
 }
 
 // Balance types
