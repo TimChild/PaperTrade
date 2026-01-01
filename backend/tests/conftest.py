@@ -58,8 +58,46 @@ def client(test_engine: AsyncEngine) -> TestClient:
                 raise
 
     def get_test_market_data() -> InMemoryMarketDataAdapter:
-        """Override market data dependency to use in-memory adapter."""
-        return InMemoryMarketDataAdapter()
+        """Override market data dependency to use in-memory adapter.
+        
+        Seeds the adapter with default test prices for common tickers.
+        """
+        from datetime import UTC, datetime
+        from decimal import Decimal
+        
+        from papertrade.application.dtos.price_point import PricePoint
+        from papertrade.domain.value_objects.money import Money
+        from papertrade.domain.value_objects.ticker import Ticker
+        
+        adapter = InMemoryMarketDataAdapter()
+        
+        # Seed with default test prices
+        test_prices = [
+            PricePoint(
+                ticker=Ticker("AAPL"),
+                price=Money(Decimal("150.00"), "USD"),
+                timestamp=datetime.now(UTC),
+                source="database",
+                interval="real-time",
+            ),
+            PricePoint(
+                ticker=Ticker("GOOGL"),
+                price=Money(Decimal("2800.00"), "USD"),
+                timestamp=datetime.now(UTC),
+                source="database",
+                interval="real-time",
+            ),
+            PricePoint(
+                ticker=Ticker("MSFT"),
+                price=Money(Decimal("380.00"), "USD"),
+                timestamp=datetime.now(UTC),
+                source="database",
+                interval="real-time",
+            ),
+        ]
+        
+        adapter.seed_prices(test_prices)
+        return adapter
 
     # Override dependencies
     app.dependency_overrides[get_session] = get_test_session
