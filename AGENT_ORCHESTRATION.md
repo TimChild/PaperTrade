@@ -123,6 +123,22 @@ task lint           # Run linters
 
 ## Troubleshooting
 
+### Long CLI Commands
+Terminal hangs with long commands. Use temp files:
+
+```bash
+# Create temp file with content
+cat > .tmp_body.md << 'EOF'
+Your long content here...
+EOF
+
+# Use temp file in command
+gh pr create --title "title" --body-file .tmp_body.md
+
+# Clean up
+rm .tmp_body.md
+```
+
 ### GH CLI Hangs
 ```bash
 GH_PAGER="" gh pr list   # Disable pager
