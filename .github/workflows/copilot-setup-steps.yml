@@ -1,0 +1,119 @@
+name: "Copilot Setup Steps"
+
+# This workflow configures the environment for GitHub Copilot coding agents.
+# GitHub Copilot requires this EXACT filename and job name to work properly.
+#
+# Documentation: https://docs.github.com/en/enterprise-cloud@latest/copilot/how-tos/use-copilot-agents/coding-agent/customize-the-agent-environment
+#
+# IMPORTANT:
+#   - File MUST be named: copilot-setup-steps.yml
+#   - Job MUST be named: copilot-setup-steps
+#   - Only customize: steps, permissions, runs-on, services, snapshot, timeout-minutes
+
+on:
+  # Manual trigger for testing
+  workflow_dispatch:
+  
+  # Auto-validate when this file changes
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  
+  # Validate on PRs that modify this file
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  # Job name MUST be "copilot-setup-steps" for GitHub Copilot to use it
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+
+    # Minimal permissions - Copilot gets its own token
+    permissions:
+      contents: read  # For actions/checkout
+
+    # Maximum timeout for setup (GitHub allows max 59 minutes)
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'  # Match README requirements (3.12+)
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('backend/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install pre-commit
+        run: |
+          python3 -m pip install --user pre-commit
+          pre-commit install
+
+      - name: Setup backend dependencies
+        run: task setup:backend
+
+      - name: Setup frontend dependencies
+        run: task setup:frontend
+
+      - name: Start Docker services
+        run: task docker:up
+
+      - name: Wait for services
+        run: sleep 5
+
+      - name: Verify Docker services healthy
+        run: |
+          if docker compose ps | grep -q "Up"; then
+            echo "✅ Docker services running"
+          else
+            echo "⚠️  Docker services may not be healthy"
+            docker compose ps
+          fi
+
+      - name: Verify backend imports
+        working-directory: backend
+        run: |
+          if uv run python -c "import papertrade" 2>/dev/null; then
+            echo "✅ Backend imports work"
+          else
+            echo "⚠️  Backend imports failed"
+            exit 0  # Don't fail setup
+          fi
+
+      - name: Summary
+        run: |
+          echo "=== Copilot Environment Ready ==="
+          task --version
+          uv --version
+          pre-commit --version
+          python --version
+          node --version
+          echo ""
+          echo "✅ All setup steps completed!"

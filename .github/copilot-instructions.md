@@ -115,10 +115,10 @@ If you need to set up or verify your development environment, you can use:
 
 - **Shell script** (recommended for local setup): `./.github/copilot-setup.sh`
 - **Task command**: `task setup` (uses Taskfile)
-- **GitHub Actions workflow**: `.github/workflows/copilot-setup.yml` (for automated/CI setup)
+- **GitHub Actions workflow**: `.github/workflows/copilot-setup-steps.yml` (for Copilot agents)
 
 The setup process installs:
-- Python 3.13 and uv (package manager)
+- Python 3.12+ and uv (package manager)
 - Node.js 20 and npm
 - Task (task runner)
 - pre-commit hooks
