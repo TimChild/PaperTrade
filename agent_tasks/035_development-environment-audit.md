@@ -1,8 +1,8 @@
 # Task 035: Development Environment & Tooling Audit
 
-**Agent**: quality-infra  
-**Priority**: MEDIUM  
-**Created**: 2026-01-01  
+**Agent**: quality-infra
+**Priority**: MEDIUM
+**Created**: 2026-01-01
 **Status**: Not Started
 
 ## Objective
