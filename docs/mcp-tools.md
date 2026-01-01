@@ -2,110 +2,94 @@
 
 Model Context Protocol (MCP) servers provide enhanced AI capabilities. Configuration: `.vscode/mcp.json`
 
-## Active Tools
+## Tested & Working
 
 ### Pylance MCP (Python Intelligence)
 
+**Status**: ✅ Tested and working
+
 | Tool | Purpose |
 |------|---------|
-| `pylanceRunCodeSnippet` | Execute Python code (avoids shell escaping) |
+| `pylanceRunCodeSnippet` | Execute Python code (avoids shell escaping issues) |
 | `pylanceImports` | Find unresolved imports across workspace |
+| `pylancePythonEnvironments` | List available Python interpreters |
+| `pylanceUpdatePythonEnvironment` | Switch to different interpreter |
+| `pylanceWorkspaceUserFiles` | List all Python files in workspace |
 | `pylanceFileSyntaxErrors` | Validate specific Python file |
 | `pylanceSyntaxErrors` | Validate code snippet |
-| `pylanceWorkspaceUserFiles` | List all Python files |
-| `pylancePythonEnvironments` | Check/list available interpreters |
-| `pylanceUpdatePythonEnvironment` | Switch to different Python interpreter |
 | `pylanceInstalledTopLevelModules` | List installed packages |
 | `pylanceInvokeRefactoring` | Auto-fix (unused imports, type annotations) |
 | `pylanceSettings` | View Pylance configuration |
 
-**⚠️ Important: Python Environment Setup**
-
-Pylance may default to global Python. To use project venv:
+**⚠️ Session Setup Required**: Pylance may default to global Python. At session start:
 
 ```
-# Check current environment
-pylancePythonEnvironments(workspaceRoot: "file:///path/to/project")
+# 1. Check current environment
+pylancePythonEnvironments(workspaceRoot: "file:///Users/timchild/github/PaperTrade")
 
-# Switch to project venv
+# 2. Switch to project venv if needed
 pylanceUpdatePythonEnvironment(
-  workspaceRoot: "file:///path/to/project",
-  pythonEnvironment: "/path/to/project/backend/.venv/bin/python"
+  workspaceRoot: "file:///Users/timchild/github/PaperTrade",
+  pythonEnvironment: "/Users/timchild/github/PaperTrade/backend/.venv/bin/python"
 )
-```
 
-**When to use**: Run Python snippets, validate code, analyze imports.
+# 3. Verify - should show no unresolved imports
+pylanceImports(workspaceRoot: "file:///Users/timchild/github/PaperTrade")
+```
 
 ### Container MCP (Docker)
 
+**Status**: ✅ Tested and working
+
 | Tool | Purpose |
 |------|---------|
-| `list_containers` | Show all containers |
-| `list_images` | Show images |
-| `list_networks` | Show networks |
+| `list_containers` | Show all containers (including stopped) |
+| `inspect_container` | Detailed container info (health, networks, mounts) |
+| `logs_for_container` | View container logs |
+| `act_container` | Start/stop/restart/remove container |
+| `list_images` | Show available images |
+| `list_networks` | Show Docker networks |
 | `list_volumes` | Show volumes |
-| `inspect_container` | Detailed container info |
-| `logs_for_container` | View logs |
-| `act_container` | Start/stop/restart/remove |
 | `run_container` | Create and run new container |
-
-**When to use**: Check container health, view logs, manage Docker.
 
 **PaperTrade containers**: `papertrade-postgres` (5432), `papertrade-redis` (6379)
 
-### GitHub PR MCP (Pull Request Management)
+### GitHub PR MCP
+
+**Status**: ✅ Tested and working
 
 | Tool | Purpose |
 |------|---------|
-| `activePullRequest` | Get details of checked-out PR |
+| `activePullRequest` | Get details of checked-out PR branch |
 | `openPullRequest` | Get details of currently viewed PR |
-| `formSearchQuery` | Convert natural language to GitHub search |
+| `formSearchQuery` | Convert natural language to GitHub search syntax |
 | `doSearch` | Execute GitHub search query |
 | `issue_fetch` | Get issue/PR details by number |
-| `suggest-fix` | Summarize and suggest fix for issue |
+| `suggest-fix` | Summarize issue and suggest fix |
+| `renderIssues` | Display search results in markdown table |
+| `copilot-coding-agent` | Hand off task to async coding agent |
 
-**When to use**: Review PRs, search issues, understand PR changes.
+## Configured (Not Exposed as Tools)
 
-## Other Configured Servers
+These MCP servers are configured but don't expose tools to the assistant:
 
-| Server | Purpose | Status |
-|--------|---------|--------|
-| Playwright | Browser automation | Configured, untested |
-| PostgreSQL | Direct DB queries | Configured (check credentials) |
-| Filesystem | File operations | Overlaps with built-ins |
-| Memory | Persistent memory | Configured, untested |
-| Sequential Thinking | Complex reasoning | Configured, untested |
+| Server | Purpose | Notes |
+|--------|---------|-------|
+| PostgreSQL | Direct DB queries | Credentials: papertrade/papertrade_dev_password |
+| Playwright | Browser automation | Headless mode |
+| Filesystem | File operations | Overlaps with built-in tools |
+| Memory | Persistent memory | For context between sessions |
+| Sequential Thinking | Complex reasoning | Structured problem solving |
 
-## MCP vs Terminal
+## When to Use MCP vs Terminal
 
-| Task | MCP | Terminal |
-|------|-----|----------|
-| Run Python snippet | ✅ `pylanceRunCodeSnippet` | ❌ Shell escaping |
-| Check container | ✅ `inspect_container` | ❌ Parse output |
+| Task | Use MCP | Use Terminal |
+|------|---------|--------------|
+| Run Python snippet | ✅ `pylanceRunCodeSnippet` | ❌ Shell escaping problems |
+| Check container health | ✅ `inspect_container` | ❌ Parse text output |
+| View container logs | ✅ `logs_for_container` | Alternative: `docker logs` |
 | Run tests | ❌ | ✅ `task test` |
-| Git operations | ❌ | ✅ `gh`, `git` |
-| Install packages | ❌ | ✅ `uv add`, `npm` |
-
-## Session Setup Checklist
-
-At the start of each orchestration session:
-
-1. **Check Pylance Python environment** - May reset to global Python
-   ```
-   pylancePythonEnvironments(workspaceRoot: "file:///path/to/project")
-   ```
-   
-2. **Switch to venv if needed**
-   ```
-   pylanceUpdatePythonEnvironment(
-     workspaceRoot: "file:///path/to/project",
-     pythonEnvironment: "/path/to/project/backend/.venv/bin/python"
-   )
-   ```
-
-3. **Verify imports resolve**
-   ```
-   pylanceImports(workspaceRoot: "file:///path/to/project")
-   # Should show no unresolved imports
-   ```
+| Install packages | ❌ | ✅ `uv add`, `npm install` |
+| Git operations | ❌ | ✅ `git`, `gh` |
+| Build project | ❌ | ✅ `task build` |
 

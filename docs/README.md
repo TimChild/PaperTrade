@@ -1,37 +1,43 @@
 # Documentation Index
 
-## Project Documentation (Root Level)
+## Getting Started
 
 | Document | Purpose |
 |----------|---------|
-| [README.md](../README.md) | Project overview and quick start |
-| [project_plan.md](../project_plan.md) | Development phases and roadmap |
-| [project_strategy.md](../project_strategy.md) | Architecture and tech decisions |
-| [PROGRESS.md](../PROGRESS.md) | Current status and recent achievements |
-| [BACKLOG.md](../BACKLOG.md) | Minor improvements and tech debt |
-| [AGENT_ORCHESTRATION.md](../AGENT_ORCHESTRATION.md) | AI agent workflow guide |
+| [../README.md](../README.md) | Project overview and quick start |
+| [testing.md](testing.md) | Testing quick reference |
+| [mcp-tools.md](mcp-tools.md) | MCP tools for AI assistants |
 
-## Technical Documentation (docs/)
+## Project Documentation (Root)
 
 | Document | Purpose |
 |----------|---------|
-| [mcp-tools.md](mcp-tools.md) | MCP tools reference for AI assistants |
-| [testing-strategy.md](testing-strategy.md) | Test pyramid and testing philosophy |
-| [testing-integration.md](testing-integration.md) | Local integration testing guide |
-| [external-resources.md](external-resources.md) | API docs and framework references |
+| [../project_plan.md](../project_plan.md) | Development phases and roadmap |
+| [../project_strategy.md](../project_strategy.md) | Architecture and tech decisions |
+| [../PROGRESS.md](../PROGRESS.md) | Current status and recent work |
+| [../BACKLOG.md](../BACKLOG.md) | Minor improvements and tech debt |
+| [../AGENT_ORCHESTRATION.md](../AGENT_ORCHESTRATION.md) | AI agent workflow guide |
+
+## Reference Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [testing-strategy.md](testing-strategy.md) | Test philosophy (detailed) |
+| [testing-integration.md](testing-integration.md) | Manual testing guide (detailed) |
+| [external-resources.md](external-resources.md) | API docs and framework links |
 | [future-ideas.md](future-ideas.md) | Feature ideas for exploration |
 
-## Architecture Plans
+## Architecture
 
 | Document | Purpose |
 |----------|---------|
-| [architecture_plans/](../architecture_plans/) | Phase-specific architecture designs |
+| [../architecture_plans/](../architecture_plans/) | Phase-specific designs |
 
-## Agent Documentation
+## Agent Files
 
 | Document | Purpose |
 |----------|---------|
-| [.github/copilot-instructions.md](../.github/copilot-instructions.md) | General agent guidelines |
-| [.github/agents/](../.github/agents/) | Role-specific agent instructions |
-| [agent_tasks/](../agent_tasks/) | Task definitions for agents |
-| [agent_progress_docs/](../agent_progress_docs/) | Agent PR documentation |
+| [../.github/copilot-instructions.md](../.github/copilot-instructions.md) | General agent guidelines |
+| [../.github/agents/](../.github/agents/) | Role-specific instructions |
+| [../agent_tasks/](../agent_tasks/) | Task definitions |
+| [../agent_progress_docs/](../agent_progress_docs/) | PR documentation |
