@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from papertrade.adapters.inbound.api.error_handlers import register_exception_handlers
 from papertrade.adapters.inbound.api.portfolios import router as portfolios_router
+from papertrade.adapters.inbound.api.prices import router as prices_router
 from papertrade.adapters.inbound.api.transactions import router as transactions_router
 from papertrade.infrastructure.database import init_db
 
@@ -44,6 +45,7 @@ app.add_middleware(
 # Include API routes
 app.include_router(portfolios_router, prefix="/api/v1")
 app.include_router(transactions_router, prefix="/api/v1")
+app.include_router(prices_router, prefix="/api/v1")
 
 
 @app.get("/health")

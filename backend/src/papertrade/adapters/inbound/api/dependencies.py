@@ -20,6 +20,9 @@ from papertrade.adapters.outbound.database.transaction_repository import (
 from papertrade.adapters.outbound.market_data.alpha_vantage_adapter import (
     AlphaVantageAdapter,
 )
+from papertrade.adapters.outbound.repositories.price_repository import (
+    PriceRepository,
+)
 from papertrade.application.ports.market_data_port import MarketDataPort
 from papertrade.infrastructure.cache.price_cache import PriceCache
 from papertrade.infrastructure.database import SessionDep
@@ -52,6 +55,20 @@ def get_transaction_repository(
         SQLModelTransactionRepository instance
     """
     return SQLModelTransactionRepository(session)
+
+
+def get_price_repository(
+    session: SessionDep,
+) -> PriceRepository:
+    """Get price repository instance.
+
+    Args:
+        session: Database session from dependency injection
+
+    Returns:
+        PriceRepository instance
+    """
+    return PriceRepository(session)
 
 
 async def get_current_user_id(
@@ -98,16 +115,20 @@ async def get_current_user_id(
 # These are created once and reused across requests
 _redis_client: Redis | None = None  # type: ignore[type-arg]
 _http_client: httpx.AsyncClient | None = None
-_market_data_adapter: AlphaVantageAdapter | None = None
 
 
-async def get_market_data() -> MarketDataPort:
+async def get_market_data(session: SessionDep) -> MarketDataPort:
     """Provide MarketDataPort implementation (AlphaVantageAdapter).
 
     This dependency creates and caches the AlphaVantageAdapter with all its
-    infrastructure dependencies (Redis, rate limiter, cache, HTTP client).
+    infrastructure dependencies (Redis, rate limiter, cache, HTTP client,
+    price repository).
 
-    The adapter is created once and reused across all requests for efficiency.
+    The core adapter infrastructure is created once and reused, but the price
+    repository is created per-request using the provided session.
+
+    Args:
+        session: Database session from dependency injection
 
     Returns:
         MarketDataPort implementation (AlphaVantageAdapter)
@@ -115,16 +136,12 @@ async def get_market_data() -> MarketDataPort:
     Raises:
         RuntimeError: If required environment variables are not set
     """
-    global _redis_client, _http_client, _market_data_adapter
-
-    # Return cached adapter if already initialized
-    if _market_data_adapter is not None:
-        return _market_data_adapter
+    global _redis_client, _http_client
 
     # Get configuration from environment variables
     redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     alpha_vantage_api_key = os.getenv("ALPHA_VANTAGE_API_KEY", "")
-    
+
     if not alpha_vantage_api_key or alpha_vantage_api_key == "your_api_key_here":
         # Use demo key for development/testing
         alpha_vantage_api_key = "demo"
@@ -160,15 +177,17 @@ async def get_market_data() -> MarketDataPort:
         default_ttl=3600,  # 1 hour
     )
 
-    # Create adapter (singleton)
-    _market_data_adapter = AlphaVantageAdapter(
+    # Create price repository (per-request, uses session)
+    price_repository = PriceRepository(session)
+
+    # Create adapter (per-request to include fresh repository)
+    return AlphaVantageAdapter(
         rate_limiter=rate_limiter,
         price_cache=price_cache,
         http_client=_http_client,
         api_key=alpha_vantage_api_key,
+        price_repository=price_repository,
     )
-
-    return _market_data_adapter
 
 
 # Type aliases for route dependency injection
@@ -178,5 +197,6 @@ PortfolioRepositoryDep = Annotated[
 TransactionRepositoryDep = Annotated[
     SQLModelTransactionRepository, Depends(get_transaction_repository)
 ]
+PriceRepositoryDep = Annotated[PriceRepository, Depends(get_price_repository)]
 CurrentUserDep = Annotated[UUID, Depends(get_current_user_id)]
 MarketDataDep = Annotated[MarketDataPort, Depends(get_market_data)]

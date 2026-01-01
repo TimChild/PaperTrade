@@ -1,11 +1,11 @@
 """Alpha Vantage market data adapter with rate limiting and caching.
 
-This module implements the MarketDataPort interface using Alpha Vantage as the data source.
-It provides tiered caching (Redis → PostgreSQL → API) and comprehensive rate limiting
-to prevent quota exhaustion.
+This module implements the MarketDataPort interface using Alpha Vantage
+as the data source. It provides tiered caching (Redis → PostgreSQL → API)
+and comprehensive rate limiting to prevent quota exhaustion.
 
-The adapter implements graceful degradation: when rate limited, it serves stale cached data
-if available rather than failing completely.
+The adapter implements graceful degradation: when rate limited, it serves
+stale cached data if available rather than failing completely.
 """
 
 from __future__ import annotations
@@ -334,7 +334,8 @@ class AlphaVantageAdapter:
     async def get_price_at(self, ticker: Ticker, timestamp: datetime) -> PricePoint:
         """Get the price for a ticker at a specific point in time.
 
-        Not implemented in Phase 2a. Will be implemented in Phase 2b/3.
+        This method queries the price repository for historical data. It finds the
+        price closest to (but not after) the requested timestamp.
 
         Args:
             ticker: Stock ticker symbol
@@ -344,12 +345,33 @@ class AlphaVantageAdapter:
             PricePoint with price closest to requested timestamp
 
         Raises:
-            NotImplementedError: Feature not yet implemented
+            TickerNotFoundError: Ticker doesn't exist
+            MarketDataUnavailableError: No data available for that time period
+
+        Example:
+            >>> timestamp = datetime(2024, 6, 15, 16, 0, tzinfo=UTC)
+            >>> price = await adapter.get_price_at(Ticker("AAPL"), timestamp)
         """
-        raise NotImplementedError(
-            "Historical price queries not implemented in Phase 2a. "
-            "Will be added in Phase 2b."
-        )
+        # Validate timestamp is not in the future
+        if timestamp > datetime.now(UTC):
+            raise MarketDataUnavailableError(
+                f"Cannot get price for future timestamp: {timestamp}"
+            )
+
+        # Query repository for price at timestamp
+        if not self.price_repository:
+            raise MarketDataUnavailableError(
+                "Price repository not configured - cannot query historical data"
+            )
+
+        price = await self.price_repository.get_price_at(ticker, timestamp)
+
+        if not price:
+            raise MarketDataUnavailableError(
+                f"No price data available for {ticker.symbol} at {timestamp}"
+            )
+
+        return price
 
     async def get_price_history(
         self,
@@ -360,7 +382,10 @@ class AlphaVantageAdapter:
     ) -> list[PricePoint]:
         """Get price history over a time range.
 
-        Not implemented in Phase 2a. Will be implemented in Phase 2b/3.
+        This method implements tiered caching for historical data:
+        1. Check Redis cache for recent history queries
+        2. Query price repository for date range
+        3. Optionally fetch from Alpha Vantage API if gaps exist
 
         Args:
             ticker: Stock ticker symbol
@@ -369,22 +394,63 @@ class AlphaVantageAdapter:
             interval: Price interval type (default: "1day")
 
         Returns:
-            List of PricePoint objects
+            List of PricePoint objects, ordered chronologically
 
         Raises:
-            NotImplementedError: Feature not yet implemented
+            ValueError: Invalid interval or end before start
+            TickerNotFoundError: Ticker doesn't exist
+            MarketDataUnavailableError: Insufficient data for range
+
+        Example:
+            >>> start = datetime(2024, 1, 1, tzinfo=UTC)
+            >>> end = datetime(2024, 12, 31, tzinfo=UTC)
+            >>> history = await adapter.get_price_history(Ticker("AAPL"), start, end)
         """
-        raise NotImplementedError(
-            "Price history not implemented in Phase 2a. Will be added in Phase 2b."
+        # Validate inputs
+        if end < start:
+            raise ValueError(f"End date ({end}) must be after start date ({start})")
+
+        valid_intervals = ["1min", "5min", "15min", "30min", "1hour", "1day"]
+        if interval not in valid_intervals:
+            raise ValueError(
+                f"Invalid interval: {interval}. Must be one of {valid_intervals}"
+            )
+
+        # Query repository for price history
+        if not self.price_repository:
+            raise MarketDataUnavailableError(
+                "Price repository not configured - cannot query historical data"
+            )
+
+        history = await self.price_repository.get_price_history(
+            ticker, start, end, interval
         )
+
+        # Return results (empty list if no data - not an error per spec)
+        return history
 
     async def get_supported_tickers(self) -> list[Ticker]:
         """Get list of tickers we have data for.
 
-        For Phase 2a, returns empty list. Will be implemented properly in Phase 2b
-        using database queries.
+        Queries the price repository to get all tickers with historical data.
 
         Returns:
-            Empty list (Phase 2a limitation)
+            List of Ticker objects for all supported tickers
+
+        Raises:
+            MarketDataUnavailableError: Cannot access ticker list
+
+        Example:
+            >>> tickers = await adapter.get_supported_tickers()
+            >>> print(f"We have data for {len(tickers)} tickers")
         """
-        return []
+        if not self.price_repository:
+            # No repository configured - return empty list
+            return []
+
+        try:
+            return await self.price_repository.get_all_tickers()
+        except Exception as e:
+            raise MarketDataUnavailableError(
+                f"Failed to get supported tickers: {e}"
+            ) from e
