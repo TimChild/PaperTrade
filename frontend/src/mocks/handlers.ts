@@ -140,4 +140,71 @@ export const handlers = [
       interval: 'real-time',
     })
   }),
+
+  // Get price history for a ticker
+  http.get(`${API_BASE_URL}/prices/:ticker/history`, ({ params, request }) => {
+    const { ticker } = params
+    const url = new URL(request.url)
+    const start = url.searchParams.get('start')
+    const end = url.searchParams.get('end')
+
+    // Mock prices for common stocks
+    const mockPrices: Record<string, number> = {
+      AAPL: 192.53,
+      GOOGL: 140.93,
+      MSFT: 374.58,
+      TSLA: 248.48,
+      AMZN: 178.25,
+      NVDA: 495.22,
+      META: 338.54,
+      BRK: 348.45,
+      V: 272.31,
+      JPM: 153.72,
+    }
+
+    const basePrice = mockPrices[ticker as string]
+    if (!basePrice) {
+      return HttpResponse.json(
+        { detail: `Ticker ${ticker} not found` },
+        { status: 404 }
+      )
+    }
+
+    // Generate mock price history data
+    const startDate = start ? new Date(start) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    const endDate = end ? new Date(end) : new Date()
+    const dataPoints: Array<{
+      ticker: { symbol: string }
+      price: { amount: number; currency: string }
+      timestamp: string
+      source: string
+      interval: string
+    }> = []
+
+    const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000))
+    const numPoints = Math.min(daysDiff, 100) // Limit to 100 points
+
+    for (let i = 0; i < numPoints; i++) {
+      const date = new Date(startDate.getTime() + (i * (endDate.getTime() - startDate.getTime())) / numPoints)
+      // Add some variance to the price (±5%)
+      const variance = (Math.random() - 0.5) * 0.1 * basePrice
+      const price = basePrice + variance
+
+      dataPoints.push({
+        ticker: { symbol: ticker as string },
+        price: { amount: parseFloat(price.toFixed(2)), currency: 'USD' },
+        timestamp: date.toISOString(),
+        source: 'database',
+        interval: '1day',
+      })
+    }
+
+    return HttpResponse.json({
+      data: dataPoints,
+      ticker: { symbol: ticker },
+      start: startDate.toISOString(),
+      end: endDate.toISOString(),
+      interval: '1day',
+    })
+  }),
 ]
