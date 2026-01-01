@@ -70,11 +70,11 @@ def test_buy_with_insufficient_funds_fails(
     )
     portfolio_id = response.json()["portfolio_id"]
 
-    # Try to buy $10,000 worth of stock
+    # Try to buy 100 shares (will cost $15,000 at seeded price of $150)
     trade_response = client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",
         headers={"X-User-Id": str(default_user_id)},
-        json={"action": "BUY", "ticker": "AAPL", "quantity": "100", "price": "100.00"},
+        json={"action": "BUY", "ticker": "AAPL", "quantity": "100"},
     )
 
     assert trade_response.status_code == 400
@@ -104,7 +104,7 @@ def test_sell_stock_not_owned_fails(
     trade_response = client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",
         headers={"X-User-Id": str(default_user_id)},
-        json={"action": "SELL", "ticker": "AAPL", "quantity": "10", "price": "150.00"},
+        json={"action": "SELL", "ticker": "AAPL", "quantity": "10"},
     )
 
     assert trade_response.status_code == 400
@@ -130,18 +130,18 @@ def test_sell_more_shares_than_owned_fails(
     )
     portfolio_id = response.json()["portfolio_id"]
 
-    # Buy 10 shares of AAPL
+    # Buy 10 shares of AAPL (price will be fetched automatically)
     client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",
         headers={"X-User-Id": str(default_user_id)},
-        json={"action": "BUY", "ticker": "AAPL", "quantity": "10", "price": "150.00"},
+        json={"action": "BUY", "ticker": "AAPL", "quantity": "10"},
     )
 
     # Try to sell 20 shares (we only have 10)
     trade_response = client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",
         headers={"X-User-Id": str(default_user_id)},
-        json={"action": "SELL", "ticker": "AAPL", "quantity": "20", "price": "155.00"},
+        json={"action": "SELL", "ticker": "AAPL", "quantity": "20"},
     )
 
     assert trade_response.status_code == 400
@@ -266,18 +266,18 @@ def test_trade_with_zero_quantity_fails(
     trade_response = client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",
         headers={"X-User-Id": str(default_user_id)},
-        json={"action": "BUY", "ticker": "AAPL", "quantity": "0", "price": "150.00"},
+        json={"action": "BUY", "ticker": "AAPL", "quantity": "0"},
     )
 
     # Should fail validation (quantity must be > 0)
     assert trade_response.status_code == 422  # Validation error
 
 
-def test_trade_with_zero_price_fails(
+def test_trade_with_invalid_ticker_fails(
     client: TestClient,
     default_user_id: UUID,
 ) -> None:
-    """Test that trading at zero price fails validation."""
+    """Test that trading with an unknown ticker fails appropriately."""
     # Create portfolio
     response = client.post(
         "/api/v1/portfolios",
@@ -290,12 +290,14 @@ def test_trade_with_zero_price_fails(
     )
     portfolio_id = response.json()["portfolio_id"]
 
-    # Try to buy at price 0
+    # Try to buy stock with unknown ticker (not in seeded test data)
+    # Using a valid format ticker (1-5 chars) but not in our seeded data
     trade_response = client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",
         headers={"X-User-Id": str(default_user_id)},
-        json={"action": "BUY", "ticker": "AAPL", "quantity": "10", "price": "0.00"},
+        json={"action": "BUY", "ticker": "ZZZZ", "quantity": "10"},
     )
 
-    # Should fail validation (price must be > 0)
-    assert trade_response.status_code == 422  # Validation error
+    # Should fail because ticker is not found in market data
+    assert trade_response.status_code == 404
+    assert "not found" in trade_response.json()["detail"].lower()

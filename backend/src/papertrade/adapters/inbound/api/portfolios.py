@@ -38,6 +38,10 @@ from papertrade.application.commands.withdraw_cash import (
     WithdrawCashCommand,
     WithdrawCashHandler,
 )
+from papertrade.application.exceptions import (
+    MarketDataUnavailableError,
+    TickerNotFoundError,
+)
 from papertrade.application.queries.get_portfolio import (
     GetPortfolioHandler,
     GetPortfolioQuery,
@@ -51,6 +55,7 @@ from papertrade.application.queries.get_portfolio_holdings import (
     GetPortfolioHoldingsQuery,
 )
 from papertrade.domain.exceptions import InvalidPortfolioError
+from papertrade.domain.value_objects.ticker import Ticker
 
 router = APIRouter(prefix="/portfolios", tags=["portfolios"])
 
@@ -297,16 +302,29 @@ async def execute_trade(
     Fetches the current market price automatically and executes the trade
     at that price. This prevents price manipulation and ensures trades
     execute at real market prices.
+    
+    Raises:
+        HTTPException: 404 if ticker not found in market data
+        HTTPException: 503 if market data service is unavailable
     """
     # Verify user owns this portfolio
     await _verify_portfolio_ownership(portfolio_id, current_user, portfolio_repo)
 
-    # Import Ticker here to avoid circular imports
-    from papertrade.domain.value_objects.ticker import Ticker
-    
     # Fetch current market price
     ticker = Ticker(request.ticker)
-    price_point = await market_data.get_current_price(ticker)
+    
+    try:
+        price_point = await market_data.get_current_price(ticker)
+    except TickerNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Ticker not found: {request.ticker}",
+        ) from None
+    except MarketDataUnavailableError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Market data unavailable: {str(e)}",
+        ) from None
     
     if request.action == "BUY":
         command = BuyStockCommand(
