@@ -20,23 +20,23 @@ repos:
       - id: check-yaml
         name: Check YAML syntax
         args: ['--unsafe']  # Allow custom tags
-        stages: [commit]
+        stages: [pre-commit]
       - id: check-added-large-files
         name: Check for large files
         args: ['--maxkb=1000']
-        stages: [commit]
+        stages: [pre-commit]
       - id: check-json
         name: Check JSON syntax
-        stages: [commit]
+        stages: [pre-commit]
       - id: check-toml
         name: Check TOML syntax
-        stages: [commit]
+        stages: [pre-commit]
       - id: check-merge-conflict
         name: Check for merge conflicts
-        stages: [commit]
+        stages: [pre-commit]
       - id: detect-private-key
         name: Detect private keys
-        stages: [commit]
+        stages: [pre-commit]
 
   # ============================================================================
   # PRE-PUSH STAGE: Auto-fixers and formatters
@@ -46,10 +46,10 @@ repos:
     hooks:
       - id: trailing-whitespace
         name: Trim trailing whitespace
-        stages: [push]
+        stages: [pre-push]
       - id: end-of-file-fixer
         name: Fix end of files
-        stages: [push]
+        stages: [pre-push]
 
   # Python - Ruff linting and formatting
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -59,11 +59,11 @@ repos:
         name: Ruff lint (backend)
         args: [--fix]
         files: ^backend/
-        stages: [push]
+        stages: [pre-push]
       - id: ruff-format
         name: Ruff format (backend)
         files: ^backend/
-        stages: [push]
+        stages: [pre-push]
 
   # Python - Type checking with Pyright
   - repo: https://github.com/RobertCraigie/pyright-python
@@ -73,5 +73,5 @@ repos:
         name: Pyright type check (backend)
         files: ^backend/
         additional_dependencies: []
-        stages: [push]
+        stages: [pre-push]
         # Note: This will use the project's pyproject.toml configuration
