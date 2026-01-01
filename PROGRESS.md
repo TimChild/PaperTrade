@@ -17,10 +17,14 @@
 - 📋 Phase 2b tasks ready, blocked until trade functionality works
 
 ### Active PRs
-- PR #40: Fix trade API - backend should fetch prices (CRITICAL)
+- PR #40: Fix trade API - backend should fetch prices (CRITICAL) - backend-swe agent
+- PR #41: Fix CI workflows and add Copilot setup - quality-infra agent
 
-### Next Up (After PR #40)
+### Next Up (After PRs #40 & #41)
 - Phase 2b: Historical price data, background refresh, price charts
+  - Task 031: Historical Price Data Storage (backend-swe)
+  - Task 032: Background Price Refresh Scheduler (backend-swe)
+  - Task 033: Price History Charts (frontend-swe)
 
 ---
 
