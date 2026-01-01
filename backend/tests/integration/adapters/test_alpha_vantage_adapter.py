@@ -294,36 +294,84 @@ class TestAlphaVantageAdapterRateLimiting:
         assert "Rate limit exceeded" in str(exc_info.value)
 
 
-class TestAlphaVantageAdapterErrorHandling:
-    """Tests for error handling scenarios."""
+class TestAlphaVantageAdapterHistoricalData:
+    """Tests for historical data methods (Phase 2b)."""
 
-    async def test_not_implemented_methods(
+    async def test_get_price_at_without_repository(
         self,
         adapter: AlphaVantageAdapter,
     ) -> None:
-        """Test that Phase 2b methods raise NotImplementedError."""
-        # get_price_at
-        with pytest.raises(NotImplementedError):
+        """Test get_price_at raises error when repository not configured."""
+        with pytest.raises(MarketDataUnavailableError) as exc_info:
             await adapter.get_price_at(
                 Ticker("AAPL"),
-                datetime.now(UTC),
+                datetime(2024, 6, 15, 16, 0, tzinfo=UTC),
             )
 
-        # get_price_history
-        with pytest.raises(NotImplementedError):
-            await adapter.get_price_history(
-                Ticker("AAPL"),
-                datetime.now(UTC) - timedelta(days=7),
-                datetime.now(UTC),
-            )
+        assert "Price repository not configured" in str(exc_info.value)
 
-    async def test_get_supported_tickers_returns_empty(
+    async def test_get_price_at_future_timestamp(
         self,
         adapter: AlphaVantageAdapter,
     ) -> None:
-        """Test that get_supported_tickers returns empty list in Phase 2a."""
-        tickers = await adapter.get_supported_tickers()
+        """Test get_price_at raises error for future timestamp."""
+        future = datetime.now(UTC) + timedelta(days=1)
 
+        with pytest.raises(MarketDataUnavailableError) as exc_info:
+            await adapter.get_price_at(Ticker("AAPL"), future)
+
+        assert "future timestamp" in str(exc_info.value).lower()
+
+    async def test_get_price_history_without_repository(
+        self,
+        adapter: AlphaVantageAdapter,
+    ) -> None:
+        """Test get_price_history raises error when repository not configured."""
+        with pytest.raises(MarketDataUnavailableError) as exc_info:
+            await adapter.get_price_history(
+                Ticker("AAPL"),
+                datetime(2024, 1, 1, tzinfo=UTC),
+                datetime(2024, 12, 31, tzinfo=UTC),
+            )
+
+        assert "Price repository not configured" in str(exc_info.value)
+
+    async def test_get_price_history_invalid_range(
+        self,
+        adapter: AlphaVantageAdapter,
+    ) -> None:
+        """Test get_price_history raises ValueError for invalid date range."""
+        # End before start
+        with pytest.raises(ValueError) as exc_info:
+            await adapter.get_price_history(
+                Ticker("AAPL"),
+                datetime(2024, 12, 31, tzinfo=UTC),
+                datetime(2024, 1, 1, tzinfo=UTC),
+            )
+
+        assert "End date" in str(exc_info.value)
+
+    async def test_get_price_history_invalid_interval(
+        self,
+        adapter: AlphaVantageAdapter,
+    ) -> None:
+        """Test get_price_history raises ValueError for invalid interval."""
+        with pytest.raises(ValueError) as exc_info:
+            await adapter.get_price_history(
+                Ticker("AAPL"),
+                datetime(2024, 1, 1, tzinfo=UTC),
+                datetime(2024, 12, 31, tzinfo=UTC),
+                interval="invalid",
+            )
+
+        assert "Invalid interval" in str(exc_info.value)
+
+    async def test_get_supported_tickers_without_repository(
+        self,
+        adapter: AlphaVantageAdapter,
+    ) -> None:
+        """Test get_supported_tickers returns empty list without repository."""
+        tickers = await adapter.get_supported_tickers()
         assert tickers == []
 
 

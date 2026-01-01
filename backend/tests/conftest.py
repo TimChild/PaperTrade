@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
+from fastapi import Depends
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.pool import StaticPool
@@ -50,9 +51,10 @@ async def test_engine() -> AsyncGenerator[AsyncEngine, None]:
 def client(test_engine: AsyncEngine) -> TestClient:
     """Create a test client with test database and in-memory market data.
 
-    Overrides the application's database session to use an in-memory test database
-    and the market data adapter to use an in-memory implementation. This ensures
-    integration tests are fast and don't require external dependencies (Redis, API keys).
+    Overrides the application's database session to use an in-memory test
+    database and the market data adapter to use an in-memory implementation.
+    This ensures integration tests are fast and don't require external
+    dependencies (Redis, API keys).
     """
     from papertrade.adapters.inbound.api.dependencies import get_market_data
     from papertrade.adapters.outbound.market_data.in_memory_adapter import (
@@ -69,20 +71,26 @@ def client(test_engine: AsyncEngine) -> TestClient:
                 await session.rollback()
                 raise
 
-    def get_test_market_data() -> InMemoryMarketDataAdapter:
+    async def get_test_market_data(
+        session: AsyncSession = Depends(get_test_session),  # type: ignore[assignment]  # noqa: B008
+    ) -> InMemoryMarketDataAdapter:
         """Override market data dependency to use in-memory adapter.
-        
+
         Seeds the adapter with default test prices for common tickers.
+
+        Args:
+            session: Database session from dependency injection (not used
+                     for in-memory adapter)
         """
         from datetime import UTC, datetime
         from decimal import Decimal
-        
+
         from papertrade.application.dtos.price_point import PricePoint
         from papertrade.domain.value_objects.money import Money
         from papertrade.domain.value_objects.ticker import Ticker
-        
+
         adapter = InMemoryMarketDataAdapter()
-        
+
         # Seed with default test prices
         test_prices = [
             PricePoint(
@@ -107,7 +115,7 @@ def client(test_engine: AsyncEngine) -> TestClient:
                 interval="real-time",
             ),
         ]
-        
+
         adapter.seed_prices(test_prices)
         return adapter
 
@@ -176,4 +184,3 @@ async def reset_global_singletons() -> AsyncGenerator[None, None]:
     # Reset singletons to None
     dependencies._redis_client = None
     dependencies._http_client = None
-    dependencies._market_data_adapter = None
