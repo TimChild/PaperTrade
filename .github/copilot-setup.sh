@@ -29,7 +29,7 @@ if ! command -v uv &> /dev/null; then
     echo "   uv not found, installing via pip..."
     python3 -m pip install --user uv
     export PATH="$HOME/.local/bin:$PATH"
-    
+
     # Verify installation
     if command -v uv &> /dev/null; then
         echo "   ✓ uv installed successfully"
@@ -100,11 +100,11 @@ echo ""
 echo "🐳 Starting Docker services (PostgreSQL + Redis)..."
 if command -v docker compose &> /dev/null; then
     docker compose up -d
-    
+
     # Give services a moment to start
     echo "   Waiting for services to be healthy..."
     sleep 3
-    
+
     # Check if services are running
     if docker compose ps | grep -q "Up"; then
         echo "   ✓ Docker services are running"
