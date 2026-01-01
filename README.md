@@ -55,7 +55,7 @@ Dependencies point INWARD only
 ### Backend
 | Component | Technology |
 |-----------|------------|
-| Language | Python 3.13+ |
+| Language | Python 3.12+ |
 | Framework | FastAPI |
 | ORM | SQLModel |
 | Database | PostgreSQL (prod) / SQLite (dev) |
@@ -85,7 +85,7 @@ Dependencies point INWARD only
 
 ### Prerequisites
 
-- Python 3.13+
+- Python 3.12+
 - Node.js 20+
 - Docker & Docker Compose
 - [Task](https://taskfile.dev/) (optional but recommended)
