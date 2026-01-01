@@ -26,6 +26,7 @@
 | [testing-integration.md](testing-integration.md) | Manual testing guide (detailed) |
 | [external-resources.md](external-resources.md) | API docs and framework links |
 | [future-ideas.md](future-ideas.md) | Feature ideas for exploration |
+| [progress-archive.md](progress-archive.md) | Historical PR details (archive) |
 
 ## Architecture
 
