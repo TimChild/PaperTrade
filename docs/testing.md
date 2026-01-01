@@ -174,7 +174,17 @@ Every PR runs:
 4. Integration tests (Backend)
 5. E2E tests (Full stack)
 
----
+## Anti-Patterns to Avoid
 
-*See [testing-strategy.md](testing-strategy.md) for philosophy details.*
-*See [testing-integration.md](testing-integration.md) for detailed API examples.*
+❌ **Don't mock internal logic** - Test real behavior with test databases
+❌ **Don't test implementation details** - Test public interfaces only
+❌ **Don't create flaky tests** - Use explicit waits, not `time.sleep()`
+❌ **Don't couple tests** - Each test should be independent
+
+## Lessons Learned
+
+**Task 016 revealed**: 218 unit tests passed but 3 critical bugs existed in production paths.
+**Root cause**: No integration tests verifying API contracts.
+**Solution**: Task 017 added 26 integration + 7 E2E tests, catching field name mismatches and DTO mapping errors.
+
+**Key insight**: Tests passing ≠ System working. Need all pyramid levels.
