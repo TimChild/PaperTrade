@@ -254,7 +254,7 @@ class TestPricePointIsStale:
         assert price_point.is_stale(timedelta(minutes=15))
 
     def test_exactly_at_threshold(self) -> None:
-        """Should return False when exactly at threshold (not stale)."""
+        """Should return True when exactly at threshold (stale)."""
         # Create price exactly 15 minutes ago
         timestamp = datetime.now(timezone.utc) - timedelta(minutes=15)
         price_point = PricePoint(
@@ -265,8 +265,8 @@ class TestPricePointIsStale:
             interval="real-time",
         )
 
-        # Should not be stale (age == max_age, not >)
-        assert not price_point.is_stale(timedelta(minutes=15))
+        # Should be stale (age >= max_age)
+        assert price_point.is_stale(timedelta(minutes=15))
 
 
 class TestPricePointWithSource:

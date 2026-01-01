@@ -133,18 +133,57 @@ class PricePoint:
                 f"Volume must be non-negative, got: {self.volume}"
             )
 
+    def __eq__(self, other: object) -> bool:
+        """Compare price points based on core identity fields only.
+
+        OHLCV data (volume, open, high, low, close) is excluded from
+        equality comparison as it's supplementary metadata.
+
+        Args:
+            other: Object to compare with
+
+        Returns:
+            True if core fields match, False otherwise
+        """
+        if not isinstance(other, PricePoint):
+            return NotImplemented
+
+        return (
+            self.ticker == other.ticker
+            and self.price == other.price
+            and self.timestamp == other.timestamp
+            and self.source == other.source
+            and self.interval == other.interval
+        )
+
+    def __hash__(self) -> int:
+        """Hash based on core identity fields only (must match __eq__).
+
+        Returns:
+            Hash value based on core fields
+        """
+        return hash((
+            self.ticker,
+            self.price,
+            self.timestamp,
+            self.source,
+            self.interval,
+        ))
+
     def is_stale(self, max_age: timedelta) -> bool:
         """Check if this price observation is stale.
+
+        A price is considered stale if its age has reached or exceeded max_age.
 
         Args:
             max_age: Maximum age before price is considered stale
 
         Returns:
-            True if timestamp is older than max_age from now (UTC)
+            True if age >= max_age (stale), False if age < max_age (fresh)
         """
         now = datetime.now(timezone.utc)
         age = now - self.timestamp
-        return age > max_age
+        return age >= max_age
 
     def with_source(self, new_source: str) -> "PricePoint":
         """Create a new PricePoint with different source.
