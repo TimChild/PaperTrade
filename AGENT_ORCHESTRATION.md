@@ -113,7 +113,7 @@ task lint           # Run linters
 - Check architecture compliance
 - Verify test quality (behavior, not implementation)
 - Look for forbidden dependencies
-- Score 0-10 (merge at 7+)
+- Score 0-10 (merge at 9+)
 
 ### Workflow
 - Parallelize independent work
