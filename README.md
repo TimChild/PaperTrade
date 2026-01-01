@@ -85,10 +85,39 @@ Dependencies point INWARD only
 
 ### Prerequisites
 
+**Required:**
 - Python 3.12+
 - Node.js 20+
 - Docker & Docker Compose
-- [Task](https://taskfile.dev/) (optional but recommended)
+
+**Optional (but recommended):**
+- [Task](https://taskfile.dev/) - Task runner for development commands
+
+#### Installing Task (Optional)
+
+Task is used throughout this documentation for convenience. If you don't have it:
+
+**macOS/Linux:**
+```bash
+sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d ~/.local/bin
+```
+
+**Using Homebrew (macOS/Linux):**
+```bash
+brew install go-task/tap/go-task
+```
+
+**Using npm:**
+```bash
+npm install -g @go-task/cli
+```
+
+**Verify installation:**
+```bash
+task --version
+```
+
+**Alternative**: If you don't install Task, you can run commands directly from `Taskfile.yml` or use the manual setup below.
 
 ### Quick Start
 
@@ -97,14 +126,11 @@ Dependencies point INWARD only
 git clone https://github.com/TimChild/PaperTrade.git
 cd PaperTrade
 
-# Copy environment variables template
-cp .env.example .env
-
 # OPTION 1: Automated setup (recommended)
 # This installs pre-commit hooks, dependencies, and starts Docker services
-task setup  # If you have Task installed
-# OR
-./.github/copilot-setup.sh  # Standalone setup script
+./.github/copilot-setup.sh
+
+# Note: The setup script will create .env from .env.example automatically
 
 # OPTION 2: Manual setup (see below)
 
