@@ -104,7 +104,7 @@ def test_execute_buy_trade_and_verify_holdings(
     )
     portfolio_id = response.json()["portfolio_id"]
 
-    # Execute buy trade
+    # Execute buy trade (price will be fetched automatically)
     trade_response = client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",
         headers={"X-User-Id": str(default_user_id)},
@@ -112,7 +112,6 @@ def test_execute_buy_trade_and_verify_holdings(
             "action": "BUY",
             "ticker": "AAPL",
             "quantity": "10",
-            "price": "150.00",
         },
     )
 
@@ -162,18 +161,18 @@ def test_buy_and_sell_updates_holdings_correctly(
     )
     portfolio_id = response.json()["portfolio_id"]
 
-    # Buy 100 shares of AAPL at $150
+    # Buy 100 shares of AAPL (price will be fetched automatically)
     client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",
         headers={"X-User-Id": str(default_user_id)},
-        json={"action": "BUY", "ticker": "AAPL", "quantity": "100", "price": "150.00"},
+        json={"action": "BUY", "ticker": "AAPL", "quantity": "100"},
     )
 
-    # Sell 30 shares of AAPL at $155
+    # Sell 30 shares of AAPL (price will be fetched automatically)
     client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",
         headers={"X-User-Id": str(default_user_id)},
-        json={"action": "SELL", "ticker": "AAPL", "quantity": "30", "price": "155.00"},
+        json={"action": "SELL", "ticker": "AAPL", "quantity": "30"},
     )
 
     # Verify holdings: 100 - 30 = 70 shares
@@ -189,14 +188,14 @@ def test_buy_and_sell_updates_holdings_correctly(
     # Verify balance
     # Start: $100,000
     # Buy: -$15,000 (100 * $150)
-    # Sell: +$4,650 (30 * $155)
-    # End: $89,650
+    # Sell: +$4,500 (30 * $150)
+    # End: $89,500
     balance_response = client.get(
         f"/api/v1/portfolios/{portfolio_id}/balance",
         headers={"X-User-Id": str(default_user_id)},
     )
     balance_data = balance_response.json()
-    assert balance_data["amount"] == "89650.00"
+    assert balance_data["amount"] == "89500.00"
 
 
 def test_get_portfolios_returns_only_user_portfolios(

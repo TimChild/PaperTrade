@@ -38,6 +38,10 @@ from papertrade.application.commands.withdraw_cash import (
     WithdrawCashCommand,
     WithdrawCashHandler,
 )
+from papertrade.application.exceptions import (
+    MarketDataUnavailableError,
+    TickerNotFoundError,
+)
 from papertrade.application.queries.get_portfolio import (
     GetPortfolioHandler,
     GetPortfolioQuery,
@@ -51,6 +55,7 @@ from papertrade.application.queries.get_portfolio_holdings import (
     GetPortfolioHoldingsQuery,
 )
 from papertrade.domain.exceptions import InvalidPortfolioError
+from papertrade.domain.value_objects.ticker import Ticker
 
 router = APIRouter(prefix="/portfolios", tags=["portfolios"])
 
@@ -105,7 +110,6 @@ class TradeRequest(BaseModel):
     action: str = Field(..., pattern="^(BUY|SELL)$")
     ticker: str = Field(..., min_length=1, max_length=5)
     quantity: Decimal = Field(..., gt=0, decimal_places=4)
-    price: Decimal = Field(..., gt=0, decimal_places=2)
 
 
 class TransactionResponse(BaseModel):
@@ -291,18 +295,44 @@ async def execute_trade(
     current_user: CurrentUserDep,
     portfolio_repo: PortfolioRepositoryDep,
     transaction_repo: TransactionRepositoryDep,
+    market_data: MarketDataDep,
 ) -> TransactionResponse:
-    """Execute a buy or sell trade."""
+    """Execute a buy or sell trade.
+    
+    Fetches the current market price automatically and executes the trade
+    at that price. This prevents price manipulation and ensures trades
+    execute at real market prices.
+    
+    Raises:
+        HTTPException: 404 if ticker not found in market data
+        HTTPException: 503 if market data service is unavailable
+    """
     # Verify user owns this portfolio
     await _verify_portfolio_ownership(portfolio_id, current_user, portfolio_repo)
 
+    # Fetch current market price
+    ticker = Ticker(request.ticker)
+    
+    try:
+        price_point = await market_data.get_current_price(ticker)
+    except TickerNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Ticker not found: {request.ticker}",
+        ) from None
+    except MarketDataUnavailableError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Market data unavailable: {str(e)}",
+        ) from None
+    
     if request.action == "BUY":
         command = BuyStockCommand(
             portfolio_id=portfolio_id,
             ticker_symbol=request.ticker,
             quantity_shares=request.quantity,
-            price_per_share_amount=request.price,
-            price_per_share_currency=DEFAULT_CURRENCY,
+            price_per_share_amount=price_point.price.amount,
+            price_per_share_currency=price_point.price.currency,
         )
         handler = BuyStockHandler(portfolio_repo, transaction_repo)
         result = await handler.execute(command)
@@ -311,8 +341,8 @@ async def execute_trade(
             portfolio_id=portfolio_id,
             ticker_symbol=request.ticker,
             quantity_shares=request.quantity,
-            price_per_share_amount=request.price,
-            price_per_share_currency=DEFAULT_CURRENCY,
+            price_per_share_amount=price_point.price.amount,
+            price_per_share_currency=price_point.price.currency,
         )
         handler = SellStockHandler(portfolio_repo, transaction_repo)
         result = await handler.execute(command)

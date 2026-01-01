@@ -46,29 +46,34 @@ def test_get_transactions_returns_all_trades(
     default_user_id: UUID,
 ) -> None:
     """Test transaction history includes all deposits and trades."""
-    # Create portfolio
+    # Create portfolio with sufficient funds
     response = client.post(
         "/api/v1/portfolios",
         headers={"X-User-Id": str(default_user_id)},
         json={
             "name": "Transaction Test",
-            "initial_deposit": "25000.00",
+            "initial_deposit": "50000.00",  # Increased to cover both trades
             "currency": "USD",
         },
     )
     portfolio_id = response.json()["portfolio_id"]
 
-    # Execute trades
-    client.post(
+    # Execute trades (prices will be fetched automatically from seeded test data)
+    # AAPL: 50 shares * $150 = $7,500
+    trade1_response = client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",
         headers={"X-User-Id": str(default_user_id)},
-        json={"action": "BUY", "ticker": "AAPL", "quantity": "50", "price": "150.00"},
+        json={"action": "BUY", "ticker": "AAPL", "quantity": "50"},
     )
-    client.post(
+    assert trade1_response.status_code == 201
+    
+    # GOOGL: 1 share * $2,800 = $2,800 (reduced quantity to fit budget)
+    trade2_response = client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",
         headers={"X-User-Id": str(default_user_id)},
-        json={"action": "BUY", "ticker": "GOOGL", "quantity": "10", "price": "140.00"},
+        json={"action": "BUY", "ticker": "GOOGL", "quantity": "1"},
     )
+    assert trade2_response.status_code == 201
 
     # Get transactions
     tx_response = client.get(
@@ -106,11 +111,11 @@ def test_transactions_include_trade_details(
     )
     portfolio_id = response.json()["portfolio_id"]
 
-    # Execute a trade
+    # Execute a trade (price will be $150 from seeded test data for AAPL)
     client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",
         headers={"X-User-Id": str(default_user_id)},
-        json={"action": "BUY", "ticker": "AAPL", "quantity": "25", "price": "180.00"},
+        json={"action": "BUY", "ticker": "AAPL", "quantity": "25"},
     )
 
     # Get transactions
@@ -127,7 +132,7 @@ def test_transactions_include_trade_details(
     # Verify details
     assert buy_tx["ticker"] == "AAPL"
     assert buy_tx["quantity"] == "25.0000"
-    assert buy_tx["price_per_share"] == "180.00"
+    assert buy_tx["price_per_share"] == "150.00"  # Seeded test price for AAPL
     # Cash change should be negative (spent money)
     assert buy_tx["cash_change"].startswith("-")
 
@@ -196,18 +201,18 @@ def test_sell_transaction_appears_in_history(
     )
     portfolio_id = response.json()["portfolio_id"]
 
-    # Buy shares
+    # Buy shares (price will be $150 from seeded test data for AAPL)
     client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",
         headers={"X-User-Id": str(default_user_id)},
-        json={"action": "BUY", "ticker": "AAPL", "quantity": "100", "price": "150.00"},
+        json={"action": "BUY", "ticker": "AAPL", "quantity": "100"},
     )
 
-    # Sell shares
+    # Sell shares (price will be $150 from seeded test data for AAPL)
     client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",
         headers={"X-User-Id": str(default_user_id)},
-        json={"action": "SELL", "ticker": "AAPL", "quantity": "30", "price": "160.00"},
+        json={"action": "SELL", "ticker": "AAPL", "quantity": "30"},
     )
 
     # Get transactions
@@ -224,7 +229,7 @@ def test_sell_transaction_appears_in_history(
     # Verify details
     assert sell_tx["ticker"] == "AAPL"
     assert sell_tx["quantity"] == "30.0000"
-    assert sell_tx["price_per_share"] == "160.00"
+    assert sell_tx["price_per_share"] == "150.00"  # Seeded test price for AAPL
     # Cash change should be positive (received money)
     assert not sell_tx["cash_change"].startswith("-")
 
@@ -246,7 +251,7 @@ def test_transaction_pagination(
     )
     portfolio_id = response.json()["portfolio_id"]
 
-    # Create multiple transactions (10 trades)
+    # Create multiple transactions (10 trades, price will be fetched automatically)
     for _i in range(10):
         client.post(
             f"/api/v1/portfolios/{portfolio_id}/trades",
@@ -255,7 +260,6 @@ def test_transaction_pagination(
                 "action": "BUY",
                 "ticker": "AAPL",
                 "quantity": "1",
-                "price": "150.00",
             },
         )
 
