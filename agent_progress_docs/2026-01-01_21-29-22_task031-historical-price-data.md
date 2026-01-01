@@ -1,8 +1,8 @@
 # Task 031: Historical Price Data Storage Implementation
 
-**Date**: 2026-01-01  
-**Agent**: backend-swe  
-**Branch**: `copilot/extend-historical-price-data`  
+**Date**: 2026-01-01
+**Agent**: backend-swe
+**Branch**: `copilot/extend-historical-price-data`
 **Status**: ✅ Complete
 
 ## Task Summary
