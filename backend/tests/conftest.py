@@ -36,11 +36,16 @@ async def test_engine() -> AsyncGenerator[AsyncEngine, None]:
 
 @pytest.fixture
 def client(test_engine: AsyncEngine) -> TestClient:
-    """Create a test client with test database.
+    """Create a test client with test database and in-memory market data.
 
-    Overrides the application's database session to use an in-memory test database.
-    This allows integration tests to run against a clean database for each test.
+    Overrides the application's database session to use an in-memory test database
+    and the market data adapter to use an in-memory implementation. This ensures
+    integration tests are fast and don't require external dependencies (Redis, API keys).
     """
+    from papertrade.adapters.inbound.api.dependencies import get_market_data
+    from papertrade.adapters.outbound.market_data.in_memory_adapter import (
+        InMemoryMarketDataAdapter,
+    )
 
     async def get_test_session() -> AsyncGenerator[AsyncSession, None]:
         """Override session dependency to use test database."""
@@ -52,8 +57,13 @@ def client(test_engine: AsyncEngine) -> TestClient:
                 await session.rollback()
                 raise
 
-    # Override the database session dependency
+    def get_test_market_data() -> InMemoryMarketDataAdapter:
+        """Override market data dependency to use in-memory adapter."""
+        return InMemoryMarketDataAdapter()
+
+    # Override dependencies
     app.dependency_overrides[get_session] = get_test_session
+    app.dependency_overrides[get_market_data] = get_test_market_data
 
     with TestClient(app) as test_client:
         yield test_client
@@ -86,3 +96,34 @@ def vcr_config() -> dict[str, object]:
         "decode_compressed_response": True,
         "cassette_library_dir": "tests/cassettes",
     }
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def reset_global_singletons() -> AsyncGenerator[None, None]:
+    """Reset global singleton dependencies between tests.
+
+    This prevents test isolation issues where one test's market data
+    adapter (with Redis/HTTP client connections) affects another test's
+    behavior.
+
+    The fixture runs automatically for all tests (autouse=True) and
+    cleans up after each test completes, ensuring each test starts
+    with a fresh state.
+    """
+    # Import here to avoid circular imports
+    from papertrade.adapters.inbound.api import dependencies
+
+    # Run the test
+    yield
+
+    # Clean up after test - close any open connections first
+    if dependencies._http_client is not None:
+        await dependencies._http_client.aclose()
+
+    if dependencies._redis_client is not None:
+        await dependencies._redis_client.aclose()
+
+    # Reset singletons to None
+    dependencies._redis_client = None
+    dependencies._http_client = None
+    dependencies._market_data_adapter = None
