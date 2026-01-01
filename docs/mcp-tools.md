@@ -85,3 +85,27 @@ pylanceUpdatePythonEnvironment(
 | Run tests | ❌ | ✅ `task test` |
 | Git operations | ❌ | ✅ `gh`, `git` |
 | Install packages | ❌ | ✅ `uv add`, `npm` |
+
+## Session Setup Checklist
+
+At the start of each orchestration session:
+
+1. **Check Pylance Python environment** - May reset to global Python
+   ```
+   pylancePythonEnvironments(workspaceRoot: "file:///path/to/project")
+   ```
+   
+2. **Switch to venv if needed**
+   ```
+   pylanceUpdatePythonEnvironment(
+     workspaceRoot: "file:///path/to/project",
+     pythonEnvironment: "/path/to/project/backend/.venv/bin/python"
+   )
+   ```
+
+3. **Verify imports resolve**
+   ```
+   pylanceImports(workspaceRoot: "file:///path/to/project")
+   # Should show no unresolved imports
+   ```
+
