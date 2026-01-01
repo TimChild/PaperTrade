@@ -157,9 +157,7 @@ async def get_price_history(
         ticker_obj = Ticker(ticker.upper())
 
         # Get price history
-        history = await market_data.get_price_history(
-            ticker_obj, start, end, interval
-        )
+        history = await market_data.get_price_history(ticker_obj, start, end, interval)
 
         # Convert to response model
         prices = [
