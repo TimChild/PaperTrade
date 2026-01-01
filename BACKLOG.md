@@ -2,15 +2,40 @@
 
 This file tracks minor improvements, tech debt, and enhancement tasks that don't block main development but should be addressed soon.
 
+**Last Updated**: December 29, 2025 (00:30 PST)
+
 ## Active Backlog
 
-### Code Quality & Linting (Post-PR #15)
+### Quality Fixes (In Progress - Dec 29, 2025)
 
-**Context**: After merging adapters layer (PR #15), we have minor linting and type checking issues that don't block development.
+**Context**: Discovered during Phase 2a PR review process.
 
 **Tasks**:
 
-1. **Fix remaining ruff linting warnings** - ~10 minutes
+1. **Fix CI workflow trigger** - ⏳ IN PROGRESS (PR #37, Task 027)
+   - **Problem**: CI doesn't run when PRs marked ready for review (draft → ready transition)
+   - **Solution**: Add `ready_for_review` event type to workflow triggers
+   - **File**: `.github/workflows/ci.yml`
+   - **Agent**: quality-infra
+   - **Estimated**: 1-2 hours
+
+2. **Fix test isolation** - ⏳ IN PROGRESS (PR #38, Task 028)
+   - **Problem**: `test_buy_and_sell_updates_holdings_correctly` fails in full suite, passes individually
+   - **Root Cause**: Global singletons in `dependencies.py` not reset between tests
+   - **Solution**: Add autouse pytest fixture to reset `_redis_client`, `_http_client`, `_market_data_adapter`
+   - **File**: `backend/tests/conftest.py`
+   - **Agent**: backend-swe
+   - **Estimated**: 1-2 hours
+
+---
+
+### Code Quality & Linting
+
+**Context**: Minor linting and type checking issues that don't block development.
+
+**Tasks**:
+
+1. **Fix remaining ruff linting warnings** - ~10 minutes (LOW PRIORITY)
    - 3 warnings remaining after auto-fix:
      - `B904`: Exception chaining in `dependencies.py` (raise from err/None)
      - `B007`: Unused loop variable in `test_sqlmodel_transaction_repository.py`
@@ -18,25 +43,17 @@ This file tracks minor improvements, tech debt, and enhancement tasks that don't
    - Run `uv run ruff check --fix --unsafe-fixes` or fix manually
    - Files: `adapters/inbound/api/dependencies.py`, test files
 
-2. **Resolve pyright deprecation warnings** - ~30 minutes
+2. **Resolve pyright deprecation warnings** - ~30 minutes (LOW PRIORITY)
    - 41 warnings about SQLAlchemy's deprecated `session.execute()`
    - Should use SQLModel's `session.exec()` instead
    - Affects: Repository implementations in `adapters/outbound/database/`
    - Note: Code works fine, this is about using recommended SQLModel patterns
 
-3. **Fix minor API test failure** - ~15 minutes
-   - Test `test_api_v1_root_endpoint` expects `/api/v1/` but we have `/`
-   - Either update test or add `/api/v1/` root endpoint
-   - File: `backend/tests/integration/test_api.py`
-
-**Estimated Total Time**: ~55 minutes
-**Priority**: Low (cosmetic, doesn't affect functionality)
-
 ---
 
-### Development Workflow Improvements
+### Development Workflow Improvements (LOW PRIORITY)
 
-**Context**: Pre-commit hooks and agent environment setup need optimization.
+**Context**: Pre-commit hooks and development workflow optimizations.
 
 **Tasks**:
 
@@ -50,7 +67,7 @@ This file tracks minor improvements, tech debt, and enhancement tasks that don't
    - **File**: `.pre-commit-config.yaml`
    - **Research**: Best practices for developer-friendly pre-commit configs
 
-2. **Create Copilot agent environment setup** - ~45 minutes
+2. **Create Copilot agent environment setup** - ~45 minutes (MAYBE NOT NEEDED)
    - **Goal**: Agents should have pre-configured environments (uv synced, pre-commit installed, etc.)
    - **Location**: `.github/copilot-agent-setup.sh` or similar
    - **Setup tasks**:
@@ -61,50 +78,25 @@ This file tracks minor improvements, tech debt, and enhancement tasks that don't
    - **Consider**: Using existing `task setup` command
    - **Research**: GitHub Copilot agent environment customization (`.github/` folder)
    - **Documentation**: Update AGENT_ORCHESTRATION.md with setup instructions
+   - **Note**: May not be needed if agents handle this automatically
 
 **Estimated Total Time**: ~65 minutes
-**Priority**: Medium (improves developer experience and agent efficiency)
+**Priority**: Low (improves developer experience but not critical)
 
 ---
 
-### Domain Layer Refinements (Post-PR #12)
+### Domain Layer Refinements (MOSTLY COMPLETE)
 
-**Context**: Domain layer implementation in PR #12 is excellent (9/10) but has minor issues to clean up.
+**Context**: Domain layer implementation in PR #12 was excellent (9/10), Task 008 (PR #13) addressed most issues.
 
-**Tasks**:
+**Remaining Tasks** (if any):
 
-1. **Fix linting warnings (E501)** - ~5 minutes
-   - 15 line-too-long warnings in domain layer
-   - All in docstrings/error messages
-   - Run `uv run ruff check --fix` and `uv run ruff format`
-   - Files affected: `transaction.py`, `money.py`
+1. ~~**Fix linting warnings (E501)**~~ - ✅ COMPLETE (Task 008)
+2. ~~**Fix Holding equality semantics**~~ - ✅ COMPLETE (Task 008)
+3. ~~**Resolve Portfolio immutability documentation**~~ - ✅ COMPLETE (Task 008)
+4. ~~**Add business rule validation**~~ - ✅ COMPLETE (Task 008)
 
-2. **Fix Holding equality semantics** - ~15 minutes
-   - Current: Equality based on ticker only (value-based but incomplete)
-   - Issue: `Holding(AAPL, qty=10, cost=1000) == Holding(AAPL, qty=20, cost=2000)` returns True
-   - Fix: Include quantity and cost_basis in equality comparison
-   - File: `backend/src/papertrade/domain/entities/holding.py`
-   - Update test: `backend/tests/unit/domain/entities/test_holding.py`
-
-3. **Resolve Portfolio immutability documentation** - ~10 minutes
-   - Architecture plan says "name can change" but implementation is fully immutable
-   - Decision: Keep fully immutable (safer), update architecture docs
-   - Files to update:
-     - `architecture_plans/20251227_phase1-backend-mvp/domain-layer.md`
-     - Architecture plan note in Portfolio entity docs
-
-4. **Add business rule validation: Cannot sell shares you don't own** - ~30 minutes
-   - Current: `PortfolioCalculator.calculate_holdings()` has comment "shouldn't happen in valid data"
-   - Fix: Add explicit validation in Application layer Use Cases
-   - Create `InsufficientSharesError` exception (already exists!)
-   - Add validation in `SellStockCommand` handler (task 007b scope)
-   - Note: Domain layer is correct as-is; this is Application layer concern
-
-**Estimated Total Time**: ~1 hour
-
-**Priority**: Low (non-blocking for Application layer development)
-
-**Assigned**: See `agent_tasks/008_domain-layer-refinements.md`
+**Status**: All items complete!
 
 ---
 
