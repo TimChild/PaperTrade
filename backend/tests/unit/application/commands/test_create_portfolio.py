@@ -133,9 +133,7 @@ class TestCreatePortfolio:
         with pytest.raises(InvalidPortfolioError):
             await handler.execute(command)
 
-    async def test_can_retrieve_created_portfolio(
-        self, handler, portfolio_repo
-    ):
+    async def test_can_retrieve_created_portfolio(self, handler, portfolio_repo):
         """Test that created portfolio can be retrieved."""
         command = CreatePortfolioCommand(
             user_id=uuid4(),

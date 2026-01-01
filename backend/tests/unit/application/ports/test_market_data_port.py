@@ -1,6 +1,6 @@
 """Tests for MarketDataPort protocol and InMemoryMarketDataAdapter."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
@@ -13,7 +13,6 @@ from papertrade.application.exceptions import (
     MarketDataUnavailableError,
     TickerNotFoundError,
 )
-from papertrade.application.ports.market_data_port import MarketDataPort
 from papertrade.domain.value_objects.money import Money
 from papertrade.domain.value_objects.ticker import Ticker
 
@@ -47,7 +46,7 @@ class TestInMemoryMarketDataAdapterSeeding:
         price_point = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("150.25"), "USD"),
-            timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc),
+            timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=UTC),
             source="database",
             interval="real-time",
         )
@@ -66,14 +65,14 @@ class TestInMemoryMarketDataAdapterSeeding:
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("150.00"), "USD"),
-                timestamp=datetime(2025, 12, 28, 14, 0, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 28, 14, 0, tzinfo=UTC),
                 source="database",
                 interval="real-time",
             ),
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("150.25"), "USD"),
-                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=UTC),
                 source="database",
                 interval="real-time",
             ),
@@ -91,14 +90,14 @@ class TestInMemoryMarketDataAdapterSeeding:
         price2 = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("150.50"), "USD"),
-            timestamp=datetime(2025, 12, 28, 15, 0, tzinfo=timezone.utc),
+            timestamp=datetime(2025, 12, 28, 15, 0, tzinfo=UTC),
             source="database",
             interval="real-time",
         )
         price1 = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("150.00"), "USD"),
-            timestamp=datetime(2025, 12, 28, 14, 0, tzinfo=timezone.utc),
+            timestamp=datetime(2025, 12, 28, 14, 0, tzinfo=UTC),
             source="database",
             interval="real-time",
         )
@@ -119,7 +118,7 @@ class TestInMemoryMarketDataAdapterSeeding:
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("150.25"), "USD"),
-                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=UTC),
                 source="database",
                 interval="real-time",
             )
@@ -150,7 +149,7 @@ class TestInMemoryAdapterGetCurrentPrice:
         price_point = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("150.25"), "USD"),
-            timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc),
+            timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=UTC),
             source="database",
             interval="real-time",
         )
@@ -168,14 +167,14 @@ class TestInMemoryAdapterGetCurrentPrice:
         older_price = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("150.00"), "USD"),
-            timestamp=datetime(2025, 12, 28, 14, 0, tzinfo=timezone.utc),
+            timestamp=datetime(2025, 12, 28, 14, 0, tzinfo=UTC),
             source="database",
             interval="real-time",
         )
         newer_price = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("150.50"), "USD"),
-            timestamp=datetime(2025, 12, 28, 15, 0, tzinfo=timezone.utc),
+            timestamp=datetime(2025, 12, 28, 15, 0, tzinfo=UTC),
             source="database",
             interval="real-time",
         )
@@ -194,7 +193,7 @@ class TestInMemoryAdapterGetPriceAt:
     async def test_get_price_at_empty_adapter(self) -> None:
         """Should raise TickerNotFoundError when no data."""
         adapter = InMemoryMarketDataAdapter()
-        timestamp = datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc)
+        timestamp = datetime(2025, 12, 28, 14, 30, tzinfo=UTC)
 
         with pytest.raises(TickerNotFoundError):
             await adapter.get_price_at(Ticker("AAPL"), timestamp)
@@ -203,7 +202,7 @@ class TestInMemoryAdapterGetPriceAt:
     async def test_get_price_at_exact_match(self) -> None:
         """Should return exact match when available."""
         adapter = InMemoryMarketDataAdapter()
-        timestamp = datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc)
+        timestamp = datetime(2025, 12, 28, 14, 30, tzinfo=UTC)
         price_point = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("150.25"), "USD"),
@@ -226,14 +225,14 @@ class TestInMemoryAdapterGetPriceAt:
         price_point = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("150.25"), "USD"),
-            timestamp=datetime(2025, 12, 28, 14, 0, tzinfo=timezone.utc),
+            timestamp=datetime(2025, 12, 28, 14, 0, tzinfo=UTC),
             source="database",
             interval="real-time",
         )
         adapter.seed_price(price_point)
 
         # Request at 14:30 (30 minutes later, within window)
-        requested_time = datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc)
+        requested_time = datetime(2025, 12, 28, 14, 30, tzinfo=UTC)
         result = await adapter.get_price_at(Ticker("AAPL"), requested_time)
 
         assert result == price_point
@@ -247,14 +246,14 @@ class TestInMemoryAdapterGetPriceAt:
         price_point = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("150.25"), "USD"),
-            timestamp=datetime(2025, 12, 28, 14, 0, tzinfo=timezone.utc),
+            timestamp=datetime(2025, 12, 28, 14, 0, tzinfo=UTC),
             source="database",
             interval="real-time",
         )
         adapter.seed_price(price_point)
 
         # Request at 16:00 (2 hours later, outside window)
-        requested_time = datetime(2025, 12, 28, 16, 0, tzinfo=timezone.utc)
+        requested_time = datetime(2025, 12, 28, 16, 0, tzinfo=UTC)
 
         with pytest.raises(MarketDataUnavailableError) as exc_info:
             await adapter.get_price_at(Ticker("AAPL"), requested_time)
@@ -269,14 +268,14 @@ class TestInMemoryAdapterGetPriceAt:
         price1 = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("150.00"), "USD"),
-            timestamp=datetime(2025, 12, 28, 14, 0, tzinfo=timezone.utc),
+            timestamp=datetime(2025, 12, 28, 14, 0, tzinfo=UTC),
             source="database",
             interval="real-time",
         )
         price2 = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("150.50"), "USD"),
-            timestamp=datetime(2025, 12, 28, 14, 45, tzinfo=timezone.utc),
+            timestamp=datetime(2025, 12, 28, 14, 45, tzinfo=UTC),
             source="database",
             interval="real-time",
         )
@@ -284,7 +283,7 @@ class TestInMemoryAdapterGetPriceAt:
         adapter.seed_prices([price1, price2])
 
         # Request at 14:40 - closer to price2 (14:45)
-        requested_time = datetime(2025, 12, 28, 14, 40, tzinfo=timezone.utc)
+        requested_time = datetime(2025, 12, 28, 14, 40, tzinfo=UTC)
         result = await adapter.get_price_at(Ticker("AAPL"), requested_time)
 
         assert result == price2
@@ -297,8 +296,8 @@ class TestInMemoryAdapterGetPriceHistory:
     async def test_get_price_history_empty_adapter(self) -> None:
         """Should raise TickerNotFoundError when ticker not in storage."""
         adapter = InMemoryMarketDataAdapter()
-        start = datetime(2025, 12, 1, tzinfo=timezone.utc)
-        end = datetime(2025, 12, 31, tzinfo=timezone.utc)
+        start = datetime(2025, 12, 1, tzinfo=UTC)
+        end = datetime(2025, 12, 31, tzinfo=UTC)
 
         with pytest.raises(TickerNotFoundError):
             await adapter.get_price_history(Ticker("AAPL"), start, end)
@@ -311,14 +310,14 @@ class TestInMemoryAdapterGetPriceHistory:
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("150.25"), "USD"),
-                timestamp=datetime(2025, 12, 15, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 15, tzinfo=UTC),
                 source="database",
                 interval="1day",
             )
         )
 
-        start = datetime(2025, 12, 31, tzinfo=timezone.utc)
-        end = datetime(2025, 12, 1, tzinfo=timezone.utc)
+        start = datetime(2025, 12, 31, tzinfo=UTC)
+        end = datetime(2025, 12, 1, tzinfo=UTC)
 
         with pytest.raises(ValueError, match="cannot be before start"):
             await adapter.get_price_history(Ticker("AAPL"), start, end)
@@ -332,21 +331,21 @@ class TestInMemoryAdapterGetPriceHistory:
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("150.00"), "USD"),
-                timestamp=datetime(2025, 12, 1, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 1, tzinfo=UTC),
                 source="database",
                 interval="1day",
             ),
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("151.00"), "USD"),
-                timestamp=datetime(2025, 12, 15, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 15, tzinfo=UTC),
                 source="database",
                 interval="1day",
             ),
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("152.00"), "USD"),
-                timestamp=datetime(2025, 12, 31, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 31, tzinfo=UTC),
                 source="database",
                 interval="1day",
             ),
@@ -354,8 +353,8 @@ class TestInMemoryAdapterGetPriceHistory:
         adapter.seed_prices(prices)
 
         # Request Dec 10 - Dec 20 (should only get middle price)
-        start = datetime(2025, 12, 10, tzinfo=timezone.utc)
-        end = datetime(2025, 12, 20, tzinfo=timezone.utc)
+        start = datetime(2025, 12, 10, tzinfo=UTC)
+        end = datetime(2025, 12, 20, tzinfo=UTC)
         result = await adapter.get_price_history(Ticker("AAPL"), start, end, "1day")
 
         assert len(result) == 1
@@ -370,22 +369,22 @@ class TestInMemoryAdapterGetPriceHistory:
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("150.00"), "USD"),
-                timestamp=datetime(2025, 12, 1, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 1, tzinfo=UTC),
                 source="database",
                 interval="1day",
             ),
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("152.00"), "USD"),
-                timestamp=datetime(2025, 12, 31, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 31, tzinfo=UTC),
                 source="database",
                 interval="1day",
             ),
         ]
         adapter.seed_prices(prices)
 
-        start = datetime(2025, 12, 1, tzinfo=timezone.utc)
-        end = datetime(2025, 12, 31, tzinfo=timezone.utc)
+        start = datetime(2025, 12, 1, tzinfo=UTC)
+        end = datetime(2025, 12, 31, tzinfo=UTC)
         result = await adapter.get_price_history(Ticker("AAPL"), start, end, "1day")
 
         assert len(result) == 2
@@ -400,15 +399,15 @@ class TestInMemoryAdapterGetPriceHistory:
         price_point = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("150.00"), "USD"),
-            timestamp=datetime(2025, 12, 1, tzinfo=timezone.utc),
+            timestamp=datetime(2025, 12, 1, tzinfo=UTC),
             source="database",
             interval="1day",
         )
         adapter.seed_price(price_point)
 
         # Request range with no data
-        start = datetime(2025, 11, 1, tzinfo=timezone.utc)
-        end = datetime(2025, 11, 30, tzinfo=timezone.utc)
+        start = datetime(2025, 11, 1, tzinfo=UTC)
+        end = datetime(2025, 11, 30, tzinfo=UTC)
         result = await adapter.get_price_history(Ticker("AAPL"), start, end, "1day")
 
         assert result == []
@@ -422,22 +421,22 @@ class TestInMemoryAdapterGetPriceHistory:
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("150.00"), "USD"),
-                timestamp=datetime(2025, 12, 1, 14, 0, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 1, 14, 0, tzinfo=UTC),
                 source="database",
                 interval="1day",
             ),
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("150.25"), "USD"),
-                timestamp=datetime(2025, 12, 1, 14, 30, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 1, 14, 30, tzinfo=UTC),
                 source="database",
                 interval="real-time",
             ),
         ]
         adapter.seed_prices(prices)
 
-        start = datetime(2025, 12, 1, tzinfo=timezone.utc)
-        end = datetime(2025, 12, 31, tzinfo=timezone.utc)
+        start = datetime(2025, 12, 1, tzinfo=UTC)
+        end = datetime(2025, 12, 31, tzinfo=UTC)
         result = await adapter.get_price_history(Ticker("AAPL"), start, end, "1day")
 
         # Should only get the 1day interval price
@@ -453,22 +452,22 @@ class TestInMemoryAdapterGetPriceHistory:
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("152.00"), "USD"),
-                timestamp=datetime(2025, 12, 31, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 31, tzinfo=UTC),
                 source="database",
                 interval="1day",
             ),
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("150.00"), "USD"),
-                timestamp=datetime(2025, 12, 1, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 1, tzinfo=UTC),
                 source="database",
                 interval="1day",
             ),
         ]
         adapter.seed_prices(prices)  # Added in reverse chronological order
 
-        start = datetime(2025, 12, 1, tzinfo=timezone.utc)
-        end = datetime(2025, 12, 31, tzinfo=timezone.utc)
+        start = datetime(2025, 12, 1, tzinfo=UTC)
+        end = datetime(2025, 12, 31, tzinfo=UTC)
         result = await adapter.get_price_history(Ticker("AAPL"), start, end, "1day")
 
         # Should be sorted oldest first
@@ -496,7 +495,7 @@ class TestInMemoryAdapterGetSupportedTickers:
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("150.25"), "USD"),
-                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=UTC),
                 source="database",
                 interval="real-time",
             )
@@ -516,14 +515,14 @@ class TestInMemoryAdapterGetSupportedTickers:
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("150.25"), "USD"),
-                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=UTC),
                 source="database",
                 interval="real-time",
             ),
             PricePoint(
                 ticker=Ticker("GOOGL"),
                 price=Money(Decimal("140.50"), "USD"),
-                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=UTC),
                 source="database",
                 interval="real-time",
             ),

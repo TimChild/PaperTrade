@@ -1,6 +1,6 @@
 """Tests for PricePoint DTO."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -17,7 +17,7 @@ class TestPricePointConstruction:
         """Should create PricePoint with all required fields."""
         ticker = Ticker("AAPL")
         price = Money(Decimal("150.25"), "USD")
-        timestamp = datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc)
+        timestamp = datetime(2025, 12, 28, 14, 30, tzinfo=UTC)
 
         price_point = PricePoint(
             ticker=ticker,
@@ -42,7 +42,7 @@ class TestPricePointConstruction:
         """Should create PricePoint with OHLCV data."""
         ticker = Ticker("AAPL")
         price = Money(Decimal("150.25"), "USD")
-        timestamp = datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc)
+        timestamp = datetime(2025, 12, 28, 14, 30, tzinfo=UTC)
         open_price = Money(Decimal("149.00"), "USD")
         high_price = Money(Decimal("151.50"), "USD")
         low_price = Money(Decimal("148.50"), "USD")
@@ -74,7 +74,7 @@ class TestPricePointConstruction:
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("150.25"), "USD"),
-                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=UTC),
                 source="invalid_source",
                 interval="real-time",
             )
@@ -85,7 +85,7 @@ class TestPricePointConstruction:
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("150.25"), "USD"),
-                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=UTC),
                 source="alpha_vantage",
                 interval="invalid_interval",
             )
@@ -122,7 +122,7 @@ class TestPricePointConstruction:
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("0.00"), "USD"),
-                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=UTC),
                 source="alpha_vantage",
                 interval="real-time",
             )
@@ -133,7 +133,7 @@ class TestPricePointConstruction:
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("150.25"), "USD"),
-                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=UTC),
                 source="alpha_vantage",
                 interval="1day",
                 open=Money(Decimal("149.00"), "EUR"),  # Different currency
@@ -145,7 +145,7 @@ class TestPricePointConstruction:
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("150.25"), "USD"),
-                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=UTC),
                 source="alpha_vantage",
                 interval="1day",
                 open=Money(Decimal("149.00"), "USD"),
@@ -159,7 +159,7 @@ class TestPricePointConstruction:
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("150.25"), "USD"),
-                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=UTC),
                 source="alpha_vantage",
                 interval="1day",
                 open=Money(Decimal("152.00"), "USD"),  # open > high (151.50)
@@ -173,7 +173,7 @@ class TestPricePointConstruction:
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("150.25"), "USD"),
-                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=UTC),
                 source="alpha_vantage",
                 interval="1day",
                 high=Money(Decimal("151.50"), "USD"),
@@ -187,7 +187,7 @@ class TestPricePointConstruction:
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("150.25"), "USD"),
-                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=UTC),
                 source="alpha_vantage",
                 interval="1day",
                 high=Money(Decimal("151.50"), "USD"),
@@ -201,7 +201,7 @@ class TestPricePointConstruction:
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("150.25"), "USD"),
-                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc),
+                timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=UTC),
                 source="alpha_vantage",
                 interval="1day",
                 volume=-1000,
@@ -212,7 +212,7 @@ class TestPricePointConstruction:
         price_point = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("150.25"), "USD"),
-            timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc),
+            timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=UTC),
             source="alpha_vantage",
             interval="1day",
             volume=0,
@@ -226,7 +226,7 @@ class TestPricePointIsStale:
     def test_fresh_price(self) -> None:
         """Should return False for fresh price."""
         # Create price 5 minutes ago
-        timestamp = datetime.now(timezone.utc) - timedelta(minutes=5)
+        timestamp = datetime.now(UTC) - timedelta(minutes=5)
         price_point = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("150.25"), "USD"),
@@ -241,7 +241,7 @@ class TestPricePointIsStale:
     def test_stale_price(self) -> None:
         """Should return True for stale price."""
         # Create price 20 minutes ago
-        timestamp = datetime.now(timezone.utc) - timedelta(minutes=20)
+        timestamp = datetime.now(UTC) - timedelta(minutes=20)
         price_point = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("150.25"), "USD"),
@@ -256,7 +256,7 @@ class TestPricePointIsStale:
     def test_exactly_at_threshold(self) -> None:
         """Should return True when exactly at threshold (stale)."""
         # Create price exactly 15 minutes ago
-        timestamp = datetime.now(timezone.utc) - timedelta(minutes=15)
+        timestamp = datetime.now(UTC) - timedelta(minutes=15)
         price_point = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("150.25"), "USD"),
@@ -277,7 +277,7 @@ class TestPricePointWithSource:
         original = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("150.25"), "USD"),
-            timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc),
+            timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=UTC),
             source="alpha_vantage",
             interval="real-time",
         )
@@ -299,7 +299,7 @@ class TestPricePointWithSource:
         price_point = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("150.25"), "USD"),
-            timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc),
+            timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=UTC),
             source="alpha_vantage",
             interval="real-time",
         )
@@ -312,7 +312,7 @@ class TestPricePointWithSource:
         original = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("150.25"), "USD"),
-            timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc),
+            timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=UTC),
             source="alpha_vantage",
             interval="1day",
             open=Money(Decimal("149.00"), "USD"),
@@ -338,7 +338,7 @@ class TestPricePointEquality:
         """Should be equal when all key fields match."""
         ticker = Ticker("AAPL")
         price = Money(Decimal("150.25"), "USD")
-        timestamp = datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc)
+        timestamp = datetime(2025, 12, 28, 14, 30, tzinfo=UTC)
 
         pp1 = PricePoint(
             ticker=ticker,
@@ -360,7 +360,7 @@ class TestPricePointEquality:
 
     def test_different_ticker(self) -> None:
         """Should not be equal when ticker differs."""
-        timestamp = datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc)
+        timestamp = datetime(2025, 12, 28, 14, 30, tzinfo=UTC)
         price = Money(Decimal("150.25"), "USD")
 
         pp1 = PricePoint(
@@ -384,7 +384,7 @@ class TestPricePointEquality:
     def test_different_price(self) -> None:
         """Should not be equal when price differs."""
         ticker = Ticker("AAPL")
-        timestamp = datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc)
+        timestamp = datetime(2025, 12, 28, 14, 30, tzinfo=UTC)
 
         pp1 = PricePoint(
             ticker=ticker,
@@ -412,7 +412,7 @@ class TestPricePointEquality:
         pp1 = PricePoint(
             ticker=ticker,
             price=price,
-            timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc),
+            timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=UTC),
             source="alpha_vantage",
             interval="real-time",
         )
@@ -420,7 +420,7 @@ class TestPricePointEquality:
         pp2 = PricePoint(
             ticker=ticker,
             price=price,
-            timestamp=datetime(2025, 12, 28, 14, 31, tzinfo=timezone.utc),
+            timestamp=datetime(2025, 12, 28, 14, 31, tzinfo=UTC),
             source="alpha_vantage",
             interval="real-time",
         )
@@ -431,7 +431,7 @@ class TestPricePointEquality:
         """Should not be equal when source differs."""
         ticker = Ticker("AAPL")
         price = Money(Decimal("150.25"), "USD")
-        timestamp = datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc)
+        timestamp = datetime(2025, 12, 28, 14, 30, tzinfo=UTC)
 
         pp1 = PricePoint(
             ticker=ticker,
@@ -455,7 +455,7 @@ class TestPricePointEquality:
         """Should not be equal when interval differs."""
         ticker = Ticker("AAPL")
         price = Money(Decimal("150.25"), "USD")
-        timestamp = datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc)
+        timestamp = datetime(2025, 12, 28, 14, 30, tzinfo=UTC)
 
         pp1 = PricePoint(
             ticker=ticker,
@@ -479,7 +479,7 @@ class TestPricePointEquality:
         """Should be equal even when OHLCV data differs (not part of equality)."""
         ticker = Ticker("AAPL")
         price = Money(Decimal("150.25"), "USD")
-        timestamp = datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc)
+        timestamp = datetime(2025, 12, 28, 14, 30, tzinfo=UTC)
 
         pp1 = PricePoint(
             ticker=ticker,
@@ -511,12 +511,14 @@ class TestPricePointStringRepresentation:
         price_point = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("150.25"), "USD"),
-            timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc),
+            timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=UTC),
             source="alpha_vantage",
             interval="real-time",
         )
 
-        expected = "AAPL @ $150.25 as of 2025-12-28 14:30:00 UTC (source: alpha_vantage)"
+        expected = (
+            "AAPL @ $150.25 as of 2025-12-28 14:30:00 UTC (source: alpha_vantage)"
+        )
         assert str(price_point) == expected
 
     def test_repr_format(self) -> None:
@@ -524,7 +526,7 @@ class TestPricePointStringRepresentation:
         price_point = PricePoint(
             ticker=Ticker("AAPL"),
             price=Money(Decimal("150.25"), "USD"),
-            timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc),
+            timestamp=datetime(2025, 12, 28, 14, 30, tzinfo=UTC),
             source="alpha_vantage",
             interval="real-time",
         )

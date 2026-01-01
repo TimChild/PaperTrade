@@ -273,9 +273,7 @@ async def withdraw_cash(
         currency=request.currency,
     )
 
-    handler = WithdrawCashHandler(
-        portfolio_repo, transaction_repo
-    )
+    handler = WithdrawCashHandler(portfolio_repo, transaction_repo)
     result = await handler.execute(command)
 
     return TransactionResponse(transaction_id=result.transaction_id)

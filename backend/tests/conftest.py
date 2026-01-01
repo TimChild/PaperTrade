@@ -71,11 +71,11 @@ def default_user_id() -> UUID:
 @pytest.fixture(scope="module")
 def vcr_config() -> dict[str, object]:
     """Configure pytest-recording for VCR cassettes.
-    
+
     VCR cassettes allow recording HTTP interactions once and replaying them
     in subsequent test runs. This enables testing external API integrations
     without requiring real API keys or network access.
-    
+
     Returns:
         Configuration dict for pytest-recording
     """

@@ -8,8 +8,11 @@ The adapter implements graceful degradation: when rate limited, it serves stale 
 if available rather than failing completely.
 """
 
+from __future__ import annotations
+
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 import httpx
 
@@ -23,6 +26,11 @@ from papertrade.domain.value_objects.money import Money
 from papertrade.domain.value_objects.ticker import Ticker
 from papertrade.infrastructure.cache.price_cache import PriceCache
 from papertrade.infrastructure.rate_limiter import RateLimiter
+
+if TYPE_CHECKING:
+    from papertrade.adapters.outbound.repositories.price_repository import (
+        PriceRepository,
+    )
 
 
 class AlphaVantageAdapter:
@@ -76,6 +84,7 @@ class AlphaVantageAdapter:
         base_url: str = "https://www.alphavantage.co/query",
         timeout: float = 5.0,
         max_retries: int = 3,
+        price_repository: PriceRepository | None = None,
     ) -> None:
         """Initialize Alpha Vantage adapter.
 
@@ -87,6 +96,7 @@ class AlphaVantageAdapter:
             base_url: API base URL (default: Alpha Vantage production)
             timeout: Request timeout in seconds (default: 5.0)
             max_retries: Maximum retry attempts (default: 3)
+            price_repository: Optional price repository for Tier 2 caching
         """
         self.rate_limiter = rate_limiter
         self.price_cache = price_cache
@@ -95,13 +105,14 @@ class AlphaVantageAdapter:
         self.base_url = base_url
         self.timeout = timeout
         self.max_retries = max_retries
+        self.price_repository = price_repository
 
     async def get_current_price(self, ticker: Ticker) -> PricePoint:
         """Get the most recent available price for a ticker.
 
         Implements tiered caching strategy:
         1. Check Redis cache (return if fresh)
-        2. Check PostgreSQL (stubbed for Phase 2a)
+        2. Check PostgreSQL (return if reasonably fresh)
         3. Fetch from Alpha Vantage API (if rate limit allows)
         4. Serve stale cached data if rate limited
 
@@ -125,13 +136,15 @@ class AlphaVantageAdapter:
             # Fresh cached data, return it
             return cached.with_source("cache")
 
-        # Tier 2: Check PostgreSQL (stubbed for Phase 2a)
-        # TODO: Implement in Task 021
-        # if self.price_repository:
-        #     db_price = await self.price_repository.get_latest_price(ticker)
-        #     if db_price and not db_price.is_stale(max_age=timedelta(hours=4)):
-        #         await self.price_cache.set(db_price)  # Warm cache
-        #         return db_price.with_source("database")
+        # Tier 2: Check PostgreSQL
+        if self.price_repository:
+            db_price = await self.price_repository.get_latest_price(
+                ticker, max_age=timedelta(hours=4)
+            )
+            if db_price and not db_price.is_stale(max_age=timedelta(hours=4)):
+                # Warm the cache with database price
+                await self.price_cache.set(db_price, ttl=3600)
+                return db_price.with_source("database")
 
         # Tier 3: Fetch from Alpha Vantage API
         if not await self.rate_limiter.can_make_request():
@@ -162,9 +175,9 @@ class AlphaVantageAdapter:
             # Store in cache for future requests
             await self.price_cache.set(price, ttl=3600)  # 1 hour TTL
 
-            # TODO: Store in database for Tier 2 caching (Task 021)
-            # if self.price_repository:
-            #     await self.price_repository.upsert_price(price)
+            # Store in database for Tier 2 caching
+            if self.price_repository:
+                await self.price_repository.upsert_price(price)
 
             return price
 

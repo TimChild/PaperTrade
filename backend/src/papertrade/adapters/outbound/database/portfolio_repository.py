@@ -92,8 +92,6 @@ class SQLModelPortfolioRepository:
         Returns:
             True if portfolio exists, False otherwise
         """
-        statement = select(PortfolioModel.id).where(
-            PortfolioModel.id == portfolio_id
-        )
+        statement = select(PortfolioModel.id).where(PortfolioModel.id == portfolio_id)
         result = await self._session.execute(statement)
         return result.scalar() is not None
