@@ -14,10 +14,10 @@ function getDateRange(range: TimeRange): { start: string; end: string } {
 
   switch (range) {
     case '1D':
-      start.setDate(end.getDate() - 1)
+      start.setTime(end.getTime() - 24 * 60 * 60 * 1000)
       break
     case '1W':
-      start.setDate(end.getDate() - 7)
+      start.setTime(end.getTime() - 7 * 24 * 60 * 60 * 1000)
       break
     case '1M':
       start.setMonth(end.getMonth() - 1)

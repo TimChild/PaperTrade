@@ -86,10 +86,11 @@ export function PriceChart({
   }))
 
   // Calculate price change
-  const firstPrice = data.prices[0].price.amount
-  const lastPrice = data.prices[data.prices.length - 1].price.amount
+  // Safe to access [0] and [length-1] because we already checked for empty array above
+  const firstPrice = data.prices[0]!.price.amount
+  const lastPrice = data.prices[data.prices.length - 1]!.price.amount
   const change = lastPrice - firstPrice
-  const changePercent = (change / firstPrice) * 100
+  const changePercent = firstPrice !== 0 ? (change / firstPrice) * 100 : 0
   const isPositive = change >= 0
 
   return (
