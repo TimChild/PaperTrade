@@ -125,6 +125,16 @@ task lint           # Run linters
 - Look for forbidden dependencies
 - Score 0-10 (merge at 9+)
 
+**Requesting Changes from Agents**:
+When you need the agent to fix issues in their PR, add comments starting with `@copilot`:
+
+```bash
+# Tag the agent in PR comments to request changes
+gh pr comment <PR_NUMBER> --body "@copilot Please fix the failing tests..."
+```
+
+This ensures the Copilot agent sees and responds to your feedback.
+
 ### Workflow
 - Parallelize independent work
 - Merge quick wins first
