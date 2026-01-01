@@ -1,6 +1,7 @@
 """Holding DTO for transferring holding data across layers."""
 
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 
 from papertrade.domain.entities.holding import Holding
@@ -20,6 +21,15 @@ class HoldingDTO:
         cost_basis_currency: Currency code (e.g., "USD")
         average_cost_per_share_amount: Average cost per share (None if zero)
         average_cost_per_share_currency: Currency for average cost (None if zero)
+        current_price_amount: Current market price per share (None if unavailable)
+        current_price_currency: Currency for current price (None if unavailable)
+        market_value_amount: Current market value (quantity * current_price, None if unavailable)
+        market_value_currency: Currency for market value (None if unavailable)
+        unrealized_gain_loss_amount: Unrealized gain/loss (market_value - cost_basis, None if unavailable)
+        unrealized_gain_loss_currency: Currency for gain/loss (None if unavailable)
+        unrealized_gain_loss_percent: Gain/loss as percentage (None if unavailable)
+        price_timestamp: When price was observed (None if unavailable)
+        price_source: Data source for price (None if unavailable)
     """
 
     ticker_symbol: str
@@ -28,6 +38,16 @@ class HoldingDTO:
     cost_basis_currency: str
     average_cost_per_share_amount: Decimal | None = None
     average_cost_per_share_currency: str | None = None
+    # Market data fields (None if price unavailable)
+    current_price_amount: Decimal | None = None
+    current_price_currency: str | None = None
+    market_value_amount: Decimal | None = None
+    market_value_currency: str | None = None
+    unrealized_gain_loss_amount: Decimal | None = None
+    unrealized_gain_loss_currency: str | None = None
+    unrealized_gain_loss_percent: Decimal | None = None
+    price_timestamp: datetime | None = None
+    price_source: str | None = None
 
     @staticmethod
     def from_entity(holding: Holding) -> "HoldingDTO":
