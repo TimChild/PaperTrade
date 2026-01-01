@@ -45,48 +45,36 @@ PaperTrade is a stock market emulation platform where users can practice trading
 - Docker Compose for local development
 - GitHub Actions for CI/CD
 
-## Agent Progress Documentation (REQUIRED)
+## Agent Progress Documentation
 
-**All agents MUST generate progress documentation for significant tasks.**
+**For PR-based coding agents only** (not for orchestration sessions).
 
-### Location
-All progress documentation goes in the `agent_progress_docs/` directory at the repository root.
+### Purpose
+When a coding agent creates a PR, it should document decisions and changes in `agent_progress_docs/`. This helps the orchestrator review work and provides context for future development.
 
-### Naming Convention
+### When Required
+- Coding agents creating PRs (backend-swe, frontend-swe, etc.)
+- Architectural decisions
+- Complex bug fixes
+
+### When NOT Required
+- Orchestration sessions (direct conversations in VS Code)
+- Simple questions or explorations
+- Documentation-only changes
+
+### Format
 ```
-YYYY-MM-DD_HH-MM-SS_short-description.md
-```
-or for complex tasks requiring multiple files:
-```
-YYYY-MM-DD_HH-MM-SS_short-description/
-├── summary.md
-├── planning.md
-├── implementation-notes.md
-└── ...
+agent_progress_docs/YYYY-MM-DD_HH-MM-SS_short-description.md
 ```
 
-### Getting the Timestamp
-**ALWAYS** determine the datetime by running a terminal command:
-```bash
-date "+%Y-%m-%d_%H-%M-%S"
-```
-Do NOT rely on internal knowledge of the current time.
+Get timestamp: `date "+%Y-%m-%d_%H-%M-%S"`
 
-### Content Requirements
-Progress documents should include:
-1. **Task Summary**: What was requested/accomplished
-2. **Decisions Made**: Key architectural or implementation decisions
-3. **Files Changed**: List of files created, modified, or deleted
-4. **Testing Notes**: What was tested and how
-5. **Known Issues/TODOs**: Any remaining work or concerns
-6. **Next Steps**: Suggested follow-up actions if applicable
-
-### When to Create Progress Docs
-- Any task that creates or significantly modifies multiple files
-- Architectural decisions or pattern implementations
-- Bug fixes that reveal systemic issues
-- Infrastructure or CI/CD changes
-- Any work that a future developer would benefit from understanding
+### Content
+1. Task Summary
+2. Decisions Made
+3. Files Changed
+4. Testing Notes
+5. Known Issues/Next Steps
 
 ## Code Quality Standards
 
