@@ -75,6 +75,8 @@ Get timestamp: `date "+%Y-%m-%d_%H-%M-%S"`
 3. Files Changed
 4. Testing Notes
 5. Known Issues/Next Steps
+6. (Optional) Next step suggestions -- Only if applicable
+
 
 ## Code Quality Standards
 
