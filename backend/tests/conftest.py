@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 
 import pytest
 import pytest_asyncio
+from fastapi import Depends
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.pool import StaticPool
@@ -57,10 +58,15 @@ def client(test_engine: AsyncEngine) -> TestClient:
                 await session.rollback()
                 raise
 
-    def get_test_market_data() -> InMemoryMarketDataAdapter:
+    async def get_test_market_data(
+        session: AsyncSession = Depends(get_test_session),  # type: ignore[assignment]
+    ) -> InMemoryMarketDataAdapter:
         """Override market data dependency to use in-memory adapter.
         
         Seeds the adapter with default test prices for common tickers.
+        
+        Args:
+            session: Database session from dependency injection (not used for in-memory adapter)
         """
         from datetime import UTC, datetime
         from decimal import Decimal
@@ -164,4 +170,3 @@ async def reset_global_singletons() -> AsyncGenerator[None, None]:
     # Reset singletons to None
     dependencies._redis_client = None
     dependencies._http_client = None
-    dependencies._market_data_adapter = None
