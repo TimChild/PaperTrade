@@ -67,8 +67,6 @@ jobs:
   frontend-checks:
     name: Frontend Checks
     runs-on: ubuntu-latest
-    # Only run if frontend directory exists
-    if: hashFiles('frontend/package.json') != ''
 
     steps:
       - name: Checkout code
@@ -98,6 +96,11 @@ jobs:
 
       - name: Build check
         run: task build:frontend
+
+      - name: Security audit
+        run: npm audit --audit-level=moderate
+        working-directory: ./frontend
+        continue-on-error: true  # Don't fail CI on audit issues, just warn
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
@@ -189,7 +192,7 @@ jobs:
         if: always()
         run: |
           if [ -f /tmp/backend.pid ]; then
-            kill $(cat /tmp/backend.pid) || true
+            kill "$(cat /tmp/backend.pid)" || true
           fi
 
       - name: Show backend logs

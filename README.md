@@ -1,6 +1,6 @@
 # PaperTrade 📈
 
-[![CI](https://github.com/TimChild/PaperTrade/actions/workflows/pr.yml/badge.svg)](https://github.com/TimChild/PaperTrade/actions/workflows/pr.yml)
+[![CI](https://github.com/TimChild/PaperTrade/actions/workflows/ci.yml/badge.svg)](https://github.com/TimChild/PaperTrade/actions/workflows/ci.yml)
 
 A stock market emulation platform for practicing trading strategies without risking real money.
 
@@ -313,9 +313,14 @@ task ci:fast
 **Why this matters**: These are the **exact same commands** that run in GitHub Actions CI. If `task ci` passes locally, CI should pass too.
 
 **CI Job Mapping:**
-- `backend-checks` job → `task lint:backend && task test:backend`
-- `frontend-checks` job → `task lint:frontend && task test:frontend && task build:frontend`
+- `backend-checks` job → `task setup:backend && task lint:backend && task test:backend`
+- `frontend-checks` job → `task setup:frontend && task lint:frontend && task test:frontend && task build:frontend`
 - `e2e-tests` job → `task docker:up && task test:e2e`
+
+**Additional CI Checks:**
+- Frontend security audit (`npm audit`) runs in CI to detect dependency vulnerabilities
+- Coverage reports are uploaded to Codecov for both backend and frontend
+- E2E tests include Playwright test reports uploaded as artifacts
 
 ### Creating a PR
 

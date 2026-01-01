@@ -1,0 +1,111 @@
+name: Copilot Environment Setup
+
+# This workflow sets up a development environment for GitHub Copilot coding agents.
+# It can be manually triggered or called by other workflows.
+#
+# Usage:
+#   1. Manual trigger: Go to Actions tab → Copilot Environment Setup → Run workflow
+#   2. From agent: This workflow ensures all dev tools are installed
+#
+# Note: This is intended for automation. Human developers should use:
+#   - ./.github/copilot-setup.sh (shell script)
+#   - task setup (Taskfile command)
+
+on:
+  workflow_dispatch:  # Manual trigger only
+
+jobs:
+  setup:
+    name: Setup Development Environment
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Install pre-commit
+        run: uv tool install pre-commit
+      
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: ${{ runner.os }}-uv-${{ hashFiles('backend/uv.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-uv-
+      
+      - name: Setup backend dependencies
+        run: task setup:backend
+      
+      - name: Setup frontend dependencies
+        run: task setup:frontend
+      
+      - name: Install pre-commit hooks
+        run: uv tool run pre-commit install
+      
+      - name: Start Docker services
+        run: task docker:up
+      
+      - name: Verify installation
+        run: |
+          echo "=== Installed Versions ==="
+          task --version
+          uv --version
+          uv tool run pre-commit --version
+          python --version
+          node --version
+          npm --version
+          echo ""
+          echo "=== Docker Services ==="
+          docker compose ps
+          echo ""
+          echo "=== Environment Ready ==="
+          echo "✅ All development tools installed successfully!"
+          echo ""
+          echo "You can now:"
+          echo "  - Run 'task dev' to start development servers"
+          echo "  - Run 'task test' to run tests"
+          echo "  - Run 'task lint' to check code quality"
+          echo "  - Run 'task ci' to run full CI suite locally"
+      
+      - name: Environment summary
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" << 'EOF'
+          ### Development Environment Ready! 🚀
+          
+          **Installed Tools:**
+          - ✅ Python 3.13
+          - ✅ Node.js 20
+          - ✅ uv (Python package manager)
+          - ✅ Task (task runner)
+          - ✅ pre-commit (git hooks)
+          
+          **Next Steps:**
+          ```bash
+          task dev:backend  # Start backend server
+          task dev:frontend # Start frontend server
+          task test         # Run all tests
+          task ci           # Run full CI checks
+          ```
+          EOF
