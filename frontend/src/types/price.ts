@@ -35,3 +35,19 @@ export interface PricePoint {
   close?: Money
   volume?: number
 }
+
+/**
+ * Time range options for price history charts
+ */
+export type TimeRange = '1D' | '1W' | '1M' | '3M' | '1Y' | 'ALL'
+
+/**
+ * Price history response from the backend
+ * Contains an array of price points for a given time range
+ */
+export interface PriceHistory {
+  ticker: string
+  prices: PricePoint[]
+  source: string
+  cached: boolean
+}
