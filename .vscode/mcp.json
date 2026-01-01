@@ -27,7 +27,7 @@
       "args": [
         "-y",
         "mcp-server-postgres",
-        "postgresql://papertrade:secret@localhost:5432/papertrade"
+        "postgresql://papertrade:papertrade_dev_password@localhost:5432/papertrade_dev"
       ],
       "disabled": false
     },

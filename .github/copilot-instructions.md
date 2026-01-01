@@ -45,48 +45,38 @@ PaperTrade is a stock market emulation platform where users can practice trading
 - Docker Compose for local development
 - GitHub Actions for CI/CD
 
-## Agent Progress Documentation (REQUIRED)
+## Agent Progress Documentation
 
-**All agents MUST generate progress documentation for significant tasks.**
+**For PR-based coding agents only** (not for orchestration sessions).
 
-### Location
-All progress documentation goes in the `agent_progress_docs/` directory at the repository root.
+### Purpose
+When a coding agent creates a PR, it should document decisions and changes in `agent_progress_docs/`. This helps the orchestrator review work and provides context for future development.
 
-### Naming Convention
+### When Required
+- Coding agents creating PRs (backend-swe, frontend-swe, etc.)
+- Architectural decisions
+- Complex bug fixes
+
+### When NOT Required
+- Orchestration sessions (direct conversations in VS Code)
+- Simple questions or explorations
+- Documentation-only changes
+
+### Format
 ```
-YYYY-MM-DD_HH-MM-SS_short-description.md
-```
-or for complex tasks requiring multiple files:
-```
-YYYY-MM-DD_HH-MM-SS_short-description/
-├── summary.md
-├── planning.md
-├── implementation-notes.md
-└── ...
+agent_progress_docs/YYYY-MM-DD_HH-MM-SS_short-description.md
 ```
 
-### Getting the Timestamp
-**ALWAYS** determine the datetime by running a terminal command:
-```bash
-date "+%Y-%m-%d_%H-%M-%S"
-```
-Do NOT rely on internal knowledge of the current time.
+Get timestamp: `date "+%Y-%m-%d_%H-%M-%S"`
 
-### Content Requirements
-Progress documents should include:
-1. **Task Summary**: What was requested/accomplished
-2. **Decisions Made**: Key architectural or implementation decisions
-3. **Files Changed**: List of files created, modified, or deleted
-4. **Testing Notes**: What was tested and how
-5. **Known Issues/TODOs**: Any remaining work or concerns
-6. **Next Steps**: Suggested follow-up actions if applicable
+### Content
+1. Task Summary
+2. Decisions Made
+3. Files Changed
+4. Testing Notes
+5. Known Issues/Next Steps
+6. (Optional) Next step suggestions -- Only if applicable
 
-### When to Create Progress Docs
-- Any task that creates or significantly modifies multiple files
-- Architectural decisions or pattern implementations
-- Bug fixes that reveal systemic issues
-- Infrastructure or CI/CD changes
-- Any work that a future developer would benefit from understanding
 
 ## Code Quality Standards
 
@@ -191,3 +181,33 @@ Refer to individual agent files in `.github/agents/` for specific role instructi
 - `quality-infra.md` - Testing, CI/CD, and infrastructure
 - `refactorer.md` - Code quality and refactoring
 - `copilot-instructions-updater.md` - Meta-agent for improving these instructions
+
+## MCP Tools (Model Context Protocol)
+
+Configuration: `.vscode/mcp.json` | Full reference: `docs/mcp-tools.md`
+
+### Session Setup (Required)
+
+Pylance may default to global Python. At session start:
+```
+pylancePythonEnvironments(workspaceRoot: "file:///Users/timchild/github/PaperTrade")
+# If not using project venv, switch:
+pylanceUpdatePythonEnvironment(workspaceRoot: ..., pythonEnvironment: "backend/.venv/bin/python")
+```
+
+### Key Tools
+
+| Task | MCP Tool | Benefit |
+|------|----------|---------|
+| Run Python code | `pylanceRunCodeSnippet` | Avoids shell escaping |
+| Check imports | `pylanceImports` | Find unresolved imports |
+| Container health | `inspect_container` | Structured data |
+| Container logs | `logs_for_container` | Clean output |
+| PR details | `activePullRequest` | Full PR context |
+
+### When to Use Terminal Instead
+
+- Running tests: `task test:backend`
+- Installing packages: `uv add`, `npm install`
+- Git operations: `git`, `gh`
+- Complex shell pipelines
