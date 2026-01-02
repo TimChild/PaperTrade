@@ -1,6 +1,6 @@
 # PaperTrade Development Progress
 
-**Last Updated**: January 1, 2026
+**Last Updated**: January 2, 2026
 
 ## Current Status
 
@@ -9,22 +9,60 @@
 | Phase 1: The Ledger | ✅ Complete | 262 tests, 6 days |
 | Phase 2a: Current Prices | ✅ Complete | 435+ tests, 4 days |
 | Phase 2b: Historical Data | ✅ Complete | 460+ tests, 1 day |
-| Infrastructure | ✅ Enhanced | Copilot setup, CI/CD improved |
+| Infrastructure | ✅ Enhanced | Docker, CI/CD, E2E testing |
+| Quality Improvements | ✅ Complete | UI fixes, deprecations resolved |
 
-### Recent Work (Jan 1, 2026)
-- ✅ **CRITICAL**: Fixed trade API security vulnerability (PR #40)
-- ✅ **Phase 2b Complete**: Historical prices, background refresh, charts
-- ✅ Infrastructure: Official Copilot setup workflow, dev environment audit
-- ✅ 7 PRs merged in parallel using autonomous orchestration
-- ✅ All 460+ tests passing (392 backend + 68 frontend)
+### Recent Work (Jan 2, 2026)
+- ✅ **Infrastructure**: Full Docker containerization (PR #47)
+- ✅ **UI Fix**: $NaN price display issue resolved (PR #48)
+- ✅ **Code Quality**: React act() warnings fixed (PR #50)
+- ✅ **Backend**: SQLAlchemy deprecations resolved - 129 warnings → 0 (PR #49)
+- ✅ **E2E Testing**: Playwright testing procedure established
+- ✅ All 403 tests passing (402 backend + 1 pending + 81 frontend)
 
 ### Active Work
-- None - All Phase 2 features complete!
+- Task #041: Fix cache source attribution test (minor, non-blocking)
 
 ### Next Up
 - Phase 3: Portfolio Analytics & Backtesting
 - Alpha Vantage TIME_SERIES_DAILY integration (optional enhancement)
-- Minor doc consistency fixes
+- Production deployment with Docker
+
+---
+
+## Quality & Infrastructure Improvements (Jan 2, 2026)
+
+**Status**: Complete
+
+**Docker Infrastructure** (PR #47):
+- ✅ Full-stack containerization (PostgreSQL, Redis, Backend, Frontend)
+- ✅ Multi-stage production Dockerfiles
+- ✅ Development Dockerfiles with hot-reload
+- ✅ Health checks for all services
+- ✅ Comprehensive Taskfile commands for Docker management
+
+**Frontend Quality** (PRs #48, #50):
+- ✅ Fixed $NaN price display issue with graceful fallback
+  - Formatter utilities handle NaN/undefined/null values
+  - Holdings table uses average cost when current price unavailable  
+  - Price charts show meaningful error messages
+  - Rate-limit-aware retry logic in usePriceQuery
+- ✅ Fixed React act() warnings in CreatePortfolioForm tests
+  - Wrapped DOM manipulation in act()
+  - Improved async assertions with findByRole
+
+**Backend Quality** (PR #49):
+- ✅ Migrated from SQLAlchemy `session.execute()` to SQLModel `session.exec()`
+- ✅ Eliminated 129 deprecation warnings → 0 warnings
+- ✅ Fixed import statements across 6 repository files
+- ✅ 402/403 tests passing (1 pending: cache source attribution)
+
+**E2E Testing**:
+- ✅ Playwright MCP testing procedure documented
+- ✅ Verified portfolio creation, trade execution, price display
+- ✅ All UI fixes validated through browser automation
+
+**Test Results**: 483 total tests (402 backend + 81 frontend)
 
 ---
 
