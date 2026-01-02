@@ -49,9 +49,7 @@ class TestRefreshActiveStocks:
     """Tests for refresh_active_stocks job."""
 
     @pytest.mark.skip(reason="Requires database setup and mocked market data")
-    async def test_refresh_with_no_active_tickers(
-        self, test_engine: AsyncMock
-    ) -> None:
+    async def test_refresh_with_no_active_tickers(self, test_engine: AsyncMock) -> None:
         """Test refresh job handles empty ticker list gracefully."""
         # Arrange
         config = SchedulerConfig(

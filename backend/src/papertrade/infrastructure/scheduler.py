@@ -143,9 +143,7 @@ async def refresh_active_stocks(config: SchedulerConfig) -> None:
                         # Update watchlist metadata if ticker is tracked
                         if ticker in watchlist_tickers:
                             now = datetime.now(UTC)
-                            next_refresh = now + timedelta(
-                                hours=config.max_age_hours
-                            )
+                            next_refresh = now + timedelta(hours=config.max_age_hours)
                             await watchlist_manager.update_refresh_metadata(
                                 ticker=ticker,
                                 last_refresh=now,

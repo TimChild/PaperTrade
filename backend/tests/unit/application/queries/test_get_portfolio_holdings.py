@@ -69,9 +69,7 @@ async def sample_portfolio(portfolio_repo):
 class TestGetPortfolioHoldings:
     """Tests for GetPortfolioHoldings query handler."""
 
-    async def test_empty_portfolio_returns_no_holdings(
-        self, handler, sample_portfolio
-    ):
+    async def test_empty_portfolio_returns_no_holdings(self, handler, sample_portfolio):
         """Test that empty portfolio returns empty holdings list."""
         # Arrange
         query = GetPortfolioHoldingsQuery(portfolio_id=sample_portfolio.id)

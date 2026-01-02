@@ -142,9 +142,7 @@ class TestGetPortfolioBalance:
 
         # Assert
         assert result.cash_balance.amount == Decimal("5000.00")  # 20000 - 15000
-        assert result.holdings_value.amount == Decimal(
-            "17500.00"
-        )  # 100 * 175.00
+        assert result.holdings_value.amount == Decimal("17500.00")  # 100 * 175.00
         assert result.total_value.amount == Decimal("22500.00")  # 5000 + 17500
 
     async def test_portfolio_with_multiple_holdings(
