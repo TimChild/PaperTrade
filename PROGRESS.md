@@ -44,7 +44,7 @@
 **Frontend Quality** (PRs #48, #50):
 - ✅ Fixed $NaN price display issue with graceful fallback
   - Formatter utilities handle NaN/undefined/null values
-  - Holdings table uses average cost when current price unavailable  
+  - Holdings table uses average cost when current price unavailable
   - Price charts show meaningful error messages
   - Rate-limit-aware retry logic in usePriceQuery
 - ✅ Fixed React act() warnings in CreatePortfolioForm tests

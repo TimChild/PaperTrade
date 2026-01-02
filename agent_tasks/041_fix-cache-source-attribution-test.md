@@ -42,12 +42,12 @@ async def get_current_price(self, ticker: Ticker) -> PricePoint:
     if cached_price:
         # Change source to indicate cache retrieval
         return cached_price.with_source("cache")
-    
+
     # Try PostgreSQL cache...
     db_price = await self._price_cache.get_latest_price(ticker)
     if db_price:
         return db_price.with_source("cache")
-    
+
     # Fetch from API...
     return api_price
 ```
