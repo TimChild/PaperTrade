@@ -57,7 +57,8 @@ class SQLModelPortfolioRepository:
             .where(PortfolioModel.user_id == user_id)
             .order_by(PortfolioModel.created_at)
         )
-        models = (await self._session.exec(statement)).all()
+        result = await self._session.exec(statement)
+        models = result.all()
         return [model.to_domain() for model in models]
 
     async def save(self, portfolio: Portfolio) -> None:

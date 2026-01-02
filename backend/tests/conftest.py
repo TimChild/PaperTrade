@@ -7,9 +7,10 @@ import pytest
 import pytest_asyncio
 from fastapi import Depends
 from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from papertrade.infrastructure.database import get_session
 from papertrade.main import app

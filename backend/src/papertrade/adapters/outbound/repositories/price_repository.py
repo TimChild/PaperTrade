@@ -7,7 +7,8 @@ layer in the tiered market data architecture.
 
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import desc, select
+from sqlalchemy import desc
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from papertrade.adapters.outbound.models.price_history import PriceHistoryModel
@@ -134,7 +135,8 @@ class PriceRepository:
         query = query.order_by(desc(PriceHistoryModel.timestamp)).limit(1)
 
         # Execute query
-        model = (await self.session.exec(query)).one_or_none()
+        result = await self.session.exec(query)
+        model = result.one_or_none()
 
         # Convert to PricePoint if found
         if model:
@@ -173,7 +175,8 @@ class PriceRepository:
         )
 
         # Execute query
-        model = (await self.session.exec(query)).one_or_none()
+        result = await self.session.exec(query)
+        model = result.one_or_none()
 
         # Convert to PricePoint if found
         if model:
@@ -222,7 +225,8 @@ class PriceRepository:
         )
 
         # Execute query
-        models = (await self.session.exec(query)).all()
+        result = await self.session.exec(query)
+        models = result.all()
 
         # Convert to PricePoints
         return [model.to_price_point() for model in models]
@@ -250,7 +254,7 @@ class PriceRepository:
 
         # Execute query
         result = await self.session.exec(query)
-        ticker_symbols = result.scalars().all()
+        ticker_symbols = result.all()
 
         # Convert to Ticker objects
         return [Ticker(symbol) for symbol in ticker_symbols]
