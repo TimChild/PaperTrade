@@ -41,7 +41,7 @@ mkdir -p temp
 cd backend && uv run uvicorn src.main:app --reload > ../temp/backend.log 2>&1 &
 echo $! > ../temp/backend.pid
 
-# Start frontend in background  
+# Start frontend in background
 cd frontend && npm run dev > ../temp/frontend.log 2>&1 &
 echo $! > ../temp/frontend.pid
 

@@ -1,8 +1,8 @@
 # E2E QA Validation Task
 
-**Task Type**: Reusable QA Template  
-**Agent**: qa  
-**Priority**: High (when executed)  
+**Task Type**: Reusable QA Template
+**Agent**: qa
+**Priority**: High (when executed)
 **Estimated Effort**: 30-45 minutes
 
 ## Objective
@@ -308,9 +308,9 @@ Create a comprehensive test report in `agent_progress_docs/` following this form
 ```markdown
 # E2E QA Test Report - [DATE]
 
-**Tester**: QA Agent  
-**Build/Commit**: [git commit hash]  
-**Environment**: Development (local)  
+**Tester**: QA Agent
+**Build/Commit**: [git commit hash]
+**Environment**: Development (local)
 **Test Duration**: [start time] - [end time]
 
 ## Executive Summary
@@ -358,7 +358,7 @@ Brief overview of testing session - overall health, major issues found, recommen
 - Network Request: `POST /api/portfolios/{id}/trades` → 503
 - Screenshot: [describe what's shown]
 
-**Root Cause Analysis**: 
+**Root Cause Analysis**:
 [Your analysis of why this might be happening]
 
 **Impact**: Users cannot execute any trades. This blocks the primary use case.
@@ -427,8 +427,8 @@ Example task file:
 ```markdown
 # Fix Trade Execution 503 Error
 
-**Priority**: P0 (Critical)  
-**Agent**: backend-swe  
+**Priority**: P0 (Critical)
+**Agent**: backend-swe
 **Related QA Report**: agent_progress_docs/YYYY-MM-DD_HH-MM-SS_e2e-qa-report.md
 
 ## Issue

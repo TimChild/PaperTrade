@@ -1,6 +1,6 @@
 # Orchestrator Procedure: Run QA Validation
 
-**Last Updated**: January 2, 2026  
+**Last Updated**: January 2, 2026
 **Purpose**: Guide orchestrator through initiating comprehensive E2E quality assurance testing
 
 ## Overview
@@ -53,7 +53,7 @@ gh pr list --state open
 cat BACKLOG.md | grep -A 3 "Critical\|High Priority"
 ```
 
-**Decision Point**: 
+**Decision Point**:
 - If critical blockers exist → Fix them first
 - If environment unstable → Stabilize before QA
 - Otherwise → Proceed to Step 2
@@ -76,8 +76,8 @@ If you need to customize the QA scope, create a specific task file:
 cat > agent_tasks/042_qa-validation-post-pr-merges.md << 'EOF'
 # QA Validation - Post PR Merges #47-49
 
-**Priority**: High  
-**Agent**: qa  
+**Priority**: High
+**Agent**: qa
 **Context**: After merging Docker infrastructure (#47), $NaN fixes (#48), and SQLAlchemy deprecations (#49)
 
 ## Objective
@@ -243,13 +243,13 @@ Determine when to run QA again:
    # Create specific task highlighting these PRs
    cat > agent_tasks/042_qa-post-infrastructure-changes.md << 'EOF'
    # QA Validation: Post-Infrastructure Changes
-   
+
    **Agent**: qa
    **Priority**: High
    **Context**: After Docker (#47), $NaN fixes (#48), SQLAlchemy (#49)
-   
+
    Execute standard QA: agent_tasks/reusable/e2e_qa_validation.md
-   
+
    Focus areas:
    - Docker doesn't break anything
    - Price fallbacks working
@@ -269,7 +269,7 @@ Determine when to run QA again:
    cat agent_progress_docs/2026-01-02_14-30-00_qa-report.md
    ```
 
-7. **Triage**: 
+7. **Triage**:
    - Found: Trading returns 503 (critical)
    - Found: $NaN still appears sometimes (warning, may be fixed)
    - Action: Create Task #043 for 503 error
@@ -279,7 +279,7 @@ Determine when to run QA again:
    ```bash
    # Assign critical fix
    gh agent-task create --custom-agent backend-swe -F agent_tasks/043_fix-trading-503.md
-   
+
    # Update PROGRESS.md
    # Schedule regression test after fix
    ```
@@ -313,7 +313,7 @@ task dev:frontend
 **Debug**:
 Check `.vscode/mcp.json` for Playwright MCP configuration
 
-**Resolution**: 
+**Resolution**:
 1. Verify MCP server configured
 2. Restart VS Code if needed
 3. Run `mcp_microsoft_pla_browser_install` if browser not installed
@@ -336,7 +336,7 @@ curl http://localhost:5173/
 
 **Expected**: This is normal with Alpha Vantage free tier (5 calls/min)
 
-**Resolution**: 
+**Resolution**:
 - Wait between tests
 - Use known cached tickers (IBM)
 - Note in QA report as expected behavior
