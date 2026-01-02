@@ -103,10 +103,9 @@ class InMemoryMarketDataAdapter:
 
         for price in prices:
             diff = abs(price.timestamp - timestamp)
-            if diff <= max_window:
-                if closest_diff is None or diff < closest_diff:
-                    closest_price = price
-                    closest_diff = diff
+            if diff <= max_window and (closest_diff is None or diff < closest_diff):
+                closest_price = price
+                closest_diff = diff
 
         if closest_price is None:
             raise MarketDataUnavailableError(
@@ -161,4 +160,4 @@ class InMemoryMarketDataAdapter:
         Returns:
             List of Ticker objects for all tickers with data
         """
-        return [Ticker(symbol) for symbol in self._prices.keys()]
+        return [Ticker(symbol) for symbol in self._prices]

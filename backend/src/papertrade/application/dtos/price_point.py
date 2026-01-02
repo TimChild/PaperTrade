@@ -157,13 +157,15 @@ class PricePoint:
         Returns:
             Hash value based on core fields
         """
-        return hash((
-            self.ticker,
-            self.price,
-            self.timestamp,
-            self.source,
-            self.interval,
-        ))
+        return hash(
+            (
+                self.ticker,
+                self.price,
+                self.timestamp,
+                self.source,
+                self.interval,
+            )
+        )
 
     def is_stale(self, max_age: timedelta) -> bool:
         """Check if this price observation is stale.
@@ -218,10 +220,12 @@ class PricePoint:
         """Return string representation.
 
         Returns:
-            Formatted string like "AAPL @ $150.25 as of 2025-12-28 14:30:00 UTC (source: alpha_vantage)"
+            Formatted string like
+            "AAPL @ $150.25 as of 2025-12-28 14:30:00 UTC (source: alpha_vantage)"
         """
+        timestamp_str = self.timestamp.strftime("%Y-%m-%d %H:%M:%S UTC")
         return (
-            f"{self.ticker} @ {self.price} as of {self.timestamp.strftime('%Y-%m-%d %H:%M:%S UTC')} "
+            f"{self.ticker} @ {self.price} as of {timestamp_str} "
             f"(source: {self.source})"
         )
 

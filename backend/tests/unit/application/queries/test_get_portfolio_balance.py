@@ -10,10 +10,6 @@ from papertrade.adapters.outbound.market_data.in_memory_adapter import (
     InMemoryMarketDataAdapter,
 )
 from papertrade.application.dtos.price_point import PricePoint
-from papertrade.application.exceptions import (
-    MarketDataUnavailableError,
-    TickerNotFoundError,
-)
 from papertrade.application.ports.in_memory_portfolio_repository import (
     InMemoryPortfolioRepository,
 )
@@ -146,9 +142,7 @@ class TestGetPortfolioBalance:
 
         # Assert
         assert result.cash_balance.amount == Decimal("5000.00")  # 20000 - 15000
-        assert result.holdings_value.amount == Decimal(
-            "17500.00"
-        )  # 100 * 175.00
+        assert result.holdings_value.amount == Decimal("17500.00")  # 100 * 175.00
         assert result.total_value.amount == Decimal("22500.00")  # 5000 + 17500
 
     async def test_portfolio_with_multiple_holdings(
@@ -220,7 +214,8 @@ class TestGetPortfolioBalance:
         result = await handler.execute(query)
 
         # Assert
-        assert result.cash_balance.amount == Decimal("15000.00")  # 50000 - 15000 - 20000
+        # 50000 - 15000 - 20000
+        assert result.cash_balance.amount == Decimal("15000.00")
         # AAPL: 100 * 175 = 17500, GOOGL: 200 * 120 = 24000
         assert result.holdings_value.amount == Decimal("41500.00")
         assert result.total_value.amount == Decimal("56500.00")  # 15000 + 41500

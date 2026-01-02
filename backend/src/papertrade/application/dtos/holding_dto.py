@@ -23,9 +23,11 @@ class HoldingDTO:
         average_cost_per_share_currency: Currency for average cost (None if zero)
         current_price_amount: Current market price per share (None if unavailable)
         current_price_currency: Currency for current price (None if unavailable)
-        market_value_amount: Current market value (quantity * current_price, None if unavailable)
+        market_value_amount: Current market value (quantity * current_price,
+            None if unavailable)
         market_value_currency: Currency for market value (None if unavailable)
-        unrealized_gain_loss_amount: Unrealized gain/loss (market_value - cost_basis, None if unavailable)
+        unrealized_gain_loss_amount: Unrealized gain/loss
+            (market_value - cost_basis, None if unavailable)
         unrealized_gain_loss_currency: Currency for gain/loss (None if unavailable)
         unrealized_gain_loss_percent: Gain/loss as percentage (None if unavailable)
         price_timestamp: When price was observed (None if unavailable)

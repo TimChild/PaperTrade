@@ -4,6 +4,7 @@ Provides database engine setup, connection pooling, and session management
 for SQLModel repositories.
 """
 
+import os
 from collections.abc import AsyncGenerator
 from typing import Annotated
 
@@ -13,19 +14,19 @@ from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 # Database URL configuration
-# For development/testing: SQLite
-# For production: PostgreSQL (configured via environment variables)
-DATABASE_URL = "sqlite+aiosqlite:///./papertrade.db"
+# For development/testing: SQLite (default)
+# For production/Docker: PostgreSQL (configured via DATABASE_URL environment variable)
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./papertrade.db")
 
 
 # Create async engine
 # echo=True logs all SQL statements (useful for development)
-# connect_args for SQLite compatibility
-engine = create_async_engine(
-    DATABASE_URL,
-    echo=True,  # Log SQL statements
-    connect_args={"check_same_thread": False},  # SQLite specific
-)
+# SQLite-specific connect_args only applied when using SQLite
+engine_kwargs = {"echo": True}
+if "sqlite" in DATABASE_URL:
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+
+engine = create_async_engine(DATABASE_URL, **engine_kwargs)
 
 
 # Session factory for creating database sessions

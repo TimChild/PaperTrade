@@ -69,9 +69,7 @@ async def sample_portfolio(portfolio_repo):
 class TestGetPortfolioHoldings:
     """Tests for GetPortfolioHoldings query handler."""
 
-    async def test_empty_portfolio_returns_no_holdings(
-        self, handler, sample_portfolio
-    ):
+    async def test_empty_portfolio_returns_no_holdings(self, handler, sample_portfolio):
         """Test that empty portfolio returns empty holdings list."""
         # Arrange
         query = GetPortfolioHoldingsQuery(portfolio_id=sample_portfolio.id)
@@ -129,9 +127,13 @@ class TestGetPortfolioHoldings:
         # Market data fields
         assert holding.current_price_amount == Decimal("175.00")
         assert holding.market_value_amount == Decimal("17500.00")  # 100 * 175
-        assert holding.unrealized_gain_loss_amount == Decimal("2500.00")  # 17500 - 15000
+        # 17500 - 15000
+        assert holding.unrealized_gain_loss_amount == Decimal("2500.00")
         # Allow slight precision difference in percentage calculation
-        assert abs(holding.unrealized_gain_loss_percent - Decimal("16.666666666666666666666666667")) < Decimal("0.0001")
+        expected_percent = Decimal("16.666666666666666666666666667")
+        assert abs(holding.unrealized_gain_loss_percent - expected_percent) < Decimal(
+            "0.0001"
+        )
         assert holding.price_timestamp is not None
         assert holding.price_source == "alpha_vantage"
 
@@ -207,7 +209,8 @@ class TestGetPortfolioHoldings:
         # GOOGL - lost value
         assert googl_holding.current_price_amount == Decimal("90.00")
         assert googl_holding.market_value_amount == Decimal("18000.00")  # 200 * 90
-        assert googl_holding.unrealized_gain_loss_amount == Decimal("-2000.00")  # 18000 - 20000
+        # 18000 - 20000
+        assert googl_holding.unrealized_gain_loss_amount == Decimal("-2000.00")
         assert googl_holding.unrealized_gain_loss_percent < Decimal("0")
 
     async def test_holding_without_price_data_returns_partial_info(

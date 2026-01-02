@@ -4,8 +4,9 @@ This module implements rate limiting for external API calls to prevent quota exh
 Uses a token bucket algorithm with dual time windows (minute and day) to enforce
 Alpha Vantage API rate limits.
 
-The implementation is Redis-backed for distributed rate limiting across multiple instances.
-Uses Lua scripts for atomic check-and-consume operations to prevent race conditions.
+The implementation is Redis-backed for distributed rate limiting
+across multiple instances. Uses Lua scripts for atomic check-and-consume
+operations to prevent race conditions.
 """
 
 from typing import Protocol
@@ -74,28 +75,28 @@ class RateLimiter:
     local day_limit = tonumber(ARGV[2])
     local minute_window = tonumber(ARGV[3])
     local day_window = tonumber(ARGV[4])
-    
+
     -- Get current token counts (default to limit if not set)
     local minute_tokens = tonumber(redis.call('GET', minute_key))
     if not minute_tokens then
         minute_tokens = minute_limit
     end
-    
+
     local day_tokens = tonumber(redis.call('GET', day_key))
     if not day_tokens then
         day_tokens = day_limit
     end
-    
+
     -- Check if we have tokens in both buckets
     if minute_tokens > 0 and day_tokens > 0 then
         -- Consume tokens
         minute_tokens = minute_tokens - 1
         day_tokens = day_tokens - 1
-        
+
         -- Update Redis with new counts
         redis.call('SET', minute_key, minute_tokens, 'EX', minute_window)
         redis.call('SET', day_key, day_tokens, 'EX', day_window)
-        
+
         return 1
     else
         return 0
@@ -173,8 +174,9 @@ class RateLimiter:
     async def consume_token(self) -> bool:
         """Atomically check and consume a token if available.
 
-        This method atomically checks both buckets and consumes a token from each
-        if both have tokens available. If either bucket is empty, no tokens are consumed.
+        This method atomically checks both buckets and consumes a token
+        from each if both have tokens available. If either bucket is empty,
+        no tokens are consumed.
 
         Returns:
             True if token was consumed, False if insufficient tokens

@@ -1,18 +1,9 @@
 """Integration tests for background scheduler."""
 
-import asyncio
-from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, patch
-from uuid import uuid4
+from unittest.mock import AsyncMock
 
 import pytest
 
-from papertrade.adapters.outbound.database.models import TransactionModel
-from papertrade.adapters.outbound.models.ticker_watchlist import TickerWatchlistModel
-from papertrade.adapters.outbound.repositories.watchlist_manager import (
-    WatchlistManager,
-)
-from papertrade.domain.value_objects.ticker import Ticker
 from papertrade.infrastructure.scheduler import (
     SchedulerConfig,
     refresh_active_stocks,
@@ -58,9 +49,7 @@ class TestRefreshActiveStocks:
     """Tests for refresh_active_stocks job."""
 
     @pytest.mark.skip(reason="Requires database setup and mocked market data")
-    async def test_refresh_with_no_active_tickers(
-        self, test_engine: AsyncMock
-    ) -> None:
+    async def test_refresh_with_no_active_tickers(self, test_engine: AsyncMock) -> None:
         """Test refresh job handles empty ticker list gracefully."""
         # Arrange
         config = SchedulerConfig(
