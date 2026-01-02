@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
+import { act } from 'react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
@@ -129,19 +130,20 @@ describe('CreatePortfolioForm', () => {
     await user.clear(depositInput)
     
     // Manually set a negative value (bypassing HTML5 validation)
-    Object.defineProperty(depositInput, 'value', {
-      writable: true,
-      value: '-100',
+    // Wrap in act() to handle state updates from the input event
+    act(() => {
+      Object.defineProperty(depositInput, 'value', {
+        writable: true,
+        value: '-100',
+      })
+      depositInput.dispatchEvent(new Event('input', { bubbles: true }))
     })
-    depositInput.dispatchEvent(new Event('input', { bubbles: true }))
     
     await user.click(submitButton)
 
-    await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent(
-        /Initial deposit must be a positive number/i
-      )
-    })
+    // Use findByRole to wait for the error to appear (handles async state update)
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(/Initial deposit must be a positive number/i)
   })
 
   it('shows error for portfolio name exceeding 100 characters', async () => {
@@ -164,19 +166,20 @@ describe('CreatePortfolioForm', () => {
     await user.type(nameInput, 'A'.repeat(50))
     
     // Manually set the value to exceed the limit (simulating form manipulation)
-    Object.defineProperty(nameInput, 'value', {
-      writable: true,
-      value: longName,
+    // Wrap in act() to handle state updates from the input event
+    act(() => {
+      Object.defineProperty(nameInput, 'value', {
+        writable: true,
+        value: longName,
+      })
+      nameInput.dispatchEvent(new Event('input', { bubbles: true }))
     })
-    nameInput.dispatchEvent(new Event('input', { bubbles: true }))
 
     await user.click(submitButton)
 
-    await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent(
-        /Portfolio name must be 100 characters or less/i
-      )
-    })
+    // Use findByRole to wait for the error to appear (handles async state update)
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(/Portfolio name must be 100 characters or less/i)
   })
 
   it('trims whitespace from portfolio name', async () => {
