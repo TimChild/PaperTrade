@@ -66,7 +66,7 @@ def test_get_transactions_returns_all_trades(
         json={"action": "BUY", "ticker": "AAPL", "quantity": "50"},
     )
     assert trade1_response.status_code == 201
-    
+
     # GOOGL: 1 share * $2,800 = $2,800 (reduced quantity to fit budget)
     trade2_response = client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",

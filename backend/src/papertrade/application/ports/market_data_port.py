@@ -30,7 +30,8 @@ class MarketDataPort(Protocol):
 
     Errors:
         TickerNotFoundError: Ticker doesn't exist in data source
-        MarketDataUnavailableError: Cannot fetch data (API down, rate limited, network error)
+        MarketDataUnavailableError: Cannot fetch data
+            (API down, rate limited, network error)
         InvalidPriceDataError: Data received but invalid/corrupted
     """
 
@@ -43,7 +44,8 @@ class MarketDataPort(Protocol):
         - Cached data (if API is rate limited or unavailable)
 
         The PricePoint.timestamp indicates when the price was observed.
-        The PricePoint.source indicates where the data came from ("alpha_vantage", "cache", etc).
+        The PricePoint.source indicates where the data came from
+        ("alpha_vantage", "cache", etc).
 
         Args:
             ticker: Stock ticker symbol to get price for
@@ -53,7 +55,8 @@ class MarketDataPort(Protocol):
 
         Raises:
             TickerNotFoundError: Ticker doesn't exist in data source
-            MarketDataUnavailableError: Cannot fetch price (API down, rate limited, network error)
+            MarketDataUnavailableError: Cannot fetch price
+                (API down, rate limited, network error)
 
         Performance Target:
             <100ms for cache hit
@@ -71,8 +74,9 @@ class MarketDataPort(Protocol):
     async def get_price_at(self, ticker: Ticker, timestamp: datetime) -> PricePoint:
         """Get the price for a ticker at a specific point in time.
 
-        This method is primarily for backtesting and historical analysis (Phase 3).
-        It returns the price closest to the requested timestamp within a reasonable window.
+        This method is primarily for backtesting and historical
+        analysis (Phase 3). It returns the price closest to the requested
+        timestamp within a reasonable window.
 
         If an exact match for the timestamp is not available, this method returns
         the closest price within ±1 hour. The actual observation time is indicated
@@ -117,14 +121,14 @@ class MarketDataPort(Protocol):
     ) -> list[PricePoint]:
         """Get price history over a time range.
 
-        This method returns a list of price observations covering the requested time range.
-        Useful for:
+        This method returns a list of price observations covering the
+        requested time range. Useful for:
         - Generating price charts
         - Technical analysis
         - Performance calculations
 
-        The results are ordered chronologically (oldest first). Each PricePoint may include
-        OHLCV (candlestick) data when available.
+        The results are ordered chronologically (oldest first).
+        Each PricePoint may include OHLCV (candlestick) data when available.
 
         Args:
             ticker: Stock ticker symbol
@@ -155,7 +159,9 @@ class MarketDataPort(Protocol):
             >>> ticker = Ticker("AAPL")
             >>> start = datetime(2025, 1, 1, tzinfo=timezone.utc)
             >>> end = datetime(2025, 1, 31, tzinfo=timezone.utc)
-            >>> history = await market_data.get_price_history(ticker, start, end, "1day")
+            >>> history = await market_data.get_price_history(
+            ...     ticker, start, end, "1day"
+            ... )
             >>> print(f"Got {len(history)} price points for January 2025")
         """
         ...

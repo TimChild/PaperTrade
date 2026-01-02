@@ -298,11 +298,11 @@ async def execute_trade(
     market_data: MarketDataDep,
 ) -> TransactionResponse:
     """Execute a buy or sell trade.
-    
+
     Fetches the current market price automatically and executes the trade
     at that price. This prevents price manipulation and ensures trades
     execute at real market prices.
-    
+
     Raises:
         HTTPException: 404 if ticker not found in market data
         HTTPException: 503 if market data service is unavailable
@@ -312,7 +312,7 @@ async def execute_trade(
 
     # Fetch current market price
     ticker = Ticker(request.ticker)
-    
+
     try:
         price_point = await market_data.get_current_price(ticker)
     except TickerNotFoundError:
@@ -325,7 +325,7 @@ async def execute_trade(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Market data unavailable: {str(e)}",
         ) from None
-    
+
     if request.action == "BUY":
         command = BuyStockCommand(
             portfolio_id=portfolio_id,

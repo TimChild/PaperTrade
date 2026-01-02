@@ -261,7 +261,7 @@ class TestPriceRepositoryGetPriceAt:
         # Arrange
         repo = PriceRepository(session)
         past_time = datetime(2024, 6, 15, 16, 0, 0, tzinfo=UTC)
-        future_time = datetime(2025, 6, 15, 16, 0, 0, tzinfo=UTC)
+        datetime(2025, 6, 15, 16, 0, 0, tzinfo=UTC)
 
         price = PricePoint(
             ticker=Ticker("AAPL"),

@@ -1,18 +1,9 @@
 """Integration tests for background scheduler."""
 
-import asyncio
-from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, patch
-from uuid import uuid4
+from unittest.mock import AsyncMock
 
 import pytest
 
-from papertrade.adapters.outbound.database.models import TransactionModel
-from papertrade.adapters.outbound.models.ticker_watchlist import TickerWatchlistModel
-from papertrade.adapters.outbound.repositories.watchlist_manager import (
-    WatchlistManager,
-)
-from papertrade.domain.value_objects.ticker import Ticker
 from papertrade.infrastructure.scheduler import (
     SchedulerConfig,
     refresh_active_stocks,

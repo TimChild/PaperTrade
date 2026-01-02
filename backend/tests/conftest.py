@@ -11,9 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engin
 from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel
 
-from papertrade.infrastructure.database import get_session
-from papertrade.main import app
-
 # Import all models to ensure they're registered with SQLModel metadata
 from papertrade.adapters.outbound.database.models import (  # noqa: F401
     PortfolioModel,
@@ -25,6 +22,8 @@ from papertrade.adapters.outbound.models.price_history import (  # noqa: F401
 from papertrade.adapters.outbound.models.ticker_watchlist import (  # noqa: F401
     TickerWatchlistModel,
 )
+from papertrade.infrastructure.database import get_session
+from papertrade.main import app
 
 
 @pytest_asyncio.fixture
