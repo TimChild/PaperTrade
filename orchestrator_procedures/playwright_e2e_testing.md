@@ -16,6 +16,8 @@ This procedure guides the orchestrator through using the Playwright MCP server t
 
 ### 1. Start Required Services
 
+#### Option A: Using Taskfile (Recommended)
+
 ```bash
 # Start Docker services (PostgreSQL, Redis)
 task docker:up
@@ -26,6 +28,46 @@ task dev:backend
 # Start frontend (in terminal 2)
 task dev:frontend
 ```
+
+#### Option B: Background Processes (for Automated Testing)
+
+For orchestrator agents running automated E2E tests, you can start services in the background and capture PIDs:
+
+```bash
+# Ensure temp directory exists (in .gitignore)
+mkdir -p temp
+
+# Start backend in background
+cd backend && uv run uvicorn src.main:app --reload > ../temp/backend.log 2>&1 &
+echo $! > ../temp/backend.pid
+
+# Start frontend in background  
+cd frontend && npm run dev > ../temp/frontend.log 2>&1 &
+echo $! > ../temp/frontend.pid
+
+# Wait for services to be ready
+sleep 5
+curl http://localhost:8000/health  # Should return {"status":"healthy"}
+curl -I http://localhost:5173/      # Should return HTTP 200
+```
+
+**Cleanup after testing**:
+```bash
+# Stop services using saved PIDs
+kill $(cat temp/backend.pid) 2>/dev/null || true
+kill $(cat temp/frontend.pid) 2>/dev/null || true
+
+# Remove PID files
+rm -f temp/backend.pid temp/frontend.pid
+
+# Logs remain in temp/ for debugging if needed
+```
+
+**Why temp/ instead of /tmp/**:
+- No additional permissions needed (stays in project root)
+- Automatically excluded via .gitignore
+- Easier to access logs for debugging
+- PID files stay with project context
 
 **Verify services are running**:
 ```bash
