@@ -1,0 +1,50 @@
+# ============================================================================
+# Backend Development Dockerfile
+# Optimized for hot-reload and development workflow
+# ============================================================================
+
+FROM python:3.12-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv for fast dependency management
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    UV_SYSTEM_PYTHON=1
+
+# Create non-root user
+RUN useradd -m -u 1000 -s /bin/bash appuser
+
+# Set working directory
+WORKDIR /app
+
+# Copy dependency files for caching
+COPY --chown=appuser:appuser pyproject.toml uv.lock ./
+
+# Install dependencies including dev dependencies (exclude playwright group)
+# Playwright is heavy and not needed for backend tests in Docker
+RUN uv sync --frozen --extra dev
+
+# Switch to non-root user
+USER appuser
+
+# Source code will be mounted as a volume in docker-compose.yml
+# This allows hot-reload during development
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Run with auto-reload enabled
+CMD ["uv", "run", "uvicorn", "papertrade.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"]

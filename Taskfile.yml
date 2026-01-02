@@ -150,10 +150,44 @@ tasks:
   docker:up:
     desc: "Start Docker services (PostgreSQL, Redis)"
     cmds:
-      - docker compose up -d
+      - docker compose up -d db redis
       - echo "✓ Docker services started"
       - 'echo "  - PostgreSQL: localhost:5432"'
       - 'echo "  - Redis: localhost:6379"'
+
+  docker:up:all:
+    desc: "Start all services in development mode (PostgreSQL, Redis, Backend, Frontend)"
+    cmds:
+      - docker compose up -d
+      - echo "✓ All services started in development mode"
+      - 'echo "  - PostgreSQL: localhost:5432"'
+      - 'echo "  - Redis: localhost:6379"'
+      - 'echo "  - Backend API: http://localhost:8000"'
+      - 'echo "  - Frontend: http://localhost:5173"'
+      - 'echo ""'
+      - 'echo "View logs with: task docker:logs"'
+
+  docker:build:
+    desc: "Build all Docker images"
+    cmds:
+      - docker compose build
+      - echo "✓ All Docker images built"
+
+  docker:build:prod:
+    desc: "Build production Docker images"
+    cmds:
+      - docker compose -f docker-compose.prod.yml build
+      - echo "✓ Production Docker images built"
+
+  docker:up:prod:
+    desc: "Start all services in production mode"
+    cmds:
+      - docker compose -f docker-compose.prod.yml up -d
+      - echo "✓ All services started in production mode"
+      - 'echo "  - PostgreSQL: localhost:5432"'
+      - 'echo "  - Redis: localhost:6379"'
+      - 'echo "  - Backend API: http://localhost:8000"'
+      - 'echo "  - Frontend: http://localhost:80"'
 
   docker:down:
     desc: "Stop Docker services"
@@ -161,10 +195,44 @@ tasks:
       - docker compose down
       - echo "✓ Docker services stopped"
 
+  docker:down:prod:
+    desc: "Stop production Docker services"
+    cmds:
+      - docker compose -f docker-compose.prod.yml down
+      - echo "✓ Production Docker services stopped"
+
   docker:logs:
     desc: "Show Docker service logs"
     cmds:
       - docker compose logs -f
+
+  docker:logs:backend:
+    desc: "Show backend logs"
+    cmds:
+      - docker compose logs -f backend
+
+  docker:logs:frontend:
+    desc: "Show frontend logs"
+    cmds:
+      - docker compose logs -f frontend
+
+  docker:restart:
+    desc: "Restart all Docker services"
+    cmds:
+      - docker compose restart
+      - echo "✓ All services restarted"
+
+  docker:restart:backend:
+    desc: "Restart backend service"
+    cmds:
+      - docker compose restart backend
+      - echo "✓ Backend service restarted"
+
+  docker:restart:frontend:
+    desc: "Restart frontend service"
+    cmds:
+      - docker compose restart frontend
+      - echo "✓ Frontend service restarted"
 
   docker:clean:
     desc: "Stop and remove Docker volumes (WARNING: deletes all data)"
