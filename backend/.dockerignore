@@ -58,11 +58,6 @@ Thumbs.db
 .gitignore
 .gitattributes
 
-# Documentation
-docs/
-*.md
-README.md
-
 # CI/CD
 .github/
 .gitlab-ci.yml
@@ -71,3 +66,6 @@ README.md
 Dockerfile*
 .dockerignore
 docker-compose*.yml
+
+# Documentation (keep README.md for package metadata)
+docs/
