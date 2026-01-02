@@ -51,4 +51,25 @@ describe('PriceStats', () => {
     expect(screen.getByText('+$125.50')).toBeInTheDocument()
     expect(screen.getByText('+11.14%')).toBeInTheDocument()
   })
+
+  it('displays fallback when currentPrice is undefined', () => {
+    render(<PriceStats currentPrice={undefined} change={5.25} changePercent={3.61} />)
+
+    expect(screen.getByText('---')).toBeInTheDocument()
+    expect(screen.getByText('Price data unavailable')).toBeInTheDocument()
+  })
+
+  it('displays fallback when change is NaN', () => {
+    render(<PriceStats currentPrice={150.25} change={NaN} changePercent={3.61} />)
+
+    expect(screen.getByText('---')).toBeInTheDocument()
+    expect(screen.getByText('Price data unavailable')).toBeInTheDocument()
+  })
+
+  it('displays fallback when all values are undefined', () => {
+    render(<PriceStats currentPrice={undefined} change={undefined} changePercent={undefined} />)
+
+    expect(screen.getByText('---')).toBeInTheDocument()
+    expect(screen.getByText('Price data unavailable')).toBeInTheDocument()
+  })
 })

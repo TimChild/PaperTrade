@@ -4,6 +4,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { getCurrentPrice, getBatchPrices } from '@/services/api/prices'
 import type { PricePoint } from '@/types/price'
+import type { AxiosError } from 'axios'
 
 /**
  * Hook to fetch current price for a single ticker
@@ -13,10 +14,20 @@ export function usePriceQuery(ticker: string) {
   return useQuery({
     queryKey: ['price', ticker],
     queryFn: () => getCurrentPrice(ticker),
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchInterval: 5 * 60 * 1000, // Auto-refetch every 5 minutes
-    retry: 3,
+    staleTime: 60 * 1000, // Consider data fresh for 1 minute
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    refetchInterval: false, // Don't auto-refetch to avoid rate limiting
+    retry: (failureCount, error) => {
+      const axiosError = error as AxiosError
+      // Don't retry on rate limit (503) or not found (404)
+      if (axiosError?.response?.status === 503 || axiosError?.response?.status === 404) {
+        return false
+      }
+      return failureCount < 2
+    },
     enabled: Boolean(ticker),
+    // Keep previous data on error to show last known price
+    placeholderData: (previousData) => previousData,
   })
 }
 
@@ -28,10 +39,20 @@ export function useBatchPricesQuery(tickers: string[]) {
   return useQuery({
     queryKey: ['prices', ...tickers.sort()],
     queryFn: () => getBatchPrices(tickers),
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000, // Auto-refetch every 5 minutes
+    staleTime: 60 * 1000, // Consider data fresh for 1 minute
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    refetchInterval: false, // Don't auto-refetch to avoid rate limiting
     enabled: tickers.length > 0, // Only run if we have tickers
-    retry: 3,
+    retry: (failureCount, error) => {
+      const axiosError = error as AxiosError
+      // Don't retry on rate limit (503)
+      if (axiosError?.response?.status === 503) {
+        return false
+      }
+      return failureCount < 2
+    },
+    // Keep previous data on error to show last known prices
+    placeholderData: (previousData) => previousData,
   })
 }
 

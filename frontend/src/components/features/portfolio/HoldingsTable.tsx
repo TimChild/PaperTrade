@@ -27,26 +27,23 @@ export function HoldingsTable({
   const {
     data: priceMap,
     isLoading: pricesLoading,
-    isError: pricesError,
   } = useBatchPricesQuery(tickers)
 
   // Calculate holdings with real prices
   const holdingsWithRealPrices = useMemo(() => {
-    if (!priceMap || priceMap.size === 0) {
-      return holdings
-    }
-
     return holdings.map((holding) => {
-      const price = priceMap.get(holding.ticker)
-      if (!price) {
-        return holding
-      }
+      const price = priceMap?.get(holding.ticker)
+      
+      // Use real-time price if available and valid, otherwise use average cost as fallback
+      const currentPrice =
+        price && Number.isFinite(price.price.amount)
+          ? price.price.amount
+          : holding.averageCost
 
-      const currentPrice = price.price.amount
       const marketValue = currentPrice * holding.quantity
       const costBasis = holding.averageCost * holding.quantity
       const gainLoss = marketValue - costBasis
-      const gainLossPercent = (gainLoss / costBasis) * 100
+      const gainLossPercent = costBasis !== 0 ? (gainLoss / costBasis) * 100 : 0
 
       return {
         ...holding,
@@ -54,6 +51,8 @@ export function HoldingsTable({
         marketValue,
         gainLoss,
         gainLossPercent,
+        // Track whether we're using real-time data or fallback
+        usingRealTimePrice: Boolean(price && Number.isFinite(price.price.amount)),
       }
     })
   }, [holdings, priceMap])
@@ -134,8 +133,8 @@ export function HoldingsTable({
                 ? 'text-positive dark:text-positive-light'
                 : 'text-negative dark:text-negative-light'
 
-              // Check if price is from API or mock
-              const priceFromAPI = priceMap?.has(holding.ticker)
+              // Check if we're using real-time price or fallback
+              const usingFallback = !('usingRealTimePrice' in holding && holding.usingRealTimePrice)
 
               return (
                 <tr
@@ -152,11 +151,17 @@ export function HoldingsTable({
                     {formatCurrency(holding.averageCost)}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-gray-700 dark:text-gray-300">
-                    {pricesError && !priceFromAPI ? (
-                      <span className="text-red-600 dark:text-red-400">N/A</span>
-                    ) : (
-                      formatCurrency(holding.currentPrice)
-                    )}
+                    <span className="inline-flex items-center gap-1">
+                      {formatCurrency(holding.currentPrice)}
+                      {usingFallback && (
+                        <span
+                          className="text-gray-400 dark:text-gray-500"
+                          title="Using average cost (current price unavailable)"
+                        >
+                          *
+                        </span>
+                      )}
+                    </span>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium text-gray-900 dark:text-white">
                     {formatCurrency(holding.marketValue)}
