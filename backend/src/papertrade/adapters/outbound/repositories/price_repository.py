@@ -7,7 +7,8 @@ layer in the tiered market data architecture.
 
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import desc, select
+from sqlalchemy import desc
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from papertrade.adapters.outbound.models.price_history import PriceHistoryModel
@@ -71,8 +72,8 @@ class PriceRepository:
             PriceHistoryModel.source == price.source,
             PriceHistoryModel.interval == price.interval,
         )
-        result = await self.session.execute(query)
-        existing = result.scalar_one_or_none()
+        result = await self.session.exec(query)
+        existing = result.one_or_none()
 
         if existing:
             # Update existing record
@@ -134,8 +135,8 @@ class PriceRepository:
         query = query.order_by(desc(PriceHistoryModel.timestamp)).limit(1)
 
         # Execute query
-        result = await self.session.execute(query)
-        model = result.scalar_one_or_none()
+        result = await self.session.exec(query)
+        model = result.one_or_none()
 
         # Convert to PricePoint if found
         if model:
@@ -174,8 +175,8 @@ class PriceRepository:
         )
 
         # Execute query
-        result = await self.session.execute(query)
-        model = result.scalar_one_or_none()
+        result = await self.session.exec(query)
+        model = result.one_or_none()
 
         # Convert to PricePoint if found
         if model:
@@ -224,8 +225,8 @@ class PriceRepository:
         )
 
         # Execute query
-        result = await self.session.execute(query)
-        models = result.scalars().all()
+        result = await self.session.exec(query)
+        models = result.all()
 
         # Convert to PricePoints
         return [model.to_price_point() for model in models]
@@ -252,8 +253,8 @@ class PriceRepository:
         )
 
         # Execute query
-        result = await self.session.execute(query)
-        ticker_symbols = result.scalars().all()
+        result = await self.session.exec(query)
+        ticker_symbols = result.all()
 
         # Convert to Ticker objects
         return [Ticker(symbol) for symbol in ticker_symbols]

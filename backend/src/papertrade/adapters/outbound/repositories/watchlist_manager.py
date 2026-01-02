@@ -7,7 +7,8 @@ tickers and finding stale tickers that need updates.
 
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select, update
+from sqlalchemy import update
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from papertrade.adapters.outbound.models.ticker_watchlist import TickerWatchlistModel
@@ -66,8 +67,8 @@ class WatchlistManager:
         query = select(TickerWatchlistModel).where(
             TickerWatchlistModel.ticker == ticker.symbol
         )
-        result = await self.session.execute(query)
-        existing = result.scalar_one_or_none()
+        result = await self.session.exec(query)
+        existing = result.one_or_none()
 
         if existing:
             # Update priority if the new priority is higher (lower number)
@@ -108,7 +109,7 @@ class WatchlistManager:
             .where(TickerWatchlistModel.ticker == ticker.symbol)
             .values(is_active=False, updated_at=datetime.now(UTC))
         )
-        await self.session.execute(stmt)
+        await self.session.exec(stmt)
         await self.session.flush()
 
     async def get_stale_tickers(self, limit: int = 10) -> list[Ticker]:
@@ -149,8 +150,8 @@ class WatchlistManager:
         )
 
         # Execute query
-        result = await self.session.execute(query)
-        models = result.scalars().all()
+        result = await self.session.exec(query)
+        models = result.all()
 
         # Convert to Ticker objects
         return [model.to_ticker() for model in models]
@@ -189,7 +190,7 @@ class WatchlistManager:
                 updated_at=datetime.now(UTC),
             )
         )
-        await self.session.execute(stmt)
+        await self.session.exec(stmt)
         await self.session.flush()
 
     async def get_all_active_tickers(self) -> list[Ticker]:
@@ -211,7 +212,7 @@ class WatchlistManager:
             .order_by(TickerWatchlistModel.priority)
         )
 
-        result = await self.session.execute(query)
-        models = result.scalars().all()
+        result = await self.session.exec(query)
+        models = result.all()
 
         return [model.to_ticker() for model in models]

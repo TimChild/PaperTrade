@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from papertrade.adapters.outbound.database.models import TransactionModel
@@ -82,8 +82,8 @@ class GetActiveTickersHandler:
             .distinct()
         )
 
-        result = await self._session.execute(stmt)
-        ticker_symbols = result.scalars().all()
+        result = await self._session.exec(stmt)
+        ticker_symbols = result.all()
 
         # Convert to Ticker objects and remove duplicates
         unique_tickers = list({Ticker(symbol) for symbol in ticker_symbols if symbol})
