@@ -1,83 +1,80 @@
 # Task 040: Review Docker Compose Environment Variable Configuration
 
 **Agent**: quality-infra
-**Priority**: High
-**Estimated Effort**: 2-3 hours
-**Related**: Task #035 (Dockerize Application)
+**Priority**: Medium (enhancement)
+**Estimated Effort**: 1-2 hours
+**Related**: Task #035 (Dockerize Application) - PR #47 ✅ Reviewed and Approved
+**Status**: Ready to start after PR #47 is merged
 
 ## Objective
 
-Review and update the Docker Compose configuration (from Task #035) to ensure proper environment variable loading for both development and production scenarios. Address the issue where the backend couldn't access the `.env` file until a symlink was manually created.
+Enhance the Docker Compose configuration (from Task #035/PR #47) to use `env_file` directive for cleaner environment variable management. This is an enhancement to the already-functional Docker implementation.
 
 ## Context
 
-**Current Situation**:
-- Root `.env` file contains all configuration (database, Redis, Alpha Vantage API key)
-- Backend requires access to environment variables to function
-- During local development testing, had to manually create symlink: `backend/.env -> ../.env`
-- Task #035 is implementing Docker Compose setup for full stack
+**PR #47 Status**: ✅ Reviewed and approved
+- Docker implementation is **functional and working**
+- Environment variables currently passed individually in docker-compose.yml
+- Uses `${ALPHA_VANTAGE_API_KEY:-demo}` syntax for variable substitution
+- All CI tests passing
 
-**Problem**:
-The backend needs environment variables (especially `ALPHA_VANTAGE_API_KEY`) to be available, but:
-1. Development mode: Backend runs via `task dev:backend` which needs access to `.env`
-2. Docker mode: Backend runs in container and needs env vars passed correctly
-3. Current setup required manual symlink creation, which isn't ideal
+**Enhancement Opportunity**:
+The current implementation lists each environment variable individually in the `environment:` section of docker-compose.yml. While this works, using the `env_file:` directive would be cleaner and more maintainable.
+
+**Background**:
+- Root `.env` file contains all configuration (database, Redis, Alpha Vantage API key)
+- During local development testing, had to manually create symlink: `backend/.env -> ../.env`
+- This was a development workaround - Docker setup doesn't have this issue
 
 ## Requirements
 
-### 1. Review Task #035 Docker Implementation
+### 1. Implement env_file Directive
 
-Once Task #035 is complete, review the Docker Compose configuration to ensure:
-
-- Environment variables are properly loaded from root `.env` file
-- Backend container has access to all required env vars
-- Frontend container receives necessary env vars (API URL, etc.)
-- No manual symlink creation required
-- Both development and production modes work
-
-### 2. Environment Variable Strategy
-
-Implement one of these approaches (or hybrid):
-
-**Option A: Direct Environment Variables in docker-compose.yml**
+**Current PR #47 Implementation**:
 ```yaml
 services:
   backend:
     environment:
-      DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL}
-      ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY}
-    env_file:
-      - .env  # Load from root
+      DATABASE_URL: postgresql+asyncpg://papertrade:papertrade_dev_password@db:5432/papertrade_dev
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      # ... 10+ individual env vars listed
+      ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-demo}
 ```
 
-**Option B: Volume Mount .env File**
-```yaml
-services:
-  backend:
-    volumes:
-      - ./.env:/app/.env:ro  # Read-only mount
-```
-
-**Option C: Explicit env_file Reference**
+**Recommended Enhancement**:
 ```yaml
 services:
   backend:
     env_file:
-      - .env
-    # Docker Compose automatically loads .env from project root
+      - .env  # Load all variables from root .env file
+    environment:
+      # Only override vars that differ in Docker context
+      DATABASE_URL: postgresql+asyncpg://papertrade:papertrade_dev_password@db:5432/papertrade_dev
+      REDIS_HOST: redis
+      POSTGRES_HOST: db
 ```
 
-### 3. Development Mode Configuration
+**Benefits**:
+- ✅ Automatically loads all .env variables (no need to list individually)
+- ✅ Easier to maintain - add new vars to .env without updating docker-compose.yml
+- ✅ Cleaner configuration - only Docker-specific overrides in environment section
+- ✅ Addresses the manual symlink issue for local development
 
-For local development (non-Docker):
+### 2. Update Development Mode Configuration (Optional)
 
-**Current Workaround** (manual symlink):
-```bash
-cd backend && ln -s ../.env .env
+The current Taskfile.yml `dev:backend` task works but could be enhanced:
+
+**Current** (works fine):
+```yaml
+dev:backend:
+  desc: "Start backend development server"
+  dir: "{{.BACKEND_DIR}}"
+  cmds:
+    - uv run uvicorn papertrade.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-**Better Solution** - Update Taskfile to handle this:
+**Enhancement** (if symlink issues persist):
 ```yaml
 dev:backend:
   desc: "Start backend development server"
@@ -85,116 +82,58 @@ dev:backend:
   deps:
     - docker:up
   cmds:
-    # Ensure .env access (create symlink if needed)
-    - test -f .env || ln -s ../.env .env
-    - 'echo "Starting backend server on http://localhost:8000"'
+    # Auto-create symlink if needed (idempotent)
+    - test -L .env || ln -s ../.env .env
     - uv run uvicorn papertrade.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Or use `dotenv` in the command:
-```yaml
-dev:backend:
-  desc: "Start backend development server"
-  dir: "{{.PROJECT_ROOT}}"  # Run from root to access .env
-  deps:
-    - docker:up
-  cmds:
-    - 'cd backend && uv run uvicorn papertrade.main:app --reload --host 0.0.0.0 --port 8000'
-  env:
-    # Explicitly pass env vars from .env
-    ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY}
-    DATABASE_URL: ${DATABASE_URL}
-    # ... other vars
+### 3. Create .env.example Template
+
+Create a template file documenting all environment variables:
+
+**`.env.example`**:
+```bash
+# Database Configuration
+POSTGRES_DB=papertrade_dev
+POSTGRES_USER=papertrade
+POSTGRES_PASSWORD=papertrade_dev_password
+DATABASE_URL=postgresql+asyncpg://papertrade:papertrade_dev_password@localhost:5432/papertrade_dev
+
+# Redis Configuration
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_DB=0
+
+# Alpha Vantage API (get your free key: https://www.alphavantage.co/support/#api-key)
+ALPHA_VANTAGE_API_KEY=your_api_key_here
+
+# Application Configuration
+APP_ENV=development
+APP_DEBUG=true
+SECRET_KEY=dev_secret_key_change_in_production
 ```
 
 ### 4. Documentation Updates
 
-Update the following files:
+Update `README.md` with environment setup section:
 
-1. **`README.md`**:
-   - Document how environment variables are loaded
-   - Explain `.env` file structure
-   - Provide example `.env.example` file
+```markdown
+## Environment Setup
 
-2. **`backend/README.md`** (if exists):
-   - Explain backend-specific env var requirements
-   - Document development setup
+1. Copy the environment template:
+   ```bash
+   cp .env.example .env
+   ```
 
-3. **`docker-compose.yml`** and **`docker-compose.dev.yml`**:
-   - Add comments explaining env var loading strategy
-   - Document which vars are required vs optional
+2. Get Alpha Vantage API key (free): https://www.alphavantage.co/support/#api-key
 
-4. **`.env.example`**:
-   - Create if doesn't exist
-   - Include all required variables with placeholder values
-   - Add comments explaining each variable
+3. Update `.env` with your API key:
+   ```
+   ALPHA_VANTAGE_API_KEY=YOUR_ACTUAL_KEY_HERE
+   ```
 
-### 5. Validation Script
-
-Create a script to validate environment setup:
-
-**`scripts/validate-env.sh`**:
-```bash
-#!/bin/bash
-# Validate environment configuration
-
-echo "Validating environment setup..."
-
-# Check if .env exists
-if [ ! -f .env ]; then
-    echo "❌ .env file not found in project root"
-    echo "   Copy .env.example to .env and configure"
-    exit 1
-fi
-
-# Check required variables
-REQUIRED_VARS=("POSTGRES_PASSWORD" "ALPHA_VANTAGE_API_KEY" "SECRET_KEY")
-
-for var in "${REQUIRED_VARS[@]}"; do
-    if ! grep -q "^${var}=" .env; then
-        echo "❌ Missing required variable: $var"
-        exit 1
-    fi
-done
-
-# Check for placeholder values
-if grep -q "your_api_key_here" .env; then
-    echo "⚠️  Warning: .env contains placeholder values"
-fi
-
-# Test database connection
-if ! docker ps | grep -q papertrade-postgres; then
-    echo "⚠️  Warning: PostgreSQL container not running"
-fi
-
-echo "✅ Environment validation passed"
+4. The default database and Redis settings work for local development.
 ```
-
-## Technical Specifications
-
-### Files to Review/Modify
-
-From Task #035 output:
-1. **`docker-compose.yml`** - Production configuration
-2. **`docker-compose.dev.yml`** (if created) - Development overrides
-3. **`backend/Dockerfile`** and **`backend/Dockerfile.dev`**
-4. **`Taskfile.yml`** - Update dev:backend task
-
-New files to create:
-1. **`.env.example`** - Template for environment variables
-2. **`scripts/validate-env.sh`** - Environment validation script
-3. **`docs/ENVIRONMENT_SETUP.md`** - Detailed environment docs (optional)
-
-### Environment Variables to Document
-
-**Required**:
-- `ALPHA_VANTAGE_API_KEY` - API key for market data (get from https://www.alphavantage.co/support/#api-key)
-- `POSTGRES_PASSWORD` - Database password
-- `SECRET_KEY` - Application secret for sessions/JWT
-
-**Optional**:
-- `DATABASE_URL` - Override default database connection
-- `REDIS_URL` - Override default Redis connection
 - `APP_ENV` - Environment (development/production)
 - `API_PORT` - Override default port 8000
 
@@ -258,30 +197,73 @@ API_PORT=8000
    ```
 
 3. **Test Fresh Setup**:
+## Success Criteria
+
+### Must Have
+
+1. ✅ **env_file Directive Implemented**: docker-compose.yml uses `env_file: [.env]` for backend service
+2. ✅ **.env.example Created**: Template file with all required variables documented
+3. ✅ **README.md Updated**: Environment setup instructions added
+4. ✅ **Docker Testing**: `docker compose up` loads .env variables correctly
+5. ✅ **Local Development**: `task dev:backend` works without manual symlink creation
+
+### Nice to Have
+
+- 🎯 Auto-create symlink in dev:backend task if needed (idempotent check)
+- 🎯 Validation script (scripts/validate-env.sh) for environment checking
+- 🎯 Comments in docker-compose.yml explaining env strategy
+- 🎯 Production docker-compose.prod.yml also uses env_file approach
+
+## Testing Checklist
+
+1. **Fresh Checkout Test**:
+   ```bash
+   git clone <repo>
+   cp .env.example .env
+   # Edit .env with actual API key
+   task setup
+   docker compose up
+   # Backend should start without errors
+   # API calls should work (not using demo key)
+   ```
+
+2. **Development Mode Test**:
    ```bash
    rm -rf backend/.env  # Remove any existing symlink
    task dev:backend
-   # Should work without manual intervention
+   # Should work without manual symlink intervention
    ```
 
-4. **Test Environment Validation**:
+3. **Environment Variable Validation**:
    ```bash
-   ./scripts/validate-env.sh
-   # Should pass with valid .env
-   # Should fail with missing .env or missing vars
+   # Start Docker services
+   docker compose up -d backend
+
+   # Verify env vars loaded
+   docker compose exec backend printenv | grep ALPHA_VANTAGE_API_KEY
+   # Should show actual API key, not "demo"
    ```
 
 ## References
 
-- Task #035: Dockerize Backend and Frontend Applications
-- Current root `.env` file
-- `Taskfile.yml` - Current dev:backend task
-- `orchestrator_procedures/playwright_e2e_testing.md` - Testing session that discovered the issue
+- ✅ **PR #47**: Docker implementation (reviewed and approved)
+- `agent_progress_docs/2026-01-02_00-40-20_dockerize-backend-frontend.md` - Docker task documentation
+- `orchestrator_procedures/playwright_e2e_testing.md` - Testing session that discovered the symlink issue
+- Current root `.env` file in project
 
-## Notes
+## Implementation Notes
 
-- This task depends on Task #035 being completed first
-- May need to coordinate with quality-infra agent working on Task #035
-- Consider creating separate docker-compose files for dev vs prod
-- Ensure `.env` is in `.gitignore` (already is, but verify)
-- Backend may need `python-dotenv` package to load .env files (check if already included)
+**Priority**: This is an enhancement, not a blocker
+- Current PR #47 implementation works functionally
+- This task improves maintainability and developer experience
+- Can be implemented as a follow-up PR after #47 is merged
+
+**Scope**:
+- Focus on docker-compose.yml env_file directive (primary goal)
+- Create .env.example for documentation (secondary)
+- README update for onboarding clarity (tertiary)
+- Development task enhancement is optional (current workaround is acceptable)
+
+**Coordination**:
+- Wait for PR #47 to be merged before starting
+- This is a refinement of working code, not a fix
