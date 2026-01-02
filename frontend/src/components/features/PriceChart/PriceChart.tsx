@@ -89,6 +89,22 @@ export function PriceChart({
   // Safe to access [0] and [length-1] because we already checked for empty array above
   const firstPrice = data.prices[0]!.price.amount
   const lastPrice = data.prices[data.prices.length - 1]!.price.amount
+  
+  // Validate prices are numbers
+  if (!Number.isFinite(firstPrice) || !Number.isFinite(lastPrice)) {
+    return (
+      <div className="price-chart">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{ticker}</h3>
+          <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
+        </div>
+        <div className="flex h-64 items-center justify-center rounded-lg border border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
+          <p className="text-gray-600 dark:text-gray-400">Invalid price data</p>
+        </div>
+      </div>
+    )
+  }
+
   const change = lastPrice - firstPrice
   const changePercent = firstPrice !== 0 ? (change / firstPrice) * 100 : 0
   const isPositive = change >= 0

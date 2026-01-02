@@ -20,6 +20,23 @@ describe('formatters', () => {
     it('formats zero correctly', () => {
       expect(formatCurrency(0)).toBe('$0.00')
     })
+
+    it('handles NaN gracefully', () => {
+      expect(formatCurrency(NaN)).toBe('---')
+    })
+
+    it('handles undefined gracefully', () => {
+      expect(formatCurrency(undefined)).toBe('---')
+    })
+
+    it('handles null gracefully', () => {
+      expect(formatCurrency(null)).toBe('---')
+    })
+
+    it('handles Infinity gracefully', () => {
+      expect(formatCurrency(Infinity)).toBe('---')
+      expect(formatCurrency(-Infinity)).toBe('---')
+    })
   })
 
   describe('formatPercent', () => {
@@ -39,6 +56,18 @@ describe('formatters', () => {
     it('formats without sign when showSign is false', () => {
       expect(formatPercent(0.05, false)).toBe('5.00%')
     })
+
+    it('handles NaN gracefully', () => {
+      expect(formatPercent(NaN)).toBe('---')
+    })
+
+    it('handles undefined gracefully', () => {
+      expect(formatPercent(undefined)).toBe('---')
+    })
+
+    it('handles null gracefully', () => {
+      expect(formatPercent(null)).toBe('---')
+    })
   })
 
   describe('formatNumber', () => {
@@ -50,6 +79,18 @@ describe('formatters', () => {
     it('respects decimal places parameter', () => {
       expect(formatNumber(100, 0)).toBe('100')
       expect(formatNumber(100.123, 3)).toBe('100.123')
+    })
+
+    it('handles NaN gracefully', () => {
+      expect(formatNumber(NaN)).toBe('---')
+    })
+
+    it('handles undefined gracefully', () => {
+      expect(formatNumber(undefined)).toBe('---')
+    })
+
+    it('handles null gracefully', () => {
+      expect(formatNumber(null)).toBe('---')
     })
   })
 
