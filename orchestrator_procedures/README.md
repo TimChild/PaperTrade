@@ -54,11 +54,29 @@ cd backend && task dev:backend
 ./orchestrator_procedures/quick_e2e_test.sh
 ```
 
-### 3. Playwright E2E Validation (WIP)
+### 3. Playwright E2E Testing (Interactive)
+
+**File**: [playwright_e2e_testing.md](./playwright_e2e_testing.md)
+
+**Purpose**: Interactive browser-based testing using Playwright MCP server.
+
+**When to use**:
+- Testing full user workflows end-to-end
+- Verifying feature integration between frontend and backend
+- Debugging UI issues or form interactions
+- Validating API responses in real-world scenarios
+
+**How to use**:
+1. Ensure Playwright MCP server is configured in `.vscode/mcp.json`
+2. Start all services (`task docker:up`, `task dev:backend`, `task dev:frontend`)
+3. Use Playwright MCP tools to navigate, click, type, and verify behavior
+4. Follow the detailed procedure in the linked document
+
+### 4. Playwright E2E Validation (Automated - WIP)
 
 **File**: [e2e_validation.py](./e2e_validation.py)
 
-**Purpose**: Automated browser-based testing with Playwright.
+**Purpose**: Automated browser-based testing with Playwright scripts.
 
 **Status**: Work in progress - selectors need to be updated as UI evolves.
 
