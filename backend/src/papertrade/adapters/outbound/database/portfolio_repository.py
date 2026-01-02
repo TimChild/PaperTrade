@@ -57,8 +57,7 @@ class SQLModelPortfolioRepository:
             .where(PortfolioModel.user_id == user_id)
             .order_by(PortfolioModel.created_at)
         )
-        result = await self._session.execute(statement)
-        models = result.scalars().all()
+        models = (await self._session.exec(statement)).all()
         return [model.to_domain() for model in models]
 
     async def save(self, portfolio: Portfolio) -> None:
@@ -93,5 +92,5 @@ class SQLModelPortfolioRepository:
             True if portfolio exists, False otherwise
         """
         statement = select(PortfolioModel.id).where(PortfolioModel.id == portfolio_id)
-        result = await self._session.execute(statement)
-        return result.scalar() is not None
+        result = await self._session.exec(statement)
+        return result.first() is not None

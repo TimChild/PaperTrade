@@ -66,8 +66,7 @@ class WatchlistManager:
         query = select(TickerWatchlistModel).where(
             TickerWatchlistModel.ticker == ticker.symbol
         )
-        result = await self.session.execute(query)
-        existing = result.scalar_one_or_none()
+        existing = (await self.session.exec(query)).one_or_none()
 
         if existing:
             # Update priority if the new priority is higher (lower number)
@@ -149,8 +148,7 @@ class WatchlistManager:
         )
 
         # Execute query
-        result = await self.session.execute(query)
-        models = result.scalars().all()
+        models = (await self.session.exec(query)).all()
 
         # Convert to Ticker objects
         return [model.to_ticker() for model in models]
@@ -211,7 +209,6 @@ class WatchlistManager:
             .order_by(TickerWatchlistModel.priority)
         )
 
-        result = await self.session.execute(query)
-        models = result.scalars().all()
+        models = (await self.session.exec(query)).all()
 
         return [model.to_ticker() for model in models]

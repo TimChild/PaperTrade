@@ -86,8 +86,7 @@ class SQLModelTransactionRepository:
         if limit is not None:
             statement = statement.limit(limit)
 
-        result = await self._session.execute(statement)
-        models = result.scalars().all()
+        models = (await self._session.exec(statement)).all()
         return [model.to_domain() for model in models]
 
     async def count_by_portfolio(
@@ -116,8 +115,8 @@ class SQLModelTransactionRepository:
                 TransactionModel.transaction_type == transaction_type.value
             )
 
-        result = await self._session.execute(statement)
-        count = result.scalar()
+        result = await self._session.exec(statement)
+        count = result.first()
         return count if count is not None else 0
 
     async def save(self, transaction: Transaction) -> None:

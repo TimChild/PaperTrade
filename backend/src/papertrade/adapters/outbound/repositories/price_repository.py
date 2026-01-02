@@ -71,8 +71,8 @@ class PriceRepository:
             PriceHistoryModel.source == price.source,
             PriceHistoryModel.interval == price.interval,
         )
-        result = await self.session.execute(query)
-        existing = result.scalar_one_or_none()
+        result = await self.session.exec(query)
+        existing = result.one_or_none()
 
         if existing:
             # Update existing record
@@ -134,8 +134,7 @@ class PriceRepository:
         query = query.order_by(desc(PriceHistoryModel.timestamp)).limit(1)
 
         # Execute query
-        result = await self.session.execute(query)
-        model = result.scalar_one_or_none()
+        model = (await self.session.exec(query)).one_or_none()
 
         # Convert to PricePoint if found
         if model:
@@ -174,8 +173,7 @@ class PriceRepository:
         )
 
         # Execute query
-        result = await self.session.execute(query)
-        model = result.scalar_one_or_none()
+        model = (await self.session.exec(query)).one_or_none()
 
         # Convert to PricePoint if found
         if model:
@@ -224,8 +222,7 @@ class PriceRepository:
         )
 
         # Execute query
-        result = await self.session.execute(query)
-        models = result.scalars().all()
+        models = (await self.session.exec(query)).all()
 
         # Convert to PricePoints
         return [model.to_price_point() for model in models]
@@ -252,7 +249,7 @@ class PriceRepository:
         )
 
         # Execute query
-        result = await self.session.execute(query)
+        result = await self.session.exec(query)
         ticker_symbols = result.scalars().all()
 
         # Convert to Ticker objects
