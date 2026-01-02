@@ -12,7 +12,7 @@ Unlike one-time tasks in `agent_tasks/`, these templates are designed to be:
 ## Current Templates
 
 ### [e2e_qa_validation.md](e2e_qa_validation.md)
-**Agent**: qa  
+**Agent**: qa
 **Purpose**: Comprehensive end-to-end quality assurance testing
 
 Execute all critical user workflows to validate application quality. Produces detailed test reports with pass/fail status, severity assessment, and follow-up action items.
