@@ -19,7 +19,7 @@ test.describe('Portfolio Creation Flow', () => {
     await page.waitForLoadState('networkidle')
 
     // 3. Click create portfolio button
-    const createButton = page.getByRole('button', { name: /create.*portfolio/i })
+    const createButton = page.getByTestId('create-first-portfolio-btn')
     await createButton.click()
 
     // 4. Fill out form
@@ -27,7 +27,7 @@ test.describe('Portfolio Creation Flow', () => {
     await page.getByLabel(/initial deposit/i).fill('10000')
 
     // 5. Submit
-    await page.getByRole('button', { name: /create portfolio/i }).last().click()
+    await page.getByTestId('submit-portfolio-form-btn').click()
 
     // 6. Wait for navigation or success (portfolio should appear)
     // Give it time to create and redirect
@@ -46,12 +46,12 @@ test.describe('Portfolio Creation Flow', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    const createButton = page.getByRole('button', { name: /create.*portfolio/i })
+    const createButton = page.getByTestId('create-first-portfolio-btn')
     await createButton.click()
 
     await page.getByLabel(/portfolio name/i).fill('Persistent Portfolio')
     await page.getByLabel(/initial deposit/i).fill('25000')
-    await page.getByRole('button', { name: /create portfolio/i }).last().click()
+    await page.getByTestId('submit-portfolio-form-btn').click()
 
     // Wait for portfolio to be created
     await page.waitForTimeout(2000)
@@ -70,12 +70,12 @@ test.describe('Portfolio Creation Flow', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    const createButton = page.getByRole('button', { name: /create.*portfolio/i })
+    const createButton = page.getByTestId('create-first-portfolio-btn')
     await createButton.click()
 
     // Try to submit without entering name
     await page.getByLabel(/initial deposit/i).fill('10000')
-    await page.getByRole('button', { name: /create portfolio/i }).last().click()
+    await page.getByTestId('submit-portfolio-form-btn').click()
 
     // Should see validation error or form should not submit
     // HTML5 validation should kick in
@@ -86,12 +86,12 @@ test.describe('Portfolio Creation Flow', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    const createButton = page.getByRole('button', { name: /create.*portfolio/i })
+    const createButton = page.getByTestId('create-first-portfolio-btn')
     await createButton.click()
 
     await page.getByLabel(/portfolio name/i).fill('Test Portfolio')
     await page.getByLabel(/initial deposit/i).fill('-1000')
-    await page.getByRole('button', { name: /create portfolio/i }).last().click()
+    await page.getByTestId('submit-portfolio-form-btn').click()
 
     // Should see validation error
     await expect(page.getByText(/positive number/i).or(page.getByText(/error/i))).toBeVisible({

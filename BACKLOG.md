@@ -6,6 +6,14 @@ Minor improvements, tech debt, and enhancements that don't block main developmen
 
 ## Active Backlog
 
+### Testing & Quality (MEDIUM PRIORITY)
+
+1. **Implement Skipped Scheduler Tests** - ~4-6 hours
+   - 4 tests in `tests/unit/infrastructure/test_scheduler.py` are skipped
+   - Reasons: "Requires database setup", "timing-dependent", "complex integration"
+   - Solution: Proper mocking for market data, event-based assertions, split complex tests
+   - See: Task #039 (to be created)
+
 ### Code Quality & Linting (LOW PRIORITY)
 
 1. **Fix remaining ruff linting warnings** - ~10 minutes

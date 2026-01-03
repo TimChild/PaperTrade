@@ -169,6 +169,14 @@ jobs:
           timeout 30 bash -c 'until docker compose exec -T db pg_isready -U papertrade; do sleep 1; done'
           timeout 30 bash -c 'until docker compose exec -T redis redis-cli ping; do sleep 1; done'
 
+      - name: Start backend and frontend servers
+        run: task docker:up:all
+
+      - name: Wait for backend and frontend to be ready
+        run: |
+          timeout 60 bash -c 'until curl -f http://localhost:8000/health; do sleep 2; done'
+          timeout 60 bash -c 'until curl -f http://localhost:5173; do sleep 2; done'
+
       - name: Run E2E tests
         run: task test:e2e
 
