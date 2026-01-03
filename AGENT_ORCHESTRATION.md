@@ -59,7 +59,7 @@ gh agent-task create --custom-agent backend-swe -F agent_tasks/029_implement-fea
 ```bash
 GH_PAGER="" gh agent-task list          # Check status
 GH_PAGER="" gh pr view <PR_NUMBER>      # Review PR
-gh pr checkout <PR_NUMBER>               # Test locally
+GH_PAGER="" gh pr checkout <PR_NUMBER>  # Test locally
 gh pr merge <PR_NUMBER> --squash --delete-branch  # Merge
 ```
 
@@ -130,10 +130,24 @@ When you need the agent to fix issues in their PR, add comments starting with `@
 
 ```bash
 # Tag the agent in PR comments to request changes
-gh pr comment <PR_NUMBER> --body "@copilot Please fix the failing tests..."
+GH_PAGER="" gh pr comment <PR_NUMBER> --body "@copilot Please fix the failing tests..."
 ```
 
 This ensures the Copilot agent sees and responds to your feedback.
+
+**GitHub CLI Best Practice**:
+Always prefix gh commands with `GH_PAGER=""` to prevent interactive pager blocking:
+
+```bash
+# Good
+GH_PAGER="" gh pr list
+GH_PAGER="" gh pr view 47
+GH_PAGER="" gh issue list
+
+# Bad - may hang waiting for pager input
+gh pr list
+gh pr view 47
+```
 
 ### Workflow
 - Parallelize independent work
@@ -152,9 +166,13 @@ gh pr create --title "title" --body-file .tmp_body.md
 rm .tmp_body.md
 ```
 
-### GH CLI Hangs
+### GH CLI Hangs/Blocks
+**Always use `GH_PAGER=""` prefix for gh commands** to prevent interactive pager from blocking:
 ```bash
-GH_PAGER="" gh pr list   # Disable pager
+GH_PAGER="" gh pr list
+GH_PAGER="" gh pr view <PR_NUMBER>
+GH_PAGER="" gh issue list
+GH_PAGER="" gh agent-task list
 ```
 
 ### Agent Task Fails
@@ -166,9 +184,9 @@ gh auth status           # Check auth
 
 ### CI Failures
 ```bash
-task ci                  # Reproduce locally
-gh pr checkout <PR>      # Test branch
-task lint && task test   # Run specific checks
+task ci                       # Reproduce locally
+GH_PAGER="" gh pr checkout <PR>  # Test branch
+task lint && task test        # Run specific checks
 ```
 
 ### Merge Conflicts
