@@ -25,11 +25,11 @@ Addressed deferred items from PR #47 to improve Docker infrastructure with enhan
 **Challenge**: GitHub Actions CI environment has SSL certificate verification issues with both pip and uv package managers due to self-signed certificates in the certificate chain.
 
 **Decisions**:
-- **Development Dockerfile**: Restored `--trusted-host pypi.org --trusted-host files.pythonhosted.org` flags for pip compatibility in CI
-- **Production Dockerfile**: Switched from uv to pip with SSL workarounds for CI compatibility
-- **Documentation**: Clearly marked these as CI-specific workarounds, not needed in standard Docker environments
+- **Development Dockerfile**: Restored `--trusted-host pypi.org --trusted-host files.pythonhosted.org` flags for pip compatibility in CI-only builds.
+- **Production Dockerfile (CI-optimized variant)**: For CI builds, temporarily switched from uv to pip with SSL workarounds to keep GitHub Actions builds green. **Real production images MUST be built without these SSL workarounds** (e.g., by removing the flags or using a separate hardened Dockerfile configuration).
+- **Documentation**: Clearly marked these as CI-specific workarounds, not needed (and not acceptable) in standard Docker or real production environments. Future work includes parameterizing these via build arguments so that SSL workarounds can be enabled explicitly for CI (for example, `CI_SSL_WORKAROUND=true`) and remain disabled by default.
 
-**Rationale**: While not ideal, the SSL workarounds enable the Docker builds to work in GitHub Actions. Production deployments should configure proper SSL certificates, but this provides a working baseline.
+**Rationale**: While not ideal, the SSL workarounds exist solely to enable Docker builds to work in GitHub Actions under constrained SSL conditions. They are **not** part of the recommended production configuration. Production deployments must use proper SSL certificates and build the production image without any SSL workarounds, treating the CI-optimized Dockerfile configuration as a testing aid rather than a deployment artifact.
 
 ### 3. Image Size Optimization
 
