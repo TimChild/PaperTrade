@@ -1,6 +1,5 @@
 """Integration tests for database seeding script."""
 
-import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlmodel import select
@@ -156,9 +155,7 @@ class TestSeedPriceHistory:
         # Each ticker should have exactly 31 price points
         assert all(count == 31 for count in ticker_counts.values())
 
-    async def test_price_amounts_have_two_decimals(
-        self, session: AsyncSession
-    ) -> None:
+    async def test_price_amounts_have_two_decimals(self, session: AsyncSession) -> None:
         """Test that all prices have exactly 2 decimal places."""
         await seed_price_history(session)
 
@@ -239,7 +236,9 @@ class TestClearExistingData:
     async def test_respects_foreign_key_constraints(
         self, session: AsyncSession
     ) -> None:
-        """Test that clearing respects foreign key constraints (transactions before portfolios)."""
+        """Test that clearing respects foreign key constraints.
+        (transactions before portfolios).
+        """
         # Seed portfolios (which creates transactions)
         await seed_portfolios(session)
 
