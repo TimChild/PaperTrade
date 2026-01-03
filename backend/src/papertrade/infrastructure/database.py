@@ -6,7 +6,7 @@ for SQLModel repositories.
 
 import os
 from collections.abc import AsyncGenerator
-from typing import Any, Annotated
+from typing import Annotated, Any
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
