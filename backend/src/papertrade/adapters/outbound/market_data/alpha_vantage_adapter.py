@@ -297,25 +297,11 @@ class AlphaVantageAdapter:
                     ticker.symbol, f"Invalid price: {price_value}"
                 )
 
-            # Extract timestamp (field "07. latest trading day")
-            trading_day_str = global_quote.get("07. latest trading day")
-            if not trading_day_str:
-                # Use current time as fallback
-                timestamp = datetime.now(UTC)
-            else:
-                # Parse date and set to end of trading day (4 PM ET = 21:00 UTC)
-                from datetime import date
-
-                trading_day = date.fromisoformat(str(trading_day_str))
-                timestamp = datetime(
-                    trading_day.year,
-                    trading_day.month,
-                    trading_day.day,
-                    21,
-                    0,
-                    0,  # 4 PM ET
-                    tzinfo=UTC,
-                )
+            # Extract timestamp - use current time for cache freshness tracking
+            # Note: The "07. latest trading day" field tells us which day's
+            # data this is, but we use current time to track when we fetched
+            # it (for cache expiry)
+            timestamp = datetime.now(UTC)
 
             # Construct PricePoint
             return PricePoint(

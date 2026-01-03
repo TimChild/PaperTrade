@@ -306,6 +306,8 @@ tasks:
   test:e2e:
     desc: "Run end-to-end tests with Playwright"
     dir: "{{.FRONTEND_DIR}}"
+    deps:
+      - docker:up:all  # Ensure full stack is running
     cmds:
       - echo "Running E2E tests..."
       - npm run test:e2e
@@ -316,6 +318,8 @@ tasks:
   test:e2e:ui:
     desc: "Run E2E tests with Playwright UI"
     dir: "{{.FRONTEND_DIR}}"
+    deps:
+      - docker:up:all  # Ensure full stack is running
     cmds:
       - echo "Running E2E tests with UI..."
       - npm run test:e2e:ui

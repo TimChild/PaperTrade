@@ -165,17 +165,17 @@ jobs:
         run: task docker:up
 
       - name: Wait for services to be ready
-        run: sleep 5
-
-      - name: Start backend server
         run: |
-          cd backend
-          nohup uv run uvicorn papertrade.main:app --host 0.0.0.0 --port 8000 > /tmp/backend.log 2>&1 &
-          echo $! > /tmp/backend.pid
+          timeout 30 bash -c 'until docker compose exec -T db pg_isready -U papertrade; do sleep 1; done'
+          timeout 30 bash -c 'until docker compose exec -T redis redis-cli ping; do sleep 1; done'
 
-      - name: Wait for backend to start
+      - name: Start backend and frontend servers
+        run: task docker:up:all
+
+      - name: Wait for backend and frontend to be ready
         run: |
-          timeout 30 bash -c 'until curl -f http://localhost:8000/health 2>/dev/null; do sleep 1; done' || true
+          timeout 60 bash -c 'until curl -f http://localhost:8000/health; do sleep 2; done'
+          timeout 60 bash -c 'until curl -f http://localhost:5173; do sleep 2; done'
 
       - name: Run E2E tests
         run: task test:e2e
@@ -187,14 +187,3 @@ jobs:
           name: playwright-report
           path: frontend/playwright-report/
           retention-days: 30
-
-      - name: Stop backend server
-        if: always()
-        run: |
-          if [ -f /tmp/backend.pid ]; then
-            kill "$(cat /tmp/backend.pid)" || true
-          fi
-
-      - name: Show backend logs
-        if: always()
-        run: cat /tmp/backend.log || true

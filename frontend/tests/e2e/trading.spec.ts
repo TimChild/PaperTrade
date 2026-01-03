@@ -15,12 +15,12 @@ test.describe('Trading Flow', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    const createButton = page.getByRole('button', { name: /create.*portfolio/i })
+    const createButton = page.getByTestId('create-first-portfolio-btn')
     await createButton.click()
 
     await page.getByLabel(/portfolio name/i).fill('Trading Portfolio')
     await page.getByLabel(/initial deposit/i).fill('50000')
-    await page.getByRole('button', { name: /create portfolio/i }).last().click()
+    await page.getByTestId('submit-portfolio-form-btn').click()
 
     // Wait for creation
     await page.waitForTimeout(2000)
@@ -66,12 +66,12 @@ test.describe('Trading Flow', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    const createButton = page.getByRole('button', { name: /create.*portfolio/i })
+    const createButton = page.getByTestId('create-first-portfolio-btn')
     await createButton.click()
 
     await page.getByLabel(/portfolio name/i).fill('Poor Portfolio')
     await page.getByLabel(/initial deposit/i).fill('1000')
-    await page.getByRole('button', { name: /create portfolio/i }).last().click()
+    await page.getByTestId('submit-portfolio-form-btn').click()
 
     await page.waitForTimeout(2000)
     await page.waitForLoadState('networkidle')
@@ -104,12 +104,12 @@ test.describe('Trading Flow', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    const createButton = page.getByRole('button', { name: /create.*portfolio/i })
+    const createButton = page.getByTestId('create-first-portfolio-btn')
     await createButton.click()
 
     await page.getByLabel(/portfolio name/i).fill('Holdings Test')
     await page.getByLabel(/initial deposit/i).fill('30000')
-    await page.getByRole('button', { name: /create portfolio/i }).last().click()
+    await page.getByTestId('submit-portfolio-form-btn').click()
 
     await page.waitForTimeout(2000)
     await page.waitForLoadState('networkidle')
