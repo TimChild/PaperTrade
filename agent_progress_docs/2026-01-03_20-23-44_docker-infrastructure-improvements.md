@@ -1,9 +1,9 @@
 # Agent Progress: Docker Infrastructure Improvements & Documentation
 
-**Date**: 2026-01-03  
-**Agent**: quality-infra  
-**Task**: Task 036 - Docker Infrastructure Improvements & Documentation  
-**Branch**: copilot/improve-docker-infrastructure  
+**Date**: 2026-01-03
+**Agent**: quality-infra
+**Task**: Task 036 - Docker Infrastructure Improvements & Documentation
+**Branch**: copilot/improve-docker-infrastructure
 **PR**: (to be created)
 
 ## Task Summary

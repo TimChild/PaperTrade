@@ -238,7 +238,7 @@ cp .env.production.example .env
   ```bash
   # PostgreSQL password
   openssl rand -base64 32
-  
+
   # Application secret key
   python -c "import secrets; print(secrets.token_urlsafe(32))"
   ```
