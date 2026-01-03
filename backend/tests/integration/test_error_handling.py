@@ -241,7 +241,7 @@ def test_create_portfolio_with_negative_deposit_fails(
         },
     )
 
-    # Should fail validation (initial_deposit must be > 0)
+    # Should fail validation (initial_deposit must be >= 0)
     assert response.status_code == 422  # Validation error
 
 
