@@ -55,7 +55,7 @@ class SQLModelPortfolioRepository:
         statement = (
             select(PortfolioModel)
             .where(PortfolioModel.user_id == user_id)
-            .order_by(PortfolioModel.created_at)
+            .order_by(PortfolioModel.created_at.asc())  # type: ignore[attr-defined]  # SQLModel field has SQLAlchemy column methods
         )
         result = await self._session.exec(statement)
         models = result.all()

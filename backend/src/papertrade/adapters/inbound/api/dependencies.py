@@ -113,7 +113,7 @@ async def get_current_user_id(
 
 # Global singletons for market data dependencies
 # These are created once and reused across requests
-_redis_client: Redis | None = None  # type: ignore[type-arg]
+_redis_client: Redis | None = None  # type: ignore[type-arg]  # Redis generic type parameter not needed for singleton
 _http_client: httpx.AsyncClient | None = None
 
 

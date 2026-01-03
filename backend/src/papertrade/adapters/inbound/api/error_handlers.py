@@ -3,7 +3,7 @@
 Maps domain exceptions to HTTP status codes with consistent error responses.
 """
 
-from fastapi import Request, status
+from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -29,7 +29,7 @@ class ErrorResponse(BaseModel):
     details: dict[str, str] | None = None
 
 
-def register_exception_handlers(app) -> None:  # type: ignore
+def register_exception_handlers(app: FastAPI) -> None:
     """Register all domain exception handlers with FastAPI app.
 
     Args:
@@ -37,7 +37,7 @@ def register_exception_handlers(app) -> None:  # type: ignore
     """
 
     @app.exception_handler(InvalidPortfolioError)
-    async def handle_invalid_portfolio(
+    async def handle_invalid_portfolio(  # pyright: ignore[reportUnusedFunction]  # Used as FastAPI exception handler decorator
         request: Request, exc: InvalidPortfolioError
     ) -> JSONResponse:
         """Handle InvalidPortfolioError -> 400 Bad Request."""
@@ -50,7 +50,7 @@ def register_exception_handlers(app) -> None:  # type: ignore
         )
 
     @app.exception_handler(InvalidTransactionError)
-    async def handle_invalid_transaction(
+    async def handle_invalid_transaction(  # pyright: ignore[reportUnusedFunction]  # Used as FastAPI exception handler decorator
         request: Request, exc: InvalidTransactionError
     ) -> JSONResponse:
         """Handle InvalidTransactionError -> 400 Bad Request."""
@@ -63,7 +63,7 @@ def register_exception_handlers(app) -> None:  # type: ignore
         )
 
     @app.exception_handler(InsufficientFundsError)
-    async def handle_insufficient_funds(
+    async def handle_insufficient_funds(  # pyright: ignore[reportUnusedFunction]  # Used as FastAPI exception handler decorator
         request: Request, exc: InsufficientFundsError
     ) -> JSONResponse:
         """Handle InsufficientFundsError -> 400 Bad Request."""
@@ -76,7 +76,7 @@ def register_exception_handlers(app) -> None:  # type: ignore
         )
 
     @app.exception_handler(InsufficientSharesError)
-    async def handle_insufficient_shares(
+    async def handle_insufficient_shares(  # pyright: ignore[reportUnusedFunction]  # Used as FastAPI exception handler decorator
         request: Request, exc: InsufficientSharesError
     ) -> JSONResponse:
         """Handle InsufficientSharesError -> 400 Bad Request."""

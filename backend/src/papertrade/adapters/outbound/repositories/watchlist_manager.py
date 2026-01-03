@@ -106,7 +106,8 @@ class WatchlistManager:
         # Mark as inactive rather than delete (preserve history)
         stmt = (
             update(TickerWatchlistModel)
-            .where(TickerWatchlistModel.ticker == ticker.symbol)
+            .where(TickerWatchlistModel.ticker == ticker.symbol)  # type: ignore[arg-type]  # SQLModel field comparison produces valid SQLAlchemy expression
+            .where(TickerWatchlistModel.is_active == True)  # type: ignore[arg-type]  # noqa: E712  # SQLAlchemy requires == True for bool columns
             .values(is_active=False, updated_at=datetime.now(UTC))
         )
         await self.session.exec(stmt)
@@ -137,14 +138,14 @@ class WatchlistManager:
         # Query for active tickers that need refresh
         query = (
             select(TickerWatchlistModel)
-            .where(TickerWatchlistModel.is_active == True)  # noqa: E712
+            .where(TickerWatchlistModel.is_active == True)  # type: ignore[arg-type]  # noqa: E712  # SQLAlchemy requires == True for bool columns
             .where(
-                (TickerWatchlistModel.next_refresh_at == None)  # noqa: E711
-                | (TickerWatchlistModel.next_refresh_at <= now)
+                (TickerWatchlistModel.next_refresh_at.is_(None))  # type: ignore[attr-defined]  # SQLModel field has SQLAlchemy column methods
+                | (TickerWatchlistModel.next_refresh_at <= now)  # type: ignore[operator]  # SQLAlchemy allows datetime comparison with None in OR expressions
             )
             .order_by(
-                TickerWatchlistModel.priority,  # Lower priority number first
-                TickerWatchlistModel.last_refresh_at.asc().nullsfirst(),
+                TickerWatchlistModel.priority.asc(),  # type: ignore[attr-defined]  # SQLModel field has SQLAlchemy column methods
+                TickerWatchlistModel.last_refresh_at.asc().nullsfirst(),  # type: ignore[attr-defined]  # SQLModel field has SQLAlchemy column methods
             )
             .limit(limit)
         )
@@ -183,7 +184,8 @@ class WatchlistManager:
         """
         stmt = (
             update(TickerWatchlistModel)
-            .where(TickerWatchlistModel.ticker == ticker.symbol)
+            .where(TickerWatchlistModel.ticker == ticker.symbol)  # type: ignore[arg-type]  # SQLModel field comparison produces valid SQLAlchemy expression
+            .where(TickerWatchlistModel.is_active == True)  # type: ignore[arg-type]  # noqa: E712  # SQLAlchemy requires == True for bool columns
             .values(
                 last_refresh_at=last_refresh,
                 next_refresh_at=next_refresh,
@@ -208,8 +210,8 @@ class WatchlistManager:
         """
         query = (
             select(TickerWatchlistModel)
-            .where(TickerWatchlistModel.is_active == True)  # noqa: E712
-            .order_by(TickerWatchlistModel.priority)
+            .where(TickerWatchlistModel.is_active == True)  # type: ignore[arg-type]  # noqa: E712  # SQLAlchemy requires == True for bool columns
+            .order_by(TickerWatchlistModel.priority.asc())  # type: ignore[attr-defined]  # SQLModel field has SQLAlchemy column methods
         )
 
         result = await self.session.exec(query)

@@ -78,7 +78,7 @@ class SQLModelTransactionRepository:
             )
 
         # Order by timestamp (chronological)
-        statement = statement.order_by(TransactionModel.timestamp)
+        statement = statement.order_by(TransactionModel.timestamp.asc())  # type: ignore[attr-defined]  # SQLModel field has SQLAlchemy column methods at runtime
 
         # Apply pagination
         if offset > 0:
@@ -106,7 +106,7 @@ class SQLModelTransactionRepository:
         """
         from sqlalchemy import func
 
-        statement = select(func.count(TransactionModel.id)).where(
+        statement = select(func.count()).select_from(TransactionModel).where(
             TransactionModel.portfolio_id == portfolio_id
         )
 

@@ -29,7 +29,7 @@ class PortfolioModel(SQLModel, table=True):
         version: Version number for optimistic locking
     """
 
-    __tablename__ = "portfolios"  # type: ignore
+    __tablename__ = "portfolios"  # type: ignore[assignment]  # SQLModel requires string literal for __tablename__
     __table_args__ = (Index("idx_portfolio_user_id", "user_id"),)
 
     id: UUID = Field(primary_key=True)
@@ -94,7 +94,7 @@ class TransactionModel(SQLModel, table=True):
         created_at: When record was inserted (for audit)
     """
 
-    __tablename__ = "transactions"  # type: ignore
+    __tablename__ = "transactions"  # type: ignore[assignment]  # SQLModel requires string literal for __tablename__
     __table_args__ = (
         Index("idx_transaction_portfolio_id", "portfolio_id"),
         Index("idx_transaction_timestamp", "timestamp"),

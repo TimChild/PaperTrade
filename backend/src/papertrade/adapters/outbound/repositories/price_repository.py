@@ -7,7 +7,6 @@ layer in the tiered market data architecture.
 
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import desc
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -132,7 +131,7 @@ class PriceRepository:
             query = query.where(PriceHistoryModel.timestamp >= cutoff_time)
 
         # Order by timestamp descending and take first result
-        query = query.order_by(desc(PriceHistoryModel.timestamp)).limit(1)
+        query = query.order_by(PriceHistoryModel.timestamp.desc()).limit(1)  # type: ignore[attr-defined]  # SQLModel field has SQLAlchemy column methods
 
         # Execute query
         result = await self.session.exec(query)
@@ -170,7 +169,7 @@ class PriceRepository:
             select(PriceHistoryModel)
             .where(PriceHistoryModel.ticker == ticker.symbol)
             .where(PriceHistoryModel.timestamp <= timestamp)
-            .order_by(desc(PriceHistoryModel.timestamp))
+            .order_by(PriceHistoryModel.timestamp.desc())  # type: ignore[attr-defined]  # SQLModel field has SQLAlchemy column methods
             .limit(1)
         )
 
@@ -221,7 +220,7 @@ class PriceRepository:
             .where(PriceHistoryModel.interval == interval)
             .where(PriceHistoryModel.timestamp >= start)
             .where(PriceHistoryModel.timestamp <= end)
-            .order_by(PriceHistoryModel.timestamp)  # Chronological order
+            .order_by(PriceHistoryModel.timestamp.asc())  # type: ignore[attr-defined]  # SQLModel field has SQLAlchemy column methods
         )
 
         # Execute query

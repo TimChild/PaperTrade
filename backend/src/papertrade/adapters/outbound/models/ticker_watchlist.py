@@ -29,7 +29,7 @@ class TickerWatchlistModel(SQLModel, table=True):
         updated_at: When record was last modified
     """
 
-    __tablename__ = "ticker_watchlist"  # type: ignore[assignment]
+    __tablename__ = "ticker_watchlist"  # type: ignore[assignment]  # SQLModel requires string literal for __tablename__
     __table_args__ = (
         # Index for finding tickers that need refresh
         Index(

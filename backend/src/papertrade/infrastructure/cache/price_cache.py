@@ -74,7 +74,7 @@ class PriceCache:
 
     def __init__(
         self,
-        redis: Redis | RedisClient,  # type: ignore[type-arg]
+        redis: Redis | RedisClient,  # type: ignore[type-arg]  # Redis generic type parameter not needed for our usage
         key_prefix: str,
         default_ttl: int | None = None,
     ) -> None:
