@@ -106,8 +106,10 @@ class SQLModelTransactionRepository:
         """
         from sqlalchemy import func
 
-        statement = select(func.count()).select_from(TransactionModel).where(
-            TransactionModel.portfolio_id == portfolio_id
+        statement = (
+            select(func.count())
+            .select_from(TransactionModel)
+            .where(TransactionModel.portfolio_id == portfolio_id)
         )
 
         # Apply type filter if provided
