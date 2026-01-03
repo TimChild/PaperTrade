@@ -170,6 +170,179 @@ cd backend
 uv run uvicorn papertrade.main:app --reload
 ```
 
+## Docker Development
+
+PaperTrade includes full Docker support for running the entire stack (PostgreSQL, Redis, Backend, Frontend) in containers.
+
+### Quick Start with Docker
+
+Run the entire stack with one command:
+
+```bash
+# Development mode (with hot-reload)
+task docker:up:all
+
+# View logs
+task docker:logs
+
+# Stop all services
+task docker:down
+```
+
+**Access the application:**
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
+
+### Production Mode
+
+Build and run the production-optimized stack:
+
+```bash
+# Build production images
+task docker:build:prod
+
+# Start production stack
+task docker:up:prod
+```
+
+**Access the application:**
+- Frontend: http://localhost:80
+- Backend API: http://localhost:8000
+
+### Environment Variables
+
+Copy `.env.example` to `.env` for development (safe defaults included):
+
+```bash
+cp .env.example .env
+```
+
+For production, use `.env.production.example` as a template:
+
+```bash
+cp .env.production.example .env
+# Then edit .env and fill in secure values
+```
+
+**Required variables:**
+- `ALPHA_VANTAGE_API_KEY`: Get from https://www.alphavantage.co/support/#api-key (free tier available)
+
+**Optional variables** (defaults provided for development):
+- `POSTGRES_PASSWORD`: Database password (default: papertrade_dev_password)
+- `SECRET_KEY`: App secret key (default: dev-secret-key-change-in-production)
+
+**Production-only variables:**
+- `APP_LOG_LEVEL`: Logging level (default: INFO)
+- Generate secure secrets:
+  ```bash
+  # PostgreSQL password
+  openssl rand -base64 32
+  
+  # Application secret key
+  python -c "import secrets; print(secrets.token_urlsafe(32))"
+  ```
+
+### Docker Commands
+
+```bash
+# Development
+task docker:up:all          # Start all services (PostgreSQL, Redis, Backend, Frontend)
+task docker:build           # Rebuild development images
+task docker:logs            # View all logs
+task docker:logs:backend    # Backend logs only
+task docker:logs:frontend   # Frontend logs only
+task docker:restart         # Restart all services
+task docker:restart:backend # Restart backend only
+task docker:restart:frontend # Restart frontend only
+
+# Production
+task docker:build:prod      # Build production images
+task docker:up:prod         # Start production stack
+task docker:down:prod       # Stop production stack
+
+# Maintenance
+task docker:down            # Stop all services
+task docker:clean           # Remove volumes (⚠️ deletes data)
+```
+
+### Hot-Reload in Development
+
+Both backend and frontend support hot-reload when running in Docker development mode:
+
+- **Backend**: File changes in `./backend/src` automatically restart the uvicorn server
+- **Frontend**: File changes in `./frontend/src` trigger Vite's Hot Module Replacement (HMR)
+
+No need to rebuild images during development - just edit and save!
+
+### Troubleshooting
+
+**Services won't start:**
+```bash
+# Check container status
+docker compose ps
+
+# View detailed logs
+docker compose logs backend
+docker compose logs frontend
+
+# Restart services
+task docker:restart
+```
+
+**Database connection errors:**
+```bash
+# Ensure PostgreSQL is healthy
+docker compose ps db
+
+# Reset database (⚠️ deletes all data)
+task docker:clean
+task docker:up:all
+```
+
+**Port conflicts:**
+
+If ports 5432, 6379, 8000, or 5173 are already in use:
+
+```bash
+# Find and stop conflicting processes
+lsof -ti:5432 | xargs kill -9  # PostgreSQL
+lsof -ti:6379 | xargs kill -9  # Redis
+lsof -ti:8000 | xargs kill -9  # Backend
+lsof -ti:5173 | xargs kill -9  # Frontend
+```
+
+Or modify the port mappings in `docker-compose.yml`.
+
+**Backend hot-reload not working:**
+
+If file changes don't trigger backend restarts:
+1. Ensure you're editing files in `./backend/src/` (mounted volume)
+2. Check backend logs: `docker compose logs backend --tail 50`
+3. Verify watchfiles is working: Look for "Watching for file changes" in logs
+4. Try restarting: `task docker:restart:backend`
+
+**Frontend hot-reload not working:**
+
+If Vite HMR isn't working:
+1. Check browser console for HMR connection errors
+2. Verify frontend logs: `docker compose logs frontend --tail 50`
+3. Try a hard refresh: Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (Mac)
+4. Restart frontend: `task docker:restart:frontend`
+
+### Image Sizes
+
+Development and production images are optimized differently:
+
+| Image | Type | Approximate Size |
+|-------|------|------------------|
+| Backend (dev) | python:3.12-slim | ~800 MB |
+| Backend (prod) | Multi-stage build | ~400 MB |
+| Frontend (dev) | node:20-alpine + Vite | ~600 MB |
+| Frontend (prod) | nginx:alpine | ~50 MB |
+
+Production images use multi-stage builds to minimize size and attack surface.
+
 ## Project Structure
 
 ```

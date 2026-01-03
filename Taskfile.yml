@@ -330,6 +330,40 @@ tasks:
       - task: test:frontend
       - task: test:e2e
 
+  test:docker:dev:
+    desc: "Test Docker development setup (health checks and connectivity)"
+    cmds:
+      - echo "Testing Docker development setup..."
+      - task: docker:down
+      - task: docker:clean
+      - task: docker:up:all
+      - sleep 15
+      - echo "Checking service health..."
+      - docker compose ps
+      - echo "Testing backend health endpoint..."
+      - curl -f http://localhost:8000/health || (echo "❌ Backend health check failed" && exit 1)
+      - echo "Testing frontend accessibility..."
+      - curl -f http://localhost:5173/ || (echo "❌ Frontend not accessible" && exit 1)
+      - echo "✅ Docker development setup working"
+      - echo "Services are running. Use 'task docker:down' to stop them."
+
+  test:docker:prod:
+    desc: "Test Docker production setup (build and health checks)"
+    cmds:
+      - echo "Testing Docker production setup..."
+      - task: docker:build:prod
+      - docker compose -f docker-compose.prod.yml up -d
+      - sleep 20
+      - echo "Checking production service health..."
+      - docker compose -f docker-compose.prod.yml ps
+      - echo "Testing backend health endpoint..."
+      - curl -f http://localhost:8000/health || (echo "❌ Backend health check failed" && exit 1)
+      - echo "Testing frontend accessibility..."
+      - curl -f http://localhost:80/ || (echo "❌ Frontend not accessible" && exit 1)
+      - echo "✅ Docker production setup working"
+      - echo "Cleaning up production stack..."
+      - docker compose -f docker-compose.prod.yml down
+      - echo "✅ Production test complete"
 
   ci:
     desc: "Run all CI checks locally (same as GitHub Actions)"

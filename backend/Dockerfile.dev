@@ -27,11 +27,10 @@ WORKDIR /app
 COPY --chown=appuser:appuser pyproject.toml README.md ./
 
 # Install dependencies including dev dependencies  
-# Using pip with --trusted-host to work around SSL cert issues in CI
-RUN pip install --no-cache-dir \
-    --trusted-host pypi.org \
-    --trusted-host files.pythonhosted.org \
-    -e ".[dev]"
+# Note: If you encounter SSL certificate errors in your environment (e.g., corporate proxy),
+# you may need to add --trusted-host flags: --trusted-host pypi.org --trusted-host files.pythonhosted.org
+# However, this should NOT be needed in standard Docker environments.
+RUN pip install --no-cache-dir -e ".[dev]"
 
 # Switch to non-root user
 USER appuser
@@ -47,5 +46,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Run with auto-reload enabled
-CMD ["python", "-m", "uvicorn", "papertrade.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"]
+# Using --reload-dir to explicitly watch /app/src for better Docker volume compatibility
+CMD ["python", "-m", "uvicorn", "papertrade.main:app", "--reload", "--reload-dir", "/app/src", "--host", "0.0.0.0", "--port", "8000"]
 

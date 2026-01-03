@@ -124,6 +124,18 @@ The setup process installs:
 - pre-commit hooks
 - Docker services (PostgreSQL, Redis)
 
+### Required Repository Secrets
+
+The following secrets should be configured in the repository for CI/CD and Copilot agents:
+
+- **`ALPHA_VANTAGE_API_KEY`**: API key for market data integration (Phase 2+)
+  - Get a free key at: https://www.alphavantage.co/support/#api-key
+  - Free tier: 5 API calls/min, 500 calls/day
+  - Required for: Market data tests, integration tests with real APIs
+  - Configure at: Repository Settings → Secrets and variables → Actions → New repository secret
+
+**Note**: For local development, copy `.env.example` to `.env` and add your own API key. For production deployments, use `.env.production.example` as a template and configure appropriate secrets management (AWS Secrets Manager, etc.).
+
 ### Branch Management
 1. **Check current branch status** before starting work:
    ```bash
