@@ -295,7 +295,15 @@ task docker:restart
 # Ensure PostgreSQL is healthy
 docker compose ps db
 
-# Reset database (⚠️ deletes all data)
+# Restart only the database service
+docker compose restart db
+
+# If the database volume is corrupted and needs a reset (⚠️ deletes DB data only)
+docker compose down
+docker volume rm papertrade_postgres_data
+task docker:up:all
+
+# Full reset of all Docker data (DB, Redis, etc.) (⚠️ deletes ALL data)
 task docker:clean
 task docker:up:all
 ```
