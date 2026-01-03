@@ -6,7 +6,7 @@ for SQLModel repositories.
 
 import os
 from collections.abc import AsyncGenerator
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -22,7 +22,7 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./papertrade.db")
 # Create async engine
 # echo=True logs all SQL statements (useful for development)
 # SQLite-specific connect_args only applied when using SQLite
-engine_kwargs = {"echo": True}
+engine_kwargs: dict[str, Any] = {"echo": True}
 if "sqlite" in DATABASE_URL:
     engine_kwargs["connect_args"] = {"check_same_thread": False}
 

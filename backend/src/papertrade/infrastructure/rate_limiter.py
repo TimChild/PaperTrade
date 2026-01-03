@@ -105,7 +105,7 @@ class RateLimiter:
 
     def __init__(
         self,
-        redis: Redis | RedisClient,  # type: ignore[type-arg]
+        redis: Redis | RedisClient,  # type: ignore[type-arg]  # Redis generic type parameter not needed for our usage
         key_prefix: str,
         calls_per_minute: int,
         calls_per_day: int,
@@ -191,7 +191,7 @@ class RateLimiter:
         minute_key = self._get_minute_key()
         day_key = self._get_day_key()
 
-        result = await self.redis.eval(  # type: ignore[misc]
+        result = await self.redis.eval(  # type: ignore[misc]  # Redis.eval() has complex Lua script type signature
             self._CONSUME_SCRIPT,
             2,  # Number of keys
             minute_key,

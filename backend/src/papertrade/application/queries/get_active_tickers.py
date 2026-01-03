@@ -77,7 +77,7 @@ class GetActiveTickersHandler:
         # Get distinct tickers that have been traded recently
         stmt = (
             select(TransactionModel.ticker)
-            .where(TransactionModel.ticker.is_not(None))
+            .where(TransactionModel.ticker.is_not(None))  # type: ignore[attr-defined]  # SQLModel field has SQLAlchemy column methods
             .where(TransactionModel.timestamp >= cutoff)
             .distinct()
         )

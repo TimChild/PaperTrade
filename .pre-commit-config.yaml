@@ -66,12 +66,13 @@ repos:
         stages: [pre-push]
 
   # Python - Type checking with Pyright
-  - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.389
+  - repo: local
     hooks:
       - id: pyright
         name: Pyright type check (backend)
-        files: ^backend/
-        additional_dependencies: []
+        entry: bash -c 'cd backend && uv run pyright'
+        language: system
+        files: ^backend/.*\.py$
+        pass_filenames: false
         stages: [pre-push]
-        # Note: This will use the project's pyproject.toml configuration
+        # Note: Uses uv to run pyright with project dependencies

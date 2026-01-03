@@ -115,8 +115,8 @@ async def refresh_active_stocks(config: SchedulerConfig) -> None:
                 logger.info("No active tickers to refresh")
                 return
 
-            # Get market data adapter
-            market_data = get_market_data()
+            # Get market data adapter (pass session)
+            market_data = await get_market_data(session)
 
             # Process tickers in batches
             for batch_num, i in enumerate(

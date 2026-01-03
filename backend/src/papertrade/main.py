@@ -18,7 +18,7 @@ from papertrade.infrastructure.scheduler import (
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):  # type: ignore
+async def lifespan(app: FastAPI):  # type: ignore[misc]  # AsyncGenerator return type is inferred correctly by FastAPI
     """Application lifespan manager - runs on startup and shutdown."""
     # Startup: Initialize database
     await init_db()

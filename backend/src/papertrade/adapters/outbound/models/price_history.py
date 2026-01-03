@@ -44,7 +44,7 @@ class PriceHistoryModel(SQLModel, table=True):
         created_at: When record was inserted (for audit)
     """
 
-    __tablename__ = "price_history"  # type: ignore[assignment]
+    __tablename__ = "price_history"  # type: ignore[assignment]  # SQLModel requires string literal for __tablename__
     __table_args__ = (
         # Unique constraint: one price per ticker per timestamp per interval
         Index(
