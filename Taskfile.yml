@@ -344,3 +344,70 @@ tasks:
     cmds:
       - task: lint
       - echo "✓ Fast checks passed. Run 'task ci' for full suite."
+
+  # =========================================================================
+  # Quick Status & Health Checks
+  # =========================================================================
+  health:
+    desc: "Check health of all running services"
+    cmds:
+      - |
+        echo "🏥 Checking service health..."
+        echo ""
+        curl -f http://localhost:8000/health && echo "  ✅ Backend healthy" || echo "  ❌ Backend down"
+        curl -f http://localhost:5173/ > /dev/null 2>&1 && echo "  ✅ Frontend healthy" || echo "  ❌ Frontend down"
+        docker compose ps | grep -E "(db.*healthy|redis.*healthy)" > /dev/null 2>&1 && echo "  ✅ Docker services healthy" || echo "  ❌ Docker services down"
+
+  status:
+    desc: "Show development environment status"
+    cmds:
+      - echo "📊 Development Environment Status"
+      - echo "=================================="
+      - echo ""
+      - echo "📂 Git Status:"
+      - git status --short | head -10 || echo "  (clean)"
+      - echo ""
+      - echo "🐳 Docker Services:"
+      - docker compose ps
+      - echo ""
+      - echo "🔧 Running Servers:"
+      - lsof -i:8000,5173,5432,6379 2>/dev/null || echo "  No servers running"
+      - echo ""
+      - echo "📋 Recent PRs:"
+      - GH_PAGER="" gh pr list --limit 3 2>/dev/null || echo "  (gh not configured)"
+
+  # =========================================================================
+  # Database Management
+  # =========================================================================
+  db:reset:
+    desc: "Reset database to clean state (WARNING: deletes all data)"
+    cmds:
+      - task: docker:down
+      - task: docker:clean
+      - task: docker:up
+      - echo "✓ Database reset complete"
+
+  db:shell:
+    desc: "Open PostgreSQL shell"
+    cmd: docker compose exec db psql -U papertrade -d papertrade_dev
+
+  db:shell:prod:
+    desc: "Open PostgreSQL shell (production database)"
+    cmd: docker compose -f docker-compose.prod.yml exec db psql -U papertrade -d papertrade
+
+  db:migrate:
+    desc: "Run database migrations"
+    dir: "{{.BACKEND_DIR}}"
+    cmd: uv run alembic upgrade head
+
+  db:migrate:create:
+    desc: "Create a new database migration (usage: task db:migrate:create MESSAGE='description')"
+    dir: "{{.BACKEND_DIR}}"
+    cmd: uv run alembic revision --autogenerate -m "{{.MESSAGE}}"
+
+  db:seed:
+    desc: "Seed database with sample data"
+    dir: "{{.BACKEND_DIR}}"
+    cmds:
+      - uv run python scripts/seed_db.py
+      - echo "✓ Database seeded with sample data"

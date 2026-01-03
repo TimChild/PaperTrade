@@ -1,14 +1,14 @@
-# Task 037: Fix Backend Type Safety Issues
+# Task 037: Fix Backend Type Safety & Enforce in Pre-commit
 
 **Agent**: backend-swe
 **Priority**: HIGH
 **Created**: 2026-01-03
 **Status**: Not Started
-**Estimated Effort**: 2-3 hours
+**Estimated Effort**: 3-4 hours
 
 ## Objective
 
-Achieve 100% type safety in the backend codebase by fixing all 25 pyright errors and removing or properly justifying all `# type: ignore` comments. This ensures maintainability, reduces bugs, and maintains code quality standards.
+Achieve 100% type safety in the backend codebase by fixing all 25 pyright errors, removing or properly justifying all `# type: ignore` comments, and ensuring type checking is enforced in pre-commit hooks and agent environments. This ensures maintainability, reduces bugs, and prevents future type safety regressions.
 
 ## Context
 
@@ -99,19 +99,45 @@ async def get_portfolio(portfolio_id, session):  # type: ignore
     ...
 ```
 
-### 4. Add Type Checking to Pre-commit (if not already)
+### 4. Add Type Checking to Pre-commit
 
-**Update `.pre-commit-config.yaml`** if needed:
+**Update `.pre-commit-config.yaml`**:
 ```yaml
 - repo: local
   hooks:
     - id: pyright
-      name: Pyright type check
+      name: Pyright type check (backend)
       entry: bash -c 'cd backend && uv run pyright'
       language: system
       types: [python]
       pass_filenames: false
+      stages: [pre-push]  # Run on push, not every commit (faster workflow)
 ```
+
+**Why pre-push instead of pre-commit**:
+- Type checking is slower (~1-2 seconds)
+- Runs before pushing, catching issues before CI
+- Doesn't slow down rapid local commits
+- Still prevents type errors from reaching remote
+
+### 5. Update Copilot Agent Environment Setup
+
+**Update `.github/workflows/copilot-setup-steps.yml`**:
+
+Add pyright installation and verification step:
+```yaml
+- name: Verify backend type safety
+  run: |
+    cd backend
+    uv run pyright --stats
+    # Fail if there are any errors
+    if uv run pyright --stats 2>&1 | grep -q "error"; then
+      echo "❌ Type errors detected. Please fix before proceeding."
+      exit 1
+    fi
+```
+
+This ensures all agent environments have type checking enforced from the start.
 
 ## Specific Issues to Address
 
@@ -181,6 +207,33 @@ task test:backend
 
 # Linting clean
 task lint:backend
+
+# Pre-commit hooks work
+git add .
+git commit -m "test: verify pre-commit hooks"
+# Should run pyright and pass
+
+# Verify agent environment setup
+.github/copilot-setup.sh
+# Should complete without type errors
+```
+
+### 4. Test Pre-commit Hook
+```bash
+# Install hooks
+pre-commit install --hook-type pre-push
+
+# Make a dummy change
+echo "# test" >> backend/src/papertrade/main.py
+
+# Try to push (locally, don't actually push)
+git add backend/src/papertrade/main.py
+git commit -m "test: verify type checking"
+git push --dry-run
+# Pyright should run and pass
+
+# Revert test change
+git reset HEAD~1
 ```
 
 ## Success Criteria
@@ -190,11 +243,14 @@ task lint:backend
 - [ ] All tests pass: `task test:backend`
 - [ ] No new linting issues: `task lint:backend`
 - [ ] Type coverage at 100% (no `Any` types except justified)
+- [ ] **Pre-commit hook added** and tested (runs on pre-push)
+- [ ] **Copilot setup workflow updated** with type check verification
 - [ ] CI passes on the PR
 - [ ] Documentation updated if type patterns changed significantly
 
-## Files Likely to Change
+## Files to Change
 
+**Code Files** (type fixes):
 1. `backend/src/papertrade/infrastructure/database.py`
 2. `backend/src/papertrade/infrastructure/scheduler.py`
 3. `backend/src/papertrade/adapters/inbound/api/error_handlers.py`
@@ -205,7 +261,10 @@ task lint:backend
 8. `backend/src/papertrade/main.py`
 9. `backend/src/papertrade/infrastructure/cache/price_cache.py`
 10. `backend/src/papertrade/infrastructure/rate_limiter.py`
-11. `.pre-commit-config.yaml` (if adding pyright hook)
+
+**Configuration Files** (automation):
+11. `.pre-commit-config.yaml` - Add pyright hook
+12. `.github/workflows/copilot-setup-steps.yml` - Add type check verification
 
 ## Non-Goals
 
