@@ -158,13 +158,29 @@ gh pr view 47
 ## Troubleshooting
 
 ### Long CLI Commands
-Terminal hangs with long commands (e.g., PR bodies). Use the `create_file` tool to write content to a temp file first, then reference it:
+Terminal hangs with long commands (e.g., PR bodies with multiple paragraphs). **Always use temp files with `-F` or `--body-file`**:
 
 ```bash
-# After using create_file to write .tmp_body.md
-gh pr create --title "title" --body-file .tmp_body.md
-rm .tmp_body.md
+# 1. Use create_file tool to create temp file
+# create_file: /path/to/repo/.tmp_pr_description.md
+
+# 2. Create PR from temp file and clean up
+GH_PAGER="" gh pr create \
+  --title "fix: description" \
+  --body-file .tmp_pr_description.md && rm .tmp_pr_description.md
+
+# Same pattern for issues
+GH_PAGER="" gh issue create \
+  --title "title" \
+  --body-file .tmp_issue_body.md && rm .tmp_issue_body.md
+
+# For agent tasks
+GH_PAGER="" gh agent-task create \
+  --custom-agent backend-swe \
+  -F agent_tasks/029_task.md
 ```
+
+**Why**: Long command-line strings cause terminal parsing issues and quote escaping problems. Temp files avoid these issues entirely.
 
 ### GH CLI Hangs/Blocks
 **Always use `GH_PAGER=""` prefix for gh commands** to prevent interactive pager from blocking:
