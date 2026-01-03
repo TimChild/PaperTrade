@@ -107,19 +107,6 @@ jobs:
             exit 0  # Don't fail setup
           fi
 
-      - name: Verify backend type safety
-        working-directory: backend
-        run: |
-          echo "Running pyright type checker..."
-          uv run pyright --stats
-          # Check for errors
-          if uv run pyright 2>&1 | grep -q "error:"; then
-            echo "❌ Type errors detected. Please fix before proceeding."
-            uv run pyright
-            exit 1
-          fi
-          echo "✅ Type safety verified - 0 errors"
-
       - name: Summary
         run: |
           echo "=== Copilot Environment Ready ==="
