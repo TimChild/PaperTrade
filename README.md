@@ -336,10 +336,12 @@ Development and production images are optimized differently:
 
 | Image | Type | Approximate Size |
 |-------|------|------------------|
-| Backend (dev) | python:3.12-slim | ~800 MB |
-| Backend (prod) | Multi-stage build | ~400 MB |
-| Frontend (dev) | node:20-alpine + Vite | ~600 MB |
-| Frontend (prod) | nginx:alpine | ~50 MB |
+| Backend (dev) | python:3.12-slim | ~586 MB |
+| Backend (prod) | Multi-stage build | ~186 MB* |
+| Frontend (dev) | node:20-alpine + Vite | ~135 MB |
+| Frontend (prod) | nginx:alpine | ~50 MB* |
+
+*Production image sizes may vary depending on build environment and dependencies.
 
 Production images use multi-stage builds to minimize size and attack surface.
 
