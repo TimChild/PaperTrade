@@ -10,6 +10,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from uuid import uuid4
 
+from sqlalchemy import delete
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -27,27 +28,20 @@ from papertrade.infrastructure.database import async_session_maker, init_db
 
 
 async def clear_existing_data(session: AsyncSession) -> None:
-    """Clear all existing data from the database."""
+    """Clear all existing data from the database using bulk delete operations."""
     print("  🗑️  Clearing existing data...")
 
+    # Use bulk delete operations for efficiency
     # Delete in order to respect foreign key constraints
+
     # First delete transactions (they reference portfolios)
-    result = await session.exec(select(TransactionModel))
-    transactions = result.all()
-    for transaction in transactions:
-        await session.delete(transaction)
+    await session.exec(delete(TransactionModel))
 
     # Then delete portfolios
-    result = await session.exec(select(PortfolioModel))
-    portfolios = result.all()
-    for portfolio in portfolios:
-        await session.delete(portfolio)
+    await session.exec(delete(PortfolioModel))
 
     # Delete price history
-    result = await session.exec(select(PriceHistoryModel))
-    prices = result.all()
-    for price in prices:
-        await session.delete(price)
+    await session.exec(delete(PriceHistoryModel))
 
     await session.commit()
     print("    ✓ Existing data cleared")
@@ -59,82 +53,39 @@ async def seed_portfolios(session: AsyncSession) -> None:
 
     # Use a consistent user_id for all sample portfolios
     user_id = uuid4()
-
-    # Portfolio 1: Beginner's Portfolio
-    portfolio1_id = uuid4()
-    transaction1_id = uuid4()
+    # Use single timestamp for all portfolios
     now = datetime.now(UTC)
 
-    portfolio1 = Portfolio(
-        id=portfolio1_id,
-        user_id=user_id,
-        name="Beginner's Portfolio",
-        created_at=now,
-    )
+    # Define portfolio configurations
+    portfolio_configs = [
+        ("Beginner's Portfolio", Decimal("10000.00")),
+        ("Tech Growth Portfolio", Decimal("50000.00")),
+        ("Dividend Income Portfolio", Decimal("100000.00")),
+    ]
 
-    transaction1 = Transaction(
-        id=transaction1_id,
-        portfolio_id=portfolio1_id,
-        transaction_type=TransactionType.DEPOSIT,
-        timestamp=now,
-        cash_change=Money(Decimal("10000.00"), "USD"),
-        notes="Initial portfolio deposit",
-    )
+    for name, initial_amount in portfolio_configs:
+        portfolio_id = uuid4()
+        transaction_id = uuid4()
 
-    # Save portfolio and transaction
-    session.add(PortfolioModel.from_domain(portfolio1))
-    session.add(TransactionModel.from_domain(transaction1))
-    print(f"  ✓ Created: {portfolio1.name} (${10000.00})")
+        portfolio = Portfolio(
+            id=portfolio_id,
+            user_id=user_id,
+            name=name,
+            created_at=now,
+        )
 
-    # Portfolio 2: Tech Growth Portfolio
-    portfolio2_id = uuid4()
-    transaction2_id = uuid4()
-    now2 = datetime.now(UTC)
+        transaction = Transaction(
+            id=transaction_id,
+            portfolio_id=portfolio_id,
+            transaction_type=TransactionType.DEPOSIT,
+            timestamp=now,
+            cash_change=Money(initial_amount, "USD"),
+            notes="Initial portfolio deposit",
+        )
 
-    portfolio2 = Portfolio(
-        id=portfolio2_id,
-        user_id=user_id,
-        name="Tech Growth Portfolio",
-        created_at=now2,
-    )
-
-    transaction2 = Transaction(
-        id=transaction2_id,
-        portfolio_id=portfolio2_id,
-        transaction_type=TransactionType.DEPOSIT,
-        timestamp=now2,
-        cash_change=Money(Decimal("50000.00"), "USD"),
-        notes="Initial portfolio deposit",
-    )
-
-    session.add(PortfolioModel.from_domain(portfolio2))
-    session.add(TransactionModel.from_domain(transaction2))
-    print(f"  ✓ Created: {portfolio2.name} (${50000.00})")
-
-    # Portfolio 3: Dividend Income Portfolio
-    portfolio3_id = uuid4()
-    transaction3_id = uuid4()
-    now3 = datetime.now(UTC)
-
-    portfolio3 = Portfolio(
-        id=portfolio3_id,
-        user_id=user_id,
-        name="Dividend Income Portfolio",
-        created_at=now3,
-    )
-
-    transaction3 = Transaction(
-        id=transaction3_id,
-        portfolio_id=portfolio3_id,
-        transaction_type=TransactionType.DEPOSIT,
-        timestamp=now3,
-        cash_change=Money(Decimal("100000.00"), "USD"),
-        notes="Initial portfolio deposit",
-    )
-
-    session.add(PortfolioModel.from_domain(portfolio3))
-    session.add(TransactionModel.from_domain(transaction3))
-    print(f"  ✓ Created: {portfolio3.name} (${100000.00})")
+        session.add(PortfolioModel.from_domain(portfolio))
+        session.add(TransactionModel.from_domain(transaction))
+        print(f"  ✓ Created: {name} (${initial_amount})")
 
     await session.commit()
 
