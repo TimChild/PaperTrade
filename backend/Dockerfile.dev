@@ -27,10 +27,14 @@ WORKDIR /app
 COPY --chown=appuser:appuser pyproject.toml README.md ./
 
 # Install dependencies including dev dependencies  
-# Note: If you encounter SSL certificate errors in your environment (e.g., corporate proxy),
-# you may need to add --trusted-host flags: --trusted-host pypi.org --trusted-host files.pythonhosted.org
-# However, this should NOT be needed in standard Docker environments.
-RUN pip install --no-cache-dir -e ".[dev]"
+# Note: In CI/CD environments (GitHub Actions), SSL certificate verification may fail
+# due to self-signed certificates in the certificate chain. The --trusted-host flags
+# are a workaround for this issue and should NOT be needed in standard Docker environments.
+# For production, use the production Dockerfile which doesn't include these flags.
+RUN pip install --no-cache-dir \
+    --trusted-host pypi.org \
+    --trusted-host files.pythonhosted.org \
+    -e ".[dev]"
 
 # Switch to non-root user
 USER appuser
