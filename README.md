@@ -305,11 +305,14 @@ task docker:up:all
 If ports 5432, 6379, 8000, or 5173 are already in use:
 
 ```bash
-# Find and stop conflicting processes
-lsof -ti:5432 | xargs kill -9  # PostgreSQL
-lsof -ti:6379 | xargs kill -9  # Redis
-lsof -ti:8000 | xargs kill -9  # Backend
-lsof -ti:5173 | xargs kill -9  # Frontend
+# Find and stop conflicting processes (graceful shutdown first)
+lsof -ti:5432 | xargs kill     # PostgreSQL (SIGTERM)
+lsof -ti:6379 | xargs kill     # Redis (SIGTERM)
+lsof -ti:8000 | xargs kill     # Backend (SIGTERM)
+lsof -ti:5173 | xargs kill     # Frontend (SIGTERM)
+
+# If processes don't stop, force kill as last resort
+lsof -ti:5432 | xargs kill -9  # Force kill if needed
 ```
 
 Or modify the port mappings in `docker-compose.yml`.
