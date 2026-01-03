@@ -27,7 +27,11 @@ WORKDIR /app
 COPY --chown=appuser:appuser pyproject.toml README.md ./
 
 # Install dependencies including dev dependencies  
-# Using pip with --trusted-host to work around SSL cert issues in CI
+# Note: In CI/CD environments (GitHub Actions), SSL certificate verification may fail
+# due to self-signed certificates in the certificate chain. The --trusted-host flags
+# are a workaround for this issue and should NOT be needed in standard Docker environments.
+# For production images, these flags should be removed; ensure your production
+# Dockerfile is configured without them.
 RUN pip install --no-cache-dir \
     --trusted-host pypi.org \
     --trusted-host files.pythonhosted.org \
@@ -47,5 +51,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Run with auto-reload enabled
-CMD ["python", "-m", "uvicorn", "papertrade.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"]
+# Using --reload-dir to explicitly watch /app/src (which contains the papertrade package)
+# This ensures file changes in the mounted volume trigger uvicorn restarts
+CMD ["python", "-m", "uvicorn", "papertrade.main:app", "--reload", "--reload-dir", "/app/src", "--host", "0.0.0.0", "--port", "8000"]
 

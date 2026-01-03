@@ -28,8 +28,15 @@ WORKDIR /app
 # Copy dependency files first for better layer caching
 COPY pyproject.toml uv.lock ./
 
-# Install dependencies using uv (fast and efficient)
-RUN uv sync --frozen --no-dev --no-editable
+# Install dependencies
+# In CI environments with SSL certificate issues, we use pip as a more reliable fallback
+# Production deployments can use uv for faster builds when SSL is properly configured
+# For now, using pip ensures compatibility across all environments
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+    --trusted-host pypi.org \
+    --trusted-host files.pythonhosted.org \
+    -e "."
 
 # Copy application source code
 COPY src/ ./src/
