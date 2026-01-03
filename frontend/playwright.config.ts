@@ -38,15 +38,19 @@ export default defineConfig({
   /* Run your local dev server before starting the tests */
   webServer: [
     {
-      command: 'cd ../backend && python3 -m uvicorn papertrade.main:app --port 8000',
+      command: 'cd ../backend && uv run uvicorn papertrade.main:app --port 8000',
       port: 8000,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: true, // Allow reusing server in CI and locally
       timeout: 120 * 1000,
+      env: {
+        DATABASE_URL: 'postgresql://papertrade:papertrade_dev_password@localhost:5432/papertrade_dev',
+        REDIS_URL: 'redis://localhost:6379/0',
+      },
     },
     {
       command: 'npm run dev',
       port: 5173,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: true,
       timeout: 120 * 1000,
     },
   ],
