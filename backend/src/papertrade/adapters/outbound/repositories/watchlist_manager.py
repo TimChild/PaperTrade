@@ -141,7 +141,7 @@ class WatchlistManager:
             .where(TickerWatchlistModel.is_active == True)  # type: ignore[arg-type]  # noqa: E712  # SQLAlchemy requires == True for bool columns
             .where(
                 (TickerWatchlistModel.next_refresh_at.is_(None))  # type: ignore[attr-defined]  # SQLModel field has SQLAlchemy column methods
-                | (TickerWatchlistModel.next_refresh_at <= now)  # type: ignore[operator]  # SQLAlchemy allows datetime comparison with None in OR expressions
+                | (TickerWatchlistModel.next_refresh_at <= now)  # type: ignore[operator]  # SQLAlchemy column comparison in OR expression with datetime and None
             )
             .order_by(
                 TickerWatchlistModel.priority.asc(),  # type: ignore[attr-defined]  # SQLModel field has SQLAlchemy column methods
