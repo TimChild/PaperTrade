@@ -1,7 +1,5 @@
 # Copilot Instructions for PaperTrade
 
-> ⚠️ **TEMPORARY**: This file is a placeholder and will be significantly improved by the `copilot-instructions-updater` agent once the project foundations are established.
-
 ## Overview
 
 PaperTrade is a stock market emulation platform where users can practice trading strategies without risking real money. We follow **Modern Software Engineering** principles (Dave Farley) with a focus on Clean Architecture, testability, and iterative development.

@@ -1,6 +1,6 @@
 # PaperTrade Development Progress
 
-**Last Updated**: January 2, 2026
+**Last Updated**: January 3, 2026
 
 ## Current Status
 
@@ -9,24 +9,51 @@
 | Phase 1: The Ledger | ✅ Complete | 262 tests, 6 days |
 | Phase 2a: Current Prices | ✅ Complete | 435+ tests, 4 days |
 | Phase 2b: Historical Data | ✅ Complete | 460+ tests, 1 day |
-| Infrastructure | ✅ Enhanced | Docker, CI/CD, E2E testing |
-| Quality Improvements | ✅ Complete | UI fixes, deprecations resolved |
+| Infrastructure | ✅ Production-Ready | Docker, CI/CD, E2E testing |
+| Quality Improvements | ✅ Complete | All tests passing |
 
-### Recent Work (Jan 2, 2026)
-- ✅ **Infrastructure**: Full Docker containerization (PR #47)
-- ✅ **UI Fix**: $NaN price display issue resolved (PR #48)
-- ✅ **Code Quality**: React act() warnings fixed (PR #50)
-- ✅ **Backend**: SQLAlchemy deprecations resolved - 129 warnings → 0 (PR #49)
-- ✅ **E2E Testing**: Playwright testing procedure established
-- ✅ All 403 tests passing (402 backend + 1 pending + 81 frontend)
+### Recent Work (Jan 3, 2026)
+- ✅ **E2E Infrastructure**: Port conflicts resolved, simplified architecture (PR #55)
+- ✅ **Backend Cache Fix**: Timestamp handling for cache freshness (PR #55)
+- ✅ **Test Quality**: Added test IDs, removed selector ambiguity (PR #55)
+- ✅ All 499 tests passing (418 backend + 81 frontend) + E2E infrastructure working
 
 ### Active Work
-- Task #041: Fix cache source attribution test (minor, non-blocking)
+- 🔄 **Task #040**: Fix E2E portfolio creation bugs (4 failing tests - agent in progress)
+  - Agent session: PR #56
+  - Root cause: User ID persistence and form validation issues
+  - Expected completion: 2-4 hours
 
 ### Next Up
 - Phase 3: Portfolio Analytics & Backtesting
 - Alpha Vantage TIME_SERIES_DAILY integration (optional enhancement)
 - Production deployment with Docker
+
+---
+
+## E2E Testing & Infrastructure (Jan 3, 2026)
+
+**Status**: Infrastructure Complete, Application Bugs In Progress
+
+**E2E Infrastructure Improvements** (PR #55):
+- ✅ Removed Playwright webServer duplication - now uses Docker Compose exclusively
+- ✅ Fixed backend cache timestamp bug (trading day close → current time)
+- ✅ Added test IDs to eliminate selector ambiguity (`data-testid` attributes)
+- ✅ Updated CI workflow to use Docker Compose for all services
+- ✅ Simplified E2E test setup - single source of truth
+- ✅ 418 backend tests passing (was 417 failed, 1 passing)
+- ✅ E2E tests now run successfully and connect to services
+
+**E2E Application Bugs** (Task #040 - In Progress):
+- 🔄 4 E2E tests failing due to portfolio creation bugs
+- 🔄 Root cause: User ID persistence and form validation
+- 🔄 Agent working on fixes (PR #56)
+- Expected: All green CI once portfolio creation is fixed
+
+**Key Learnings**:
+- Always use specific test IDs over regex selectors
+- Docker Compose > Playwright webServer for full-stack tests
+- E2E infrastructure vs application bugs are different concerns
 
 ---
 
