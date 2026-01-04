@@ -1,7 +1,7 @@
 """Pytest configuration and shared fixtures."""
 
 from collections.abc import AsyncGenerator
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import pytest
 import pytest_asyncio
@@ -52,14 +52,20 @@ def client(test_engine: AsyncEngine) -> TestClient:
     """Create a test client with test database and in-memory market data.
 
     Overrides the application's database session to use an in-memory test
-    database and the market data adapter to use an in-memory implementation.
+    database, the market data adapter to use an in-memory implementation,
+    and the auth adapter to use an in-memory implementation.
     This ensures integration tests are fast and don't require external
-    dependencies (Redis, API keys).
+    dependencies (Redis, API keys, Clerk).
     """
-    from papertrade.adapters.inbound.api.dependencies import get_market_data
+    from papertrade.adapters.auth.in_memory_adapter import InMemoryAuthAdapter
+    from papertrade.adapters.inbound.api.dependencies import (
+        get_auth_port,
+        get_market_data,
+    )
     from papertrade.adapters.outbound.market_data.in_memory_adapter import (
         InMemoryMarketDataAdapter,
     )
+    from papertrade.application.ports.auth_port import AuthenticatedUser
 
     async def get_test_session() -> AsyncGenerator[AsyncSession, None]:
         """Override session dependency to use test database."""
@@ -119,21 +125,68 @@ def client(test_engine: AsyncEngine) -> TestClient:
         adapter.seed_prices(test_prices)
         return adapter
 
+    def get_test_auth_port() -> InMemoryAuthAdapter:
+        """Override auth port dependency to use in-memory adapter.
+
+        Creates a singleton adapter pre-configured with a test user and token.
+        Tests can use the default test user or add additional users as needed.
+
+        The adapter is created once and cached to ensure all requests in a
+        test use the same adapter instance.
+        """
+        # Use a closure variable to cache the adapter instance
+        if not hasattr(get_test_auth_port, "_adapter"):
+            adapter = InMemoryAuthAdapter()
+
+            # Add a default test user with a known token
+            # This matches the default_user_id fixture for backward compatibility
+            test_user = AuthenticatedUser(
+                id="test-user-default",
+                email="test@papertrade.example",
+            )
+            adapter.add_user(test_user, "test-token-default")
+
+            get_test_auth_port._adapter = adapter  # type: ignore[attr-defined]
+
+        return get_test_auth_port._adapter  # type: ignore[attr-defined, return-value]
+
     # Override dependencies
     app.dependency_overrides[get_session] = get_test_session
     app.dependency_overrides[get_market_data] = get_test_market_data
+    app.dependency_overrides[get_auth_port] = get_test_auth_port
 
     with TestClient(app) as test_client:
         yield test_client
 
-    # Clean up overrides
+    # Clean up overrides and cached adapter
     app.dependency_overrides.clear()
+    if hasattr(get_test_auth_port, "_adapter"):
+        delattr(get_test_auth_port, "_adapter")
 
 
 @pytest.fixture
 def default_user_id() -> UUID:
-    """Provide a default user ID for tests."""
-    return uuid4()
+    """Provide a default user ID for tests.
+
+    This creates a deterministic UUID from the default test user ID.
+    This maintains backward compatibility with existing tests while
+    supporting the new authentication system.
+    """
+    from uuid import NAMESPACE_DNS, uuid5
+
+    # Create UUID from the same user ID used in the test auth adapter
+    return uuid5(NAMESPACE_DNS, "test-user-default")
+
+
+@pytest.fixture
+def auth_headers() -> dict[str, str]:
+    """Provide authentication headers for test requests.
+
+    Returns headers with a valid Bearer token for the default test user.
+    This replaces the old X-User-Id header approach.
+    """
+    return {"Authorization": "Bearer test-token-default"}
+
 
 
 @pytest.fixture(scope="module")

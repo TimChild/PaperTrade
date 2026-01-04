@@ -78,3 +78,18 @@ class InsufficientSharesError(BusinessRuleViolationError):
     """Raised when attempting to sell more shares than owned."""
 
     pass
+
+
+# Authentication Exceptions
+
+
+class AuthenticationError(DomainException):
+    """Base exception for authentication-related errors."""
+
+    pass
+
+
+class InvalidTokenError(AuthenticationError):
+    """Raised when a token is invalid, expired, or malformed."""
+
+    pass

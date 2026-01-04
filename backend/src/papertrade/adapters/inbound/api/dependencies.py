@@ -8,9 +8,12 @@ from typing import Annotated
 from uuid import UUID
 
 import httpx
-from fastapi import Depends, Header
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from redis.asyncio import Redis
 
+from papertrade.adapters.auth.clerk_adapter import ClerkAuthAdapter
+from papertrade.adapters.auth.in_memory_adapter import InMemoryAuthAdapter
 from papertrade.adapters.outbound.database.portfolio_repository import (
     SQLModelPortfolioRepository,
 )
@@ -23,10 +26,15 @@ from papertrade.adapters.outbound.market_data.alpha_vantage_adapter import (
 from papertrade.adapters.outbound.repositories.price_repository import (
     PriceRepository,
 )
+from papertrade.application.ports.auth_port import AuthenticatedUser, AuthPort
 from papertrade.application.ports.market_data_port import MarketDataPort
+from papertrade.domain.exceptions import InvalidTokenError
 from papertrade.infrastructure.cache.price_cache import PriceCache
 from papertrade.infrastructure.database import SessionDep
 from papertrade.infrastructure.rate_limiter import RateLimiter
+
+# Security scheme for Bearer token authentication
+security = HTTPBearer()
 
 
 def get_portfolio_repository(
@@ -71,44 +79,84 @@ def get_price_repository(
     return PriceRepository(session)
 
 
-async def get_current_user_id(
-    x_user_id: Annotated[str | None, Header()] = None,
-) -> "UUID":
-    """Get current user ID from request headers.
+def get_auth_port() -> AuthPort:
+    """Get authentication port implementation.
 
-    This is a mock implementation for Phase 1. In production, this would:
-    - Validate JWT token
-    - Extract user ID from token
-    - Raise 401 if unauthorized
-
-    For now, we accept a user ID via X-User-Id header for testing.
-
-    Args:
-        x_user_id: User ID from X-User-Id header
+    Returns the appropriate AuthPort implementation based on environment
+    configuration. Uses ClerkAuthAdapter for production with a valid
+    Clerk secret key, or InMemoryAuthAdapter for testing.
 
     Returns:
-        User UUID
+        AuthPort implementation (ClerkAuthAdapter or InMemoryAuthAdapter)
+    """
+    clerk_secret_key = os.getenv("CLERK_SECRET_KEY", "")
+
+    # Use Clerk adapter if secret key is configured
+    if clerk_secret_key and clerk_secret_key != "test":
+        return ClerkAuthAdapter(secret_key=clerk_secret_key)
+
+    # Fall back to in-memory adapter for testing
+    # In test environments, this will be overridden with a properly
+    # configured InMemoryAuthAdapter
+    return InMemoryAuthAdapter()
+
+
+async def get_current_user(
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+    auth: Annotated[AuthPort, Depends(get_auth_port)],
+) -> AuthenticatedUser:
+    """Extract and verify user from Authorization header.
+
+    Validates the Bearer token and returns the authenticated user.
+    This dependency can be used in route handlers to require authentication.
+
+    Args:
+        credentials: Bearer token credentials from Authorization header
+        auth: Authentication port implementation
+
+    Returns:
+        AuthenticatedUser: Verified user identity
 
     Raises:
-        HTTPException: 400 if X-User-Id header is missing or invalid
+        HTTPException: 401 if authentication fails
     """
-    from uuid import UUID
-
-    from fastapi import HTTPException
-
-    if not x_user_id:
-        raise HTTPException(
-            status_code=400,
-            detail="X-User-Id header is required (authentication not yet implemented)",
-        )
-
     try:
-        return UUID(x_user_id)
-    except ValueError as e:
+        return await auth.verify_token(credentials.credentials)
+    except InvalidTokenError as e:
         raise HTTPException(
-            status_code=400,
-            detail=f"Invalid X-User-Id header: must be a valid UUID, got '{x_user_id}'",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid authentication credentials: {str(e)}",
+            headers={"WWW-Authenticate": "Bearer"},
         ) from e
+
+
+async def get_current_user_id(
+    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+) -> UUID:
+    """Get current user ID as UUID from authenticated user.
+
+    This is a compatibility layer that converts the Clerk user ID (string)
+    to a UUID. This allows existing code that expects UUID user IDs to
+    continue working during the migration.
+
+    For new code, prefer using get_current_user directly to get the
+    AuthenticatedUser object.
+
+    Args:
+        current_user: Authenticated user from get_current_user
+
+    Returns:
+        UUID: User ID as UUID (hashed from Clerk user ID string)
+
+    Note:
+        This creates a deterministic UUID from the Clerk user ID string.
+        The same Clerk ID will always produce the same UUID.
+    """
+    from uuid import NAMESPACE_DNS, uuid5
+
+    # Create deterministic UUID from Clerk user ID
+    # This ensures the same Clerk user ID always maps to the same UUID
+    return uuid5(NAMESPACE_DNS, current_user.id)
 
 
 # Global singletons for market data dependencies
@@ -198,5 +246,7 @@ TransactionRepositoryDep = Annotated[
     SQLModelTransactionRepository, Depends(get_transaction_repository)
 ]
 PriceRepositoryDep = Annotated[PriceRepository, Depends(get_price_repository)]
+AuthPortDep = Annotated[AuthPort, Depends(get_auth_port)]
+CurrentUser = Annotated[AuthenticatedUser, Depends(get_current_user)]
 CurrentUserDep = Annotated[UUID, Depends(get_current_user_id)]
 MarketDataDep = Annotated[MarketDataPort, Depends(get_market_data)]

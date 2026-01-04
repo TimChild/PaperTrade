@@ -10,13 +10,14 @@ from fastapi.testclient import TestClient
 
 def test_get_transactions_returns_initial_deposit(
     client: TestClient,
+    auth_headers: dict[str, str],
     default_user_id: UUID,
 ) -> None:
     """Test that transaction history includes the initial deposit."""
     # Create portfolio
     response = client.post(
         "/api/v1/portfolios",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={
             "name": "Transaction Test",
             "initial_deposit": "25000.00",
@@ -28,7 +29,7 @@ def test_get_transactions_returns_initial_deposit(
     # Get transactions
     tx_response = client.get(
         f"/api/v1/portfolios/{portfolio_id}/transactions",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
     )
 
     assert tx_response.status_code == 200
@@ -43,13 +44,14 @@ def test_get_transactions_returns_initial_deposit(
 
 def test_get_transactions_returns_all_trades(
     client: TestClient,
+    auth_headers: dict[str, str],
     default_user_id: UUID,
 ) -> None:
     """Test transaction history includes all deposits and trades."""
     # Create portfolio with sufficient funds
     response = client.post(
         "/api/v1/portfolios",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={
             "name": "Transaction Test",
             "initial_deposit": "50000.00",  # Increased to cover both trades
@@ -62,7 +64,7 @@ def test_get_transactions_returns_all_trades(
     # AAPL: 50 shares * $150 = $7,500
     trade1_response = client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={"action": "BUY", "ticker": "AAPL", "quantity": "50"},
     )
     assert trade1_response.status_code == 201
@@ -70,7 +72,7 @@ def test_get_transactions_returns_all_trades(
     # GOOGL: 1 share * $2,800 = $2,800 (reduced quantity to fit budget)
     trade2_response = client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={"action": "BUY", "ticker": "GOOGL", "quantity": "1"},
     )
     assert trade2_response.status_code == 201
@@ -78,7 +80,7 @@ def test_get_transactions_returns_all_trades(
     # Get transactions
     tx_response = client.get(
         f"/api/v1/portfolios/{portfolio_id}/transactions",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
     )
 
     assert tx_response.status_code == 200
@@ -96,13 +98,14 @@ def test_get_transactions_returns_all_trades(
 
 def test_transactions_include_trade_details(
     client: TestClient,
+    auth_headers: dict[str, str],
     default_user_id: UUID,
 ) -> None:
     """Test that trade transactions include ticker, quantity, and price."""
     # Create portfolio
     response = client.post(
         "/api/v1/portfolios",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={
             "name": "Detail Test",
             "initial_deposit": "50000.00",
@@ -114,14 +117,14 @@ def test_transactions_include_trade_details(
     # Execute a trade (price will be $150 from seeded test data for AAPL)
     client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={"action": "BUY", "ticker": "AAPL", "quantity": "25"},
     )
 
     # Get transactions
     tx_response = client.get(
         f"/api/v1/portfolios/{portfolio_id}/transactions",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
     )
 
     transactions = tx_response.json()["transactions"]
@@ -139,13 +142,14 @@ def test_transactions_include_trade_details(
 
 def test_deposit_and_withdrawal_in_transaction_history(
     client: TestClient,
+    auth_headers: dict[str, str],
     default_user_id: UUID,
 ) -> None:
     """Test that deposits and withdrawals appear in transaction history."""
     # Create portfolio
     response = client.post(
         "/api/v1/portfolios",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={
             "name": "Cash Flow Test",
             "initial_deposit": "10000.00",
@@ -157,21 +161,21 @@ def test_deposit_and_withdrawal_in_transaction_history(
     # Additional deposit
     client.post(
         f"/api/v1/portfolios/{portfolio_id}/deposit",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={"amount": "5000.00", "currency": "USD"},
     )
 
     # Withdrawal
     client.post(
         f"/api/v1/portfolios/{portfolio_id}/withdraw",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={"amount": "2000.00", "currency": "USD"},
     )
 
     # Get transactions
     tx_response = client.get(
         f"/api/v1/portfolios/{portfolio_id}/transactions",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
     )
 
     transactions = tx_response.json()["transactions"]
@@ -186,13 +190,14 @@ def test_deposit_and_withdrawal_in_transaction_history(
 
 def test_sell_transaction_appears_in_history(
     client: TestClient,
+    auth_headers: dict[str, str],
     default_user_id: UUID,
 ) -> None:
     """Test that sell transactions appear correctly in history."""
     # Create portfolio
     response = client.post(
         "/api/v1/portfolios",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={
             "name": "Sell Test",
             "initial_deposit": "50000.00",
@@ -204,21 +209,21 @@ def test_sell_transaction_appears_in_history(
     # Buy shares (price will be $150 from seeded test data for AAPL)
     client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={"action": "BUY", "ticker": "AAPL", "quantity": "100"},
     )
 
     # Sell shares (price will be $150 from seeded test data for AAPL)
     client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={"action": "SELL", "ticker": "AAPL", "quantity": "30"},
     )
 
     # Get transactions
     tx_response = client.get(
         f"/api/v1/portfolios/{portfolio_id}/transactions",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
     )
 
     transactions = tx_response.json()["transactions"]
@@ -236,13 +241,14 @@ def test_sell_transaction_appears_in_history(
 
 def test_transaction_pagination(
     client: TestClient,
+    auth_headers: dict[str, str],
     default_user_id: UUID,
 ) -> None:
     """Test that transaction list supports pagination."""
     # Create portfolio
     response = client.post(
         "/api/v1/portfolios",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={
             "name": "Pagination Test",
             "initial_deposit": "100000.00",
@@ -255,7 +261,7 @@ def test_transaction_pagination(
     for _i in range(10):
         client.post(
             f"/api/v1/portfolios/{portfolio_id}/trades",
-            headers={"X-User-Id": str(default_user_id)},
+            headers=auth_headers,
             json={
                 "action": "BUY",
                 "ticker": "AAPL",
@@ -266,7 +272,7 @@ def test_transaction_pagination(
     # Get first page (limit=5)
     page1_response = client.get(
         f"/api/v1/portfolios/{portfolio_id}/transactions?limit=5&offset=0",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
     )
     page1_data = page1_response.json()
     assert len(page1_data["transactions"]) == 5
@@ -277,7 +283,7 @@ def test_transaction_pagination(
     # Get second page
     page2_response = client.get(
         f"/api/v1/portfolios/{portfolio_id}/transactions?limit=5&offset=5",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
     )
     page2_data = page2_response.json()
     assert len(page2_data["transactions"]) == 5
