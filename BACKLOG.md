@@ -14,6 +14,21 @@ Minor improvements, tech debt, and enhancements that don't block main developmen
    - Solution: Proper mocking for market data, event-based assertions, split complex tests
    - See: Task #039 (to be created)
 
+2. **Migrate E2E Tests to Test IDs** - ~8-12 hours
+   - **Problem**: Current Playwright tests use text matching (`.getByText()`, `.getByRole()` with name)
+   - **Risk**: Brittle tests that break when UI copy changes; difficult to target specific elements
+   - **Solution**: Add `data-testid` attributes throughout frontend, update all E2E tests to use `.getByTestId()`
+   - **Scope**:
+     - Add test IDs to all interactive elements (buttons, inputs, links, etc.)
+     - Add test IDs to key content areas (portfolio cards, transaction rows, etc.)
+     - Update existing E2E tests: `frontend/tests/e2e/*.spec.ts`
+     - Document test ID naming conventions (e.g., `portfolio-card-{id}`, `trade-form-ticker-input`)
+   - **Benefits**: More reliable tests, easier debugging, clearer test intent
+   - **References**:
+     - Playwright best practices: https://playwright.dev/docs/locators#locate-by-test-id
+     - Testing Library: https://testing-library.com/docs/queries/bytestid/
+   - **Note**: Alpha Vantage provides a `demo` API key for E2E testing (see: https://www.alphavantage.co/documentation/)
+
 ### Code Quality & Linting (LOW PRIORITY)
 
 1. **Fix remaining ruff linting warnings** - ~10 minutes
