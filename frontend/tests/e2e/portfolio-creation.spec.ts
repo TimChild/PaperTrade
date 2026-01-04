@@ -23,8 +23,8 @@ test.describe('Portfolio Creation Flow', () => {
     await createButton.click()
 
     // 4. Fill out form
-    await page.getByLabel(/portfolio name/i).fill('My Test Portfolio')
-    await page.getByLabel(/initial deposit/i).fill('10000')
+    await page.getByTestId('create-portfolio-name-input').fill('My Test Portfolio')
+    await page.getByTestId('create-portfolio-deposit-input').fill('10000')
 
     // 5. Submit
     await page.getByTestId('submit-portfolio-form-btn').click()
@@ -34,7 +34,7 @@ test.describe('Portfolio Creation Flow', () => {
     await page.waitForTimeout(2000)
 
     // 7. Verify portfolio appears by checking for portfolio name heading
-    await expect(page.getByRole('heading', { name: 'My Test Portfolio' })).toBeVisible({
+    await expect(page.getByTestId('portfolio-detail-name')).toHaveText('My Test Portfolio', {
       timeout: 10000,
     })
   })
@@ -50,8 +50,8 @@ test.describe('Portfolio Creation Flow', () => {
     const createButton = page.getByTestId('create-first-portfolio-btn')
     await createButton.click()
 
-    await page.getByLabel(/portfolio name/i).fill('Persistent Portfolio')
-    await page.getByLabel(/initial deposit/i).fill('25000')
+    await page.getByTestId('create-portfolio-name-input').fill('Persistent Portfolio')
+    await page.getByTestId('create-portfolio-deposit-input').fill('25000')
     await page.getByTestId('submit-portfolio-form-btn').click()
 
     // Wait for portfolio to be created
@@ -62,7 +62,7 @@ test.describe('Portfolio Creation Flow', () => {
     await page.waitForLoadState('networkidle')
 
     // Portfolio should still be visible by checking for heading
-    await expect(page.getByRole('heading', { name: 'Persistent Portfolio' })).toBeVisible({
+    await expect(page.getByTestId('portfolio-detail-name')).toHaveText('Persistent Portfolio', {
       timeout: 10000,
     })
   })
@@ -76,12 +76,12 @@ test.describe('Portfolio Creation Flow', () => {
     await createButton.click()
 
     // Try to submit without entering name
-    await page.getByLabel(/initial deposit/i).fill('10000')
+    await page.getByTestId('create-portfolio-deposit-input').fill('10000')
     await page.getByTestId('submit-portfolio-form-btn').click()
 
     // Should see validation error or form should not submit
     // HTML5 validation should kick in
-    await expect(page.getByLabel(/portfolio name/i)).toBeFocused()
+    await expect(page.getByTestId('create-portfolio-name-input')).toBeFocused()
   })
 
   test('should show validation error for invalid deposit amount', async ({ page }) => {
@@ -91,8 +91,8 @@ test.describe('Portfolio Creation Flow', () => {
     const createButton = page.getByTestId('create-first-portfolio-btn')
     await createButton.click()
 
-    await page.getByLabel(/portfolio name/i).fill('Test Portfolio')
-    await page.getByLabel(/initial deposit/i).fill('-1000')
+    await page.getByTestId('create-portfolio-name-input').fill('Test Portfolio')
+    await page.getByTestId('create-portfolio-deposit-input').fill('-1000')
     await page.getByTestId('submit-portfolio-form-btn').click()
 
     // Should see validation error

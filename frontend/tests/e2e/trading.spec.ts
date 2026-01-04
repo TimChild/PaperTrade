@@ -18,29 +18,25 @@ test.describe('Trading Flow', () => {
     const createButton = page.getByTestId('create-first-portfolio-btn')
     await createButton.click()
 
-    await page.getByLabel(/portfolio name/i).fill('Trading Portfolio')
-    await page.getByLabel(/initial deposit/i).fill('50000')
+    await page.getByTestId('create-portfolio-name-input').fill('Trading Portfolio')
+    await page.getByTestId('create-portfolio-deposit-input').fill('50000')
     await page.getByTestId('submit-portfolio-form-btn').click()
 
-    // Wait for portfolio to appear on dashboard
-    await expect(page.getByRole('heading', { name: 'Trading Portfolio' })).toBeVisible({
+    // Wait for portfolio to appear on dashboard/detail page
+    await expect(page.getByTestId('portfolio-detail-name')).toHaveText('Trading Portfolio', {
       timeout: 10000,
     })
 
-    // 2. Navigate to portfolio detail page to access trade form
-    await page.getByRole('link', { name: /trade stocks/i }).click()
-    await page.waitForLoadState('networkidle')
-
-    // Verify we're on the portfolio detail page
+    // 2. Verify we're on the portfolio detail page with trade form
     await expect(page.getByRole('heading', { name: 'Trading Portfolio', level: 1 })).toBeVisible()
     await expect(page.getByRole('heading', { name: 'Execute Trade' })).toBeVisible()
 
-    // 3. Fill in the trade form using accessible role-based selectors
-    await page.getByRole('textbox', { name: /symbol/i }).fill('IBM')
-    await page.getByRole('spinbutton', { name: /quantity/i }).fill('2')
+    // 3. Fill in the trade form using test IDs
+    await page.getByTestId('trade-form-ticker-input').fill('IBM')
+    await page.getByTestId('trade-form-quantity-input').fill('2')
 
     // 4. Execute the buy order
-    const buyButton = page.getByRole('button', { name: /execute buy order/i })
+    const buyButton = page.getByTestId('trade-form-buy-button')
     await expect(buyButton).toBeEnabled()
 
     // Set up dialog handler before clicking to catch success alert
@@ -59,7 +55,7 @@ test.describe('Trading Flow', () => {
     // 5. Verify trade execution results
     // Cash balance should have decreased (IBM price is ~$291.50, so 2 shares ~$583)
     // Verify holdings table shows IBM in a table cell
-    await expect(page.getByRole('cell', { name: 'IBM' })).toBeVisible({ timeout: 5000 })
+    await expect(page.getByTestId('holding-symbol-IBM')).toBeVisible({ timeout: 5000 })
 
     // 6. Verify transaction history shows the buy trade (look for BUY transaction)
     await expect(page.getByText(/buy/i).first()).toBeVisible()
@@ -73,28 +69,24 @@ test.describe('Trading Flow', () => {
     const createButton = page.getByTestId('create-first-portfolio-btn')
     await createButton.click()
 
-    await page.getByLabel(/portfolio name/i).fill('Poor Portfolio')
-    await page.getByLabel(/initial deposit/i).fill('1000')
+    await page.getByTestId('create-portfolio-name-input').fill('Poor Portfolio')
+    await page.getByTestId('create-portfolio-deposit-input').fill('1000')
     await page.getByTestId('submit-portfolio-form-btn').click()
 
-    // Wait for portfolio to appear on dashboard
-    await expect(page.getByRole('heading', { name: 'Poor Portfolio' })).toBeVisible({
+    // Wait for portfolio to appear on detail page
+    await expect(page.getByTestId('portfolio-detail-name')).toHaveText('Poor Portfolio', {
       timeout: 10000,
     })
-
-    // Navigate to portfolio detail page
-    await page.getByRole('link', { name: /trade stocks/i }).click()
-    await page.waitForLoadState('networkidle')
 
     // Verify we're on the portfolio detail page with trade form
     await expect(page.getByRole('heading', { name: 'Execute Trade' })).toBeVisible()
 
     // Try to buy expensive stock with insufficient funds
     // IBM is ~$291.50, so 1000 shares would cost ~$291,500
-    await page.getByRole('textbox', { name: /symbol/i }).fill('IBM')
-    await page.getByRole('spinbutton', { name: /quantity/i }).fill('1000')
+    await page.getByTestId('trade-form-ticker-input').fill('IBM')
+    await page.getByTestId('trade-form-quantity-input').fill('1000')
 
-    const buyButton = page.getByRole('button', { name: /execute buy order/i })
+    const buyButton = page.getByTestId('trade-form-buy-button')
     await expect(buyButton).toBeEnabled()
 
     // Set up dialog handler to catch error message
@@ -117,18 +109,14 @@ test.describe('Trading Flow', () => {
     const createButton = page.getByTestId('create-first-portfolio-btn')
     await createButton.click()
 
-    await page.getByLabel(/portfolio name/i).fill('Holdings Test')
-    await page.getByLabel(/initial deposit/i).fill('30000')
+    await page.getByTestId('create-portfolio-name-input').fill('Holdings Test')
+    await page.getByTestId('create-portfolio-deposit-input').fill('30000')
     await page.getByTestId('submit-portfolio-form-btn').click()
 
-    // Wait for portfolio to appear on dashboard
-    await expect(page.getByRole('heading', { name: 'Holdings Test' })).toBeVisible({
+    // Wait for portfolio to appear on detail page
+    await expect(page.getByTestId('portfolio-detail-name')).toHaveText('Holdings Test', {
       timeout: 10000,
     })
-
-    // Navigate to portfolio detail page
-    await page.getByRole('link', { name: /trade stocks/i }).click()
-    await page.waitForLoadState('networkidle')
 
     // Verify trade form is visible
     await expect(page.getByRole('heading', { name: 'Execute Trade' })).toBeVisible()
@@ -138,10 +126,10 @@ test.describe('Trading Flow', () => {
     await expect(page.getByText(/no holdings/i)).toBeVisible()
 
     // Execute a buy trade
-    await page.getByRole('textbox', { name: /symbol/i }).fill('IBM')
-    await page.getByRole('spinbutton', { name: /quantity/i }).fill('5')
+    await page.getByTestId('trade-form-ticker-input').fill('IBM')
+    await page.getByTestId('trade-form-quantity-input').fill('5')
 
-    const buyButton = page.getByRole('button', { name: /execute buy order/i })
+    const buyButton = page.getByTestId('trade-form-buy-button')
     await expect(buyButton).toBeEnabled()
 
     // Set up dialog handler for success
@@ -156,8 +144,8 @@ test.describe('Trading Flow', () => {
     await page.waitForTimeout(3000)
     await page.waitForLoadState('networkidle')
 
-    // Verify holdings now show IBM stock in table
-    await expect(page.getByRole('cell', { name: 'IBM' })).toBeVisible({ timeout: 5000 })
+    // Verify holdings now show IBM stock in table using test ID
+    await expect(page.getByTestId('holding-symbol-IBM')).toBeVisible({ timeout: 5000 })
 
     // Verify "No holdings" message is gone
     await expect(page.getByText(/no holdings/i)).not.toBeVisible()
