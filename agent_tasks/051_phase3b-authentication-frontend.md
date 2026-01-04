@@ -1,10 +1,10 @@
 # Task 051: Phase 3b Authentication - Frontend Implementation
 
-**Agent**: frontend-swe  
-**Status**: Not Started  
-**Created**: 2026-01-04  
-**Effort**: 1 week  
-**Dependencies**: Task #050 (Backend auth must be complete)  
+**Agent**: frontend-swe
+**Status**: Not Started
+**Created**: 2026-01-04
+**Effort**: 1 week
+**Dependencies**: Task #050 (Backend auth must be complete)
 **Discovery Document**: [agent_progress_docs/2026-01-04_05-55-00_phase3b-auth-discovery.md](../agent_progress_docs/2026-01-04_05-55-00_phase3b-auth-discovery.md)
 
 ## Objective
@@ -24,7 +24,7 @@ Implement authentication UI and state management for PaperTrade frontend. Enable
 
 **Backend API must be complete** (Task #050):
 - POST /auth/register
-- POST /auth/login  
+- POST /auth/login
 - POST /auth/refresh
 - GET /users/me
 - Protected endpoints validate JWT tokens
@@ -42,7 +42,7 @@ interface AuthState {
   refreshToken: string | null
   user: User | null
   isAuthenticated: boolean
-  
+
   setTokens: (access: string, refresh: string) => void
   setUser: (user: User) => void
   logout: () => void
@@ -55,14 +55,14 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       user: null,
       isAuthenticated: false,
-      
-      setTokens: (access, refresh) => 
+
+      setTokens: (access, refresh) =>
         set({ accessToken: access, refreshToken: refresh, isAuthenticated: true }),
-      
-      setUser: (user) => 
+
+      setUser: (user) =>
         set({ user }),
-      
-      logout: () => 
+
+      logout: () =>
         set({ accessToken: null, refreshToken: null, user: null, isAuthenticated: false }),
     }),
     {
@@ -110,26 +110,26 @@ export const authApi = {
   register: async (data: RegisterRequest): Promise<void> => {
     await apiClient.post('/auth/register', data)
   },
-  
+
   login: async (credentials: LoginRequest): Promise<TokenResponse> => {
     // FastAPI OAuth2PasswordRequestForm expects form data
     const formData = new URLSearchParams()
     formData.append('username', credentials.email)
     formData.append('password', credentials.password)
-    
+
     const response = await apiClient.post<TokenResponse>('/auth/login', formData, {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     })
     return response.data
   },
-  
+
   refresh: async (refreshToken: string): Promise<TokenResponse> => {
     const response = await apiClient.post<TokenResponse>('/auth/refresh', {
       refresh_token: refreshToken,
     })
     return response.data
   },
-  
+
   getCurrentUser: async (): Promise<User> => {
     const response = await apiClient.get<User>('/users/me')
     return response.data
@@ -172,24 +172,24 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config
-    
+
     // If 401 and haven't retried yet
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
-      
+
       const { refreshToken, setTokens, logout } = useAuthStore.getState()
-      
+
       if (!refreshToken) {
         logout()
         window.location.href = '/login'
         return Promise.reject(error)
       }
-      
+
       try {
         // Attempt to refresh tokens
         const tokens = await authApi.refresh(refreshToken)
         setTokens(tokens.access_token, tokens.refresh_token)
-        
+
         // Retry original request with new token
         originalRequest.headers.Authorization = `Bearer ${tokens.access_token}`
         return apiClient(originalRequest)
@@ -200,7 +200,7 @@ apiClient.interceptors.response.use(
         return Promise.reject(refreshError)
       }
     }
-    
+
     return Promise.reject(error)
   }
 )
@@ -231,11 +231,11 @@ export function Login() {
     mutationFn: authApi.login,
     onSuccess: async (tokens) => {
       setTokens(tokens.access_token, tokens.refresh_token)
-      
+
       // Fetch user profile
       const user = await authApi.getCurrentUser()
       setUser(user)
-      
+
       navigate('/')
     },
   })
@@ -251,7 +251,7 @@ export function Login() {
         <div>
           <h2 className="text-3xl font-bold text-center">Sign in to PaperTrade</h2>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="email" className="block text-sm font-medium">
@@ -325,20 +325,20 @@ export function Register() {
     mutationFn: authApi.register,
     onSuccess: () => {
       // Redirect to login after successful registration
-      navigate('/login', { 
-        state: { message: 'Registration successful! Please sign in.' } 
+      navigate('/login', {
+        state: { message: 'Registration successful! Please sign in.' }
       })
     },
   })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (password !== confirmPassword) {
       alert('Passwords do not match')
       return
     }
-    
+
     registerMutation.mutate({ email, password })
   }
 
@@ -348,7 +348,7 @@ export function Register() {
         <div>
           <h2 className="text-3xl font-bold text-center">Create your account</h2>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label htmlFor="email" className="block text-sm font-medium">
@@ -456,7 +456,7 @@ function App() {
         {/* Public routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        
+
         {/* Protected routes */}
         <Route
           path="/"
@@ -500,7 +500,7 @@ export function Navigation() {
     <nav className="bg-blue-600 text-white p-4">
       <div className="container mx-auto flex justify-between items-center">
         <h1 className="text-xl font-bold">PaperTrade</h1>
-        
+
         <div className="flex items-center gap-4">
           <span className="text-sm">{user?.email}</span>
           <button
@@ -566,18 +566,18 @@ test('complete authentication flow', async ({ page }) => {
   await page.fill('[data-testid="password-input"]', 'password123')
   await page.fill('[data-testid="confirm-password-input"]', 'password123')
   await page.click('[data-testid="register-button"]')
-  
+
   // Should redirect to login
   await expect(page).toHaveURL('/login')
-  
+
   // Login
   await page.fill('[data-testid="email-input"]', 'test@example.com')
   await page.fill('[data-testid="password-input"]', 'password123')
   await page.click('[data-testid="login-button"]')
-  
+
   // Should redirect to home
   await expect(page).toHaveURL('/')
-  
+
   // Logout
   await page.click('[data-testid="logout-button"]')
   await expect(page).toHaveURL('/login')

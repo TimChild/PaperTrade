@@ -1,10 +1,10 @@
 # Task 050: Phase 3b Authentication - Backend Implementation
 
-**Agent**: backend-swe  
-**Status**: Not Started  
-**Created**: 2026-01-04  
-**Effort**: 1.5-2 weeks  
-**Dependencies**: None  
+**Agent**: backend-swe
+**Status**: Not Started
+**Created**: 2026-01-04
+**Effort**: 1.5-2 weeks
+**Dependencies**: None
 **Discovery Document**: [agent_progress_docs/2026-01-04_05-55-00_phase3b-auth-discovery.md](../agent_progress_docs/2026-01-04_05-55-00_phase3b-auth-discovery.md)
 
 ## Objective
@@ -52,9 +52,9 @@ class User:
     hashed_password: str
     created_at: datetime
     is_active: bool = True
-    
+
     def __init__(self, ...): ...
-    
+
     # Domain logic only - no I/O
 ```
 
@@ -62,13 +62,13 @@ class User:
 ```python
 class UserNotFoundError(DomainError):
     """User does not exist."""
-    
+
 class InvalidCredentialsError(DomainError):
     """Invalid email or password."""
-    
+
 class DuplicateEmailError(DomainError):
     """Email already registered."""
-    
+
 class InvalidTokenError(DomainError):
     """Invalid or expired JWT token."""
 ```
@@ -77,11 +77,11 @@ class InvalidTokenError(DomainError):
 ```python
 class PasswordService:
     """Domain service for password hashing and verification."""
-    
+
     @staticmethod
     def hash_password(password: str) -> str:
         """Hash a password using bcrypt."""
-        
+
     @staticmethod
     def verify_password(plain: str, hashed: str) -> bool:
         """Verify a password against a hash."""
@@ -98,19 +98,19 @@ from papertrade.domain.entities.user import User
 
 class UserRepository(ABC):
     """Repository interface for User persistence."""
-    
+
     @abstractmethod
     async def create(self, user: User) -> User:
         """Save a new user."""
-    
+
     @abstractmethod
     async def get_by_id(self, user_id: UUID) -> Optional[User]:
         """Find user by ID."""
-    
+
     @abstractmethod
     async def get_by_email(self, email: str) -> Optional[User]:
         """Find user by email."""
-    
+
     @abstractmethod
     async def update(self, user: User) -> User:
         """Update existing user."""
@@ -124,21 +124,21 @@ from jose import jwt, JWTError
 
 class JWTService:
     """Application service for JWT token generation and validation."""
-    
+
     def __init__(self, secret_key: str, algorithm: str = "HS256"):
         self.secret_key = secret_key
         self.algorithm = algorithm
-    
+
     def create_access_token(
         self, user_id: UUID, expires_delta: timedelta = timedelta(minutes=15)
     ) -> str:
         """Generate access token."""
-    
+
     def create_refresh_token(
         self, user_id: UUID, expires_delta: timedelta = timedelta(days=7)
     ) -> str:
         """Generate refresh token."""
-    
+
     def decode_token(self, token: str) -> dict:
         """Decode and validate token."""
         # Raises InvalidTokenError on failure
@@ -158,7 +158,7 @@ class RegisterUserHandler:
     ):
         self.user_repository = user_repository
         self.password_service = password_service
-    
+
     async def handle(self, command: RegisterUserCommand) -> User:
         """Register a new user."""
         # 1. Check email doesn't exist
@@ -187,7 +187,7 @@ class LoginUserHandler:
         jwt_service: JWTService,
     ):
         ...
-    
+
     async def handle(self, command: LoginUserCommand) -> LoginResult:
         """Authenticate user and return tokens."""
         # 1. Find user by email
@@ -208,7 +208,7 @@ class RefreshTokenHandler:
         jwt_service: JWTService,
     ):
         ...
-    
+
     async def handle(self, command: RefreshTokenCommand) -> LoginResult:
         """Generate new tokens from refresh token."""
         # 1. Validate refresh token
@@ -225,7 +225,7 @@ class GetUserQuery:
 class GetUserHandler:
     def __init__(self, user_repository: UserRepository):
         self.user_repository = user_repository
-    
+
     async def handle(self, query: GetUserQuery) -> User:
         """Get user by ID."""
         # Raises: UserNotFoundError
@@ -239,12 +239,12 @@ class GetUserHandler:
 ```python
 class UserModel(SQLModel, table=True):
     """Database model for User entity."""
-    
+
     __tablename__ = "users"
     __table_args__ = (
         Index("idx_user_email", "email", unique=True),
     )
-    
+
     id: UUID = Field(primary_key=True)
     email: str = Field(max_length=255, index=True, unique=True)
     hashed_password: str = Field(max_length=255)
@@ -256,22 +256,22 @@ class UserModel(SQLModel, table=True):
 ```python
 class SQLModelUserRepository(UserRepository):
     """SQLModel implementation of UserRepository."""
-    
+
     def __init__(self, session: AsyncSession):
         self.session = session
-    
+
     async def create(self, user: User) -> User:
         """Save new user to database."""
-    
+
     async def get_by_id(self, user_id: UUID) -> Optional[User]:
         """Find user by ID."""
-    
+
     async def get_by_email(self, email: str) -> Optional[User]:
         """Find user by email (case-insensitive)."""
-    
+
     async def update(self, user: User) -> User:
         """Update existing user."""
-    
+
     # Helper: _to_entity(model) -> User
     # Helper: _to_model(entity) -> UserModel
 ```
@@ -295,10 +295,10 @@ def upgrade() -> None:
         sa.Column('is_active', sa.Boolean(), nullable=False, default=True),
         sa.PrimaryKeyConstraint('id'),
     )
-    
+
     # Add unique index on email
     op.create_index('idx_user_email', 'users', ['email'], unique=True)
-    
+
     # Add foreign key constraint to portfolios.user_id
     op.create_foreign_key(
         'fk_portfolio_user',
@@ -443,7 +443,7 @@ app.include_router(users_router)
 ```python
 class Settings(BaseSettings):
     # ... existing ...
-    
+
     # JWT Settings
     JWT_SECRET_KEY: str = Field(..., description="Secret key for JWT signing")
     JWT_ALGORITHM: str = Field(default="HS256", description="JWT algorithm")
