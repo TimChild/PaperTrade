@@ -76,3 +76,43 @@ repos:
         pass_filenames: false
         stages: [pre-push]
         # Note: Uses uv to run pyright with project dependencies
+
+  # Backend - Unit tests
+  - repo: local
+    hooks:
+      - id: backend-tests
+        name: Backend unit tests
+        entry: bash -c 'cd backend && uv run pytest --no-cov -q'
+        language: system
+        files: ^backend/.*\.py$
+        pass_filenames: false
+        stages: [pre-push]
+
+  # Frontend - ESLint and TypeScript type check
+  - repo: local
+    hooks:
+      - id: eslint
+        name: ESLint (frontend)
+        entry: bash -c 'cd frontend && npm run lint'
+        language: system
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false
+        stages: [pre-push]
+      - id: typescript
+        name: TypeScript type check (frontend)
+        entry: bash -c 'cd frontend && npm run typecheck'
+        language: system
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false
+        stages: [pre-push]
+
+  # Frontend - Unit tests
+  - repo: local
+    hooks:
+      - id: frontend-tests
+        name: Frontend unit tests
+        entry: bash -c 'cd frontend && npm run test:unit -- --run'
+        language: system
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false
+        stages: [pre-push]

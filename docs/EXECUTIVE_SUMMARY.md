@@ -46,7 +46,6 @@ PaperTrade is a stock market emulation platform that lets you practice trading s
 ## Known Limitations
 
 ### Trading Restrictions
-- ⚠️ **SELL orders not yet implemented** - Can only buy stocks (Phase 3 feature)
 - ⚠️ **No limit/stop orders** - Market orders only
 - ⚠️ **No fractional shares** - Whole shares only
 - ⚠️ **No short selling** - Long positions only

@@ -29,7 +29,7 @@
 | Feature | Status | Details | Phase | Notes |
 |---------|--------|---------|-------|-------|
 | **BUY Orders** | ✅ Full | Market buy orders with real-time pricing | Phase 2 | US & international stocks |
-| **SELL Orders** | ❌ Not Implemented | Market sell orders | Phase 3 | Planned Q1 2026 |
+| **SELL Orders** | ✅ Full | Market sell orders with holdings validation | Phase 3a | Holdings check, cost basis tracking |
 | **Limit Orders** | ❌ Not Implemented | Buy/sell at specific price | Phase 4 | Requires order management system |
 | **Stop Orders** | ❌ Not Implemented | Trigger at specific price | Phase 4 | Requires price monitoring |
 | **Fractional Shares** | ❌ Not Implemented | Buy partial shares | Future | Low priority |

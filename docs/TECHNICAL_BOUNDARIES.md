@@ -11,31 +11,23 @@ This document outlines known technical limitations, edge cases, and architectura
 
 ## Critical Limitations
 
-### 1. SELL Orders Not Implemented
+### 1. SELL Orders ✅ IMPLEMENTED (Phase 3a Complete)
 
-**Status**: ❌ Not Available
-**Impact**: **HIGH** - Users cannot exit positions
-**Planned**: Phase 3 (Q1 2026)
+**Status**: ✅ Fully Available
+**Impact**: Users can exit positions and rebalance portfolios
+**Completed**: Phase 3a (discovered Jan 4, 2026)
 
-**Details**:
-- Only BUY orders supported currently
-- Once you buy a stock, holdings are locked
-- Cannot realize gains or cut losses
-- No way to rebalance portfolio
+**Features**:
+- Market sell orders with real-time pricing
+- Holdings validation (cannot sell more than owned)
+- Cost basis tracking with proportional reduction
+- Complete API and UI support
+- Error handling for insufficient shares
 
-**Workarounds**:
-- Create new portfolio to "start fresh"
-- Track intended sells manually
-- Wait for Phase 3 implementation
-
-**Technical Reason**:
-- Requires additional domain logic (validate sufficient holdings)
-- Transaction type SELL not fully implemented
-- Holdings update logic for sells incomplete
-
-**Code References**:
-- `backend/src/papertrade/domain/entities.py` - Transaction types
-- `backend/src/papertrade/application/use_cases/execute_trade.py` - Trade execution
+**Implementation**:
+- `backend/src/papertrade/domain/entities/transaction.py` - SELL transaction type
+- `backend/src/papertrade/application/commands/sell_stock.py` - SellStockHandler
+- `frontend/src/components/features/portfolio/TradeForm.tsx` - BUY/SELL toggle
 
 ---
 
