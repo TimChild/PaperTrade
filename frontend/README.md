@@ -111,9 +111,58 @@ src/components/Button.tsx
 src/components/Button.test.tsx
 ```
 
-Run tests:
+### Unit Tests
+
+Run unit tests with Vitest:
 ```bash
-npm test
+npm test              # Run once
+npm run test:watch    # Watch mode
+npm run test:ui       # Interactive UI
+```
+
+### E2E Tests
+
+E2E tests use Playwright and are located in `tests/e2e/`.
+
+Run E2E tests:
+```bash
+npm run test:e2e         # Headless
+npm run test:e2e:headed  # With browser
+npm run test:e2e:ui      # Interactive UI
+```
+
+### Test IDs
+
+E2E tests use `data-testid` attributes for stable element targeting. Follow these conventions:
+
+**Naming Pattern**: `{component}-{element}-{variant?}`
+
+**Examples**:
+- `create-portfolio-name-input` - Portfolio name input
+- `trade-form-buy-button` - Buy button in trade form
+- `holding-symbol-IBM` - IBM symbol in holdings table
+
+See `docs/TESTING_CONVENTIONS.md` for complete guidelines.
+
+**Adding test IDs**:
+```tsx
+// Static test ID
+<button data-testid="trade-form-submit-button" type="submit">
+  Submit
+</button>
+
+// Dynamic test ID
+<div data-testid={`portfolio-card-${portfolio.id}`}>
+  {portfolio.name}
+</div>
+```
+
+**Using in tests**:
+```typescript
+// Playwright E2E test
+await page.getByTestId('trade-form-ticker-input').fill('AAPL')
+await page.getByTestId('trade-form-buy-button').click()
+await expect(page.getByTestId('holding-symbol-AAPL')).toBeVisible()
 ```
 
 ## Contributing
