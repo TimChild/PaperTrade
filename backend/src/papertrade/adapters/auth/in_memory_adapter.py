@@ -20,9 +20,7 @@ class InMemoryAuthAdapter(AuthPort):
         _tokens: Mapping of tokens to user IDs
     """
 
-    def __init__(
-        self, users: dict[str, AuthenticatedUser] | None = None
-    ) -> None:
+    def __init__(self, users: dict[str, AuthenticatedUser] | None = None) -> None:
         """Initialize the adapter with optional pre-populated users.
 
         Args:

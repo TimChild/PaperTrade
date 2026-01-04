@@ -188,7 +188,6 @@ def auth_headers() -> dict[str, str]:
     return {"Authorization": "Bearer test-token-default"}
 
 
-
 @pytest.fixture(scope="module")
 def vcr_config() -> dict[str, object]:
     """Configure pytest-recording for VCR cassettes.
