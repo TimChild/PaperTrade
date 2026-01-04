@@ -1,7 +1,6 @@
 """Tests for RegisterUser command."""
 
 import pytest
-from pydantic import ValidationError
 
 from papertrade.application.commands.register_user import (
     RegisterUserCommand,

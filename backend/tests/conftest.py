@@ -158,7 +158,7 @@ async def test_user_token(
         JWT access token string
     """
     # Register the test user
-    register_response = client.post(
+    client.post(
         "/api/v1/auth/register",
         json={
             "email": test_user_credentials["email"],

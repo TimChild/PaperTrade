@@ -144,7 +144,7 @@ class TestUserEquality:
 
         assert user != "not a user"
         assert user != 123
-        assert user != None
+        assert user is not None
 
     def test_hash_based_on_id(self) -> None:
         """Should hash based on ID only."""
@@ -196,10 +196,10 @@ class TestUserImmutability:
             created_at=datetime.now(UTC),
         )
 
-        with pytest.raises(Exception):  # dataclass frozen raises FrozenInstanceError
+        with pytest.raises(Exception):  # noqa: B017 - dataclass frozen raises FrozenInstanceError
             user.email = "new@example.com"  # type: ignore[misc]
 
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017 - dataclass frozen raises FrozenInstanceError
             user.is_active = False  # type: ignore[misc]
 
 

@@ -5,7 +5,10 @@ from uuid import uuid4
 
 import pytest
 
-from papertrade.application.commands.login_user import LoginUserCommand, LoginUserHandler
+from papertrade.application.commands.login_user import (
+    LoginUserCommand,
+    LoginUserHandler,
+)
 from papertrade.application.ports.in_memory_user_repository import (
     InMemoryUserRepository,
 )
@@ -106,7 +109,9 @@ class TestLoginUser:
         )
 
         # Assert
-        with pytest.raises(InvalidCredentialsError, match="Incorrect email or password"):
+        with pytest.raises(
+            InvalidCredentialsError, match="Incorrect email or password"
+        ):
             await handler.execute(command)
 
     async def test_incorrect_password_raises_error(self, handler, active_user):
@@ -115,7 +120,9 @@ class TestLoginUser:
         command = LoginUserCommand(email="user@example.com", password="WrongPassword!")
 
         # Assert
-        with pytest.raises(InvalidCredentialsError, match="Incorrect email or password"):
+        with pytest.raises(
+            InvalidCredentialsError, match="Incorrect email or password"
+        ):
             await handler.execute(command)
 
     async def test_inactive_user_cannot_login(self, handler, inactive_user):
