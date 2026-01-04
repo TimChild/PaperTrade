@@ -64,6 +64,14 @@ The Frontend SWE is responsible for building a responsive, high-performance fina
 - Use TanStack Query for caching/invalidation
 - Zustand for global UI state only
 
+### Test IDs for E2E Testing
+- Add `data-testid` attributes to all interactive elements
+- Follow naming pattern: `{component}-{element}-{variant?}`
+- Use kebab-case: `trade-form-buy-button`, `portfolio-card-name-123`
+- Dynamic lists include ID: `holding-row-${ticker}`
+- See `docs/TESTING_CONVENTIONS.md` for complete guidelines
+- Test IDs complement, don't replace, accessibility attributes
+
 ## Code Organization
 
 ```
