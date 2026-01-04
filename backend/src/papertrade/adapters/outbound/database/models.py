@@ -65,9 +65,13 @@ class PortfolioModel(SQLModel, table=True):
         now = datetime.now(UTC)
         # Strip timezone info for PostgreSQL TIMESTAMP WITHOUT TIME ZONE columns
         # We store all times in UTC but PostgreSQL column is defined without timezone
-        created_at_naive = portfolio.created_at.replace(tzinfo=None) if portfolio.created_at.tzinfo else portfolio.created_at
+        created_at_naive = (
+            portfolio.created_at.replace(tzinfo=None)
+            if portfolio.created_at.tzinfo
+            else portfolio.created_at
+        )
         updated_at_naive = now.replace(tzinfo=None)
-        
+
         return cls(
             id=portfolio.id,
             user_id=portfolio.user_id,
@@ -182,7 +186,11 @@ class TransactionModel(SQLModel, table=True):
         # Strip timezone info for PostgreSQL TIMESTAMP WITHOUT TIME ZONE columns
         now = datetime.now(UTC)
         created_at_naive = now.replace(tzinfo=None)
-        timestamp_naive = transaction.timestamp.replace(tzinfo=None) if transaction.timestamp.tzinfo else transaction.timestamp
+        timestamp_naive = (
+            transaction.timestamp.replace(tzinfo=None)
+            if transaction.timestamp.tzinfo
+            else transaction.timestamp
+        )
 
         return cls(
             id=transaction.id,
@@ -198,4 +206,3 @@ class TransactionModel(SQLModel, table=True):
             notes=transaction.notes,
             created_at=created_at_naive,
         )
-
