@@ -21,19 +21,21 @@
   - 10 E2E tests passing including buy-sell workflow
 - ✅ **Phase 3b Discovery** (Task #049, PR #64): Authentication gap analysis
   - Comprehensive codebase audit: **0% auth complete**
-  - 38 components analyzed (30 missing, 4 partial, 4 ready)
   - Security risks identified: CRITICAL production blockers
-  - Implementation roadmap created (2-3 weeks estimated)
-- ✅ **Pre-Commit Enhancements**: Added backend/frontend tests to pre-push hooks
-  - Unit tests, linting, type checking all run before push
-  - Ensures code quality without blocking commits
+- ⚠️ **Auth Strategy Pivot**: Custom JWT → Clerk (third-party auth)
+  - PR #65 (custom JWT) closed - work discarded
+  - Decision: Auth is commodity infrastructure, not core product value
+  - Clerk saves 3-4 weeks (login UI, profile pages, password reset, social login)
+  - Clean Architecture preserved via AuthPort adapter pattern
+  - Tasks #052 (docs) and #053 (implementation) created
 
 ### Active Work
-- 🚀 **Phase 3b Authentication** (Tasks #050-051): Production-ready security
-  - Task #050: Backend implementation (backend-swe, 1.5-2 weeks)
-  - Task #051: Frontend implementation (frontend-swe, 1 week)
-  - JWT-based authentication with refresh tokens
-  - User registration, login, protected routes
+- 🚀 **Phase 3b Authentication** (Clerk-based):
+  - Task #052: Documentation update for Clerk approach (architect)
+  - Task #053: Implementation (backend + frontend, 2-3 days)
+  - Uses Clerk for user management, social login, profile UI
+  - Backend: AuthPort interface + ClerkAuthAdapter
+  - Frontend: ClerkProvider + pre-built components
   - **Critical for production deployment**
 
 ### Phase 3a Status: ✅ COMPLETE (Discovered Jan 4, 2026)
@@ -51,14 +53,14 @@
 - **Discovered**: Jan 4, 2026 - implementation predates architecture plan
 
 #### Phase 3b: Production-Ready Foundation 🚀 IN PROGRESS
-- 🚧 User authentication (JWT-based) - Task #050 in progress
-- 🚧 User registration and login - Task #051 pending
-- ⏳ Portfolio ownership model
+- 🚧 User authentication (Clerk-based) - Task #053
+- ✅ Strategy decided: Third-party auth (Clerk) over custom JWT
+- ⏳ Backend: AuthPort adapter wrapping Clerk SDK
+- ⏳ Frontend: ClerkProvider + pre-built components
 - ⏳ Protected API endpoints
 - **Value**: Ready for public deployment with data privacy
-- **Status**: Discovery complete (0% → implementation starting)
-- **Effort**: 2-3 weeks (backend 1.5-2 weeks, frontend 1 week)
-- **Tasks**: #050 (backend), #051 (frontend, depends on #050)
+- **Effort**: 2-3 days (down from 2-3 weeks with custom)
+- **Tasks**: #052 (docs), #053 (implementation)
 
 #### Phase 3c: Analytics & Insights (3-4 weeks, Mar 2026)
 - ✅ Portfolio performance charts (Recharts)
@@ -69,9 +71,9 @@
 
 **Architecture Decision Records**:
 - SELL before Auth: High user value, no dependencies, fast to implement
-- Auth before Analytics: Critical for production, enables multi-user
+- Auth via Clerk: Commodity infrastructure, saves 3-4 weeks, Clean Architecture via adapter
 - Analytics last: Requires SELL for complete P&L, benefits from historical data
-- Total estimate: 7-10 weeks (Q1-Q2 2026)
+- Total estimate: 5-7 weeks (Q1-Q2 2026) - reduced from 7-10 weeks
 
 ---
 
