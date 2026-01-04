@@ -3,7 +3,7 @@
 Provides portfolio persistence using SQLModel ORM with SQLite/PostgreSQL.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlmodel import select
@@ -78,8 +78,12 @@ class SQLModelPortfolioRepository:
             self._session.add(model)
         else:
             # Update existing portfolio (only mutable fields)
+            # Strip timezone for PostgreSQL TIMESTAMP WITHOUT TIME ZONE
+            # Also ensure created_at is naive (it might have been converted when loaded)
+            if existing.created_at.tzinfo is not None:
+                existing.created_at = existing.created_at.replace(tzinfo=None)
             existing.name = portfolio.name
-            existing.updated_at = datetime.now()
+            existing.updated_at = datetime.now(UTC).replace(tzinfo=None)
             existing.version += 1
             self._session.add(existing)
 

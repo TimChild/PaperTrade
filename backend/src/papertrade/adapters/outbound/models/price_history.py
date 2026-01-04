@@ -152,7 +152,8 @@ class PriceHistoryModel(SQLModel, table=True):
             ticker=price.ticker.symbol,
             price_amount=price.price.amount,
             price_currency=price.price.currency,
-            timestamp=price.timestamp,
+            # Strip timezone for PostgreSQL TIMESTAMP WITHOUT TIME ZONE
+            timestamp=price.timestamp.replace(tzinfo=None) if price.timestamp.tzinfo else price.timestamp,
             source=price.source,
             interval=price.interval,
             open_amount=price.open.amount if price.open else None,
