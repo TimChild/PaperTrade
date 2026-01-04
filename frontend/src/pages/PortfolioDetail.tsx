@@ -170,7 +170,6 @@ export function PortfolioDetail(): React.JSX.Element {
               onSubmit={handleTradeSubmit} 
               isSubmitting={executeTrade.isPending}
               holdings={holdings}
-              portfolioId={portfolioId}
               quickSellData={quickSellData}
             />
           </section>

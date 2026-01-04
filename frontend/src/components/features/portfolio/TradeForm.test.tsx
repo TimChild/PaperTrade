@@ -3,7 +3,6 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TradeForm } from './TradeForm'
 import type { Holding } from '@/types/portfolio'
-import type { TradeRequest } from '@/services/api/types'
 
 describe('TradeForm', () => {
   const mockOnSubmit = vi.fn()

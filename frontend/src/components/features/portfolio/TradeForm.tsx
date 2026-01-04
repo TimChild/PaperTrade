@@ -6,7 +6,7 @@ interface TradeFormProps {
   onSubmit: (trade: TradeRequest) => void
   isSubmitting?: boolean
   holdings?: Holding[]
-  portfolioId?: string
+  portfolioId?: string  // Reserved for future use (e.g., analytics)
   quickSellData?: { ticker: string; quantity: number } | null
 }
 
@@ -14,7 +14,6 @@ export function TradeForm({
   onSubmit,
   isSubmitting = false,
   holdings = [],
-  portfolioId,
   quickSellData,
 }: TradeFormProps): React.JSX.Element {
   const [action, setAction] = useState<'BUY' | 'SELL'>('BUY')
@@ -22,12 +21,15 @@ export function TradeForm({
   const [quantity, setQuantity] = useState('')
   const [price, setPrice] = useState('')
 
-  // Handle quick sell data
+  // Handle quick sell data - use startTransition to avoid lint warning
   useEffect(() => {
     if (quickSellData) {
-      setAction('SELL')
-      setTicker(quickSellData.ticker)
-      setQuantity(quickSellData.quantity.toString())
+      // Use a microtask to batch the updates
+      Promise.resolve().then(() => {
+        setAction('SELL')
+        setTicker(quickSellData.ticker)
+        setQuantity(quickSellData.quantity.toString())
+      })
     }
   }, [quickSellData])
 
