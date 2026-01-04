@@ -158,6 +158,8 @@ mcp_microsoft_pla_browser_click({
 
 ### Step 4: Test Trade Execution
 
+**Note**: Use IBM ticker (demo API key only supports IBM)
+
 ```typescript
 // Navigate to trade page
 mcp_microsoft_pla_browser_click({
@@ -165,11 +167,11 @@ mcp_microsoft_pla_browser_click({
   ref: "e75"
 })
 
-// Fill trade form
+// Fill trade form with IBM ticker
 mcp_microsoft_pla_browser_type({
   element: "Symbol textbox",
   ref: "e130",
-  text: "IBM"
+  text: "IBM"  // Must use IBM for demo API key
 })
 
 mcp_microsoft_pla_browser_type({
@@ -210,27 +212,18 @@ mcp_microsoft_pla_browser_snapshot()
 
 **Symptom**: Trade fails with 404 error saying "Ticker not found: AAPL"
 
-**Causes**:
-1. Alpha Vantage API key not configured
-2. Rate limit exceeded (5 calls/min free tier)
-3. Backend can't access `.env` file
+**Cause**: The Alpha Vantage `demo` API key only supports IBM ticker.
 
-**Debugging**:
-```bash
-# Check if .env is accessible
-cd backend && cat .env | grep ALPHA_VANTAGE_API_KEY
+**Resolution**: Use `IBM` ticker instead of `AAPL` in E2E tests. The demo key is intentionally limited - only IBM returns real data.
 
-# Test API directly
-curl "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=IBM&apikey=YOUR_KEY"
+Example:
+```typescript
+// ❌ Don't use AAPL
+text: "AAPL"
 
-# Check backend logs for rate limit messages
-# Look for: "Rate limit exceeded. No cached data available."
+// ✅ Use IBM instead
+text: "IBM"
 ```
-
-**Resolution**:
-1. Ensure `backend/.env` symlink exists: `ln -s ../.env backend/.env`
-2. Restart backend to pick up environment variables
-3. Wait 1 minute if rate limited, or use cached ticker (IBM)
 
 ### Issue: Dialog/Alert Handling
 
@@ -288,10 +281,14 @@ Some operations trigger re-renders:
 
 ### 4. Use Known-Good Tickers
 
-For testing trades, use tickers that are likely to work:
-- **IBM**: Usually works (established company)
-- **AAPL**: May hit rate limits if testing multiple times
-- Avoid obscure tickers that might not exist in Alpha Vantage
+**IMPORTANT**: E2E tests must use **IBM ticker only**.
+
+The Alpha Vantage `demo` API key (used in CI) only supports IBM:
+- **IBM**: ✅ Works with demo key
+- **AAPL**: ❌ Returns "demo key is for demo purposes only" error
+- Other tickers: ❌ Not supported with demo key
+
+When writing E2E tests, always use `IBM` for ticker symbols to ensure CI compatibility.
 
 ### 5. Monitor Rate Limits
 
