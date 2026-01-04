@@ -161,6 +161,39 @@ jobs:
         working-directory: ./frontend
         run: npx playwright install --with-deps
 
+      - name: Validate E2E environment variables
+        run: |
+          echo "Validating required environment variables for E2E tests..."
+          missing_vars=()
+          
+          if [ -z "${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}" ]; then
+            missing_vars+=("VITE_CLERK_PUBLISHABLE_KEY (secret)")
+          fi
+          
+          if [ -z "${{ secrets.CLERK_SECRET_KEY }}" ]; then
+            missing_vars+=("CLERK_SECRET_KEY (secret)")
+          fi
+          
+          if [ -z "${{ vars.E2E_CLERK_USER_USERNAME }}" ]; then
+            missing_vars+=("E2E_CLERK_USER_USERNAME (variable)")
+          fi
+          
+          if [ -z "${{ vars.E2E_CLERK_USER_PASSWORD }}" ]; then
+            missing_vars+=("E2E_CLERK_USER_PASSWORD (variable)")
+          fi
+          
+          if [ ${#missing_vars[@]} -ne 0 ]; then
+            echo "❌ ERROR: Missing required environment variables:"
+            printf '  - %s\n' "${missing_vars[@]}"
+            echo ""
+            echo "Please configure these in GitHub repository settings:"
+            echo "  Secrets: Settings → Secrets and variables → Actions → Secrets"
+            echo "  Variables: Settings → Secrets and variables → Actions → Variables"
+            exit 1
+          fi
+          
+          echo "✅ All required environment variables are present"
+
       - name: Start Docker services
         run: task docker:up
 
@@ -184,8 +217,8 @@ jobs:
         env:
           CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-          E2E_CLERK_USER_USERNAME: ${{ secrets.E2E_CLERK_USER_USERNAME }}
-          E2E_CLERK_USER_PASSWORD: ${{ secrets.E2E_CLERK_USER_PASSWORD }}
+          E2E_CLERK_USER_USERNAME: ${{ vars.E2E_CLERK_USER_USERNAME }}
+          E2E_CLERK_USER_PASSWORD: ${{ vars.E2E_CLERK_USER_PASSWORD }}
 
       - name: Upload Playwright report
         if: always()
