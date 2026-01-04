@@ -149,12 +149,14 @@ class MarketDataPort(Protocol):
 > **📝 Note**: This is the **original Phase 3 plan**. Based on Phase 1-2 learnings and user needs analysis (January 2026), Phase 3 has been **refined and restructured** into 3 focused sub-phases:
 >
 > - **Phase 3a: Complete Trading Loop** (SELL orders) - 2-3 weeks
-> - **Phase 3b: Production-Ready Foundation** (User authentication) - 2-3 weeks
+> - **Phase 3b: Production-Ready Foundation** (Clerk authentication) - 2-3 days
 > - **Phase 3c: Analytics & Insights** (Charts + Backtesting) - 3-4 weeks
 >
 > See `architecture_plans/phase3-refined/` for detailed specifications.
 >
 > **Why the change?** User feedback identified SELL orders and authentication as higher priorities than pure backtesting. The refined plan delivers incremental value faster while incorporating backtesting into Phase 3c alongside analytics.
+>
+> **Auth Decision (Jan 2026)**: Using Clerk (third-party auth) instead of custom JWT saves 3-4 weeks. Auth is commodity infrastructure - our value is in trading/backtesting features.
 
 **Goal**: User can start a portfolio at a past date and simulate trading with historical prices.
 

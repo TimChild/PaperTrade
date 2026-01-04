@@ -35,7 +35,7 @@ This document outlines known technical limitations, edge cases, and architectura
 
 **Status**: ❌ Not Available
 **Impact**: **CRITICAL** - Not production-ready
-**Planned**: Phase 3 (Q1 2026)
+**Planned**: Phase 3b (Q1 2026 - 2-3 days using Clerk)
 
 **Details**:
 - All portfolios visible to all users
@@ -54,16 +54,23 @@ This document outlines known technical limitations, edge cases, and architectura
 - Use only in local development
 - Trust-based single-user deployment
 
-**Technical Approach (Future)**:
-- JWT or session-based authentication
-- User entity in domain model
-- Portfolio ownership via foreign key
-- Login/logout endpoints
-- Protected routes in frontend
+**Technical Approach (Phase 3b)**:
+- Clerk for authentication (third-party service)
+- Pre-built login/signup UI components
+- Clean Architecture via `AuthPort` adapter pattern
+- Portfolio ownership via foreign key to Clerk user ID
+- Protected API endpoints with Clerk token validation
+
+**Why Clerk?**:
+- Saves 3-4 weeks vs custom JWT implementation
+- Auth is commodity infrastructure, not core product value
+- Better security (managed by experts)
+- Social login, password reset, email verification included
 
 **Code References**:
-- `backend/src/papertrade/adapters/inbound/api/routes.py` - No auth middleware
-- `frontend/src/lib/utils/userSession.ts` - LocalStorage user management
+- `backend/src/papertrade/adapters/inbound/api/routes.py` - No auth middleware (yet)
+- `frontend/src/lib/utils/userSession.ts` - LocalStorage user management (temporary)
+- See `architecture_plans/phase3-refined/phase3b-authentication.md` for detailed design
 
 ---
 
@@ -380,11 +387,11 @@ alert("Insufficient funds to execute trade")
 - No authorization
 - Trust-based system
 
-**Future Solution**:
-- JWT tokens
-- Server-side session management
-- Secure HTTP-only cookies
-- Proper login/logout flow
+**Future Solution (Phase 3b)**:
+- Clerk tokens (managed by Clerk service)
+- Server-side token validation via Clerk SDK
+- Secure session management (handled by Clerk)
+- Proper login/logout flow with pre-built UI
 
 **Code References**:
 - `frontend/src/lib/utils/userSession.ts` - Current implementation
