@@ -12,13 +12,13 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # Install dependencies with increased timeout and retries for network resilience
-# Using npm install instead of npm ci for better timeout handling
+# Use npm ci for reproducible installs while relying on npm config for timeout handling
 RUN npm config set fetch-timeout 600000 && \
     npm config set fetch-retries 5 && \
     npm config set fetch-retry-mintimeout 20000 && \
     npm config set fetch-retry-maxtimeout 120000 && \
-    npm install --no-audit --prefer-offline || \
-    (echo "First install attempt failed, retrying..." && npm install --no-audit)
+    npm ci --no-audit --prefer-offline || \
+    (echo "First install attempt failed, retrying..." && npm ci --no-audit)
 
 # Source code will be mounted as a volume in docker-compose.yml
 # This allows hot-reload during development
