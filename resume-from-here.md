@@ -2,8 +2,8 @@
 
 ## Current Status
 
-**Decision Made**: Pivot from custom JWT to **Clerk** for authentication  
-**PR #65**: Closed (custom JWT work discarded)  
+**Decision Made**: Pivot from custom JWT to **Clerk** for authentication
+**PR #65**: Closed (custom JWT work discarded)
 **Branch**: Return to `main`
 
 ## What Just Happened

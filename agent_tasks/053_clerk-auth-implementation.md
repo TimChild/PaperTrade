@@ -45,15 +45,15 @@ class AuthenticatedUser:
 
 class AuthPort(Protocol):
     """Port for authentication operations."""
-    
+
     async def verify_token(self, token: str) -> AuthenticatedUser:
         """Verify token and return authenticated user.
-        
+
         Raises:
             InvalidTokenError: If token is invalid or expired
         """
         ...
-    
+
     async def get_user(self, user_id: str) -> AuthenticatedUser | None:
         """Get user by ID, or None if not found."""
         ...
@@ -72,10 +72,10 @@ from papertrade.domain.exceptions import InvalidTokenError
 
 class ClerkAuthAdapter(AuthPort):
     """Clerk implementation of AuthPort."""
-    
+
     def __init__(self, secret_key: str):
         self._clerk = Clerk(bearer_auth=secret_key)
-    
+
     async def verify_token(self, token: str) -> AuthenticatedUser:
         try:
             # Verify JWT with Clerk
@@ -84,14 +84,14 @@ class ClerkAuthAdapter(AuthPort):
             )
             if not request_state.is_signed_in:
                 raise InvalidTokenError("Invalid or expired token")
-            
+
             return AuthenticatedUser(
                 id=request_state.user_id,
                 email=request_state.claims.get("email", ""),
             )
         except Exception as e:
             raise InvalidTokenError(str(e))
-    
+
     async def get_user(self, user_id: str) -> AuthenticatedUser | None:
         try:
             user = self._clerk.users.get(user_id=user_id)
@@ -113,22 +113,22 @@ from papertrade.domain.exceptions import InvalidTokenError
 
 class InMemoryAuthAdapter(AuthPort):
     """In-memory auth for testing - no Clerk dependency."""
-    
+
     def __init__(self, users: dict[str, AuthenticatedUser] | None = None):
         self._users = users or {}
         self._tokens: dict[str, str] = {}  # token -> user_id
-    
+
     def add_user(self, user: AuthenticatedUser, token: str) -> None:
         """Add a user with their token for testing."""
         self._users[user.id] = user
         self._tokens[token] = user.id
-    
+
     async def verify_token(self, token: str) -> AuthenticatedUser:
         user_id = self._tokens.get(token)
         if not user_id or user_id not in self._users:
             raise InvalidTokenError("Invalid token")
         return self._users[user_id]
-    
+
     async def get_user(self, user_id: str) -> AuthenticatedUser | None:
         return self._users.get(user_id)
 ```
@@ -195,10 +195,10 @@ async def create_portfolio(
 ```python
 class Settings(BaseSettings):
     # ... existing settings
-    
+
     # Clerk
     clerk_secret_key: str = ""
-    
+
     model_config = SettingsConfigDict(env_file=".env")
 ```
 
@@ -298,7 +298,7 @@ import { useAuth } from '@clerk/clerk-react'
 // Create authenticated fetch wrapper
 export function useAuthenticatedApi() {
   const { getToken } = useAuth()
-  
+
   return async (url: string, options: RequestInit = {}) => {
     const token = await getToken()
     return fetch(url, {
