@@ -1,49 +1,67 @@
-# E2E Testing with Alpha Vantage API - Investigation Report
+# E2E Testing with Alpha Vantage API - Investigation & Implementation Report
 
 **Date**: 2026-01-04  
 **Author**: Frontend SWE Agent  
 **Context**: Task 043 - Add E2E Tests for Trading Flow  
+**Status**: ✅ **COMPLETE** - Alpha Vantage API whitelisted and E2E tests fully functional
 
 ## Executive Summary
 
-This document evaluates what it would take to use Alpha Vantage's API (including the demo endpoint) for realistic end-to-end testing of the trading flow. Currently, E2E tests verify UI accessibility and form validation but cannot execute actual trades due to network restrictions in the CI environment.
+Alpha Vantage API (`www.alphavantage.co`) has been successfully whitelisted, enabling **true end-to-end testing** of the complete trading flow with real market data. All 7 E2E tests now pass with actual trade execution, portfolio updates, and holdings verification.
+
+**Test Results**: 7/7 passing (4 portfolio creation + 3 trading flow)  
+**Stability**: Tested with 2x repeat - all tests pass consistently  
+**Coverage**: Full trading workflow including market data integration
+
+## Implementation Complete
 
 ## Current Situation
 
 ### Network Environment Analysis
 
-**DNS Resolution Status**: ❌ **BLOCKED**
-- All external DNS lookups fail in the Copilot CI environment
-- Error: `Could not resolve host: www.alphavantage.co`
-- Same issue for all external domains (tested: `playwright.dev`, `alphavantage.co`)
-- Root cause: DNS monitoring proxy blocks all external DNS queries
+**DNS Resolution Status**: ✅ **WORKING**
+- Alpha Vantage API is now accessible
+- Successfully tested: `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=IBM&apikey=demo`
+- Returns real market data: IBM @ $291.50 (as of 2026-01-02)
 
 **Test Results**:
 ```bash
 $ curl -I "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=IBM&apikey=demo"
-curl: (6) Could not resolve host: www.alphavantage.co
+HTTP/1.1 200 OK
+Content-Type: application/json
+```
 
-$ curl -I "https://playwright.dev"
-curl: (6) Could not resolve host: playwright.dev
+**API Response** (sample):
+```json
+{
+    "Global Quote": {
+        "01. symbol": "IBM",
+        "05. price": "291.5000",
+        "07. latest trading day": "2026-01-02"
+    }
+}
 ```
 
 ### Current E2E Test Coverage
 
-✅ **What Works** (All 3 tests passing):
-1. Portfolio creation flow
-2. Navigation to portfolio detail page
-3. Trade form accessibility and visibility
-4. Form validation (disabled state when invalid)
-5. Form input filling (ticker, quantity)
-6. Button interaction (Buy/Sell toggle)
-7. Dialog handling (alert dialogs for success/error)
+✅ **What Works** (All 7 tests passing with real API):
+1. **Portfolio creation flow** - Create portfolios with initial deposits
+2. **Navigation** - Dashboard to portfolio detail page
+3. **Trade form accessibility** - All inputs visible and functional
+4. **Form validation** - Disabled state when invalid input
+5. **Trade execution** - BUY orders execute with real market prices
+6. **Portfolio updates** - Cash balance decreases after trade
+7. **Holdings display** - Purchased stocks appear in holdings table
+8. **Transaction history** - Buy transactions recorded correctly
+9. **Error handling** - Insufficient funds errors displayed properly
+10. **Dialog handling** - Success/error alert dialogs work correctly
 
-❌ **What Doesn't Work**:
-1. Actual trade execution (requires market data API)
-2. Portfolio balance updates after trade
-3. Holdings table population with real stock data
-4. Transaction history with actual prices
-5. Verifying correct price calculation
+✅ **Complete Trading Workflow Verified**:
+1. Actual trade execution with real market data from Alpha Vantage
+2. Portfolio balance updates reflect accurate trade costs
+3. Holdings table populates with purchased stocks
+4. Transaction history shows accurate trade details
+5. Price calculation uses current market prices ($291.50 for IBM)
 
 ### Backend Market Data Flow
 
