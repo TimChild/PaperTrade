@@ -78,3 +78,36 @@ class InsufficientSharesError(BusinessRuleViolationError):
     """Raised when attempting to sell more shares than owned."""
 
     pass
+
+
+# Authentication & Authorization Exceptions
+
+
+class UserNotFoundError(DomainException):
+    """Raised when a user cannot be found."""
+
+    pass
+
+
+class InvalidCredentialsError(DomainException):
+    """Raised when authentication credentials are invalid."""
+
+    pass
+
+
+class DuplicateEmailError(DomainException):
+    """Raised when attempting to register with an email that already exists."""
+
+    pass
+
+
+class InvalidTokenError(DomainException):
+    """Raised when a JWT token is invalid or expired."""
+
+    pass
+
+
+class InactiveUserError(DomainException):
+    """Raised when a user account is inactive."""
+
+    pass
