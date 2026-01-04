@@ -31,6 +31,7 @@ export function PortfolioDetail(): React.JSX.Element {
   const transactions = transactionsData?.transactions.map(adaptTransaction) || []
 
   const handleTradeSubmit = (trade: TradeRequest) => {
+    console.log(`[TradeSubmit] Portfolio ID: ${portfolioId}, Action: ${trade.action}, Ticker: ${trade.ticker}, Quantity: ${trade.quantity}`)
     executeTrade.mutate(trade, {
       onSuccess: () => {
         alert(`${trade.action === 'BUY' ? 'Buy' : 'Sell'} order executed successfully!`)
@@ -38,6 +39,7 @@ export function PortfolioDetail(): React.JSX.Element {
         setQuickSellData(null)
       },
       onError: (error) => {
+        console.error(`[TradeSubmit Error] Portfolio ID: ${portfolioId}`, error)
         alert(`Failed to execute trade: ${error instanceof Error ? error.message : 'Unknown error'}`)
       },
     })
@@ -46,7 +48,7 @@ export function PortfolioDetail(): React.JSX.Element {
   const handleQuickSell = (ticker: string, quantity: number) => {
     // Set quick sell data and scroll to trade form
     setQuickSellData({ ticker, quantity })
-    
+
     // Scroll to trade form with smooth behavior
     setTimeout(() => {
       tradeFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
@@ -166,8 +168,8 @@ export function PortfolioDetail(): React.JSX.Element {
         <div className="space-y-8 lg:col-span-1">
           {/* Trade Form */}
           <section ref={tradeFormRef}>
-            <TradeForm 
-              onSubmit={handleTradeSubmit} 
+            <TradeForm
+              onSubmit={handleTradeSubmit}
               isSubmitting={executeTrade.isPending}
               holdings={holdings}
               quickSellData={quickSellData}

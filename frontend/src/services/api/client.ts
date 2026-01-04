@@ -42,6 +42,10 @@ export const apiClient = axios.create({
 // Request interceptor (for future auth token injection)
 apiClient.interceptors.request.use(
   (config) => {
+    // Log the full URL for debugging (especially useful in CI)
+    const fullUrl = `${config.baseURL}${config.url}`
+    console.log(`[API Request] ${config.method?.toUpperCase()} ${fullUrl}`)
+
     // Add auth token when implemented
     // const token = localStorage.getItem('authToken')
     // if (token) {
@@ -63,22 +67,31 @@ apiClient.interceptors.response.use(
       // Server responded with error status
       const { status, data } = error.response
 
+      const requestUrl = error.config?.url
+      const fullUrl = error.config?.baseURL ? `${error.config.baseURL}${requestUrl}` : requestUrl
+
       switch (status) {
         case 401:
           console.error('Unauthorized - authentication required')
+          console.error('URL:', fullUrl)
           // TODO: Redirect to login when auth is implemented
           break
         case 403:
           console.error('Forbidden - insufficient permissions')
+          console.error('URL:', fullUrl)
           break
         case 404:
           console.error('Resource not found:', data?.detail)
+          console.error('URL:', fullUrl)
+          console.error('Method:', error.config?.method?.toUpperCase())
           break
         case 500:
           console.error('Server error:', data?.detail)
+          console.error('URL:', fullUrl)
           break
         default:
           console.error('API error:', data?.detail || error.message)
+          console.error('URL:', fullUrl)
       }
     } else if (error.request) {
       // Request made but no response received

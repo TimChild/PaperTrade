@@ -168,6 +168,16 @@ test.describe('Trading Flow', () => {
   test('should execute complete buy-sell trading loop', async ({ page }) => {
     // This test verifies the complete trading flow: BUY → SELL
 
+    // Capture console logs for debugging
+    page.on('console', msg => {
+      console.log(`[Browser ${msg.type()}]:`, msg.text())
+    })
+
+    // Capture page errors
+    page.on('pageerror', error => {
+      console.error('[Browser Error]:', error)
+    })
+
     // 1. Create a portfolio
     await page.goto('/')
     await page.waitForLoadState('networkidle')
