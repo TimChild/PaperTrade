@@ -24,14 +24,40 @@
   - Alpha Vantage integration documented
 
 ### Active Work
-- No active development tasks
+- 🏗️ **Architecture Refinement** (Task #046): Phase 3-4 planning in progress
+  - Analyzing user needs and implementation learnings
+  - Refining Phase 3-4 architecture based on Phase 1-2 velocity
+  - Creating detailed specifications and product roadmap
 
-### Next Up
-- Phase 3: Portfolio Analytics & Backtesting
-  - SELL order functionality
-  - User authentication & authorization
-  - Portfolio analytics charts
-- Production deployment with Docker
+### Next Up (Refined Phase 3 Plan)
+
+**Phase 3 Restructured** - Breaking into focused increments for maximum value delivery:
+
+#### Phase 3a: Complete Trading Loop (2-3 weeks, Jan 2026)
+- ✅ SELL order functionality
+- ✅ Sufficient holdings validation
+- ✅ Cost basis tracking for P&L
+- **Value**: Users can exit positions and rebalance portfolios
+
+#### Phase 3b: Production-Ready Foundation (2-3 weeks, Feb 2026)
+- ✅ User authentication (JWT-based)
+- ✅ User registration and login
+- ✅ Portfolio ownership model
+- ✅ Protected API endpoints
+- **Value**: Ready for public deployment with data privacy
+
+#### Phase 3c: Analytics & Insights (3-4 weeks, Mar 2026)
+- ✅ Portfolio performance charts (Recharts)
+- ✅ Gain/loss calculations
+- ✅ Holdings composition (pie charts)
+- ✅ Simple backtesting (time-travel trades)
+- **Value**: Data-driven decision making
+
+**Architecture Decision Records**:
+- SELL before Auth: High user value, no dependencies, fast to implement
+- Auth before Analytics: Critical for production, enables multi-user
+- Analytics last: Requires SELL for complete P&L, benefits from historical data
+- Total estimate: 7-10 weeks (Q1-Q2 2026)
 
 ---
 
