@@ -88,7 +88,8 @@ class PriceHistoryModel(SQLModel, table=True):
     volume: int | None = None
 
     # Metadata
-    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    # Store as timezone-naive to match timestamp column (both are TIMESTAMP WITHOUT TIME ZONE)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
 
     def to_price_point(self) -> PricePoint:
         """Convert database model to PricePoint DTO.

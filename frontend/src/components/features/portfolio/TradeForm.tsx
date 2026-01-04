@@ -21,7 +21,7 @@ export function TradeForm({
   const [quantity, setQuantity] = useState('')
   const [price, setPrice] = useState('')
 
-  // Handle quick sell data - use startTransition to avoid lint warning
+  // Handle quick sell data using a microtask to batch state updates
   useEffect(() => {
     if (quickSellData) {
       // Use a microtask to batch the updates
