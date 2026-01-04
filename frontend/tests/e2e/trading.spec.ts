@@ -202,8 +202,9 @@ test.describe('Trading Flow', () => {
     await expect(page.getByTestId('portfolio-detail-name')).toHaveText('Buy-Sell Portfolio')
     await expect(page.getByRole('heading', { name: 'Execute Trade' })).toBeVisible()
 
-    // 3. Execute a BUY order (buy 10 shares of AAPL)
-    await page.getByTestId('trade-form-ticker-input').fill('AAPL')
+    // 3. Execute a BUY order (buy 10 shares of IBM)
+    // Note: Using IBM because the Alpha Vantage demo API key only supports IBM ticker
+    await page.getByTestId('trade-form-ticker-input').fill('IBM')
     await page.getByTestId('trade-form-quantity-input').fill('10')
 
     const buyButton = page.getByTestId('trade-form-buy-button')
@@ -222,20 +223,20 @@ test.describe('Trading Flow', () => {
     await page.waitForLoadState('networkidle')
 
     // 4. Verify holding shows 10 shares
-    await expect(page.getByTestId('holding-symbol-AAPL')).toBeVisible({ timeout: 5000 })
-    await expect(page.getByTestId('holding-quantity-AAPL')).toHaveText('10')
+    await expect(page.getByTestId('holding-symbol-IBM')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByTestId('holding-quantity-IBM')).toHaveText('10')
 
-    // 5. Execute a SELL order (sell 5 shares of AAPL)
+    // 5. Execute a SELL order (sell 5 shares of IBM)
     // Switch to SELL action
     await page.getByTestId('trade-form-action-sell').click()
 
     // Fill in ticker and quantity
-    await page.getByTestId('trade-form-ticker-input').fill('AAPL')
+    await page.getByTestId('trade-form-ticker-input').fill('IBM')
     await page.getByTestId('trade-form-quantity-input').fill('5')
 
     // Verify holdings info is displayed
     await expect(page.getByTestId('trade-form-holdings-info')).toBeVisible()
-    await expect(page.getByText(/You own.*10.*shares of AAPL/i)).toBeVisible()
+    await expect(page.getByText(/You own.*10.*shares of IBM/i)).toBeVisible()
 
     const sellButton = page.getByTestId('trade-form-sell-button')
     await expect(sellButton).toBeEnabled()
@@ -253,8 +254,8 @@ test.describe('Trading Flow', () => {
     await page.waitForLoadState('networkidle')
 
     // 6. Verify holding now shows 5 shares
-    await expect(page.getByTestId('holding-symbol-AAPL')).toBeVisible({ timeout: 5000 })
-    await expect(page.getByTestId('holding-quantity-AAPL')).toHaveText('5')
+    await expect(page.getByTestId('holding-symbol-IBM')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByTestId('holding-quantity-IBM')).toHaveText('5')
 
     // 7. Verify transaction history shows both BUY and SELL
     await expect(page.getByText(/buy/i).first()).toBeVisible()
