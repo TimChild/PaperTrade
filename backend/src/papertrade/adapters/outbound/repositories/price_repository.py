@@ -66,8 +66,12 @@ class PriceRepository:
         """
         # Check if a price already exists
         # Strip timezone for PostgreSQL TIMESTAMP WITHOUT TIME ZONE comparison
-        timestamp_naive = price.timestamp.replace(tzinfo=None) if price.timestamp.tzinfo else price.timestamp
-        
+        timestamp_naive = (
+            price.timestamp.replace(tzinfo=None)
+            if price.timestamp.tzinfo
+            else price.timestamp
+        )
+
         query = select(PriceHistoryModel).where(
             PriceHistoryModel.ticker == price.ticker.symbol,
             PriceHistoryModel.timestamp == timestamp_naive,
@@ -171,8 +175,10 @@ class PriceRepository:
         """
         # Query for prices at or before target timestamp
         # Strip timezone for PostgreSQL TIMESTAMP WITHOUT TIME ZONE comparison
-        timestamp_naive = timestamp.replace(tzinfo=None) if timestamp.tzinfo else timestamp
-        
+        timestamp_naive = (
+            timestamp.replace(tzinfo=None) if timestamp.tzinfo else timestamp
+        )
+
         query = (
             select(PriceHistoryModel)
             .where(PriceHistoryModel.ticker == ticker.symbol)
@@ -224,7 +230,7 @@ class PriceRepository:
         # Build query - strip timezone for PostgreSQL TIMESTAMP WITHOUT TIME ZONE
         start_naive = start.replace(tzinfo=None) if start.tzinfo else start
         end_naive = end.replace(tzinfo=None) if end.tzinfo else end
-        
+
         query = (
             select(PriceHistoryModel)
             .where(PriceHistoryModel.ticker == ticker.symbol)
