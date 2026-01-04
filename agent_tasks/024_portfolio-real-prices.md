@@ -1,9 +1,9 @@
 # Task 024: Portfolio Use Cases with Real Prices
 
-**Created**: 2025-12-29  
-**Agent**: backend-swe  
-**Estimated Effort**: 3-4 hours  
-**Dependencies**: Task 020 (Alpha Vantage Adapter), Task 021 (PostgreSQL Repository recommended but not required)  
+**Created**: 2025-12-29
+**Agent**: backend-swe
+**Estimated Effort**: 3-4 hours
+**Dependencies**: Task 020 (Alpha Vantage Adapter), Task 021 (PostgreSQL Repository recommended but not required)
 **Phase**: Phase 2a - Market Data Integration
 
 ## Objective
@@ -63,10 +63,10 @@ async def execute(...) -> PortfolioBalanceDTO:
     # Get portfolio and holdings (existing logic)
     portfolio = await portfolio_repository.get_by_id(portfolio_id)
     holdings = await portfolio_repository.get_holdings(portfolio_id)
-    
+
     # Calculate holdings value with REAL prices
     holdings_value = Money(Decimal("0"), "USD")
-    
+
     for holding in holdings:
         try:
             # Fetch current price from market data
@@ -76,20 +76,20 @@ async def execute(...) -> PortfolioBalanceDTO:
                 price_point.price.currency
             )
             holdings_value += holding_value
-            
+
         except TickerNotFoundError:
             # Ticker not found - skip this holding (value = 0)
             logger.warning(f"Ticker {holding.ticker} not found in market data")
             continue
-            
+
         except MarketDataUnavailableError as e:
             # API down or rate limited - skip but log
             logger.error(f"Market data unavailable for {holding.ticker}: {e}")
             continue
-    
+
     # Calculate total value
     total_value = portfolio.cash_balance + holdings_value
-    
+
     return PortfolioBalanceDTO(
         portfolio_id=portfolio_id,
         cash_balance=portfolio.cash_balance,
@@ -113,18 +113,18 @@ async def execute(...) -> PortfolioBalanceDTO:
 @dataclass(frozen=True)
 class HoldingDTO:
     """DTO for holding with market data."""
-    
+
     ticker: str
     quantity: Decimal
     average_cost: Money
     cost_basis: Money  # quantity * average_cost
-    
+
     # NEW: Market data fields
     current_price: Money | None = None
     market_value: Money | None = None  # quantity * current_price
     unrealized_gain_loss: Money | None = None  # market_value - cost_basis
     unrealized_gain_loss_percent: Decimal | None = None
-    
+
     # NEW: Price metadata
     price_timestamp: datetime | None = None
     price_source: str | None = None
@@ -143,14 +143,14 @@ class GetHoldings:
     ) -> list[HoldingDTO]:
         # Get holdings (existing logic)
         holdings = await portfolio_repository.get_holdings(portfolio_id)
-        
+
         # Enrich with market data
         enriched_holdings = []
         for holding in holdings:
             try:
                 # Fetch current price
                 price_point = await market_data.get_current_price(holding.ticker)
-                
+
                 # Calculate metrics
                 market_value = Money(
                     price_point.price.amount * Decimal(str(holding.quantity)),
@@ -166,10 +166,10 @@ class GetHoldings:
                 )
                 gain_loss_percent = (
                     (unrealized_gain_loss.amount / cost_basis.amount) * 100
-                    if cost_basis.amount > 0 
+                    if cost_basis.amount > 0
                     else Decimal("0")
                 )
-                
+
                 # Create enriched DTO
                 enriched_holdings.append(HoldingDTO(
                     ticker=holding.ticker.symbol,
@@ -183,7 +183,7 @@ class GetHoldings:
                     price_timestamp=price_point.timestamp,
                     price_source=price_point.source,
                 ))
-                
+
             except (TickerNotFoundError, MarketDataUnavailableError) as e:
                 # Price unavailable - return holding without market data
                 logger.warning(f"Price unavailable for {holding.ticker}: {e}")
@@ -197,7 +197,7 @@ class GetHoldings:
                     ),
                     # Market data fields = None (indicates unavailable)
                 ))
-        
+
         return enriched_holdings
 ```
 
@@ -216,17 +216,17 @@ import httpx
 
 async def get_market_data() -> AlphaVantageAdapter:
     """Provide MarketDataPort implementation (AlphaVantageAdapter)."""
-    
+
     # Get config
     from papertrade.config import settings
-    
+
     # Create Redis client for rate limiter and cache
     redis = await Redis.from_url(
         settings.redis_url,
         encoding="utf-8",
         decode_responses=True
     )
-    
+
     # Create rate limiter (5 calls/min, 500/day)
     rate_limiter = RateLimiter(
         redis=redis,
@@ -234,17 +234,17 @@ async def get_market_data() -> AlphaVantageAdapter:
         calls_per_minute=5,
         calls_per_day=500,
     )
-    
+
     # Create price cache
     price_cache = PriceCache(
         redis=redis,
         key_prefix="papertrade:price",
         default_ttl=3600,  # 1 hour
     )
-    
+
     # Create HTTP client
     http_client = httpx.AsyncClient(timeout=5.0)
-    
+
     # Create adapter
     adapter = AlphaVantageAdapter(
         rate_limiter=rate_limiter,
@@ -252,7 +252,7 @@ async def get_market_data() -> AlphaVantageAdapter:
         http_client=http_client,
         api_key=settings.alpha_vantage_api_key,
     )
-    
+
     return adapter
 ```
 
@@ -317,13 +317,13 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # Existing settings...
-    
+
     # Redis
     redis_url: str = "redis://localhost:6379/0"
-    
+
     # Alpha Vantage
     alpha_vantage_api_key: str
-    
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
@@ -362,17 +362,17 @@ async def test_portfolio_balance_with_real_prices(
 ):
     """Test portfolio balance calculation with real prices."""
     query = GetPortfolioBalance()
-    
+
     result = await query.execute(
         portfolio_id=UUID("..."),
         user_id=UUID("..."),
         portfolio_repository=mock_portfolio_repository,
         market_data=mock_market_data,
     )
-    
+
     # Verify price was fetched
     assert mock_market_data.get_current_price.called
-    
+
     # Verify portfolio value includes holdings value
     assert result.total_value.amount > result.cash_balance.amount
 
@@ -383,13 +383,13 @@ async def test_portfolio_balance_handles_ticker_not_found(
 ):
     """Test graceful handling when ticker not found."""
     from papertrade.application.exceptions import TickerNotFoundError
-    
+
     # Mock ticker not found
     mock_market_data.get_current_price.side_effect = TickerNotFoundError("INVALID")
-    
+
     query = GetPortfolioBalance()
     result = await query.execute(...)
-    
+
     # Should not raise error, just exclude that holding
     # Holdings value should be 0
     assert result.holdings_value.amount == Decimal("0")
@@ -409,7 +409,7 @@ async def test_get_holdings_with_real_prices(
     auth_headers: dict,
 ):
     """Integration test with AlphaVantageAdapter (uses respx mocks)."""
-    
+
     # Mock Alpha Vantage API response
     import respx
     respx.get("https://www.alphavantage.co/query").mock(
@@ -421,17 +421,17 @@ async def test_get_holdings_with_real_prices(
             }
         })
     )
-    
+
     # Make request
     response = await async_client.get(
         "/api/v1/portfolios/{portfolio_id}/holdings",
         headers=auth_headers,
     )
-    
+
     # Verify response
     assert response.status_code == 200
     holdings = response.json()
-    
+
     # Verify market data included
     assert holdings[0]["current_price"]["amount"] == 192.53
     assert holdings[0]["market_value"] is not None

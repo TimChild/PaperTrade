@@ -1,9 +1,9 @@
 # Task 023: Real Price Display UI
 
-**Created**: 2025-12-28  
-**Agent**: frontend-swe  
-**Estimated Effort**: 3-4 hours  
-**Dependencies**: Task 018 (PricePoint foundation), can proceed in parallel with Task 020  
+**Created**: 2025-12-28
+**Agent**: frontend-swe
+**Estimated Effort**: 3-4 hours
+**Dependencies**: Task 018 (PricePoint foundation), can proceed in parallel with Task 020
 **Related PRs**: N/A (new work)
 
 ## Objective
@@ -64,14 +64,14 @@ export async function getBatchPrices(
   const results = await Promise.allSettled(
     tickers.map(ticker => getCurrentPrice(ticker))
   );
-  
+
   const priceMap = new Map<string, PricePoint>();
   results.forEach((result, index) => {
     if (result.status === 'fulfilled') {
       priceMap.set(tickers[index], result.value);
     }
   });
-  
+
   return priceMap;
 }
 ```
@@ -153,18 +153,18 @@ export function useBatchPricesQuery(tickers: string[]) {
  */
 export function usePriceStaleness(pricePoint: PricePoint | undefined) {
   if (!pricePoint) return null;
-  
+
   const now = new Date();
   const priceTime = new Date(pricePoint.timestamp);
   const diffMs = now.getTime() - priceTime.getTime();
   const diffMinutes = Math.floor(diffMs / 60000);
-  
+
   if (diffMinutes < 1) return 'Just now';
   if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes > 1 ? 's' : ''} ago`;
-  
+
   const diffHours = Math.floor(diffMinutes / 60);
   if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-  
+
   const diffDays = Math.floor(diffHours / 24);
   return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
 }
@@ -186,27 +186,27 @@ interface PortfolioCardProps {
 export function PortfolioCard({ portfolio }: PortfolioCardProps) {
   // Extract tickers from holdings
   const tickers = portfolio.holdings.map(h => h.ticker);
-  
+
   // Fetch prices for all holdings
   const { data: priceMap, isLoading, error } = useBatchPricesQuery(tickers);
-  
+
   // Calculate total portfolio value
   const portfolioValue = useMemo(() => {
     if (!priceMap) return portfolio.cash_balance;
-    
+
     const holdingsValue = portfolio.holdings.reduce((sum, holding) => {
       const price = priceMap.get(holding.ticker);
       if (!price) return sum;
       return sum + (price.price.amount * holding.shares);
     }, 0);
-    
+
     return portfolio.cash_balance + holdingsValue;
   }, [portfolio, priceMap]);
-  
+
   // Determine most stale price (for indicator)
   const stalestPrice = useMemo(() => {
     if (!priceMap || priceMap.size === 0) return null;
-    
+
     const prices = Array.from(priceMap.values());
     return prices.reduce((oldest, current) => {
       return new Date(current.timestamp) < new Date(oldest.timestamp)
@@ -214,13 +214,13 @@ export function PortfolioCard({ portfolio }: PortfolioCardProps) {
         : oldest;
     }, prices[0]);
   }, [priceMap]);
-  
+
   const staleness = usePriceStaleness(stalestPrice);
-  
+
   return (
     <div className="portfolio-card">
       <h2>{portfolio.name}</h2>
-      
+
       {/* Portfolio Value */}
       <div className="portfolio-value">
         <span className="label">Total Value</span>
@@ -237,13 +237,13 @@ export function PortfolioCard({ portfolio }: PortfolioCardProps) {
           </>
         )}
       </div>
-      
+
       {/* Cash Balance */}
       <div className="cash-balance">
         <span className="label">Cash</span>
         <span className="amount">${portfolio.cash_balance.toFixed(2)}</span>
       </div>
-      
+
       {/* Holdings */}
       <div className="holdings">
         <h3>Holdings</h3>
@@ -263,7 +263,7 @@ export function PortfolioCard({ portfolio }: PortfolioCardProps) {
               {portfolio.holdings.map(holding => {
                 const price = priceMap?.get(holding.ticker);
                 const value = price ? price.price.amount * holding.shares : null;
-                
+
                 return (
                   <tr key={holding.ticker}>
                     <td>{holding.ticker}</td>
@@ -303,11 +303,11 @@ import { http, HttpResponse } from 'msw';
 
 const handlers = [
   // ... existing handlers ...
-  
+
   // Get current price for a ticker
   http.get('/api/v1/prices/:ticker', ({ params }) => {
     const { ticker } = params;
-    
+
     // Mock prices for common stocks
     const mockPrices: Record<string, number> = {
       'AAPL': 192.53,
@@ -316,7 +316,7 @@ const handlers = [
       'TSLA': 248.48,
       'AMZN': 178.25,
     };
-    
+
     const price = mockPrices[ticker as string];
     if (!price) {
       return HttpResponse.json(
@@ -324,7 +324,7 @@ const handlers = [
         { status: 404 }
       );
     }
-    
+
     return HttpResponse.json({
       ticker: { symbol: ticker },
       price: { amount: price, currency: 'USD' },
@@ -365,21 +365,21 @@ describe('usePriceQuery', () => {
     const { result } = renderHook(() => usePriceQuery('AAPL'), {
       wrapper: createWrapper(),
     });
-    
+
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    
+
     expect(result.current.data).toMatchObject({
       ticker: { symbol: 'AAPL' },
       price: { amount: 192.53, currency: 'USD' },
       source: 'mock',
     });
   });
-  
+
   it('handles ticker not found error', async () => {
     const { result } = renderHook(() => usePriceQuery('INVALID'), {
       wrapper: createWrapper(),
     });
-    
+
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeTruthy();
   });
@@ -393,11 +393,11 @@ describe('usePriceStaleness', () => {
       timestamp: new Date().toISOString(),
       source: 'mock',
     };
-    
+
     const { result } = renderHook(() => usePriceStaleness(pricePoint));
     expect(result.current).toBe('Just now');
   });
-  
+
   it('returns minutes for slightly old prices', () => {
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
     const pricePoint = {
@@ -406,7 +406,7 @@ describe('usePriceStaleness', () => {
       timestamp: fiveMinutesAgo.toISOString(),
       source: 'mock',
     };
-    
+
     const { result } = renderHook(() => usePriceStaleness(pricePoint));
     expect(result.current).toBe('5 minutes ago');
   });
@@ -421,48 +421,48 @@ import { test, expect } from '@playwright/test';
 test.describe('Price Display', () => {
   test('shows portfolio value with real prices', async ({ page }) => {
     await page.goto('/');
-    
+
     // Wait for portfolio to load
     await expect(page.locator('h2').first()).toContainText('Portfolio');
-    
+
     // Check that prices are loading
     await expect(page.locator('.loading')).toBeVisible();
-    
+
     // Wait for prices to load
     await expect(page.locator('.loading')).not.toBeVisible();
-    
+
     // Check that portfolio value is displayed
     const portfolioValue = page.locator('.portfolio-value .amount');
     await expect(portfolioValue).toBeVisible();
-    
+
     // Verify staleness indicator
     await expect(page.locator('.staleness')).toContainText('ago');
   });
-  
+
   test('shows individual holding prices', async ({ page }) => {
     await page.goto('/');
-    
+
     // Wait for holdings table
     await page.waitForSelector('.holdings table');
-    
+
     // Check first holding row
     const firstRow = page.locator('.holdings tbody tr').first();
-    
+
     // Should have ticker, shares, price, value
     await expect(firstRow.locator('td').nth(0)).not.toBeEmpty(); // Ticker
     await expect(firstRow.locator('td').nth(1)).not.toBeEmpty(); // Shares
     await expect(firstRow.locator('td').nth(2)).toContainText('$'); // Price
     await expect(firstRow.locator('td').nth(3)).toContainText('$'); // Value
   });
-  
+
   test('handles price fetch errors gracefully', async ({ page }) => {
     // Mock API error
-    await page.route('/api/v1/prices/*', route => 
+    await page.route('/api/v1/prices/*', route =>
       route.fulfill({ status: 500, body: 'Server error' })
     );
-    
+
     await page.goto('/');
-    
+
     // Should show error state
     await expect(page.locator('.error')).toContainText('Error loading prices');
   });

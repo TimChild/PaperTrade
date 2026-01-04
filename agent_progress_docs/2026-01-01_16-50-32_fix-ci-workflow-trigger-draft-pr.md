@@ -1,8 +1,8 @@
 # Task 027: Fix CI Workflow Trigger on Draft PR Transition
 
-**Agent**: quality-infra  
-**Date**: 2026-01-01  
-**Task Duration**: ~30 minutes  
+**Agent**: quality-infra
+**Date**: 2026-01-01
+**Task Duration**: ~30 minutes
 **Status**: ✅ Complete
 
 ## Task Summary
@@ -223,7 +223,7 @@ This is purely CI/CD configuration:
 ## Success Criteria
 
 - [x] CI workflow triggers when PR transitions from draft to ready
-- [x] CI still triggers on PR open and new commits  
+- [x] CI still triggers on PR open and new commits
 - [x] Both `ci.yml` and `pr.yml` workflows updated
 - [x] YAML syntax validated
 - [x] Changes are minimal and surgical

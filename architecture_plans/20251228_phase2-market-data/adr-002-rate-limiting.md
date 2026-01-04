@@ -1,8 +1,8 @@
 # ADR 002: Rate Limiting Implementation
 
-**Status**: Approved  
-**Date**: 2025-12-28  
-**Deciders**: Architecture Team  
+**Status**: Approved
+**Date**: 2025-12-28
+**Deciders**: Architecture Team
 **Context**: Phase 2 Market Data Integration
 
 ## Context
@@ -78,19 +78,19 @@ TTL:
 can_make_request():
   minute_key = generate_minute_key(now)
   day_key = generate_day_key(now)
-  
+
   minute_tokens = redis.get(minute_key) OR capacity_per_minute
   day_tokens = redis.get(day_key) OR capacity_per_day
-  
+
   return (minute_tokens > 0) AND (day_tokens > 0)
 
 consume_token():
   minute_key = generate_minute_key(now)
   day_key = generate_day_key(now)
-  
+
   redis.decr(minute_key)
   redis.decr(day_key)
-  
+
   redis.expire(minute_key, 120)  # Ensure TTL set
   redis.expire(day_key, 48*3600)
 ```

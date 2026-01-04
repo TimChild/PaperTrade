@@ -729,18 +729,18 @@ async def execute_sell_command(
     # 1. Get portfolio and transactions
     portfolio = await repository.get(portfolio_id)
     transactions = await transaction_repository.list_by_portfolio(portfolio_id)
-    
+
     # 2. Calculate current holdings
     calculator = PortfolioCalculator()
     current_holding = calculator.calculate_holding_for_ticker(transactions, ticker)
-    
+
     # 3. VALIDATE business rule
     if current_holding is None or current_holding.quantity < quantity:
         raise InsufficientSharesError(
             f"Cannot sell {quantity.shares} shares of {ticker.symbol}, "
             f"only {current_holding.quantity.shares if current_holding else 0} owned"
         )
-    
+
     # 4. Create transaction (validation passed)
     transaction = Transaction.create_sell(
         portfolio_id=portfolio_id,
@@ -748,7 +748,7 @@ async def execute_sell_command(
         quantity=quantity,
         price_per_share=price_per_share,
     )
-    
+
     # 5. Persist
     await transaction_repository.save(transaction)
     return SellResult(success=True, transaction_id=transaction.id)
@@ -764,7 +764,7 @@ class PortfolioCalculator:
         ticker: Ticker,
     ) -> Holding | None:
         """Calculate current holding for a ticker from transactions.
-        
+
         Returns holding even if it has negative quantity (invalid state).
         Caller is responsible for validation.
         """

@@ -14,7 +14,7 @@ export function ErrorDisplay({ error, className = '' }: ErrorDisplayProps) {
 
   // Extract error message
   let message = 'An unexpected error occurred'
-  
+
   if (error instanceof Error) {
     // Check if it's an Axios error
     if ('response' in error && error.response?.data) {

@@ -1,6 +1,6 @@
 # Phase 2 Market Data Integration - Interface Specifications
 
-**Created**: 2025-12-28  
+**Created**: 2025-12-28
 **Status**: Approved
 
 ## Overview
@@ -287,7 +287,7 @@ Manages hot cache of recent prices using Redis.
 | key_prefix | "papertrade:price:" | Prefix for all cache keys |
 
 ### Key Format
-Keys: `papertrade:price:{ticker.symbol}`  
+Keys: `papertrade:price:{ticker.symbol}`
 Example: `papertrade:price:AAPL`
 
 ### Serialization

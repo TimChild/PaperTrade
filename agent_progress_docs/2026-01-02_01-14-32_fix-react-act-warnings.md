@@ -1,8 +1,8 @@
 # Agent Progress: Fix React act() Warnings in CreatePortfolioForm Tests
 
-**Agent**: frontend-swe  
-**Date**: 2026-01-02  
-**Task**: Task 038 - Fix Frontend React Act() Warnings in Tests  
+**Agent**: frontend-swe
+**Date**: 2026-01-02
+**Task**: Task 038 - Fix Frontend React Act() Warnings in Tests
 **Status**: ✅ Complete
 
 ## Task Summary
@@ -57,7 +57,7 @@ This is cleaner and more idiomatic for async queries in React Testing Library.
 - Replaced `waitFor(() => expect(screen.getByRole(...)))` with `await screen.findByRole(...)`
 - Added explanatory comments about why `act()` is needed
 
-**Total changes**: 
+**Total changes**:
 - 1 import added
 - 2 test cases updated
 - Lines changed: ~20 (minimal, surgical changes)

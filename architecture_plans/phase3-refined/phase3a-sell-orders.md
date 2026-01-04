@@ -1,7 +1,7 @@
 # Phase 3a: SELL Order Functionality
 
-**Duration**: 2-3 weeks  
-**Priority**: HIGH  
+**Duration**: 2-3 weeks
+**Priority**: HIGH
 **Dependencies**: None (builds on Phase 2)
 
 ## Objective
@@ -133,7 +133,7 @@ graph TD
     GetPrice --> CreateTx[Create SELL Transaction]
     CreateTx --> Save[Save to Ledger]
     Save --> Return[Return Transaction]
-    
+
     style Error1 fill:#ffcccc
     style Error2 fill:#ffcccc
     style Error3 fill:#ffcccc

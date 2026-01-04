@@ -1,6 +1,6 @@
 ---
 name: Copilot Instructions Updater
-description: Updates all the copilot specific files across the repository. I.e. updates the various text instruction files that the agents read for each coding session. 
+description: Updates all the copilot specific files across the repository. I.e. updates the various text instruction files that the agents read for each coding session.
   This agent thoroughly looks through the repository to understand its structure and how to implement various new features within it.
 ---
 
@@ -144,4 +144,4 @@ When updating instructions:
 2. Use diff-friendly formatting
 3. Update related files consistently
 4. Generate progress documentation per `.github/copilot-instructions.md`
-5. Note any temporary items that need future updates 
+5. Note any temporary items that need future updates

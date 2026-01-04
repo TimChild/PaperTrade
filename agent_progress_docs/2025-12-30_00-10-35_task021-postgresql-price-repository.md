@@ -1,8 +1,8 @@
 # Task 021: PostgreSQL Price Repository Implementation
 
-**Agent**: backend-swe  
-**Date**: 2025-12-30  
-**Duration**: ~3 hours  
+**Agent**: backend-swe
+**Date**: 2025-12-30
+**Duration**: ~3 hours
 **Status**: ✅ Complete
 
 ## Task Summary
@@ -210,8 +210,8 @@ All performance targets met:
 
 ### AlphaVantageAdapter Tiered Caching
 
-**Tier 1 (Redis)**: <100ms, 1 hour TTL  
-**Tier 2 (PostgreSQL)**: <100ms, 4 hour max age ✨ **NEW**  
+**Tier 1 (Redis)**: <100ms, 1 hour TTL
+**Tier 2 (PostgreSQL)**: <100ms, 4 hour max age ✨ **NEW**
 **Tier 3 (Alpha Vantage API)**: <2s, rate limited
 
 **Flow**:

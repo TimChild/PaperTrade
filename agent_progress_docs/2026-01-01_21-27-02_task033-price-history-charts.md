@@ -1,7 +1,7 @@
 # Task 033: Price History Charts (Frontend)
 
-**Agent**: frontend-swe  
-**Date**: January 1, 2026  
+**Agent**: frontend-swe
+**Date**: January 1, 2026
 **Status**: ✅ COMPLETED
 
 ## Task Summary
@@ -110,7 +110,7 @@ Implemented interactive price history charts for the frontend, allowing users to
 
 ### Build Verification
 - TypeScript compilation: ✅ Passed
-- ESLint: ✅ Passed  
+- ESLint: ✅ Passed
 - Production build: ✅ Passed (688KB gzipped bundle)
 
 ## Implementation Highlights
@@ -120,7 +120,7 @@ Implemented interactive price history charts for the frontend, allowing users to
 function getDateRange(range: TimeRange): { start: string; end: string } {
   const end = new Date()
   const start = new Date()
-  
+
   switch (range) {
     case '1D': start.setDate(end.getDate() - 1); break
     case '1W': start.setDate(end.getDate() - 7); break
@@ -129,7 +129,7 @@ function getDateRange(range: TimeRange): { start: string; end: string } {
     case '1Y': start.setFullYear(end.getFullYear() - 1); break
     case 'ALL': start.setFullYear(end.getFullYear() - 5); break
   }
-  
+
   return {
     start: start.toISOString().split('T')[0],
     end: end.toISOString().split('T')[0],
@@ -243,6 +243,6 @@ The charts will display correctly when:
 
 ---
 
-**Completion Time**: ~3 hours  
-**Estimated Time**: 5-6 hours  
+**Completion Time**: ~3 hours
+**Estimated Time**: 5-6 hours
 **Time Saved**: 2-3 hours (efficient implementation)

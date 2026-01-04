@@ -1,8 +1,8 @@
 # Task 013: Add Portfolio Creation UI
 
-**Date**: 2025-12-29 00:27 UTC  
-**Agent**: Frontend-SWE  
-**Task**: Implement portfolio creation UI functionality  
+**Date**: 2025-12-29 00:27 UTC
+**Agent**: Frontend-SWE
+**Task**: Implement portfolio creation UI functionality
 **Status**: ✅ COMPLETE
 
 ## Summary

@@ -13,7 +13,7 @@ export function formatCurrency(value: number | undefined | null, currency = 'USD
   if (value === null || value === undefined || !Number.isFinite(value)) {
     return '---'
   }
-  
+
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
@@ -34,7 +34,7 @@ export function formatPercent(
   if (value === null || value === undefined || !Number.isFinite(value)) {
     return '---'
   }
-  
+
   return new Intl.NumberFormat('en-US', {
     style: 'percent',
     minimumFractionDigits: 2,
@@ -54,7 +54,7 @@ export function formatNumber(value: number | undefined | null, decimals: number 
   if (value === null || value === undefined || !Number.isFinite(value)) {
     return '---'
   }
-  
+
   return new Intl.NumberFormat('en-US', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
@@ -72,7 +72,7 @@ export function formatDate(
   includeTime: boolean = true
 ): string {
   const date = new Date(dateString)
-  
+
   if (includeTime) {
     return new Intl.DateTimeFormat('en-US', {
       month: 'short',
@@ -83,7 +83,7 @@ export function formatDate(
       hour12: true,
     }).format(date)
   }
-  
+
   return new Intl.DateTimeFormat('en-US', {
     month: 'short',
     day: 'numeric',

@@ -307,6 +307,15 @@ async def execute_trade(
         HTTPException: 404 if ticker not found in market data
         HTTPException: 503 if market data service is unavailable
     """
+    # Log the trade request for debugging (especially useful in CI)
+    import logging
+
+    logger = logging.getLogger(__name__)
+    logger.info(
+        f"Trade request received: portfolio_id={portfolio_id}, "
+        f"action={request.action}, ticker={request.ticker}, quantity={request.quantity}"
+    )
+
     # Verify user owns this portfolio
     await _verify_portfolio_ownership(portfolio_id, current_user, portfolio_repo)
 
@@ -417,9 +426,17 @@ async def _verify_portfolio_ownership(
     Raises:
         HTTPException: 404 if portfolio not found, 403 if user doesn't own it
     """
+    import logging
+
+    logger = logging.getLogger(__name__)
+    logger.info(
+        f"Verifying portfolio ownership: portfolio_id={portfolio_id}, user_id={user_id}"
+    )
+
     portfolio = await portfolio_repo.get(portfolio_id)
 
     if portfolio is None:
+        logger.warning(f"Portfolio not found: {portfolio_id}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Portfolio not found: {portfolio_id}",

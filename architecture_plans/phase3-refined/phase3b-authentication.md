@@ -1,7 +1,7 @@
 # Phase 3b: User Authentication & Authorization
 
-**Duration**: 2-3 weeks  
-**Priority**: CRITICAL (blocks production deployment)  
+**Duration**: 2-3 weeks
+**Priority**: CRITICAL (blocks production deployment)
 **Dependencies**: None (can parallel with 3a)
 
 ## Objective
@@ -54,12 +54,12 @@ graph LR
     DB -->|3. Return user| API
     API -->|4. Generate JWT + Refresh| Client
     Client -->|5. Store in httpOnly cookie| Browser[Browser Storage]
-    
+
     Client -->|6. API requests with JWT| Protected[Protected Endpoints]
     Protected -->|7. Validate JWT| Middleware[Auth Middleware]
     Middleware -->|8. Extract user_id| Protected
     Protected -->|9. Filter by user_id| DB
-    
+
     style API fill:#90EE90
     style Middleware fill:#FFD700
     style Browser fill:#87CEEB
@@ -271,7 +271,7 @@ get_current_user:
   5. Extract user_id from token
   6. Fetch user from database
   7. Return user object
-  
+
   Errors:
   - No header: 401 Unauthorized
   - Invalid format: 401 Unauthorized

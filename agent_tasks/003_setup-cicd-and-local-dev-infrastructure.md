@@ -21,9 +21,9 @@ jobs:
     - Run ruff check
     - Run pyright
     - Run pytest with coverage
-    
+
   frontend-quality:
-    - Checkout code  
+    - Checkout code
     - Setup Node.js 20
     - Install dependencies
     - Run eslint
@@ -46,11 +46,11 @@ services:
     environment variables for dev
     volume for data persistence
     healthcheck
-    
+
   redis:
     image: redis:7-alpine
     healthcheck
-    
+
   # Backend and frontend services can be added later
   # when we have proper Dockerfiles
 ```
@@ -62,41 +62,41 @@ tasks:
   setup:
     desc: "Set up complete development environment"
     # Install backend deps, frontend deps, start docker services
-    
+
   dev:
     desc: "Start development servers"
     # Start docker services, backend, frontend
-    
+
   dev:backend:
     desc: "Start backend development server"
-    
+
   dev:frontend:
     desc: "Start frontend development server"
-    
+
   test:
     desc: "Run all tests"
-    
+
   test:backend:
     desc: "Run backend tests"
-    
+
   test:frontend:
     desc: "Run frontend tests"
-    
+
   lint:
     desc: "Run all linters"
-    
+
   lint:backend:
     desc: "Run backend linters (ruff, pyright)"
-    
+
   lint:frontend:
     desc: "Run frontend linters (eslint, tsc)"
-    
+
   docker:up:
     desc: "Start Docker services"
-    
+
   docker:down:
     desc: "Stop Docker services"
-    
+
   clean:
     desc: "Clean build artifacts and caches"
 ```
@@ -110,12 +110,12 @@ repos:
       - end-of-file-fixer
       - check-yaml
       - check-added-large-files
-      
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     hooks:
       - ruff (lint)
       - ruff-format
-      
+
   - repo: local
     hooks:
       - pyright (backend)

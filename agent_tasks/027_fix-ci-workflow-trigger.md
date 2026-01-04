@@ -1,9 +1,9 @@
 # Task 027: Fix CI Workflow Trigger on Draft PR Transition
 
-**Created**: 2026-01-01  
-**Agent**: quality-infra  
-**Estimated Effort**: 1-2 hours  
-**Dependencies**: None  
+**Created**: 2026-01-01
+**Agent**: quality-infra
+**Estimated Effort**: 1-2 hours
+**Dependencies**: None
 **Phase**: Quality Improvement
 
 ## Objective
@@ -74,7 +74,7 @@ May have similar issues.
 ```yaml
 on:
   pull_request:
-    types: 
+    types:
       - opened
       - synchronize
       - reopened
@@ -88,7 +88,7 @@ If you want to avoid running CI on draft PRs entirely:
 ```yaml
 on:
   pull_request:
-    types: 
+    types:
       - opened
       - synchronize
       - reopened

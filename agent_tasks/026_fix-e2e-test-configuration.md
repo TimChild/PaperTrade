@@ -1,9 +1,9 @@
 # Task 026: Fix E2E Test Configuration
 
-**Created**: 2025-12-29  
-**Agent**: quality-infra  
-**Estimated Effort**: 1 hour  
-**Dependencies**: None  
+**Created**: 2025-12-29
+**Agent**: quality-infra
+**Estimated Effort**: 1 hour
+**Dependencies**: None
 **Phase**: Quality Improvement
 
 ## Objective
@@ -99,27 +99,27 @@ import { defineConfig, devices } from '@playwright/test'
  */
 export default defineConfig({
   testDir: './tests/e2e',
-  
+
   /* Run tests in files in parallel */
   fullyParallel: true,
-  
+
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
-  
+
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  
+
   /* Opt out of parallel tests on CI. */
   workers: process.env.CI ? 1 : undefined,
-  
+
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
-  
+
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
     baseURL: 'http://localhost:5173',
-    
+
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
   },
@@ -236,59 +236,59 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
-      
+
       - name: Install dependencies
         run: npm ci
         working-directory: frontend
-      
+
       - name: Lint
         run: npm run lint
         working-directory: frontend
-      
+
       - name: Type check
         run: npm run type-check
         working-directory: frontend
-      
+
       - name: Unit tests
         run: npm run test:unit  # ✅ Explicit unit tests only
         working-directory: frontend
-      
+
       - name: Build
         run: npm run build
         working-directory: frontend
-  
+
   e2e-tests:
     runs-on: ubuntu-latest
     needs: [backend-checks, frontend-checks]
     steps:
       - uses: actions/checkout@v4
-      
+
       # Setup Node, Python, Docker, etc.
-      
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
         working-directory: frontend
-      
+
       - name: Start services
         run: task docker:up
-      
+
       - name: Start backend
         run: task dev:backend &
-      
+
       - name: Wait for backend
         run: timeout 60 bash -c 'until curl -f http://localhost:8000/health; do sleep 2; done'
-      
+
       - name: Run E2E tests
         run: npm run test:e2e
         working-directory: frontend
-      
+
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4
         if: always()
@@ -375,8 +375,8 @@ npm run test:unit
 
 ## Impact
 
-**Risk**: LOW - Configuration-only changes, no code changes  
-**Priority**: MEDIUM - Unblocks E2E testing capability  
+**Risk**: LOW - Configuration-only changes, no code changes
+**Priority**: MEDIUM - Unblocks E2E testing capability
 **Effort**: 1 hour (configuration updates)
 
 ## Notes

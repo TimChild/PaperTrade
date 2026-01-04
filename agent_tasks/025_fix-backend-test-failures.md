@@ -1,9 +1,9 @@
 # Task 025: Fix Backend Test Failures
 
-**Created**: 2025-12-29  
-**Agent**: backend-swe  
-**Estimated Effort**: 1 hour  
-**Dependencies**: None (standalone fixes)  
+**Created**: 2025-12-29
+**Agent**: backend-swe
+**Estimated Effort**: 1 hour
+**Dependencies**: None (standalone fixes)
 **Phase**: Quality Improvement
 
 ## Objective
@@ -14,7 +14,7 @@ Fix 3 failing backend tests (2 pre-existing issues in PricePoint DTO, 1 new issu
 
 Local testing revealed test failures after merging PRs #30, #31, #32. Two failures are pre-existing bugs in the PricePoint DTO implementation, and one is a new issue from the AlphaVantageAdapter where cached prices don't update their `source` field.
 
-**Current Status**: 331/334 tests passing (99.1%)  
+**Current Status**: 331/334 tests passing (99.1%)
 **Target**: 334/334 tests passing (100%)
 
 ## Success Criteria
@@ -49,13 +49,13 @@ def is_stale(self, max_age: timedelta) -> bool:
 ```python
 def is_stale(self, max_age: timedelta) -> bool:
     """Check if price data is older than max_age.
-    
+
     A price is considered stale if its age is GREATER than max_age.
     At exactly max_age, it is still considered fresh.
-    
+
     Args:
         max_age: Maximum age before price is considered stale
-        
+
     Returns:
         True if age > max_age (stale), False if age <= max_age (fresh)
     """
@@ -75,7 +75,7 @@ def test_exactly_at_threshold(self) -> None:
         source="alpha_vantage",
         interval="real-time",
     )
-    
+
     # Should not be stale (age == max_age, not >)
     assert not price_point.is_stale(timedelta(minutes=15))  # Should pass
 ```
@@ -104,7 +104,7 @@ class PricePoint:
     high: Money | None = None
     low: Money | None = None
     close: Money | None = None
-    
+
     # Default __eq__ compares ALL fields ❌
 ```
 
@@ -122,16 +122,16 @@ class PricePoint:
     high: Money | None = None
     low: Money | None = None
     close: Money | None = None
-    
+
     def __eq__(self, other: object) -> bool:
         """Compare price points based on core identity fields only.
-        
+
         OHLCV data (volume, open, high, low, close) is excluded from
         equality comparison as it's supplementary metadata.
         """
         if not isinstance(other, PricePoint):
             return NotImplemented
-        
+
         return (
             self.ticker == other.ticker
             and self.price == other.price
@@ -139,7 +139,7 @@ class PricePoint:
             and self.source == other.source
             and self.interval == other.interval
         )
-    
+
     def __hash__(self) -> int:
         """Hash based on core identity fields only (must match __eq__)."""
         return hash((
@@ -158,7 +158,7 @@ def test_ohlcv_not_in_equality(self) -> None:
     ticker = Ticker("AAPL")
     price = Money(Decimal("150.25"), "USD")
     timestamp = datetime(2025, 12, 28, 14, 30, tzinfo=timezone.utc)
-    
+
     pp1 = PricePoint(
         ticker=ticker,
         price=price,
@@ -167,7 +167,7 @@ def test_ohlcv_not_in_equality(self) -> None:
         interval="1day",
         volume=1000000,  # Different volume
     )
-    
+
     pp2 = PricePoint(
         ticker=ticker,
         price=price,
@@ -176,7 +176,7 @@ def test_ohlcv_not_in_equality(self) -> None:
         interval="1day",
         volume=2000000,  # Different volume
     )
-    
+
     assert pp1 == pp2  # Should pass (OHLCV excluded)
 ```
 
@@ -194,12 +194,12 @@ def test_ohlcv_not_in_equality(self) -> None:
 ```python
 async def get_current_price(self, ticker: Ticker) -> PricePoint:
     """Get current price with tiered caching."""
-    
+
     # Tier 1: Check Redis cache
     cached = await self._price_cache.get(ticker)
     if cached and not cached.is_stale(timedelta(hours=1)):
         return cached  # ❌ Returns with original source="alpha_vantage"
-    
+
     # ... rest of implementation
 ```
 
@@ -207,7 +207,7 @@ async def get_current_price(self, ticker: Ticker) -> PricePoint:
 ```python
 async def get_current_price(self, ticker: Ticker) -> PricePoint:
     """Get current price with tiered caching."""
-    
+
     # Tier 1: Check Redis cache
     cached = await self._price_cache.get(ticker)
     if cached and not cached.is_stale(timedelta(hours=1)):
@@ -224,7 +224,7 @@ async def get_current_price(self, ticker: Ticker) -> PricePoint:
             low=cached.low,
             close=cached.close,
         )
-    
+
     # ... rest of implementation (fetch from API, save to cache)
 ```
 
@@ -234,13 +234,13 @@ from dataclasses import replace
 
 async def get_current_price(self, ticker: Ticker) -> PricePoint:
     """Get current price with tiered caching."""
-    
+
     # Tier 1: Check Redis cache
     cached = await self._price_cache.get(ticker)
     if cached and not cached.is_stale(timedelta(hours=1)):
         # Update source to indicate cache hit
         return replace(cached, source="cache")  # ✅ Cleaner with replace()
-    
+
     # ... rest of implementation
 ```
 
@@ -256,9 +256,9 @@ async def test_get_current_price_cache_hit(
 ) -> None:
     """Test that second request hits cache (no API call)."""
     from datetime import date
-    
+
     today = date.today().isoformat()
-    
+
     mock_route = respx.get("https://www.alphavantage.co/query").mock(
         return_value=httpx.Response(
             200,
@@ -271,11 +271,11 @@ async def test_get_current_price_cache_hit(
             },
         )
     )
-    
+
     # First call - populates cache
     price1 = await adapter.get_current_price(Ticker("AAPL"))
     assert price1.source == "alpha_vantage"  # ✅ From API
-    
+
     # Second call - hits cache
     price2 = await adapter.get_current_price(Ticker("AAPL"))
     assert price2.source == "cache"  # ✅ Should pass after fix
@@ -331,8 +331,8 @@ async def test_get_current_price_cache_hit(
 
 ## Impact
 
-**Risk**: LOW - Only test fixes, no production logic changes  
-**Priority**: MEDIUM - Fixes quality but doesn't block feature work  
+**Risk**: LOW - Only test fixes, no production logic changes
+**Priority**: MEDIUM - Fixes quality but doesn't block feature work
 **Effort**: 1 hour (straightforward fixes)
 
 ## Notes

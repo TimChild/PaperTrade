@@ -80,7 +80,7 @@ CREATE TABLE price_history (
     UNIQUE (ticker, timestamp)
 );
 
-CREATE INDEX idx_price_history_ticker_timestamp 
+CREATE INDEX idx_price_history_ticker_timestamp
     ON price_history (ticker, timestamp DESC);
 ```
 

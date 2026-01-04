@@ -1,8 +1,8 @@
 # Task 028: Fix Test Isolation Issue in Portfolio API Integration Tests
 
-**Date**: 2026-01-01  
-**Agent**: backend-swe  
-**Status**: ✅ Complete  
+**Date**: 2026-01-01
+**Agent**: backend-swe
+**Status**: ✅ Complete
 
 ## Summary
 
@@ -56,15 +56,15 @@ Added an autouse fixture to reset global singletons after each test:
 async def reset_global_singletons() -> AsyncGenerator[None, None]:
     """Reset global singleton dependencies between tests."""
     from papertrade.adapters.inbound.api import dependencies
-    
+
     yield  # Run the test
-    
+
     # Clean up - close connections first
     if dependencies._http_client is not None:
         await dependencies._http_client.aclose()
     if dependencies._redis_client is not None:
         await dependencies._redis_client.aclose()
-    
+
     # Reset singletons
     dependencies._redis_client = None
     dependencies._http_client = None

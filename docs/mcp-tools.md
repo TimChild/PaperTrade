@@ -92,4 +92,3 @@ These MCP servers are configured but don't expose tools to the assistant:
 | Install packages | ❌ | ✅ `uv add`, `npm install` |
 | Git operations | ❌ | ✅ `git`, `gh` |
 | Build project | ❌ | ✅ `task build` |
-

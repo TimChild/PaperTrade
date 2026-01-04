@@ -47,13 +47,13 @@ This ensures we only refresh stocks users care about.
 async def refresh_active_stocks():
     """Refresh prices for all active stocks"""
     active_tickers = await get_active_tickers()
-    
+
     for ticker in active_tickers:
         try:
             # Fetch current price
             price = await market_data.get_current_price(ticker)
             # Cache automatically updated via normal flow
-            
+
             # Rate limiting: 5/min = ~12 sec between calls
             await asyncio.sleep(12)
         except Exception as e:
@@ -121,20 +121,20 @@ Add query to fetch active tickers:
 async def get_active_tickers(days: int = 30) -> List[str]:
     """Get tickers with recent activity"""
     cutoff = datetime.now() - timedelta(days=days)
-    
+
     # From transactions
     traded_tickers = await db.query(
-        "SELECT DISTINCT ticker FROM transactions 
+        "SELECT DISTINCT ticker FROM transactions
          WHERE timestamp > ? AND ticker IS NOT NULL",
         cutoff
     )
-    
+
     # From current holdings
     held_tickers = await db.query(
-        "SELECT DISTINCT ticker FROM holdings 
+        "SELECT DISTINCT ticker FROM holdings
          WHERE quantity > 0"
     )
-    
+
     return list(set(traded_tickers + held_tickers))
 ```
 
@@ -183,7 +183,7 @@ pre_populate = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"]  # Always refresh these
 
 1. **Unit Tests**: Test scheduler configuration parsing
 2. **Integration Tests**: Test refresh logic with VCR
-3. **Manual Test**: 
+3. **Manual Test**:
    ```bash
    # Disable scheduler in config
    # Run refresh manually

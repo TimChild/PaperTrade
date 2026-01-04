@@ -1,7 +1,7 @@
 # Phase 3c: Portfolio Analytics & Simple Backtesting
 
-**Duration**: 3-4 weeks  
-**Priority**: MEDIUM (enhances user experience)  
+**Duration**: 3-4 weeks
+**Priority**: MEDIUM (enhances user experience)
 **Dependencies**: Phase 3a (SELL orders) recommended
 
 ## Objective
@@ -464,7 +464,7 @@ CREATE TABLE portfolio_snapshots (
     holdings_value DECIMAL(15, 2) NOT NULL CHECK (holdings_value >= 0),
     holdings_count INTEGER NOT NULL CHECK (holdings_count >= 0),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     CONSTRAINT unique_portfolio_date UNIQUE (portfolio_id, snapshot_date),
     CONSTRAINT valid_total CHECK (total_value = cash_balance + holdings_value)
 );

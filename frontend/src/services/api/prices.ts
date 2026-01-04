@@ -68,18 +68,18 @@ function generateMockPriceHistory(
   const start = new Date(startDate)
   const end = new Date(endDate)
   const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-  
+
   const prices: PricePoint[] = []
   let basePrice = 150 + Math.random() * 100 // Random starting price between 150-250
-  
+
   for (let i = 0; i <= days; i++) {
     const date = new Date(start)
     date.setDate(start.getDate() + i)
-    
+
     // Random walk with some volatility
     const change = (Math.random() - 0.5) * 5
     basePrice = Math.max(50, basePrice + change) // Don't go below 50
-    
+
     prices.push({
       ticker: { symbol: ticker },
       price: {
@@ -91,7 +91,7 @@ function generateMockPriceHistory(
       interval: '1day',
     })
   }
-  
+
   return {
     ticker,
     prices,

@@ -8,11 +8,11 @@ This document outlines the manual testing procedure for validating PaperTrade's 
    ```bash
    # Terminal 1: Docker services
    task docker:up
-   
+
    # Terminal 2: Backend
    cd backend && task dev:backend
-   
-   # Terminal 3: Frontend  
+
+   # Terminal 3: Frontend
    cd frontend && npm run dev
    ```
 

@@ -42,7 +42,7 @@ No changes to production code needed. The backend validation was correct - domai
    ```typescript
    // Before
    disabled={createPortfolio.isPending || !name.trim()}
-   
+
    // After
    disabled={createPortfolio.isPending}
    ```
@@ -52,7 +52,7 @@ No changes to production code needed. The backend validation was correct - domai
    // Before
    if (isNaN(depositAmount) || depositAmount < 0) {
      setError('Initial deposit must be a positive number')
-   
+
    // After
    if (isNaN(depositAmount) || depositAmount <= 0) {
      setError('Initial deposit must be a positive number greater than zero')
@@ -62,7 +62,7 @@ No changes to production code needed. The backend validation was correct - domai
    ```typescript
    // Before
    <input type="number" step="0.01" min="0" .../>
-   
+
    // After
    <input type="number" step="0.01" .../>
    ```
@@ -71,7 +71,7 @@ No changes to production code needed. The backend validation was correct - domai
    ```typescript
    // Before
    const [initialDeposit, setInitialDeposit] = useState('0.00')
-   
+
    // After
    const [initialDeposit, setInitialDeposit] = useState('1000.00')
    ```
@@ -80,7 +80,7 @@ No changes to production code needed. The backend validation was correct - domai
    ```typescript
    // Before
    Optional: Start with an initial cash balance (default: $0.00)
-   
+
    // After
    Start with an initial cash balance (must be greater than $0.00)
    ```

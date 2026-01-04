@@ -1,7 +1,7 @@
 # Phase 2 Market Data Integration - Architecture Overview
 
-**Created**: 2025-12-28  
-**Status**: Approved  
+**Created**: 2025-12-28
+**Status**: Approved
 **Phase**: Phase 2 "Reality Injection"
 
 ## Executive Summary
@@ -72,7 +72,7 @@ get_price_history(ticker, start, end) → List[PricePoint]
 2. Check PostgreSQL → HIT: Warm Redis, return stored
 3. Call Alpha Vantage (rate-limited) → Store in PostgreSQL + Redis
 
-**Rationale**: 
+**Rationale**:
 - Free tier: 5 calls/min, 500/day
 - Pre-populate common stocks to avoid quota burn
 - Graceful degradation when rate-limited
@@ -85,7 +85,7 @@ get_price_history(ticker, start, end) → List[PricePoint]
 - `frontend/config.toml` - API endpoints, feature flags, update intervals
 - `.env` - Secrets (API keys) only
 
-**Rationale**: 
+**Rationale**:
 - TOML is more readable than JSON/YAML for config
 - Pydantic Settings provides type-safe validation
 - Environment overrides for deployment flexibility
@@ -215,8 +215,8 @@ Scheduler triggers daily refresh
 ## Risk Analysis
 
 ### Risk 1: API Rate Limits Exhausted
-**Likelihood**: Medium  
-**Impact**: High (no new prices)  
+**Likelihood**: Medium
+**Impact**: High (no new prices)
 **Mitigation**:
 - Pre-populate common stocks
 - Aggressive caching (Redis + PostgreSQL)
@@ -224,32 +224,32 @@ Scheduler triggers daily refresh
 - Upgrade to premium tier when needed (configurable)
 
 ### Risk 2: Alpha Vantage API Changes
-**Likelihood**: Low  
-**Impact**: High (adapter breaks)  
+**Likelihood**: Low
+**Impact**: High (adapter breaks)
 **Mitigation**:
 - VCR cassettes detect format changes
 - Abstract MarketDataPort allows provider swap
 - Monitor API health and error rates
 
 ### Risk 3: Redis/PostgreSQL Operational Complexity
-**Likelihood**: Low  
-**Impact**: Medium (deployment complexity)  
+**Likelihood**: Low
+**Impact**: Medium (deployment complexity)
 **Mitigation**:
 - Docker Compose for local development
 - AWS managed services for production (RDS, ElastiCache)
 - Fallback to API-only mode if cache unavailable
 
 ### Risk 4: Stale Price Data
-**Likelihood**: Medium  
-**Impact**: Low (user sees old prices)  
+**Likelihood**: Medium
+**Impact**: Low (user sees old prices)
 **Mitigation**:
 - Display timestamp with prices ("as of 2:30 PM")
 - Background refresh every 24 hours
 - Frontend polling for updates (configurable interval)
 
 ### Risk 5: Time Zone Handling
-**Likelihood**: Medium  
-**Impact**: Medium (incorrect price matching)  
+**Likelihood**: Medium
+**Impact**: Medium (incorrect price matching)
 **Mitigation**:
 - Store all timestamps in UTC
 - Convert to market timezone for display

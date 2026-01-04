@@ -132,7 +132,7 @@ describe('CreatePortfolioForm', () => {
 
     await user.type(nameInput, 'Test Portfolio')
     await user.clear(depositInput)
-    
+
     // Manually set a negative value (bypassing HTML5 validation)
     // Wrap in act() to handle state updates from the input event
     act(() => {
@@ -142,7 +142,7 @@ describe('CreatePortfolioForm', () => {
       })
       depositInput.dispatchEvent(new Event('input', { bubbles: true }))
     })
-    
+
     await user.click(submitButton)
 
     // Use findByRole to wait for the error to appear (handles async state update)
@@ -164,11 +164,11 @@ describe('CreatePortfolioForm', () => {
 
     // Type a name longer than 100 characters (bypassing maxLength by setting value directly)
     const longName = 'A'.repeat(101)
-    
+
     // Simulate user bypassing client-side validation
     await user.clear(nameInput)
     await user.type(nameInput, 'A'.repeat(50))
-    
+
     // Manually set the value to exceed the limit (simulating form manipulation)
     // Wrap in act() to handle state updates from the input event
     act(() => {
@@ -221,13 +221,13 @@ describe('CreatePortfolioForm', () => {
     const submitButton = screen.getByRole('button', { name: /Create Portfolio/i })
 
     await user.type(nameInput, 'Test Portfolio')
-    
+
     // Button should be enabled before submission
     expect(submitButton).not.toBeDisabled()
-    
+
     // After clicking, it should show loading state (or complete quickly)
     await user.click(submitButton)
-    
+
     // The form will either show loading or complete successfully
     // We just verify no error occurred
     await waitFor(() => {

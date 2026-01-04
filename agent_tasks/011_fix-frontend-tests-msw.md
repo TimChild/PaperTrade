@@ -6,7 +6,7 @@
 ## Context
 After Task 009 (Frontend-Backend Integration), 3 frontend tests in `App.test.tsx` are failing because they make real API calls to the backend. In the test environment, there's no backend running, causing tests to show loading spinner indefinitely and log network errors.
 
-**Current Status**: 20/23 tests passing (87%)  
+**Current Status**: 20/23 tests passing (87%)
 **Target**: 23/23 tests passing (100%)
 
 ## Problem Statement
@@ -349,7 +349,7 @@ it('displays error when API fails', async () => {
       return HttpResponse.json({ detail: 'Not found' }, { status: 404 })
     })
   )
-  
+
   render(<App />)
   await waitFor(() => {
     expect(screen.getByText('Portfolio not found')).toBeInTheDocument()
@@ -369,11 +369,11 @@ it('shows loading spinner initially', () => {
 ```typescript
 it('handles trade form submission', async () => {
   render(<TradeForm />)
-  
+
   await userEvent.type(screen.getByLabelText('Ticker'), 'AAPL')
   await userEvent.type(screen.getByLabelText('Quantity'), '10')
   await userEvent.click(screen.getByRole('button', { name: 'Buy' }))
-  
+
   await waitFor(() => {
     expect(screen.getByText('Trade executed successfully')).toBeInTheDocument()
   })
@@ -448,7 +448,7 @@ When this task is complete:
 
 ---
 
-**Created**: 2025-12-28  
-**Priority**: P1 - Critical  
-**Estimated Effort**: 2 hours  
+**Created**: 2025-12-28
+**Priority**: P1 - Critical
+**Estimated Effort**: 2 hours
 **Assigned To**: Frontend Software Engineer (or available agent)

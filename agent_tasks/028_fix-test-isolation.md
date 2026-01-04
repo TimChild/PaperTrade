@@ -1,9 +1,9 @@
 # Task 028: Fix Test Isolation Issue in Portfolio API Integration Tests
 
-**Created**: 2026-01-01  
-**Agent**: backend-swe  
-**Estimated Effort**: 1-2 hours  
-**Dependencies**: None  
+**Created**: 2026-01-01
+**Agent**: backend-swe
+**Estimated Effort**: 1-2 hours
+**Dependencies**: None
 **Phase**: Quality Improvement
 
 ## Objective
@@ -54,10 +54,10 @@ _market_data_adapter: AlphaVantageAdapter | None = None
 
 async def get_market_data() -> MarketDataPort:
     global _redis_client, _http_client, _market_data_adapter
-    
+
     if _market_data_adapter is not None:
         return _market_data_adapter
-    
+
     # Create singletons...
 ```
 
@@ -84,12 +84,12 @@ from papertrade.adapters.inbound.api import dependencies
 @pytest.fixture(autouse=True)
 async def reset_global_singletons():
     """Reset global singleton dependencies between tests.
-    
+
     This prevents test isolation issues where one test's market data
     adapter affects another test's behavior.
     """
     yield  # Run the test
-    
+
     # Clean up after test
     dependencies._redis_client = None
     dependencies._http_client = None
@@ -122,13 +122,13 @@ def client(app):
     """Create test client with overridden dependencies."""
     # Create fresh in-memory adapter for each test
     market_data = InMemoryMarketDataAdapter()
-    
+
     # Override dependency
     app.dependency_overrides[get_market_data] = lambda: market_data
-    
+
     with TestClient(app) as client:
         yield client
-    
+
     # Clean up
     app.dependency_overrides.clear()
 ```

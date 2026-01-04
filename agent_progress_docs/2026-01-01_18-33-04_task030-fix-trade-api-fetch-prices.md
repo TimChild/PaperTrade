@@ -1,8 +1,8 @@
 # Task 030: Fix Trade API - Backend Should Fetch Prices
 
-**Agent**: backend-swe  
-**Date**: January 1, 2026  
-**Priority**: CRITICAL - Blocks actual trading functionality  
+**Agent**: backend-swe
+**Date**: January 1, 2026
+**Priority**: CRITICAL - Blocks actual trading functionality
 **Status**: ✅ COMPLETED
 
 ## Problem Statement
@@ -57,7 +57,7 @@ async def execute_trade(
     market_data: MarketDataDep,  # ✅ New dependency
 ) -> TransactionResponse:
     """Execute a buy or sell trade.
-    
+
     Fetches the current market price automatically and executes the trade
     at that price. This prevents price manipulation and ensures trades
     execute at real market prices.
@@ -65,7 +65,7 @@ async def execute_trade(
     # ✅ Fetch current market price
     ticker = Ticker(request.ticker)
     price_point = await market_data.get_current_price(ticker)
-    
+
     # ✅ Use fetched price for trade execution
     if request.action == "BUY":
         command = BuyStockCommand(
@@ -85,11 +85,11 @@ Updated the test fixture to seed `InMemoryMarketDataAdapter` with default test p
 ```python
 def get_test_market_data() -> InMemoryMarketDataAdapter:
     """Override market data dependency to use in-memory adapter.
-    
+
     Seeds the adapter with default test prices for common tickers.
     """
     adapter = InMemoryMarketDataAdapter()
-    
+
     # Seed with default test prices
     test_prices = [
         PricePoint(
@@ -101,7 +101,7 @@ def get_test_market_data() -> InMemoryMarketDataAdapter:
         ),
         # ... more test prices
     ]
-    
+
     adapter.seed_prices(test_prices)
     return adapter
 ```
@@ -223,10 +223,10 @@ Option A is a pragmatic choice that solves the security issue quickly without co
 
 ## Security Improvements
 
-✅ **Fixed**: Clients can no longer manipulate prices to trade at arbitrary values  
-✅ **Fixed**: No race conditions - price fetched immediately before trade execution  
-✅ **Fixed**: Backend has full control over pricing logic  
-✅ **Improved UX**: Frontend no longer needs separate API call for price  
+✅ **Fixed**: Clients can no longer manipulate prices to trade at arbitrary values
+✅ **Fixed**: No race conditions - price fetched immediately before trade execution
+✅ **Fixed**: Backend has full control over pricing logic
+✅ **Improved UX**: Frontend no longer needs separate API call for price
 
 ## Files Modified
 
@@ -241,9 +241,9 @@ Option A is a pragmatic choice that solves the security issue quickly without co
 
 ## Impact on Existing Features
 
-✅ **No Breaking Changes**: All existing tests pass  
-✅ **Backward Compatible**: Frontend changes are additive (price field optional)  
-✅ **E2E Tests**: Should still work (price field exists in UI but not sent)  
+✅ **No Breaking Changes**: All existing tests pass
+✅ **Backward Compatible**: Frontend changes are additive (price field optional)
+✅ **E2E Tests**: Should still work (price field exists in UI but not sent)
 
 ## Success Criteria Met
 
@@ -277,6 +277,6 @@ Option A is a pragmatic choice that solves the security issue quickly without co
 
 ---
 
-**Task Completed**: January 1, 2026  
-**Total Time**: ~3 hours  
+**Task Completed**: January 1, 2026
+**Total Time**: ~3 hours
 **Commits**: 2

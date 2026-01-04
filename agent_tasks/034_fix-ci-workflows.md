@@ -20,7 +20,7 @@ Multiple issues with GitHub Actions workflows:
    - `main.yml` and `pr.yml` use direct `uv run` commands
    - Maintaining three workflows is error-prone
 
-3. **Missing Copilot environment setup workflow**: 
+3. **Missing Copilot environment setup workflow**:
    - When Copilot coding agents start, they need task and pre-commit installed
    - Currently this is manual via `.github/copilot-setup.sh`
    - Should be automated via GitHub Actions workflow
@@ -87,7 +87,7 @@ New workflow: `.github/workflows/copilot-setup.yml`
 
 **Trigger**: Manual dispatch (for Copilot agents to run)
 
-**Purpose**: 
+**Purpose**:
 - Install system dependencies (task, pre-commit, etc.)
 - Set up Python and Node.js environments
 - Install project dependencies
@@ -99,44 +99,44 @@ name: Copilot Environment Setup
 
 on:
   workflow_dispatch:  # Manual trigger
-  
+
 jobs:
   setup:
     name: Setup Development Environment
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      
+
       - name: Install uv
         uses: astral-sh/setup-uv@v4
         with:
           version: "latest"
-      
+
       - name: Install Task
         uses: arduino/setup-task@v2
         with:
           version: 3.x
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Install pre-commit
         run: pip install pre-commit
-      
+
       - name: Setup environment
         run: task setup
-      
+
       - name: Verify installation
         run: |
           task --version
           pre-commit --version
           uv --version
-          
+
       - name: Environment ready
         run: echo "✅ Development environment is ready!"
 ```
@@ -220,7 +220,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps: [...]
-  
+
   test:
     needs: lint  # Wait for lint to pass
     runs-on: ubuntu-latest
@@ -276,7 +276,7 @@ If Copilot agents hit permission issues (likely scenarios):
 ### Issue 1: Cannot push workflow file changes
 **Symptom**: Agent can create files but not push to `.github/workflows/`
 
-**Solution**: 
+**Solution**:
 - Agent should create workflow in a different location first
 - Agent creates PR with changes
 - Human reviewer approves and merges

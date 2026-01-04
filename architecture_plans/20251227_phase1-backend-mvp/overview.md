@@ -89,34 +89,34 @@ graph TB
         SQLRepo[SQLModel Repositories]
         MemRepo[InMemory Repositories]
     end
-    
+
     subgraph "Application Layer"
         CreatePort[CreatePortfolio]
         DepositCmd[DepositCash]
         WithdrawCmd[WithdrawCash]
         TradeCmd[ExecuteTrade]
-        
+
         BalanceQuery[GetPortfolioBalance]
         HoldingsQuery[GetPortfolioHoldings]
         ValueQuery[GetPortfolioValue]
         TxQuery[GetTransactionHistory]
-        
+
         PortRepo[PortfolioRepository Port]
         TxRepo[TransactionRepository Port]
     end
-    
+
     subgraph "Domain Layer"
         Portfolio[Portfolio Entity]
         Transaction[Transaction Entity]
         Holding[Holding Entity]
-        
+
         Money[Money VO]
         Ticker[Ticker VO]
         Qty[Quantity VO]
-        
+
         Calc[PortfolioCalculator Service]
     end
-    
+
     API --> CreatePort
     API --> DepositCmd
     API --> WithdrawCmd
@@ -125,38 +125,38 @@ graph TB
     API --> HoldingsQuery
     API --> ValueQuery
     API --> TxQuery
-    
+
     CreatePort --> PortRepo
     CreatePort --> Portfolio
-    
+
     DepositCmd --> TxRepo
     DepositCmd --> PortRepo
     DepositCmd --> Transaction
-    
+
     WithdrawCmd --> TxRepo
     WithdrawCmd --> PortRepo
     WithdrawCmd --> Transaction
-    
+
     TradeCmd --> TxRepo
     TradeCmd --> PortRepo
     TradeCmd --> Transaction
-    
+
     BalanceQuery --> TxRepo
     BalanceQuery --> Calc
-    
+
     HoldingsQuery --> TxRepo
     HoldingsQuery --> Calc
-    
+
     ValueQuery --> TxRepo
     ValueQuery --> Calc
-    
+
     TxQuery --> TxRepo
-    
+
     SQLRepo -.implements.-> PortRepo
     SQLRepo -.implements.-> TxRepo
     MemRepo -.implements.-> PortRepo
     MemRepo -.implements.-> TxRepo
-    
+
     Portfolio --> Money
     Transaction --> Money
     Transaction --> Ticker
@@ -164,7 +164,7 @@ graph TB
     Holding --> Ticker
     Holding --> Qty
     Holding --> Money
-    
+
     Calc --> Transaction
     Calc --> Holding
 ```
@@ -181,7 +181,7 @@ sequenceDiagram
     participant UseCase as Use Case
     participant Repo as Repository
     participant DB as Database
-    
+
     Client->>API: POST /api/v1/portfolios/{id}/trades
     API->>API: Validate request
     API->>UseCase: ExecuteTrade(portfolio_id, ticker, quantity, type, price)
@@ -210,7 +210,7 @@ sequenceDiagram
     participant Calc as PortfolioCalculator
     participant Repo as TransactionRepository
     participant DB as Database
-    
+
     Client->>API: GET /api/v1/portfolios/{id}/holdings
     API->>UseCase: GetPortfolioHoldings(portfolio_id)
     UseCase->>Repo: get_by_portfolio(portfolio_id)
