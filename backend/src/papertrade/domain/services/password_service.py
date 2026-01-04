@@ -33,7 +33,7 @@ class PasswordService:
         """
         if not password:
             raise ValueError("Password cannot be empty")
-        
+
         # Hash password with bcrypt (rounds=12 for strong security)
         password_bytes = password.encode("utf-8")
         salt = bcrypt.gensalt(rounds=12)
@@ -53,7 +53,7 @@ class PasswordService:
         """
         if not plain_password or not hashed_password:
             return False
-        
+
         try:
             password_bytes = plain_password.encode("utf-8")
             hashed_bytes = hashed_password.encode("utf-8")

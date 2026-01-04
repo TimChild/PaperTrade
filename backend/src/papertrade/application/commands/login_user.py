@@ -9,7 +9,6 @@ from papertrade.application.services.jwt_service import JWTService
 from papertrade.domain.exceptions import (
     InactiveUserError,
     InvalidCredentialsError,
-    UserNotFoundError,
 )
 from papertrade.domain.services.password_service import PasswordService
 

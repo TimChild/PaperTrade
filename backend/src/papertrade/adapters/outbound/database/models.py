@@ -12,9 +12,73 @@ from sqlmodel import Field, Index, SQLModel
 
 from papertrade.domain.entities.portfolio import Portfolio
 from papertrade.domain.entities.transaction import Transaction, TransactionType
+from papertrade.domain.entities.user import User
 from papertrade.domain.value_objects.money import Money
 from papertrade.domain.value_objects.quantity import Quantity
 from papertrade.domain.value_objects.ticker import Ticker
+
+
+class UserModel(SQLModel, table=True):
+    """Database model for User entity.
+
+    Attributes:
+        id: Primary key (UUID)
+        email: User's email address (unique, indexed)
+        hashed_password: Bcrypt hashed password
+        created_at: Timestamp of user registration
+        is_active: Whether the user account is active
+    """
+
+    __tablename__ = "users"  # type: ignore[assignment]
+    __table_args__ = (Index("idx_user_email", "email", unique=True),)
+
+    id: UUID = Field(primary_key=True)
+    email: str = Field(max_length=255, index=True, unique=True)
+    hashed_password: str = Field(max_length=255)
+    created_at: datetime
+    is_active: bool = Field(default=True)
+
+    def to_domain(self) -> User:
+        """Convert database model to domain entity.
+
+        Returns:
+            User domain entity
+        """
+        # Database stores naive UTC datetimes - add UTC timezone back
+        created_at_utc = self.created_at.replace(tzinfo=UTC)
+
+        return User(
+            id=self.id,
+            email=self.email,
+            hashed_password=self.hashed_password,
+            created_at=created_at_utc,
+            is_active=self.is_active,
+        )
+
+    @classmethod
+    def from_domain(cls, user: User) -> "UserModel":
+        """Convert domain entity to database model.
+
+        Args:
+            user: Domain User entity
+
+        Returns:
+            UserModel for database persistence
+        """
+        # Strip timezone for PostgreSQL TIMESTAMP WITHOUT TIME ZONE columns
+        if user.created_at.tzinfo:
+            created_at_naive = user.created_at.astimezone(UTC).replace(tzinfo=None)
+        else:
+            # Assume naive datetimes are already UTC (per domain contract)
+            created_at_naive = user.created_at
+
+        return cls(
+            id=user.id,
+            email=user.email,
+            hashed_password=user.hashed_password,
+            created_at=created_at_naive,
+            is_active=user.is_active,
+        )
 
 
 class PortfolioModel(SQLModel, table=True):

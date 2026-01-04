@@ -16,7 +16,8 @@ class JWTService:
     """Application service for JWT token generation and validation.
 
     This service provides secure JWT operations for authentication.
-    Access tokens are short-lived (15 minutes), refresh tokens are longer-lived (7 days).
+    Access tokens are short-lived (15 minutes), refresh tokens are longer-lived
+    (7 days).
 
     Attributes:
         secret_key: Secret key for JWT signing (from environment)
