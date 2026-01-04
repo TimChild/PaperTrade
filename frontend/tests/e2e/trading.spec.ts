@@ -1,9 +1,33 @@
-import { test, expect } from './fixtures'
+import { test, expect, clerk } from './fixtures'
 
 test.describe('Trading Flow', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear localStorage and start fresh
+    // Check for credentials first - skip entire test if not available
+    const username = process.env.E2E_CLERK_USER_USERNAME
+    const password = process.env.E2E_CLERK_USER_PASSWORD
+
+    if (!username || !password) {
+      test.skip(true, 'E2E_CLERK_USER_USERNAME and E2E_CLERK_USER_PASSWORD required')
+      return
+    }
+
+    // Navigate to app first
     await page.goto('/')
+
+    // Sign in programmatically using Clerk testing helper
+    await clerk.signIn({
+      page,
+      signInParams: {
+        strategy: 'password',
+        identifier: username,
+        password: password,
+      },
+    })
+
+    // After sign in, go to dashboard
+    await page.goto('/dashboard')
+
+    // Clear localStorage and start fresh (portfolios)
     await page.evaluate(() => localStorage.clear())
     await page.reload()
   })

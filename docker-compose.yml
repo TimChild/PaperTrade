@@ -91,6 +91,8 @@ services:
       - "5173:5173"
     environment:
       VITE_API_BASE_URL: http://localhost:8000/api/v1
+      # Clerk authentication - passed from host environment
+      VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY:-}
     depends_on:
       backend:
         condition: service_healthy

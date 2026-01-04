@@ -1,26 +1,29 @@
 /**
- * Playwright test fixtures with E2E test mode support
+ * Playwright test fixtures with Clerk authentication support
+ *
+ * Uses @clerk/testing to properly handle authentication in E2E tests:
+ * - setupClerkTestingToken() injects testing tokens to bypass bot detection
+ * - clerk.signIn() signs in a test user programmatically
+ *
+ * References:
+ * - https://clerk.com/docs/testing/playwright
  */
-import { test as base } from '@playwright/test'
+import { test as base, expect } from '@playwright/test'
+import { clerk, setupClerkTestingToken } from '@clerk/testing/playwright'
 
 /**
- * Extended test fixture that adds e2e-test query parameter to bypass Clerk auth
+ * Extended test fixture that sets up Clerk testing token
+ * This allows tests to authenticate properly with Clerk
  */
 export const test = base.extend({
   page: async ({ page }, use) => {
-    // Override goto to automatically add e2e-test=true query parameter
-    const originalGoto = page.goto.bind(page)
-    page.goto = async (url: string, options?: Parameters<typeof originalGoto>[1]) => {
-      // Add e2e-test=true parameter to bypass Clerk authentication
-      const urlWithParam = url.includes('?') 
-        ? `${url}&e2e-test=true` 
-        : `${url}?e2e-test=true`
-      
-      return originalGoto(urlWithParam, options)
+    // Only set up Clerk testing token if credentials are configured
+    // If not, tests will need to skip themselves
+    if (process.env.CLERK_SECRET_KEY) {
+      await setupClerkTestingToken({ page })
     }
-
     await use(page)
   },
 })
 
-export { expect } from '@playwright/test'
+export { expect, clerk }
