@@ -16,6 +16,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from papertrade.adapters.outbound.database.models import (  # noqa: F401
     PortfolioModel,
     TransactionModel,
+    UserModel,
 )
 from papertrade.adapters.outbound.models.price_history import (  # noqa: F401
     PriceHistoryModel,
@@ -134,6 +135,59 @@ def client(test_engine: AsyncEngine) -> TestClient:
 def default_user_id() -> UUID:
     """Provide a default user ID for tests."""
     return uuid4()
+
+
+@pytest.fixture
+def test_user_credentials() -> dict[str, str]:
+    """Provide test user credentials."""
+    return {"email": "test@example.com", "password": "TestPassword123!"}
+
+
+@pytest_asyncio.fixture
+async def test_user_token(
+    client: TestClient, test_user_credentials: dict[str, str]
+) -> str:
+    """Create a test user and return a JWT access token.
+
+    This fixture:
+    1. Registers a test user
+    2. Logs in to get JWT tokens
+    3. Returns the access token for authenticated requests
+
+    Returns:
+        JWT access token string
+    """
+    # Register the test user
+    register_response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": test_user_credentials["email"],
+            "password": test_user_credentials["password"],
+        },
+    )
+
+    # Login to get tokens
+    login_response = client.post(
+        "/api/v1/auth/login",
+        data={
+            "username": test_user_credentials["email"],
+            "password": test_user_credentials["password"],
+        },
+    )
+
+    assert login_response.status_code == 200, f"Login failed: {login_response.text}"
+    token_data = login_response.json()
+    return token_data["access_token"]
+
+
+@pytest_asyncio.fixture
+async def auth_headers(test_user_token: str) -> dict[str, str]:
+    """Provide authorization headers with JWT token.
+
+    Returns:
+        Dictionary with Authorization header containing Bearer token
+    """
+    return {"Authorization": f"Bearer {test_user_token}"}
 
 
 @pytest.fixture(scope="module")

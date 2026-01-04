@@ -4,14 +4,12 @@ These tests verify that the portfolio endpoints work correctly end-to-end,
 including database persistence and proper error handling.
 """
 
-from uuid import UUID
-
 from fastapi.testclient import TestClient
 
 
 def test_create_portfolio_with_initial_deposit(
     client: TestClient,
-    default_user_id: UUID,
+    auth_headers: dict[str, str],
 ) -> None:
     """Test creating a portfolio with initial deposit.
 
@@ -19,7 +17,7 @@ def test_create_portfolio_with_initial_deposit(
     """
     response = client.post(
         "/api/v1/portfolios",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={
             "name": "My Portfolio",
             "initial_deposit": "10000.00",
@@ -37,7 +35,7 @@ def test_create_portfolio_with_initial_deposit(
     # Verify portfolio was created
     list_response = client.get(
         "/api/v1/portfolios",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
     )
     assert list_response.status_code == 200
     portfolios = list_response.json()
@@ -48,7 +46,7 @@ def test_create_portfolio_with_initial_deposit(
 
 def test_get_portfolio_balance_after_creation(
     client: TestClient,
-    default_user_id: UUID,
+    auth_headers: dict[str, str],
 ) -> None:
     """Test balance endpoint returns correct amount after portfolio creation.
 
@@ -58,7 +56,7 @@ def test_get_portfolio_balance_after_creation(
     # Create portfolio with $10,000 deposit
     response = client.post(
         "/api/v1/portfolios",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={
             "name": "Balance Test Portfolio",
             "initial_deposit": "10000.00",
@@ -70,7 +68,7 @@ def test_get_portfolio_balance_after_creation(
     # Get balance
     balance_response = client.get(
         f"/api/v1/portfolios/{portfolio_id}/balance",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
     )
 
     # This would have FAILED before Bug #2 fix!
@@ -86,7 +84,7 @@ def test_get_portfolio_balance_after_creation(
 
 def test_execute_buy_trade_and_verify_holdings(
     client: TestClient,
-    default_user_id: UUID,
+    auth_headers: dict[str, str],
 ) -> None:
     """Test buying stock updates holdings correctly.
 
@@ -95,7 +93,7 @@ def test_execute_buy_trade_and_verify_holdings(
     # Create portfolio with cash
     response = client.post(
         "/api/v1/portfolios",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={
             "name": "Trading Portfolio",
             "initial_deposit": "50000.00",
@@ -107,7 +105,7 @@ def test_execute_buy_trade_and_verify_holdings(
     # Execute buy trade (price will be fetched automatically)
     trade_response = client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={
             "action": "BUY",
             "ticker": "AAPL",
@@ -123,7 +121,7 @@ def test_execute_buy_trade_and_verify_holdings(
     # Verify holdings
     holdings_response = client.get(
         f"/api/v1/portfolios/{portfolio_id}/holdings",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
     )
     assert holdings_response.status_code == 200
 
@@ -137,7 +135,7 @@ def test_execute_buy_trade_and_verify_holdings(
     # Verify balance decreased
     balance_response = client.get(
         f"/api/v1/portfolios/{portfolio_id}/balance",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
     )
     balance_data = balance_response.json()
     # $50,000 - (10 shares * $150) = $48,500
@@ -146,13 +144,13 @@ def test_execute_buy_trade_and_verify_holdings(
 
 def test_buy_and_sell_updates_holdings_correctly(
     client: TestClient,
-    default_user_id: UUID,
+    auth_headers: dict[str, str],
 ) -> None:
     """Test buy followed by sell updates holdings and balance correctly."""
     # Create portfolio
     response = client.post(
         "/api/v1/portfolios",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={
             "name": "Trading Portfolio",
             "initial_deposit": "100000.00",
@@ -164,21 +162,21 @@ def test_buy_and_sell_updates_holdings_correctly(
     # Buy 100 shares of AAPL (price will be fetched automatically)
     client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={"action": "BUY", "ticker": "AAPL", "quantity": "100"},
     )
 
     # Sell 30 shares of AAPL (price will be fetched automatically)
     client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={"action": "SELL", "ticker": "AAPL", "quantity": "30"},
     )
 
     # Verify holdings: 100 - 30 = 70 shares
     holdings_response = client.get(
         f"/api/v1/portfolios/{portfolio_id}/holdings",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
     )
     holdings = holdings_response.json()["holdings"]
     assert len(holdings) == 1
@@ -192,7 +190,7 @@ def test_buy_and_sell_updates_holdings_correctly(
     # End: $89,500
     balance_response = client.get(
         f"/api/v1/portfolios/{portfolio_id}/balance",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
     )
     balance_data = balance_response.json()
     assert balance_data["amount"] == "89500.00"
@@ -200,18 +198,17 @@ def test_buy_and_sell_updates_holdings_correctly(
 
 def test_get_portfolios_returns_only_user_portfolios(
     client: TestClient,
-    default_user_id: UUID,
+    auth_headers: dict[str, str],
+    test_user_credentials: dict[str, str],
 ) -> None:
     """Test that list portfolios only returns portfolios owned by the current user.
 
     This would have caught Bug #1 from Task 016: user ID mismatch issues.
     """
-    from uuid import uuid4
-
-    # Create portfolio for user 1
+    # Create portfolio for user 1 (using auth_headers)
     response1 = client.post(
         "/api/v1/portfolios",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={
             "name": "User 1 Portfolio",
             "initial_deposit": "10000.00",
@@ -220,11 +217,28 @@ def test_get_portfolios_returns_only_user_portfolios(
     )
     assert response1.status_code == 201
 
-    # Create portfolio for user 2 (different user)
-    user_2_id = uuid4()
+    # Create a second user and their portfolio
+    user_2_credentials = {"email": "user2@example.com", "password": "TestPassword123!"}
+    client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": user_2_credentials["email"],
+            "password": user_2_credentials["password"],
+        },
+    )
+    login_response = client.post(
+        "/api/v1/auth/login",
+        data={
+            "username": user_2_credentials["email"],
+            "password": user_2_credentials["password"],
+        },
+    )
+    user_2_token = login_response.json()["access_token"]
+    user_2_headers = {"Authorization": f"Bearer {user_2_token}"}
+
     response2 = client.post(
         "/api/v1/portfolios",
-        headers={"X-User-Id": str(user_2_id)},
+        headers=user_2_headers,
         json={
             "name": "User 2 Portfolio",
             "initial_deposit": "20000.00",
@@ -236,24 +250,23 @@ def test_get_portfolios_returns_only_user_portfolios(
     # User 1 should only see their portfolio
     list_response = client.get(
         "/api/v1/portfolios",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
     )
     assert list_response.status_code == 200
     portfolios = list_response.json()
     assert len(portfolios) == 1
     assert portfolios[0]["name"] == "User 1 Portfolio"
-    assert portfolios[0]["user_id"] == str(default_user_id)
 
 
 def test_deposit_and_withdraw_cash(
     client: TestClient,
-    default_user_id: UUID,
+    auth_headers: dict[str, str],
 ) -> None:
     """Test depositing and withdrawing cash updates balance correctly."""
     # Create portfolio
     response = client.post(
         "/api/v1/portfolios",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={
             "name": "Cash Test Portfolio",
             "initial_deposit": "10000.00",
@@ -265,7 +278,7 @@ def test_deposit_and_withdraw_cash(
     # Deposit $5,000
     deposit_response = client.post(
         f"/api/v1/portfolios/{portfolio_id}/deposit",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={"amount": "5000.00", "currency": "USD"},
     )
     assert deposit_response.status_code == 201
@@ -273,14 +286,14 @@ def test_deposit_and_withdraw_cash(
     # Verify balance increased
     balance_response = client.get(
         f"/api/v1/portfolios/{portfolio_id}/balance",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
     )
     assert balance_response.json()["amount"] == "15000.00"
 
     # Withdraw $3,000
     withdraw_response = client.post(
         f"/api/v1/portfolios/{portfolio_id}/withdraw",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={"amount": "3000.00", "currency": "USD"},
     )
     assert withdraw_response.status_code == 201
@@ -288,20 +301,20 @@ def test_deposit_and_withdraw_cash(
     # Verify balance decreased
     balance_response = client.get(
         f"/api/v1/portfolios/{portfolio_id}/balance",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
     )
     assert balance_response.json()["amount"] == "12000.00"
 
 
 def test_multiple_portfolios_for_same_user(
     client: TestClient,
-    default_user_id: UUID,
+    auth_headers: dict[str, str],
 ) -> None:
     """Test that a user can create multiple portfolios."""
     # Create first portfolio
     response1 = client.post(
         "/api/v1/portfolios",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={
             "name": "Growth Portfolio",
             "initial_deposit": "50000.00",
@@ -313,7 +326,7 @@ def test_multiple_portfolios_for_same_user(
     # Create second portfolio
     response2 = client.post(
         "/api/v1/portfolios",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
         json={
             "name": "Income Portfolio",
             "initial_deposit": "30000.00",
@@ -325,7 +338,7 @@ def test_multiple_portfolios_for_same_user(
     # Verify both portfolios exist
     list_response = client.get(
         "/api/v1/portfolios",
-        headers={"X-User-Id": str(default_user_id)},
+        headers=auth_headers,
     )
     assert list_response.status_code == 200
     portfolios = list_response.json()
