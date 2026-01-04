@@ -4,7 +4,7 @@ These models represent the database schema and provide conversion functions
 to/from domain entities.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -62,13 +62,18 @@ class PortfolioModel(SQLModel, table=True):
         Returns:
             PortfolioModel for database persistence
         """
-        now = datetime.now()
+        now = datetime.now(UTC)
+        # Strip timezone info for PostgreSQL TIMESTAMP WITHOUT TIME ZONE columns
+        # We store all times in UTC but PostgreSQL column is defined without timezone
+        created_at_naive = portfolio.created_at.replace(tzinfo=None) if portfolio.created_at.tzinfo else portfolio.created_at
+        updated_at_naive = now.replace(tzinfo=None)
+        
         return cls(
             id=portfolio.id,
             user_id=portfolio.user_id,
             name=portfolio.name,
-            created_at=portfolio.created_at,
-            updated_at=now,
+            created_at=created_at_naive,
+            updated_at=updated_at_naive,
             version=1,
         )
 
@@ -174,11 +179,16 @@ class TransactionModel(SQLModel, table=True):
             price_amount = transaction.price_per_share.amount
             price_currency = transaction.price_per_share.currency
 
+        # Strip timezone info for PostgreSQL TIMESTAMP WITHOUT TIME ZONE columns
+        now = datetime.now(UTC)
+        created_at_naive = now.replace(tzinfo=None)
+        timestamp_naive = transaction.timestamp.replace(tzinfo=None) if transaction.timestamp.tzinfo else transaction.timestamp
+
         return cls(
             id=transaction.id,
             portfolio_id=transaction.portfolio_id,
             transaction_type=transaction.transaction_type.value,
-            timestamp=transaction.timestamp,
+            timestamp=timestamp_naive,
             cash_change_amount=transaction.cash_change.amount,
             cash_change_currency=transaction.cash_change.currency,
             ticker=ticker_str,
@@ -186,5 +196,6 @@ class TransactionModel(SQLModel, table=True):
             price_per_share_amount=price_amount,
             price_per_share_currency=price_currency,
             notes=transaction.notes,
-            created_at=datetime.now(),
+            created_at=created_at_naive,
         )
+
