@@ -4,17 +4,34 @@
 
 A stock market emulation platform for practicing trading strategies without risking real money.
 
-> **Status**: ✅ Phase 1 "The Ledger" - Complete vertical integration (Database → API → Frontend)
+> **Status**: ✅ Phase 2 Complete - Real market data integration with Alpha Vantage
 >
-> **Latest**: Frontend-backend integration merged to main (Dec 28, 2025)
+> **Latest**: Comprehensive documentation package available (Jan 4, 2026)
+
+## 📚 Documentation
+
+**New Users?** Start here:
+- **[Executive Summary](docs/EXECUTIVE_SUMMARY.md)** - Quick overview of current capabilities
+- **[User Guide](docs/USER_GUIDE.md)** - Step-by-step instructions for using PaperTrade
+
+**Developers & Contributors:**
+- **[Feature Status Matrix](docs/FEATURE_STATUS.md)** - Complete feature implementation status
+- **[Technical Boundaries](docs/TECHNICAL_BOUNDARIES.md)** - Known limitations and edge cases
+
+**Project Information:**
+- [Development Progress](PROGRESS.md) - Phase completion tracking
+- [Project Plan](project_plan.md) - Roadmap and architecture
+- [Backlog](BACKLOG.md) - Planned improvements
 
 ## Overview
 
 PaperTrade allows users to:
 - ✅ Start with virtual cash and practice investing
-- ✅ Create portfolios and execute trades
-- ✅ Track holdings and transaction history
-- 🚧 Real-time market data integration (Phase 2)
+- ✅ Create unlimited portfolios with different strategies
+- ✅ Execute BUY trades with real-time market data
+- ✅ Track holdings, cash balances, and complete transaction history
+- ✅ Trade US and international stocks (UK, Canada, Germany, China, etc.)
+- 📋 SELL trades and portfolio rebalancing (Phase 3 - Q1 2026)
 - 📋 Backtest strategies against historical data (Phase 3)
 - 📋 Implement automated trading algorithms (Phase 4)
 
