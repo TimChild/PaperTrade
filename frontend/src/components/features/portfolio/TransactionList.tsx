@@ -77,14 +77,15 @@ export function TransactionList({
 
   return (
     <div className="rounded-lg border border-gray-300 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-      <div className="divide-y divide-gray-200 dark:divide-gray-700">
-        {displayTransactions.map((transaction) => {
+      <div className="divide-y divide-gray-200 dark:divide-gray-700" data-testid="transaction-history-table">
+        {displayTransactions.map((transaction, idx) => {
           const colorClass = getTransactionColorClass(transaction.type)
           const isPositive = transaction.amount > 0
 
           return (
             <div
               key={transaction.id}
+              data-testid={`transaction-row-${idx}`}
               className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50"
             >
               <div className="flex items-start gap-3">
@@ -93,11 +94,11 @@ export function TransactionList({
                 </span>
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="font-medium text-gray-900 dark:text-white">
+                    <p className="font-medium text-gray-900 dark:text-white" data-testid={`transaction-type-${idx}`}>
                       {getTransactionLabel(transaction.type)}
                     </p>
                     {transaction.ticker && (
-                      <span className="rounded bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                      <span className="rounded bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-300" data-testid={`transaction-symbol-${idx}`}>
                         {transaction.ticker}
                       </span>
                     )}
@@ -118,7 +119,7 @@ export function TransactionList({
                 </div>
               </div>
               <div className={`text-right ${colorClass}`}>
-                <p className="text-lg font-semibold">
+                <p className="text-lg font-semibold" data-testid={`transaction-amount-${idx}`}>
                   {isPositive ? '+' : ''}
                   {formatCurrency(Math.abs(transaction.amount))}
                 </p>

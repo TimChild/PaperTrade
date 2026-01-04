@@ -85,7 +85,7 @@ export function HoldingsTable({
   return (
     <div className="overflow-hidden rounded-lg border border-gray-300 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <table data-testid="holdings-table" className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
               <th
@@ -139,12 +139,13 @@ export function HoldingsTable({
               return (
                 <tr
                   key={holding.ticker}
+                  data-testid={`holding-row-${holding.ticker}`}
                   className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
                 >
-                  <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                  <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900 dark:text-white" data-testid={`holding-symbol-${holding.ticker}`}>
                     {holding.ticker}
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-gray-700 dark:text-gray-300">
+                  <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-gray-700 dark:text-gray-300" data-testid={`holding-quantity-${holding.ticker}`}>
                     {formatNumber(holding.quantity, 0)}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-gray-700 dark:text-gray-300">
@@ -163,7 +164,7 @@ export function HoldingsTable({
                       )}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium text-gray-900 dark:text-white">
+                  <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium text-gray-900 dark:text-white" data-testid={`holding-value-${holding.ticker}`}>
                     {formatCurrency(holding.marketValue)}
                   </td>
                   <td
