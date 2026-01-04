@@ -8,10 +8,15 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
 from papertrade.domain.exceptions import (
+    DuplicateEmailError,
+    InactiveUserError,
     InsufficientFundsError,
     InsufficientSharesError,
+    InvalidCredentialsError,
     InvalidPortfolioError,
+    InvalidTokenError,
     InvalidTransactionError,
+    UserNotFoundError,
 )
 
 
@@ -85,5 +90,74 @@ def register_exception_handlers(app: FastAPI) -> None:
             content=ErrorResponse(
                 error="InsufficientShares",
                 message=str(exc),
+            ).model_dump(),
+        )
+
+    # Authentication & Authorization Exception Handlers
+
+    @app.exception_handler(InvalidCredentialsError)
+    async def handle_invalid_credentials(  # pyright: ignore[reportUnusedFunction]
+        request: Request, exc: InvalidCredentialsError
+    ) -> JSONResponse:
+        """Handle InvalidCredentialsError -> 401 Unauthorized."""
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content=ErrorResponse(
+                error="InvalidCredentials",
+                message="Incorrect email or password",
+            ).model_dump(),
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    @app.exception_handler(InvalidTokenError)
+    async def handle_invalid_token(  # pyright: ignore[reportUnusedFunction]
+        request: Request, exc: InvalidTokenError
+    ) -> JSONResponse:
+        """Handle InvalidTokenError -> 401 Unauthorized."""
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content=ErrorResponse(
+                error="InvalidToken",
+                message="Invalid or expired token",
+            ).model_dump(),
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    @app.exception_handler(InactiveUserError)
+    async def handle_inactive_user(  # pyright: ignore[reportUnusedFunction]
+        request: Request, exc: InactiveUserError
+    ) -> JSONResponse:
+        """Handle InactiveUserError -> 403 Forbidden."""
+        return JSONResponse(
+            status_code=status.HTTP_403_FORBIDDEN,
+            content=ErrorResponse(
+                error="InactiveUser",
+                message="User account is inactive",
+            ).model_dump(),
+        )
+
+    @app.exception_handler(UserNotFoundError)
+    async def handle_user_not_found(  # pyright: ignore[reportUnusedFunction]
+        request: Request, exc: UserNotFoundError
+    ) -> JSONResponse:
+        """Handle UserNotFoundError -> 404 Not Found."""
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content=ErrorResponse(
+                error="UserNotFound",
+                message="User not found",
+            ).model_dump(),
+        )
+
+    @app.exception_handler(DuplicateEmailError)
+    async def handle_duplicate_email(  # pyright: ignore[reportUnusedFunction]
+        request: Request, exc: DuplicateEmailError
+    ) -> JSONResponse:
+        """Handle DuplicateEmailError -> 409 Conflict."""
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content=ErrorResponse(
+                error="DuplicateEmail",
+                message="Email already registered",
             ).model_dump(),
         )

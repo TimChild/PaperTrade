@@ -5,10 +5,12 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from papertrade.adapters.inbound.api.auth import router as auth_router
 from papertrade.adapters.inbound.api.error_handlers import register_exception_handlers
 from papertrade.adapters.inbound.api.portfolios import router as portfolios_router
 from papertrade.adapters.inbound.api.prices import router as prices_router
 from papertrade.adapters.inbound.api.transactions import router as transactions_router
+from papertrade.adapters.inbound.api.users import router as users_router
 from papertrade.infrastructure.database import init_db
 from papertrade.infrastructure.scheduler import (
     SchedulerConfig,
@@ -63,6 +65,8 @@ app.add_middleware(
 )
 
 # Include API routes
+app.include_router(auth_router, prefix="/api/v1")
+app.include_router(users_router, prefix="/api/v1")
 app.include_router(portfolios_router, prefix="/api/v1")
 app.include_router(transactions_router, prefix="/api/v1")
 app.include_router(prices_router, prefix="/api/v1")

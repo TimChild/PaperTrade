@@ -8,7 +8,8 @@ from typing import Annotated
 from uuid import UUID
 
 import httpx
-from fastapi import Depends, Header
+from fastapi import Depends
+from fastapi.security import OAuth2PasswordBearer
 from redis.asyncio import Redis
 
 from papertrade.adapters.outbound.database.portfolio_repository import (
@@ -27,6 +28,9 @@ from papertrade.application.ports.market_data_port import MarketDataPort
 from papertrade.infrastructure.cache.price_cache import PriceCache
 from papertrade.infrastructure.database import SessionDep
 from papertrade.infrastructure.rate_limiter import RateLimiter
+
+# OAuth2 password bearer for JWT token authentication
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
 def get_portfolio_repository(
@@ -72,42 +76,41 @@ def get_price_repository(
 
 
 async def get_current_user_id(
-    x_user_id: Annotated[str | None, Header()] = None,
-) -> "UUID":
-    """Get current user ID from request headers.
+    token: Annotated[str, Depends(oauth2_scheme)],
+) -> UUID:
+    """Get current user ID from JWT token.
 
-    This is a mock implementation for Phase 1. In production, this would:
-    - Validate JWT token
-    - Extract user ID from token
-    - Raise 401 if unauthorized
-
-    For now, we accept a user ID via X-User-Id header for testing.
+    Validates the JWT token and extracts the user ID from the 'sub' claim.
 
     Args:
-        x_user_id: User ID from X-User-Id header
+        token: JWT access token from Authorization header
 
     Returns:
-        User UUID
+        User UUID from token
 
     Raises:
-        HTTPException: 400 if X-User-Id header is missing or invalid
+        HTTPException: 401 if token is invalid, expired, or missing user ID
     """
-    from uuid import UUID
+    from fastapi import HTTPException, status
 
-    from fastapi import HTTPException
+    from papertrade.application.services.jwt_service import JWTService
+    from papertrade.domain.exceptions import InvalidTokenError
+    from papertrade.infrastructure.settings import get_settings
 
-    if not x_user_id:
-        raise HTTPException(
-            status_code=400,
-            detail="X-User-Id header is required (authentication not yet implemented)",
-        )
+    settings = get_settings()
+    jwt_service = JWTService(
+        secret_key=settings.jwt_secret_key,
+        algorithm=settings.jwt_algorithm,
+    )
 
     try:
-        return UUID(x_user_id)
-    except ValueError as e:
+        user_id = jwt_service.get_user_id_from_token(token)
+        return user_id
+    except InvalidTokenError as e:
         raise HTTPException(
-            status_code=400,
-            detail=f"Invalid X-User-Id header: must be a valid UUID, got '{x_user_id}'",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
         ) from e
 
 
