@@ -15,7 +15,7 @@ export function CreatePortfolioForm({
   onCancel,
 }: CreatePortfolioFormProps): React.JSX.Element {
   const [name, setName] = useState('')
-  const [initialDeposit, setInitialDeposit] = useState('0.00')
+  const [initialDeposit, setInitialDeposit] = useState('1000.00')
   const [error, setError] = useState<string | null>(null)
 
   const createPortfolio = useCreatePortfolio()
@@ -38,8 +38,8 @@ export function CreatePortfolioForm({
 
     // Validate initial deposit
     const depositAmount = parseFloat(initialDeposit)
-    if (isNaN(depositAmount) || depositAmount < 0) {
-      setError('Initial deposit must be a positive number')
+    if (isNaN(depositAmount) || depositAmount <= 0) {
+      setError('Initial deposit must be a positive number greater than zero')
       return
     }
 
@@ -101,7 +101,6 @@ export function CreatePortfolioForm({
             id="initial-deposit"
             type="number"
             step="0.01"
-            min="0"
             value={initialDeposit}
             onChange={(e) => setInitialDeposit(e.target.value)}
             placeholder="0.00"
@@ -110,7 +109,7 @@ export function CreatePortfolioForm({
           />
         </div>
         <p id="initial-deposit-help" className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          Optional: Start with an initial cash balance (default: $0.00)
+          Start with an initial cash balance (must be greater than $0.00)
         </p>
       </div>
 
@@ -150,7 +149,7 @@ export function CreatePortfolioForm({
         <button
           type="submit"
           data-testid="submit-portfolio-form-btn"
-          disabled={createPortfolio.isPending || !name.trim()}
+          disabled={createPortfolio.isPending}
           className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {createPortfolio.isPending ? 'Creating...' : 'Create Portfolio'}

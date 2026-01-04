@@ -33,11 +33,12 @@ test.describe('Portfolio Creation Flow', () => {
     // Give it time to create and redirect
     await page.waitForTimeout(2000)
 
-    // 7. Verify portfolio appears (either in list or we're on detail page)
-    await expect(
-      page.getByText('My Test Portfolio').or(page.getByText(/\$10,000/))
-    ).toBeVisible({ timeout: 10000 })
+    // 7. Verify portfolio appears by checking for portfolio name heading
+    await expect(page.getByRole('heading', { name: 'My Test Portfolio' })).toBeVisible({
+      timeout: 10000,
+    })
   })
+
 
   test('should persist portfolio after page refresh', async ({ page }) => {
     // This test would have caught Bug #1 (user ID persistence) from Task 016
@@ -60,11 +61,12 @@ test.describe('Portfolio Creation Flow', () => {
     await page.reload()
     await page.waitForLoadState('networkidle')
 
-    // Portfolio should still be visible
-    await expect(page.getByText('Persistent Portfolio').or(page.getByText(/\$25,000/))).toBeVisible({
+    // Portfolio should still be visible by checking for heading
+    await expect(page.getByRole('heading', { name: 'Persistent Portfolio' })).toBeVisible({
       timeout: 10000,
     })
   })
+
 
   test('should show validation error for empty portfolio name', async ({ page }) => {
     await page.goto('/')

@@ -83,8 +83,11 @@ describe('CreatePortfolioForm', () => {
     const nameInput = screen.getByLabelText(/Portfolio Name/i)
     const submitButton = screen.getByRole('button', { name: /Create Portfolio/i })
 
-    // Submit button should be disabled when name is empty
-    expect(submitButton).toBeDisabled()
+    // Submit button should NOT be disabled (HTML5 validation will handle empty name)
+    expect(submitButton).not.toBeDisabled()
+
+    // Name input should have required attribute for HTML5 validation
+    expect(nameInput).toHaveAttribute('required')
 
     // Type a name
     await user.type(nameInput, 'Test Portfolio')
@@ -92,7 +95,8 @@ describe('CreatePortfolioForm', () => {
 
     // Clear the name
     await user.clear(nameInput)
-    expect(submitButton).toBeDisabled()
+    // Button still not disabled - HTML5 validation will catch it on submit
+    expect(submitButton).not.toBeDisabled()
   })
 
   it('accepts valid initial deposit values', async () => {

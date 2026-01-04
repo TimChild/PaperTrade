@@ -4,7 +4,7 @@ These models represent the database schema and provide conversion functions
 to/from domain entities.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -45,11 +45,14 @@ class PortfolioModel(SQLModel, table=True):
         Returns:
             Portfolio domain entity
         """
+        # Database stores naive UTC datetimes - add UTC timezone back
+        created_at_utc = self.created_at.replace(tzinfo=UTC)
+
         return Portfolio(
             id=self.id,
             user_id=self.user_id,
             name=self.name,
-            created_at=self.created_at,
+            created_at=created_at_utc,
         )
 
     @classmethod
@@ -62,13 +65,22 @@ class PortfolioModel(SQLModel, table=True):
         Returns:
             PortfolioModel for database persistence
         """
-        now = datetime.now()
+        now = datetime.now(UTC)
+        # Strip timezone for PostgreSQL TIMESTAMP WITHOUT TIME ZONE columns
+        # Convert to UTC first if needed, then strip timezone
+        if portfolio.created_at.tzinfo:
+            created_at_naive = portfolio.created_at.astimezone(UTC).replace(tzinfo=None)
+        else:
+            # Assume naive datetimes are already UTC (per domain contract)
+            created_at_naive = portfolio.created_at
+        updated_at_naive = now.replace(tzinfo=None)
+
         return cls(
             id=portfolio.id,
             user_id=portfolio.user_id,
             name=portfolio.name,
-            created_at=portfolio.created_at,
-            updated_at=now,
+            created_at=created_at_naive,
+            updated_at=updated_at_naive,
             version=1,
         )
 
@@ -138,11 +150,14 @@ class TransactionModel(SQLModel, table=True):
                 self.price_per_share_amount, self.price_per_share_currency
             )
 
+        # Database stores naive UTC datetimes - add UTC timezone back
+        timestamp_utc = self.timestamp.replace(tzinfo=UTC)
+
         return Transaction(
             id=self.id,
             portfolio_id=self.portfolio_id,
             transaction_type=TransactionType[self.transaction_type],
-            timestamp=self.timestamp,
+            timestamp=timestamp_utc,
             cash_change=cash_change,
             ticker=ticker_obj,
             quantity=quantity_obj,
@@ -174,11 +189,22 @@ class TransactionModel(SQLModel, table=True):
             price_amount = transaction.price_per_share.amount
             price_currency = transaction.price_per_share.currency
 
+        # Strip timezone for PostgreSQL TIMESTAMP WITHOUT TIME ZONE columns
+        # Convert to UTC first if needed, then strip timezone
+        now = datetime.now(UTC)
+        created_at_naive = now.replace(tzinfo=None)
+
+        if transaction.timestamp.tzinfo:
+            timestamp_naive = transaction.timestamp.astimezone(UTC).replace(tzinfo=None)
+        else:
+            # Assume naive datetimes are already UTC (per domain contract)
+            timestamp_naive = transaction.timestamp
+
         return cls(
             id=transaction.id,
             portfolio_id=transaction.portfolio_id,
             transaction_type=transaction.transaction_type.value,
-            timestamp=transaction.timestamp,
+            timestamp=timestamp_naive,
             cash_change_amount=transaction.cash_change.amount,
             cash_change_currency=transaction.cash_change.currency,
             ticker=ticker_str,
@@ -186,5 +212,5 @@ class TransactionModel(SQLModel, table=True):
             price_per_share_amount=price_amount,
             price_per_share_currency=price_currency,
             notes=transaction.notes,
-            created_at=datetime.now(),
+            created_at=created_at_naive,
         )
