@@ -430,8 +430,7 @@ async def _verify_portfolio_ownership(
 
     logger = logging.getLogger(__name__)
     logger.info(
-        f"Verifying portfolio ownership: "
-        f"portfolio_id={portfolio_id}, user_id={user_id}"
+        f"Verifying portfolio ownership: portfolio_id={portfolio_id}, user_id={user_id}"
     )
 
     portfolio = await portfolio_repo.get(portfolio_id)
