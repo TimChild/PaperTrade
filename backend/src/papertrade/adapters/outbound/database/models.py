@@ -47,7 +47,7 @@ class PortfolioModel(SQLModel, table=True):
         """
         # Database stores naive UTC datetimes - add UTC timezone back
         created_at_utc = self.created_at.replace(tzinfo=UTC)
-        
+
         return Portfolio(
             id=self.id,
             user_id=self.user_id,
@@ -66,8 +66,8 @@ class PortfolioModel(SQLModel, table=True):
             PortfolioModel for database persistence
         """
         now = datetime.now(UTC)
-        # Strip timezone info for PostgreSQL TIMESTAMP WITHOUT TIME ZONE columns
-        # All domain datetimes are UTC - convert to UTC first if needed, then strip timezone
+        # Strip timezone for PostgreSQL TIMESTAMP WITHOUT TIME ZONE columns
+        # Convert to UTC first if needed, then strip timezone
         if portfolio.created_at.tzinfo:
             created_at_naive = portfolio.created_at.astimezone(UTC).replace(tzinfo=None)
         else:
@@ -189,11 +189,11 @@ class TransactionModel(SQLModel, table=True):
             price_amount = transaction.price_per_share.amount
             price_currency = transaction.price_per_share.currency
 
-        # Strip timezone info for PostgreSQL TIMESTAMP WITHOUT TIME ZONE columns
-        # All domain datetimes are UTC - convert to UTC first if needed, then strip timezone
+        # Strip timezone for PostgreSQL TIMESTAMP WITHOUT TIME ZONE columns
+        # Convert to UTC first if needed, then strip timezone
         now = datetime.now(UTC)
         created_at_naive = now.replace(tzinfo=None)
-        
+
         if transaction.timestamp.tzinfo:
             timestamp_naive = transaction.timestamp.astimezone(UTC).replace(tzinfo=None)
         else:
