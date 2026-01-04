@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ClerkProvider } from '@clerk/clerk-react'
 import App from '@/App'
 
 // Create a test query client
@@ -19,9 +20,11 @@ describe('App', () => {
     const queryClient = createTestQueryClient()
 
     render(
-      <QueryClientProvider client={queryClient}>
-        <App />
-      </QueryClientProvider>
+      <ClerkProvider publishableKey="test-key">
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </ClerkProvider>
     )
 
     // Wait for data to load (MSW will respond)
@@ -34,9 +37,11 @@ describe('App', () => {
     const queryClient = createTestQueryClient()
 
     render(
-      <QueryClientProvider client={queryClient}>
-        <App />
-      </QueryClientProvider>
+      <ClerkProvider publishableKey="test-key">
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </ClerkProvider>
     )
 
     await waitFor(() => {
@@ -48,9 +53,11 @@ describe('App', () => {
     const queryClient = createTestQueryClient()
 
     render(
-      <QueryClientProvider client={queryClient}>
-        <App />
-      </QueryClientProvider>
+      <ClerkProvider publishableKey="test-key">
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </ClerkProvider>
     )
 
     // Wait for portfolio data to load
