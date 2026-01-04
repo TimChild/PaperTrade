@@ -1,9 +1,9 @@
 # Task 019: Taskfile-Based CI Workflow
 
-**Agent**: quality-infra  
-**Created**: 2025-12-28  
-**Duration**: 2-3 hours  
-**Dependencies**: Task 015 (Workflow improvements - merged)  
+**Agent**: quality-infra
+**Created**: 2025-12-28
+**Duration**: 2-3 hours
+**Dependencies**: Task 015 (Workflow improvements - merged)
 **Phase**: Infrastructure - CI/CD improvements
 
 ## Context
@@ -218,30 +218,30 @@ jobs:
   backend-checks:
     name: Backend Checks
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      
+
       - name: Install uv
         uses: astral-sh/setup-uv@v4
-      
+
       - name: Install Task
         uses: arduino/setup-task@v2
-      
+
       - name: Install dependencies
         run: task setup:backend
-      
+
       - name: Run linters
         run: task lint:backend
-      
+
       - name: Run tests with coverage
         run: task test:backend
-      
+
       - name: Upload coverage
         uses: codecov/codecov-action@v4
         with:
@@ -251,31 +251,31 @@ jobs:
   frontend-checks:
     name: Frontend Checks
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      
+
       - name: Install Task
         uses: arduino/setup-task@v2
-      
+
       - name: Install dependencies
         run: task setup:frontend
-      
+
       - name: Run linters
         run: task lint:frontend
-      
+
       - name: Run tests
         run: task test:frontend
-      
+
       - name: Build check
         run: task build:frontend
-      
+
       - name: Upload coverage
         uses: codecov/codecov-action@v4
         with:
@@ -286,18 +286,18 @@ jobs:
     name: E2E Tests
     runs-on: ubuntu-latest
     needs: [backend-checks, frontend-checks]
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       # Setup Python, Node, uv, Task...
-      
+
       - name: Start services
         run: task docker:up
-      
+
       - name: Run E2E tests
         run: task test:e2e
-      
+
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4
@@ -450,7 +450,7 @@ ci:debug:
   desc: "Run CI with verbose output for debugging"
   cmds:
     - task: lint:backend
-    - task: lint:frontend  
+    - task: lint:frontend
     - task: test:backend -- -vv
     - task: test:frontend -- --verbose
 ```

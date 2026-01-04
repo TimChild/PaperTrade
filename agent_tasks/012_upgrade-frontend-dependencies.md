@@ -335,8 +335,8 @@ When this task is complete:
 
 ---
 
-**Created**: 2025-12-28  
-**Priority**: P2 - Important  
-**Estimated Effort**: 1 hour  
-**Assigned To**: Frontend Software Engineer (or available agent)  
+**Created**: 2025-12-28
+**Priority**: P2 - Important
+**Estimated Effort**: 1 hour
+**Assigned To**: Frontend Software Engineer (or available agent)
 **Prerequisites**: Task 011 (MSW setup) recommended to complete first

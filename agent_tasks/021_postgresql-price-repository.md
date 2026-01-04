@@ -1,9 +1,9 @@
 # Task 021: PostgreSQL Price Repository
 
-**Created**: 2025-12-29  
-**Agent**: backend-swe  
-**Estimated Effort**: 4-5 hours  
-**Dependencies**: Task 020 (Alpha Vantage Adapter merged)  
+**Created**: 2025-12-29
+**Agent**: backend-swe
+**Estimated Effort**: 4-5 hours
+**Dependencies**: Task 020 (Alpha Vantage Adapter merged)
 **Phase**: Phase 2a - Market Data Integration
 
 ## Objective
@@ -59,16 +59,16 @@ CREATE TABLE price_history (
     volume BIGINT,
     -- Metadata
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    
+
     -- Constraints
     CONSTRAINT price_positive CHECK (price_amount > 0),
     CONSTRAINT unique_price UNIQUE (ticker, timestamp, source, interval)
 );
 
 -- Indexes for performance
-CREATE INDEX idx_price_history_ticker_timestamp 
+CREATE INDEX idx_price_history_ticker_timestamp
     ON price_history(ticker, timestamp DESC);
-CREATE INDEX idx_price_history_ticker_interval 
+CREATE INDEX idx_price_history_ticker_interval
     ON price_history(ticker, interval, timestamp DESC);
 ```
 
@@ -87,8 +87,8 @@ CREATE TABLE ticker_watchlist (
 );
 
 -- Index for refresh queries
-CREATE INDEX idx_watchlist_next_refresh 
-    ON ticker_watchlist(next_refresh_at) 
+CREATE INDEX idx_watchlist_next_refresh
+    ON ticker_watchlist(next_refresh_at)
     WHERE is_active = TRUE;
 ```
 
@@ -119,9 +119,9 @@ from typing import Optional
 
 class PriceHistoryModel(SQLModel, table=True):
     """SQLModel for price_history table."""
-    
+
     __tablename__ = "price_history"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True)
     ticker: str = Field(max_length=10, index=True)
     price_amount: Decimal = Field(decimal_places=2)
@@ -129,7 +129,7 @@ class PriceHistoryModel(SQLModel, table=True):
     timestamp: datetime = Field(index=True)
     source: str = Field(max_length=50)
     interval: str = Field(max_length=10)
-    
+
     # Optional OHLCV
     open_amount: Optional[Decimal] = Field(default=None, decimal_places=2)
     open_currency: Optional[str] = Field(default=None, max_length=3)
@@ -140,13 +140,13 @@ class PriceHistoryModel(SQLModel, table=True):
     close_amount: Optional[Decimal] = Field(default=None, decimal_places=2)
     close_currency: Optional[str] = Field(default=None, max_length=3)
     volume: Optional[int] = None
-    
+
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    
+
     def to_price_point(self) -> PricePoint:
         """Convert to PricePoint DTO."""
         # Implementation to convert model to PricePoint
-        
+
     @classmethod
     def from_price_point(cls, price: PricePoint) -> "PriceHistoryModel":
         """Create from PricePoint DTO."""
@@ -162,9 +162,9 @@ from typing import Optional
 
 class TickerWatchlistModel(SQLModel, table=True):
     """SQLModel for ticker_watchlist table."""
-    
+
     __tablename__ = "ticker_watchlist"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True)
     ticker: str = Field(unique=True, max_length=10)
     priority: int = Field(default=100)
@@ -185,24 +185,24 @@ class TickerWatchlistModel(SQLModel, table=True):
 ```python
 class PriceRepository:
     """PostgreSQL implementation of price storage."""
-    
+
     async def upsert_price(self, price: PricePoint) -> None:
         """Insert or update price (ON CONFLICT DO UPDATE)."""
-        
+
     async def get_latest_price(
-        self, 
+        self,
         ticker: Ticker,
         max_age: timedelta | None = None
     ) -> PricePoint | None:
         """Get most recent price for ticker."""
-        
+
     async def get_price_at(
-        self, 
+        self,
         ticker: Ticker,
         timestamp: datetime
     ) -> PricePoint | None:
         """Get price closest to timestamp."""
-        
+
     async def get_price_history(
         self,
         ticker: Ticker,
@@ -211,7 +211,7 @@ class PriceRepository:
         interval: str = "1day"
     ) -> list[PricePoint]:
         """Get price history over time range."""
-        
+
     async def get_all_tickers(self) -> list[Ticker]:
         """Get list of tickers we have data for."""
 ```
@@ -231,7 +231,7 @@ class PriceRepository:
 ```python
 class WatchlistManager:
     """Manages ticker watchlist for automated price refresh."""
-    
+
     async def add_ticker(
         self,
         ticker: Ticker,
@@ -239,16 +239,16 @@ class WatchlistManager:
         refresh_interval: timedelta = timedelta(minutes=5)
     ) -> None:
         """Add ticker to watchlist."""
-        
+
     async def remove_ticker(self, ticker: Ticker) -> None:
         """Remove ticker from watchlist."""
-        
+
     async def get_stale_tickers(
         self,
         limit: int = 10
     ) -> list[Ticker]:
         """Get tickers that need refresh (past next_refresh_at)."""
-        
+
     async def update_refresh_metadata(
         self,
         ticker: Ticker,
@@ -256,7 +256,7 @@ class WatchlistManager:
         next_refresh: datetime
     ) -> None:
         """Update refresh timestamps after fetching price."""
-        
+
     async def get_all_active_tickers(self) -> list[Ticker]:
         """Get all active watched tickers."""
 ```
@@ -273,20 +273,20 @@ async def get_current_price(self, ticker: Ticker) -> PricePoint:
     cached = await self.price_cache.get(ticker)
     if cached and not cached.is_stale(max_age=timedelta(hours=1)):
         return cached.with_source("cache")
-    
+
     # Tier 2: PostgreSQL (IMPLEMENT THIS)
     if self.price_repository:
         db_price = await self.price_repository.get_latest_price(
-            ticker, 
+            ticker,
             max_age=timedelta(hours=4)
         )
         if db_price and not db_price.is_stale(max_age=timedelta(hours=4)):
             await self.price_cache.set(db_price)  # Warm cache
             return db_price.with_source("database")
-    
+
     # Tier 3: API (already implemented)
     # ... existing API logic ...
-    
+
     # Store in database after API fetch
     if self.price_repository:
         await self.price_repository.upsert_price(price)
@@ -301,19 +301,19 @@ async def get_current_price(self, ticker: Ticker) -> PricePoint:
 @pytest.mark.asyncio
 async def test_upsert_price():
     """Test inserting and updating prices."""
-    
+
 @pytest.mark.asyncio
 async def test_get_latest_price():
     """Test retrieving most recent price."""
-    
+
 @pytest.mark.asyncio
 async def test_get_price_at():
     """Test time-travel price queries."""
-    
+
 @pytest.mark.asyncio
 async def test_get_price_history():
     """Test range queries."""
-    
+
 @pytest.mark.asyncio
 async def test_performance_indexes():
     """Verify indexes are used (EXPLAIN ANALYZE)."""
@@ -324,11 +324,11 @@ async def test_performance_indexes():
 @pytest.mark.asyncio
 async def test_add_remove_ticker():
     """Test adding and removing from watchlist."""
-    
+
 @pytest.mark.asyncio
 async def test_get_stale_tickers():
     """Test finding tickers needing refresh."""
-    
+
 @pytest.mark.asyncio
 async def test_priority_ordering():
     """Test that higher priority tickers refreshed first."""
@@ -339,7 +339,7 @@ async def test_priority_ordering():
 @pytest.mark.asyncio
 async def test_tier2_fallback():
     """Test Redis miss → PostgreSQL hit → return."""
-    
+
 @pytest.mark.asyncio
 async def test_tier3_stores_in_db():
     """Test API fetch stores in PostgreSQL."""

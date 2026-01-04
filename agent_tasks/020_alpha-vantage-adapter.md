@@ -1,9 +1,9 @@
 # Task 020: Alpha Vantage Adapter with Rate Limiting
 
-**Created**: 2025-12-28  
-**Agent**: backend-swe  
-**Estimated Effort**: 6-8 hours  
-**Dependencies**: Task 018 (PricePoint + MarketDataPort foundation)  
+**Created**: 2025-12-28
+**Agent**: backend-swe
+**Estimated Effort**: 6-8 hours
+**Dependencies**: Task 018 (PricePoint + MarketDataPort foundation)
 **Related PRs**: N/A (new work)
 
 ## Objective
@@ -115,30 +115,30 @@ async def get_current_price(self, ticker: Ticker) -> PricePoint:
     cached = await self.price_cache.get(ticker)
     if cached and not cached.is_stale(max_age=timedelta(hours=1)):
         return cached
-    
+
     # Tier 2: Check PostgreSQL (skip for now, implement in Task 021)
     # if self.price_repository:
     #     db_price = await self.price_repository.get_latest_price(ticker)
     #     if db_price and not db_price.is_stale(max_age=timedelta(hours=4)):
     #         await self.price_cache.set(db_price)  # Warm cache
     #         return db_price
-    
+
     # Tier 3: Fetch from Alpha Vantage API
     if not await self.rate_limiter.can_make_request():
         # Serve stale data if available, else raise error
         if cached:
             return cached.with_source("alpha_vantage_stale")
         raise MarketDataUnavailableError("Rate limit exceeded, no cached data")
-    
+
     # Make API request
     await self.rate_limiter.consume_token()
     price = await self._fetch_from_api(ticker)
-    
+
     # Store in cache and database
     await self.price_cache.set(price)
     # if self.price_repository:
     #     await self.price_repository.upsert_price(price)
-    
+
     return price
 ```
 
@@ -221,11 +221,11 @@ async def test_get_current_price_cache_miss():
     """Test full flow: cache miss → API call → cache population"""
     adapter = AlphaVantageAdapter(...)
     price = await adapter.get_current_price(Ticker.create("AAPL"))
-    
+
     assert price.ticker.symbol == "AAPL"
     assert price.price.amount > 0
     assert price.source == "alpha_vantage"
-    
+
     # Verify cache was populated
     cached = await adapter.price_cache.get(Ticker.create("AAPL"))
     assert cached == price
@@ -234,20 +234,20 @@ async def test_get_current_price_cache_miss():
 async def test_get_current_price_cache_hit():
     """Test cache hit (no API call)"""
     adapter = AlphaVantageAdapter(...)
-    
+
     # First call populates cache (uses VCR)
     price1 = await adapter.get_current_price(Ticker.create("AAPL"))
-    
+
     # Second call hits cache (no VCR interaction)
     price2 = await adapter.get_current_price(Ticker.create("AAPL"))
-    
+
     assert price2 == price1
 
 @pytest.mark.vcr()
 async def test_rate_limit_exceeded():
     """Test behavior when rate limited"""
     adapter = AlphaVantageAdapter(...)
-    
+
     # Exhaust rate limit (make 5+ requests in rapid succession)
     for _ in range(6):
         try:
@@ -260,7 +260,7 @@ async def test_rate_limit_exceeded():
 async def test_ticker_not_found():
     """Test invalid ticker handling"""
     adapter = AlphaVantageAdapter(...)
-    
+
     with pytest.raises(TickerNotFoundError):
         await adapter.get_current_price(Ticker.create("INVALID"))
 ```

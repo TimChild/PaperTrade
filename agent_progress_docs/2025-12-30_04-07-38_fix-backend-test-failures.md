@@ -1,9 +1,9 @@
 # Fix Backend Test Failures - Task 025
 
-**Date**: 2025-12-30  
-**Agent**: backend-swe  
-**Task**: Fix 3 failing backend tests in PricePoint DTO  
-**Duration**: ~40 minutes  
+**Date**: 2025-12-30
+**Agent**: backend-swe
+**Task**: Fix 3 failing backend tests in PricePoint DTO
+**Duration**: ~40 minutes
 **Result**: ✅ All 334 backend tests passing (100%)
 
 ## Summary
@@ -56,7 +56,7 @@ def test_exactly_at_threshold(self) -> None:
     """Should return True when exactly at threshold (stale)."""  # Updated docstring
     timestamp = datetime.now(timezone.utc) - timedelta(minutes=15)
     price_point = PricePoint(...)
-    
+
     # Should be stale (age >= max_age)  # Updated comment and expectation
     assert price_point.is_stale(timedelta(minutes=15))  # Changed from "assert not" to "assert"
 ```
@@ -67,7 +67,7 @@ def test_exactly_at_threshold(self) -> None:
 
 **Issue**: The default `@dataclass` equality compared ALL fields including OHLCV data (volume, open, high, low, close), but these are supplementary metadata that shouldn't affect equality.
 
-**Rationale**: 
+**Rationale**:
 - Two price points with the same ticker, price, timestamp, source, and interval should be considered equal
 - OHLCV data provides additional context but doesn't change the core identity of a price observation
 - This matches domain semantics: a price observation is identified by when/where/what, not by supplementary stats

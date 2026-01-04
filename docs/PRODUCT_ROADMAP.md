@@ -1,6 +1,6 @@
 # PaperTrade Product Roadmap
 
-**Last Updated**: January 4, 2026  
+**Last Updated**: January 4, 2026
 **Version**: Phase 2 Complete
 
 ## What is this document?
@@ -340,28 +340,28 @@ We're considering open-sourcing PaperTrade in 2027. Here's the plan:
 
 ## ❓ FAQ
 
-**Q: When will SELL orders be available?**  
+**Q: When will SELL orders be available?**
 A: Late January 2026 (Phase 3a). This is our highest priority.
 
-**Q: Can I use this for real trading?**  
+**Q: Can I use this for real trading?**
 A: No! PaperTrade is a **simulation** with virtual money. Use it to learn, then trade for real elsewhere.
 
-**Q: Will there be a mobile app?**  
+**Q: Will there be a mobile app?**
 A: Not in 2026. The web app works on mobile browsers. Phase 4a will improve mobile experience. Native apps maybe 2027+.
 
-**Q: Can I import my real brokerage trades?**  
+**Q: Can I import my real brokerage trades?**
 A: Not yet. Planned for future (CSV import). For now, manually re-create trades.
 
-**Q: Is my data safe?**  
+**Q: Is my data safe?**
 A: After Phase 3b (Feb 2026), yes. User authentication will ensure data privacy. Currently it's development mode (not production-safe).
 
-**Q: How accurate are the prices?**  
+**Q: How accurate are the prices?**
 A: We use Alpha Vantage API (real market data). Free tier has 15-20 min delays. Paid tier is real-time.
 
-**Q: Can I test my strategy from 2020?**  
+**Q: Can I test my strategy from 2020?**
 A: Yes! Phase 3c (Mar 2026) adds backtesting. You'll be able to create portfolios at past dates and execute historical trades.
 
-**Q: Will this always be free?**  
+**Q: Will this always be free?**
 A: Core features will always be free. We may add premium features (real-time data, advanced analytics) for a small fee in 2027+.
 
 ---
@@ -376,5 +376,5 @@ We're building PaperTrade because we believe everyone should have access to inve
 
 **Questions? Suggestions?** Open an issue on GitHub or contact us at [feedback@papertrade.com](mailto:feedback@papertrade.com)
 
-**Last Updated**: January 4, 2026  
+**Last Updated**: January 4, 2026
 **Next Update**: April 2026 (post-Phase 3)

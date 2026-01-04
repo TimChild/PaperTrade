@@ -1,8 +1,8 @@
 # Agent Progress: Task 048 - Phase 3a SELL Orders Frontend Implementation
 
-**Date**: 2026-01-04  
-**Agent**: frontend-swe  
-**Task**: Task 048 - Phase 3a SELL Orders Frontend Implementation  
+**Date**: 2026-01-04
+**Agent**: frontend-swe
+**Task**: Task 048 - Phase 3a SELL Orders Frontend Implementation
 **PR**: copilot/implement-sell-order-functionality-again
 
 ## Task Summary

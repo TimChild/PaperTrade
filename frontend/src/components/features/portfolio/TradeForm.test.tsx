@@ -287,7 +287,7 @@ describe('TradeForm', () => {
 
       // Switch to SELL
       await user.click(screen.getByTestId('trade-form-action-sell'))
-      
+
       // Clear and enter new values
       const tickerInput = screen.getByTestId('trade-form-ticker-input')
       await user.clear(tickerInput)

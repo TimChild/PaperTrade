@@ -158,16 +158,16 @@ async def get_portfolio_value(
     repository: PortfolioRepository,
 ) -> PortfolioValuation:
     effective_time = as_of or datetime.now(UTC)
-    
+
     # Get holdings as of the effective time
     holdings = await repository.get_holdings_at(portfolio_id, effective_time)
-    
+
     # Get prices as of the effective time
     prices = await market_data.get_prices_at(
-        [h.ticker for h in holdings], 
+        [h.ticker for h in holdings],
         effective_time
     )
-    
+
     return calculate_valuation(holdings, prices)
 ```
 

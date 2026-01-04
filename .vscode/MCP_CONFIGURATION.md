@@ -11,8 +11,8 @@ MCP servers extend AI assistant capabilities by providing structured access to t
 ## Configured Servers
 
 ### 1. Playwright MCP (Official Microsoft)
-**Purpose**: Browser automation and E2E testing  
-**Command**: `npx @playwright/mcp@latest`  
+**Purpose**: Browser automation and E2E testing
+**Command**: `npx @playwright/mcp@latest`
 **Status**: ✅ Enabled
 
 **Capabilities**:
@@ -32,8 +32,8 @@ MCP servers extend AI assistant capabilities by providing structured access to t
 - "Debug why the trade submission test is failing"
 
 ### 2. GitHub MCP (Official)
-**Purpose**: Enhanced GitHub API access  
-**Command**: `npx @modelcontextprotocol/server-github`  
+**Purpose**: Enhanced GitHub API access
+**Command**: `npx @modelcontextprotocol/server-github`
 **Status**: ✅ Enabled (requires `GITHUB_TOKEN` env var)
 
 **Capabilities**:
@@ -48,9 +48,9 @@ MCP servers extend AI assistant capabilities by providing structured access to t
 - "Analyze PR review comments and suggest improvements"
 
 ### 3. PostgreSQL MCP
-**Purpose**: Database inspection and queries  
-**Command**: `npx mcp-server-postgres`  
-**Status**: ✅ Enabled  
+**Purpose**: Database inspection and queries
+**Command**: `npx mcp-server-postgres`
+**Status**: ✅ Enabled
 **Connection**: `postgresql://papertrade:secret@localhost:5432/papertrade`
 
 **Capabilities**:
@@ -67,9 +67,9 @@ MCP servers extend AI assistant capabilities by providing structured access to t
 **Note**: Requires PostgreSQL to be running locally (`task docker:up`)
 
 ### 4. Filesystem MCP (Official)
-**Purpose**: Enhanced file operations  
-**Command**: `npx @modelcontextprotocol/server-filesystem`  
-**Status**: ✅ Enabled  
+**Purpose**: Enhanced file operations
+**Command**: `npx @modelcontextprotocol/server-filesystem`
+**Status**: ✅ Enabled
 **Scope**: `/Users/timchild/github/PaperTrade`
 
 **Capabilities**:
@@ -84,8 +84,8 @@ MCP servers extend AI assistant capabilities by providing structured access to t
 - "List all test files modified in the last week"
 
 ### 5. Memory MCP (Official)
-**Purpose**: Persistent context across sessions  
-**Command**: `npx @modelcontextprotocol/server-memory`  
+**Purpose**: Persistent context across sessions
+**Command**: `npx @modelcontextprotocol/server-memory`
 **Status**: ✅ Enabled
 
 **Capabilities**:
@@ -100,8 +100,8 @@ MCP servers extend AI assistant capabilities by providing structured access to t
 - "Store the deployment checklist for future reference"
 
 ### 6. Sequential Thinking MCP (Official)
-**Purpose**: Structured reasoning and planning  
-**Command**: `npx @modelcontextprotocol/server-sequential-thinking`  
+**Purpose**: Structured reasoning and planning
+**Command**: `npx @modelcontextprotocol/server-sequential-thinking`
 **Status**: ✅ Enabled
 
 **Capabilities**:
@@ -239,5 +239,5 @@ This configuration should be reviewed and updated:
 
 ---
 
-**Maintained By**: Orchestrator Agent  
+**Maintained By**: Orchestrator Agent
 **Last Review**: January 1, 2026

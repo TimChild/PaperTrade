@@ -1,7 +1,7 @@
 # Portfolio Dashboard UI Implementation - Task 005
 
-**Date:** 2025-12-27  
-**Agent:** Frontend SWE  
+**Date:** 2025-12-27
+**Agent:** Frontend SWE
 **Task:** Create Portfolio Dashboard UI with mock data
 
 ## Task Summary

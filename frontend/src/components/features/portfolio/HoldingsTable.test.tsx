@@ -14,7 +14,7 @@ vi.mock('@/hooks/usePriceQuery', () => ({
       ['MSFT', { price: { amount: 350.0, currency: 'USD' }, timestamp: '2024-01-01T12:00:00Z' }],
       ['LOSS', { price: { amount: 150.0, currency: 'USD' }, timestamp: '2024-01-01T12:00:00Z' }],
     ])
-    
+
     // Only return prices for requested tickers
     const filteredPriceMap = new Map()
     tickers.forEach((ticker) => {
@@ -23,7 +23,7 @@ vi.mock('@/hooks/usePriceQuery', () => ({
         filteredPriceMap.set(ticker, price)
       }
     })
-    
+
     return {
       data: filteredPriceMap,
       isLoading: false,
@@ -210,7 +210,7 @@ describe('HoldingsTable', () => {
           quantity: 100,
           averageCost: 200.0,
           currentPrice: 150.0, // Mock will return 150.0
-          marketValue: 15000.0, 
+          marketValue: 15000.0,
           gainLoss: -5000.0,
           gainLossPercent: -25.0,
         },

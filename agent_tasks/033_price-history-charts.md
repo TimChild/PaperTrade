@@ -65,7 +65,7 @@ interface PriceChartProps {
 
 export function PriceChart({ ticker, timeRange }: PriceChartProps) {
   const { data, isLoading } = usePriceHistory(ticker, timeRange)
-  
+
   return (
     <div className="price-chart">
       <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
@@ -82,7 +82,7 @@ export function PriceChart({ ticker, timeRange }: PriceChartProps) {
 // frontend/src/hooks/usePriceHistory.ts
 export function usePriceHistory(ticker: string, range: TimeRange) {
   const { start, end } = getDateRange(range)
-  
+
   return useQuery({
     queryKey: ['priceHistory', ticker, range],
     queryFn: () => pricesApi.getPriceHistory(ticker, start, end),
@@ -187,27 +187,27 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 
 export function PriceChart({ ticker, timeRange }: PriceChartProps) {
   const { data, isLoading, error } = usePriceHistory(ticker, timeRange)
-  
+
   if (isLoading) return <ChartSkeleton />
   if (error) return <ChartError onRetry={() => refetch()} />
   if (!data || data.prices.length === 0) return <NoData />
-  
+
   const chartData = formatDataForChart(data.prices)
   const isPositive = data.prices[data.prices.length - 1].price > data.prices[0].price
-  
+
   return (
     <div className="price-chart">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold">{ticker}</h3>
         <TimeRangeSelector selected={timeRange} onChange={onRangeChange} />
       </div>
-      
+
       <PriceStats
         currentPrice={data.prices[data.prices.length - 1].price}
         change={calculateChange(data.prices)}
         changePercent={calculateChangePercent(data.prices)}
       />
-      
+
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" />

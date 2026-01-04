@@ -35,7 +35,7 @@ export function HoldingsTable({
   const holdingsWithRealPrices = useMemo(() => {
     return holdings.map((holding) => {
       const price = priceMap?.get(holding.ticker)
-      
+
       // Use real-time price if available and valid, otherwise use average cost as fallback
       const currentPrice =
         price && Number.isFinite(price.price.amount)

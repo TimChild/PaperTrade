@@ -1,8 +1,8 @@
 # ADR 001: Tiered Caching Strategy (Redis + PostgreSQL)
 
-**Status**: Approved  
-**Date**: 2025-12-28  
-**Deciders**: Architecture Team  
+**Status**: Approved
+**Date**: 2025-12-28
+**Deciders**: Architecture Team
 **Context**: Phase 2 Market Data Integration
 
 ## Context

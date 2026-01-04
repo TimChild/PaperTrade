@@ -1,7 +1,7 @@
 # Phase 2 Market Data Integration - Implementation Guide
 
-**Created**: 2025-12-28  
-**Status**: Approved  
+**Created**: 2025-12-28
+**Status**: Approved
 **Audience**: Backend-SWE and Frontend-SWE agents
 
 ## Overview
@@ -21,8 +21,8 @@ Before starting any task:
 
 ### Task 015: Domain Models and Interfaces (2-3 hours)
 
-**Agent**: Backend-SWE  
-**Dependencies**: None  
+**Agent**: Backend-SWE
+**Dependencies**: None
 **Branch**: `feature/phase2-domain-models`
 
 #### Objectives
@@ -80,8 +80,8 @@ Before starting any task:
 
 ### Task 016: MarketDataPort Interface (1-2 hours)
 
-**Agent**: Backend-SWE  
-**Dependencies**: Task 015  
+**Agent**: Backend-SWE
+**Dependencies**: Task 015
 **Branch**: `feature/phase2-market-data-port`
 
 #### Objectives
@@ -127,8 +127,8 @@ Before starting any task:
 
 ### Task 017: Alpha Vantage Adapter with Rate Limiting (6-8 hours)
 
-**Agent**: Backend-SWE  
-**Dependencies**: Task 016  
+**Agent**: Backend-SWE
+**Dependencies**: Task 016
 **Branch**: `feature/phase2-alpha-vantage-adapter`
 
 #### Objectives
@@ -201,8 +201,8 @@ Before starting any task:
 
 ### Task 018: PostgreSQL Price Repository (4-5 hours)
 
-**Agent**: Backend-SWE  
-**Dependencies**: Task 015  
+**Agent**: Backend-SWE
+**Dependencies**: Task 015
 **Branch**: `feature/phase2-price-repository`
 
 #### Objectives
@@ -273,8 +273,8 @@ Before starting any task:
 
 ### Task 019: Update Portfolio Use Cases (3-4 hours)
 
-**Agent**: Backend-SWE  
-**Dependencies**: Tasks 016, 017, 018  
+**Agent**: Backend-SWE
+**Dependencies**: Tasks 016, 017, 018
 **Branch**: `feature/phase2-portfolio-real-prices`
 
 #### Objectives
@@ -304,7 +304,7 @@ Before starting any task:
 - Calculate portfolio value with real prices
 - Handle errors (ticker not found → use $0, log warning)
 
-**Step 2**: Update GetHoldings  
+**Step 2**: Update GetHoldings
 - Add current price to HoldingDTO
 - Include unrealized gain/loss calculation
 - Include price timestamp and source
@@ -330,8 +330,8 @@ Before starting any task:
 
 ### Task 020: Frontend - Display Real Portfolio Values (4-5 hours)
 
-**Agent**: Frontend-SWE  
-**Dependencies**: Task 019  
+**Agent**: Frontend-SWE
+**Dependencies**: Task 019
 **Branch**: `feature/phase2-frontend-real-prices`
 
 #### Objectives
@@ -402,8 +402,8 @@ Before starting any task:
 
 ### Task 021: Implement Historical Price Queries (4-5 hours)
 
-**Agent**: Backend-SWE  
-**Dependencies**: Task 018  
+**Agent**: Backend-SWE
+**Dependencies**: Task 018
 **Branch**: `feature/phase2-historical-queries`
 
 #### Objectives
@@ -452,8 +452,8 @@ Before starting any task:
 
 ### Task 022: Batch Import for Common Stocks (3-4 hours)
 
-**Agent**: Backend-SWE  
-**Dependencies**: Task 021  
+**Agent**: Backend-SWE
+**Dependencies**: Task 021
 **Branch**: `feature/phase2-batch-import`
 
 #### Objectives
@@ -497,8 +497,8 @@ python -m papertrade.cli.import_prices --lookback-days=365
 
 ### Task 023: Background Refresh Scheduler (5-6 hours)
 
-**Agent**: Backend-SWE  
-**Dependencies**: Task 018  
+**Agent**: Backend-SWE
+**Dependencies**: Task 018
 **Branch**: `feature/phase2-scheduler`
 
 #### Objectives
@@ -554,8 +554,8 @@ pip install apscheduler
 
 ### Task 024: Frontend - Price History Charts (6-8 hours)
 
-**Agent**: Frontend-SWE  
-**Dependencies**: Task 021  
+**Agent**: Frontend-SWE
+**Dependencies**: Task 021
 **Branch**: `feature/phase2-price-charts`
 
 #### Objectives
@@ -609,8 +609,8 @@ pip install apscheduler
 
 ### Task 025: Testing and Quality Validation (4-5 hours)
 
-**Agent**: Backend-SWE or Quality-Assurance agent  
-**Dependencies**: All previous tasks  
+**Agent**: Backend-SWE or Quality-Assurance agent
+**Dependencies**: All previous tasks
 **Branch**: `feature/phase2-final-testing`
 
 #### Objectives
@@ -627,7 +627,7 @@ pip install apscheduler
 # Backend
 task test:backend
 
-# Frontend  
+# Frontend
 task test:frontend
 ```
 

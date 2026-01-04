@@ -147,7 +147,7 @@ class MarketDataPort(Protocol):
 ### Phase 3: The Time Machine (Historical Backtesting)
 
 > **📝 Note**: This is the **original Phase 3 plan**. Based on Phase 1-2 learnings and user needs analysis (January 2026), Phase 3 has been **refined and restructured** into 3 focused sub-phases:
-> 
+>
 > - **Phase 3a: Complete Trading Loop** (SELL orders) - 2-3 weeks
 > - **Phase 3b: Production-Ready Foundation** (User authentication) - 2-3 weeks
 > - **Phase 3c: Analytics & Insights** (Charts + Backtesting) - 3-4 weeks

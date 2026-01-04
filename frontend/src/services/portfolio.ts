@@ -30,7 +30,7 @@ export const portfolioService = {
   async getById(id: string): Promise<Portfolio> {
     // Simulate API delay
     await new Promise((resolve) => setTimeout(resolve, 300))
-    
+
     const portfolio = mockPortfolios.find((p) => p.id === id)
     if (!portfolio) {
       throw new Error(`Portfolio with id ${id} not found`)
@@ -44,7 +44,7 @@ export const portfolioService = {
   async getHoldings(portfolioId: string): Promise<Holding[]> {
     // Simulate API delay
     await new Promise((resolve) => setTimeout(resolve, 300))
-    
+
     return mockHoldings[portfolioId] || []
   },
 
@@ -54,7 +54,7 @@ export const portfolioService = {
   async getTransactions(portfolioId: string): Promise<Transaction[]> {
     // Simulate API delay
     await new Promise((resolve) => setTimeout(resolve, 300))
-    
+
     const transactions = mockTransactions[portfolioId] || []
     // Return sorted by timestamp (most recent first)
     return [...transactions].sort(
@@ -68,7 +68,7 @@ export const portfolioService = {
   async executeTrade(request: TradeRequest): Promise<Transaction> {
     // Simulate API delay
     await new Promise((resolve) => setTimeout(resolve, 500))
-    
+
     // In real implementation, this would call the API
     // For now, just return a mock success response
     const mockTransaction: Transaction = {
@@ -80,7 +80,7 @@ export const portfolioService = {
       quantity: request.quantity,
       timestamp: new Date().toISOString(),
     }
-    
+
     return mockTransaction
   },
 }

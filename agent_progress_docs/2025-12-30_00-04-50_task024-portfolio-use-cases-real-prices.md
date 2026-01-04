@@ -1,8 +1,8 @@
 # Task 024: Portfolio Use Cases with Real Prices
 
-**Date**: 2025-12-30  
-**Agent**: backend-swe  
-**Task**: Integrate MarketDataPort into portfolio queries for real-time price data  
+**Date**: 2025-12-30
+**Agent**: backend-swe
+**Task**: Integrate MarketDataPort into portfolio queries for real-time price data
 **Status**: ✅ Complete
 
 ## Summary
@@ -99,7 +99,7 @@ Successfully integrated the MarketDataPort into portfolio use cases, enabling re
    - Tests empty portfolios and error conditions
 
 7. **`backend/tests/unit/application/queries/test_get_portfolio_holdings.py`** (NEW)
-   - 7 comprehensive test cases  
+   - 7 comprehensive test cases
    - Tests market data enrichment
    - Tests buy/sell transactions
    - Tests holdings without prices (partial data)
@@ -142,15 +142,15 @@ holdings = PortfolioCalculator.calculate_holdings(transactions)
 for holding in holdings:
     try:
         price_point = await market_data.get_current_price(holding.ticker)
-        
+
         # 3. Calculate metrics
         market_value = price_point.price * holding.quantity
         unrealized_gain_loss = market_value - holding.cost_basis
         gain_loss_percent = (unrealized_gain_loss / cost_basis) * 100
-        
+
         # 4. Create enriched DTO
         enriched_holdings.append(HoldingDTO(...))
-        
+
     except (TickerNotFoundError, MarketDataUnavailableError):
         # 5. Graceful degradation - return holding without market data
         enriched_holdings.append(HoldingDTO(... market_data_fields=None))
@@ -206,7 +206,7 @@ The `.env.example` file already includes these variables.
 ## Performance Considerations
 
 1. **Caching**: Redis cache (1 hour TTL) reduces API calls
-2. **Rate Limiting**: Token bucket prevents quota exhaustion  
+2. **Rate Limiting**: Token bucket prevents quota exhaustion
 3. **Singleton Connections**: Reused across requests
 4. **Graceful Degradation**: Never blocks on missing data
 

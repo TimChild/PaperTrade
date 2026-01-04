@@ -54,7 +54,7 @@ Trade endpoint should:
 
 1. Check [frontend/src/services/api/types.ts](cci:7://file:///Users/timchild/github/PaperTrade/frontend/src/services/api/types.ts:0:0-0:0)
    - Remove `price` from `TradeRequest` interface
-   
+
 2. Check components that call `executeTrade`
    - Remove any price-fetching logic before trade execution
    - UI can still display estimated price, but shouldn't send it
@@ -71,7 +71,7 @@ async def execute_trade(
 ):
     # Fetch current price
     price_point = await market_data_service.get_current_price(request.ticker)
-    
+
     # Execute command with fetched price
     if request.action == "BUY":
         command = ExecuteBuyCommand(
@@ -93,11 +93,11 @@ class ExecuteBuyCommandHandler:
     ):
         self.portfolio_repo = portfolio_repo
         self.market_data = market_data
-    
+
     async def handle(self, command: ExecuteBuyCommand) -> Transaction:
         # Fetch price inside handler
         price_point = await self.market_data.get_current_price(command.ticker)
-        
+
         # Use price for trade
         # ...
 ```

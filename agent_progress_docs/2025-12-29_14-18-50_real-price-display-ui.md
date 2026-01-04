@@ -1,9 +1,9 @@
 # Task 023: Real Price Display UI - Implementation Complete
 
-**Agent**: frontend-swe  
-**Task ID**: Task 023  
-**Date**: 2025-12-29  
-**Duration**: ~2.5 hours  
+**Agent**: frontend-swe
+**Task ID**: Task 023
+**Date**: 2025-12-29
+**Duration**: ~2.5 hours
 **Status**: ✅ Complete
 
 ## Task Summary
@@ -284,8 +284,8 @@ frontend/src/pages/
 └── PortfolioDetail.tsx                         (modified, +8/-2 lines)
 ```
 
-**Total**: 4 files created, 5 files modified  
-**Lines Added**: ~500 lines  
+**Total**: 4 files created, 5 files modified
+**Lines Added**: ~500 lines
 **Test Coverage**: 13 new test cases
 
 ---

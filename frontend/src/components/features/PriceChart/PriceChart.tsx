@@ -89,7 +89,7 @@ export function PriceChart({
   // Safe to access [0] and [length-1] because we already checked for empty array above
   const firstPrice = data.prices[0]!.price.amount
   const lastPrice = data.prices[data.prices.length - 1]!.price.amount
-  
+
   // Validate prices are numbers
   if (!Number.isFinite(firstPrice) || !Number.isFinite(lastPrice)) {
     return (

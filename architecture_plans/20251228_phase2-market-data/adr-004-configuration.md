@@ -1,8 +1,8 @@
 # ADR 004: Configuration Management (TOML-Based)
 
-**Status**: Approved  
-**Date**: 2025-12-28  
-**Deciders**: Architecture Team  
+**Status**: Approved
+**Date**: 2025-12-28
+**Deciders**: Architecture Team
 **Context**: Phase 2 Market Data Integration
 
 ## Context
@@ -231,7 +231,7 @@ When application starts, validate:
 Configuration Error: market_data.alpha_vantage.api_key
 
   ALPHA_VANTAGE_API_KEY is required but not set.
-  
+
   To fix:
   1. Copy .env.example to .env
   2. Set ALPHA_VANTAGE_API_KEY=your_actual_key
@@ -435,7 +435,7 @@ enable_price_charts = false  # Controlled rollout
 | **.env** | Secrets and overrides | ❌ No | API keys, passwords |
 | **config.{env}.toml** | Environment-specific | ❌ No | Per-environment tweaks |
 
-**Rationale**: 
+**Rationale**:
 - Secrets never committed
 - Defaults always available (onboarding friendly)
 - Environment overrides are optional (production only)

@@ -112,7 +112,7 @@ Test IDs (`data-testid` attributes) provide stable, explicit element targeting f
 
 // Test ID with conditional rendering
 {onCancel && (
-  <button 
+  <button
     data-testid="create-portfolio-cancel-button"
     onClick={onCancel}
   >

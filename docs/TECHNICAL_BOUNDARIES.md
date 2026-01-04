@@ -1,6 +1,6 @@
 # PaperTrade: Technical Boundaries & Limitations
 
-**Last Updated**: January 4, 2026  
+**Last Updated**: January 4, 2026
 **Version**: Phase 2 Complete
 
 ## Overview
@@ -13,8 +13,8 @@ This document outlines known technical limitations, edge cases, and architectura
 
 ### 1. SELL Orders Not Implemented
 
-**Status**: ❌ Not Available  
-**Impact**: **HIGH** - Users cannot exit positions  
+**Status**: ❌ Not Available
+**Impact**: **HIGH** - Users cannot exit positions
 **Planned**: Phase 3 (Q1 2026)
 
 **Details**:
@@ -41,8 +41,8 @@ This document outlines known technical limitations, edge cases, and architectura
 
 ### 2. No User Authentication
 
-**Status**: ❌ Not Available  
-**Impact**: **CRITICAL** - Not production-ready  
+**Status**: ❌ Not Available
+**Impact**: **CRITICAL** - Not production-ready
 **Planned**: Phase 3 (Q1 2026)
 
 **Details**:
@@ -77,8 +77,8 @@ This document outlines known technical limitations, edge cases, and architectura
 
 ### 3. API Rate Limiting (Alpha Vantage)
 
-**Status**: ⚠️ Active Limitation  
-**Impact**: **HIGH** - Affects all market data operations  
+**Status**: ⚠️ Active Limitation
+**Impact**: **HIGH** - Affects all market data operations
 **Limits**: 5 API calls/minute, 500 calls/day (free tier)
 
 **Details**:
@@ -125,7 +125,7 @@ This document outlines known technical limitations, edge cases, and architectura
 
 ### 4. Whole Shares Only (No Fractional Shares)
 
-**Status**: ❌ Not Supported  
+**Status**: ❌ Not Supported
 **Impact**: MEDIUM - Limits trading flexibility
 
 **Details**:
@@ -156,7 +156,7 @@ This document outlines known technical limitations, edge cases, and architectura
 
 ### 5. Market Orders Only
 
-**Status**: ❌ Limit/Stop Orders Not Available  
+**Status**: ❌ Limit/Stop Orders Not Available
 **Impact**: MEDIUM - No advanced order types
 
 **Details**:
@@ -182,7 +182,7 @@ This document outlines known technical limitations, edge cases, and architectura
 
 ### 6. No Short Selling
 
-**Status**: ❌ Not Supported  
+**Status**: ❌ Not Supported
 **Impact**: LOW-MEDIUM - Can't bet against stocks
 
 **Details**:
@@ -201,7 +201,7 @@ This document outlines known technical limitations, edge cases, and architectura
 
 ### 7. USD Currency Only
 
-**Status**: ⚠️ Single Currency  
+**Status**: ⚠️ Single Currency
 **Impact**: MEDIUM - International stocks show USD-equivalent prices
 
 **Details**:
@@ -229,7 +229,7 @@ This document outlines known technical limitations, edge cases, and architectura
 
 ### 8. Browser Alert Dialogs
 
-**Status**: ⚠️ Basic UI  
+**Status**: ⚠️ Basic UI
 **Impact**: LOW - Not elegant but functional
 
 **Details**:
@@ -257,7 +257,7 @@ alert("Insufficient funds to execute trade")
 
 ### 9. Limited Mobile Responsiveness
 
-**Status**: ⚠️ Desktop-First Design  
+**Status**: ⚠️ Desktop-First Design
 **Impact**: MEDIUM - Mobile users have suboptimal experience
 
 **Details**:
@@ -281,7 +281,7 @@ alert("Insufficient funds to execute trade")
 
 ### 10. No Real-Time Updates (WebSockets)
 
-**Status**: ❌ Polling-Based  
+**Status**: ❌ Polling-Based
 **Impact**: MEDIUM - Prices don't auto-update
 
 **Details**:
@@ -312,8 +312,8 @@ alert("Insufficient funds to execute trade")
 
 ### 11. No Portfolio Analytics/Charts
 
-**Status**: ❌ Not Implemented  
-**Impact**: MEDIUM - Can't visualize performance  
+**Status**: ❌ Not Implemented
+**Impact**: MEDIUM - Can't visualize performance
 **Planned**: Phase 3
 
 **Missing Features**:
@@ -341,8 +341,8 @@ alert("Insufficient funds to execute trade")
 
 ### 12. No Backtesting
 
-**Status**: ❌ Not Implemented  
-**Impact**: MEDIUM - Can't test strategies on historical data  
+**Status**: ❌ Not Implemented
+**Impact**: MEDIUM - Can't test strategies on historical data
 **Planned**: Phase 3
 
 **Missing Capability**:
@@ -368,7 +368,7 @@ alert("Insufficient funds to execute trade")
 
 ### 13. Session Management (LocalStorage)
 
-**Status**: ⚠️ Temporary Solution  
+**Status**: ⚠️ Temporary Solution
 **Impact**: MEDIUM - Fragile user tracking
 
 **Current Implementation**:
@@ -402,7 +402,7 @@ alert("Insufficient funds to execute trade")
 
 ### 14. Single Database (No Sharding)
 
-**Status**: ⚠️ Monolithic Database  
+**Status**: ⚠️ Monolithic Database
 **Impact**: LOW - Sufficient for current scale
 
 **Current State**:
@@ -431,8 +431,8 @@ alert("Insufficient funds to execute trade")
 
 ### 15. No Backup/Disaster Recovery
 
-**Status**: ❌ Not Implemented  
-**Impact**: CRITICAL - Data loss risk  
+**Status**: ❌ Not Implemented
+**Impact**: CRITICAL - Data loss risk
 **Planned**: Production deployment
 
 **Missing**:
@@ -463,8 +463,8 @@ alert("Insufficient funds to execute trade")
 
 ### 16. No Monitoring/Observability
 
-**Status**: ❌ Not Implemented  
-**Impact**: MEDIUM-HIGH - Blind to production issues  
+**Status**: ❌ Not Implemented
+**Impact**: MEDIUM-HIGH - Blind to production issues
 **Planned**: Production deployment
 
 **Missing**:
@@ -494,7 +494,7 @@ alert("Insufficient funds to execute trade")
 
 ### 17. Concurrent Trade Conflicts
 
-**Status**: ⚠️ Race Condition Risk  
+**Status**: ⚠️ Race Condition Risk
 **Impact**: LOW - Rare but possible
 
 **Scenario**:
@@ -523,7 +523,7 @@ Two trades execute simultaneously for same portfolio:
 
 ### 18. Negative Prices (Invalid Data)
 
-**Status**: ⚠️ Possible from External API  
+**Status**: ⚠️ Possible from External API
 **Impact**: LOW - Data validation needed
 
 **Scenario**:
@@ -549,7 +549,7 @@ Two trades execute simultaneously for same portfolio:
 
 ### 19. Stale Price Display
 
-**Status**: ⚠️ Cache Staleness  
+**Status**: ⚠️ Cache Staleness
 **Impact**: LOW-MEDIUM - Users see old prices
 
 **Scenario**:
@@ -577,7 +577,7 @@ Two trades execute simultaneously for same portfolio:
 
 ### 20. Docker Volume Permissions
 
-**Status**: ⚠️ Platform-Specific Issue  
+**Status**: ⚠️ Platform-Specific Issue
 **Impact**: LOW - Affects Docker development
 
 **Scenario**:
@@ -607,7 +607,7 @@ EACCES: permission denied
 
 ### 21. N+1 Query Problem (Holdings)
 
-**Status**: ⚠️ Potential Performance Issue  
+**Status**: ⚠️ Potential Performance Issue
 **Impact**: MEDIUM - Slow portfolio page with many holdings
 
 **Scenario**:
@@ -630,7 +630,7 @@ EACCES: permission denied
 
 ### 22. Large Transaction History
 
-**Status**: ⚠️ Pagination Needed  
+**Status**: ⚠️ Pagination Needed
 **Impact**: MEDIUM - Slow page load for active portfolios
 
 **Scenario**:
@@ -659,7 +659,7 @@ EACCES: permission denied
 
 ### 23. Alpha Vantage Single Point of Failure
 
-**Status**: ⚠️ No Fallback Provider  
+**Status**: ⚠️ No Fallback Provider
 **Impact**: HIGH - Total market data failure if API down
 
 **Scenario**:
@@ -686,7 +686,7 @@ EACCES: permission denied
 
 ### 24. No Cryptocurrency Support
 
-**Status**: ❌ Not Planned  
+**Status**: ❌ Not Planned
 **Impact**: LOW - Different use case
 
 **Reason**:
@@ -708,7 +708,7 @@ EACCES: permission denied
 
 ### 25. E2E Tests Cannot Execute Real Trades (CI)
 
-**Status**: ⚠️ CI Environment Limitation  
+**Status**: ⚠️ CI Environment Limitation
 **Impact**: MEDIUM - Limited E2E coverage
 
 **Issue**:
@@ -738,7 +738,7 @@ EACCES: permission denied
 
 ### 26. Demo API Key Limitations
 
-**Status**: ⚠️ Development Constraint  
+**Status**: ⚠️ Development Constraint
 **Impact**: MEDIUM - More restrictive than free tier
 
 **Demo Key**: `ALPHA_VANTAGE_API_KEY=demo`
@@ -793,5 +793,5 @@ EACCES: permission denied
 
 ---
 
-**Last Updated**: January 4, 2026  
+**Last Updated**: January 4, 2026
 **Maintained By**: PaperTrade Development Team

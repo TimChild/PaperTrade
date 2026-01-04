@@ -1,6 +1,6 @@
 # PaperTrade User Guide
 
-**Version**: 2.0 (Phase 2 Complete)  
+**Version**: 2.0 (Phase 2 Complete)
 **Last Updated**: January 4, 2026
 
 ## Table of Contents
@@ -31,8 +31,8 @@ Think of it as a **sandbox for investors** – all the market experience, none o
 
 ### Current Status
 
-✅ **Phase 1 Complete**: Portfolio management and transaction ledger  
-✅ **Phase 2 Complete**: Real market data integration (Alpha Vantage)  
+✅ **Phase 1 Complete**: Portfolio management and transaction ledger
+✅ **Phase 2 Complete**: Real market data integration (Alpha Vantage)
 🚧 **Phase 3 In Planning**: SELL orders, analytics, backtesting
 
 ---
@@ -549,5 +549,5 @@ Remember: This is virtual money – experiment, learn, and have fun without fina
 
 ---
 
-**Last Updated**: January 4, 2026  
+**Last Updated**: January 4, 2026
 **Version**: 2.0 (Phase 2 Complete)

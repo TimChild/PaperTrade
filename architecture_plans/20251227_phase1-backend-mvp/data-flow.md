@@ -34,39 +34,39 @@ sequenceDiagram
     participant PortRepo as Portfolio<br>Repository
     participant TxRepo as Transaction<br>Repository
     participant DB as Database
-    
+
     User->>API: POST /api/v1/portfolios<br>{user_id, name, initial_deposit}
-    
+
     API->>API: Validate request schema
     API->>API: Parse Money value object
-    
+
     API->>UC: execute(user_id, name, initial_deposit)
-    
+
     Note over UC: Validate business rules
     UC->>UC: Check initial_deposit > 0
     UC->>UC: Check name is valid
-    
+
     Note over UC: Create domain entities
     UC->>Portfolio: new(id=uuid, user_id, name, created_at=now)
     Portfolio-->>UC: Portfolio instance
-    
+
     UC->>Transaction: new(id=uuid,<br>type=DEPOSIT,<br>cash_change=initial_deposit)
     Transaction-->>UC: Transaction instance
-    
+
     Note over UC: Persist to database
     UC->>PortRepo: save(portfolio)
     PortRepo->>DB: INSERT INTO portfolio
     DB-->>PortRepo: Success
     PortRepo-->>UC: None
-    
+
     UC->>TxRepo: save(transaction)
     TxRepo->>DB: INSERT INTO transaction
     DB-->>TxRepo: Success
     TxRepo-->>UC: None
-    
+
     Note over UC: Emit domain event (for audit)
     UC->>UC: emit(PortfolioCreated)
-    
+
     UC-->>API: Result(portfolio_id)
     API-->>User: 201 Created<br>{portfolio_id, name, created_at}
 ```
@@ -92,47 +92,47 @@ sequenceDiagram
     participant TxRepo as Transaction<br>Repository
     participant Calc as Portfolio<br>Calculator
     participant DB as Database
-    
+
     User->>API: POST /api/v1/portfolios/{id}/trades<br>{ticker: "AAPL", quantity: 10,<br>type: BUY, price: 150}
-    
+
     API->>API: Validate request
     API->>API: Create Ticker("AAPL")
     API->>API: Create Quantity(10)
     API->>API: Create Money(150, "USD")
-    
+
     API->>UC: execute(portfolio_id, ticker,<br>quantity, BUY, price)
-    
+
     Note over UC: Verify portfolio exists
     UC->>PortRepo: get(portfolio_id)
     PortRepo->>DB: SELECT * FROM portfolio WHERE id=?
     DB-->>PortRepo: Portfolio record
     PortRepo-->>UC: Portfolio entity
-    
+
     Note over UC: Check sufficient funds
     UC->>TxRepo: get_by_portfolio(portfolio_id)
     TxRepo->>DB: SELECT * FROM transaction<br>WHERE portfolio_id=?
     DB-->>TxRepo: Transaction records
     TxRepo-->>UC: List[Transaction]
-    
+
     UC->>Calc: calculate_cash_balance(transactions)
     Calc->>Calc: sum(tx.cash_change for tx in transactions)
     Calc-->>UC: current_balance = Money(5000, "USD")
-    
+
     UC->>UC: total_cost = quantity × price = 1500
     UC->>UC: Validate: current_balance >= total_cost
     Note over UC: 5000 >= 1500 ✓
-    
+
     Note over UC: Create BUY transaction
     UC->>UC: new Transaction(<br>type=BUY,<br>cash_change=-1500,<br>ticker="AAPL",<br>quantity=10,<br>price=150)
-    
+
     UC->>TxRepo: save(transaction)
     TxRepo->>DB: INSERT INTO transaction
     DB-->>TxRepo: Success
     TxRepo-->>UC: None
-    
+
     Note over UC: Emit event
     UC->>UC: emit(TradeExecuted)
-    
+
     UC-->>API: Result(transaction_id, total_cost=1500)
     API-->>User: 201 Created<br>{transaction_id, total_cost}
 ```
@@ -158,45 +158,45 @@ sequenceDiagram
     participant TxRepo as Transaction<br>Repository
     participant Calc as Portfolio<br>Calculator
     participant DB as Database
-    
+
     User->>API: POST /api/v1/portfolios/{id}/trades<br>{ticker: "AAPL", quantity: 5,<br>type: SELL, price: 160}
-    
+
     API->>API: Validate request and create VOs
     API->>UC: execute(portfolio_id, ticker,<br>quantity, SELL, price)
-    
+
     UC->>PortRepo: get(portfolio_id)
     PortRepo->>DB: SELECT portfolio
     DB-->>PortRepo: Portfolio record
     PortRepo-->>UC: Portfolio entity
-    
+
     Note over UC: Check sufficient shares
     UC->>TxRepo: get_by_portfolio(portfolio_id)
     TxRepo->>DB: SELECT transactions
     DB-->>TxRepo: All transactions
     TxRepo-->>UC: List[Transaction]
-    
+
     UC->>Calc: calculate_holdings(transactions)
-    
+
     Note over Calc: Aggregate by ticker
     loop For each unique ticker
         Calc->>Calc: Process BUY transactions<br>(add shares, add cost)
         Calc->>Calc: Process SELL transactions<br>(subtract shares, reduce cost)
     end
-    
+
     Calc-->>UC: List[Holding]<br>AAPL: 10 shares @ $150 avg
-    
+
     UC->>UC: Find holding for AAPL
     UC->>UC: Validate: holding.quantity (10) >= quantity (5)
     Note over UC: 10 >= 5 ✓
-    
+
     UC->>UC: total_proceeds = quantity × price = 800
     UC->>UC: new Transaction(<br>type=SELL,<br>cash_change=+800,<br>ticker="AAPL",<br>quantity=5,<br>price=160)
-    
+
     UC->>TxRepo: save(transaction)
     TxRepo->>DB: INSERT INTO transaction
     DB-->>TxRepo: Success
     TxRepo-->>UC: None
-    
+
     UC->>UC: emit(TradeExecuted)
     UC-->>API: Result(transaction_id, total_proceeds=800)
     API-->>User: 201 Created
@@ -223,28 +223,28 @@ sequenceDiagram
     participant TxRepo as Transaction<br>Repository
     participant Calc as Portfolio<br>Calculator
     participant DB as Database
-    
+
     User->>API: POST /api/v1/portfolios/{id}/withdraw<br>{amount: 2000}
-    
+
     API->>UC: execute(portfolio_id, amount)
-    
+
     UC->>PortRepo: get(portfolio_id)
     PortRepo->>DB: SELECT portfolio
     DB-->>PortRepo: Portfolio record
     PortRepo-->>UC: Portfolio entity
-    
+
     UC->>TxRepo: get_by_portfolio(portfolio_id)
     TxRepo->>DB: SELECT transactions
     DB-->>TxRepo: All transactions
     TxRepo-->>UC: List[Transaction]
-    
+
     UC->>Calc: calculate_cash_balance(transactions)
     Calc->>Calc: sum(tx.cash_change)
     Calc-->>UC: current_balance = Money(1500, "USD")
-    
+
     UC->>UC: Validate: current_balance >= amount
     Note over UC: 1500 >= 2000 ✗<br>FAIL!
-    
+
     UC-->>API: raise InsufficientFundsError
     API-->>User: 400 Bad Request<br>{error: "Insufficient funds"}
 ```
@@ -270,33 +270,33 @@ sequenceDiagram
     participant TxRepo as Transaction<br>Repository
     participant Calc as Portfolio<br>Calculator
     participant DB as Database
-    
+
     User->>API: GET /api/v1/portfolios/{id}/balance
-    
+
     API->>UC: execute(portfolio_id)
-    
+
     UC->>PortRepo: get(portfolio_id)
     PortRepo->>DB: SELECT portfolio
     DB-->>PortRepo: Portfolio record
     PortRepo-->>UC: Portfolio entity
-    
+
     UC->>TxRepo: get_by_portfolio(portfolio_id)
     TxRepo->>DB: SELECT * FROM transaction<br>WHERE portfolio_id=?<br>ORDER BY timestamp
     DB-->>TxRepo: All transactions (chronological)
     TxRepo-->>UC: List[Transaction]
-    
+
     UC->>Calc: calculate_cash_balance(transactions)
-    
+
     Note over Calc: Pure calculation
     Calc->>Calc: balance = Money(0, "USD")
     loop For each transaction
         Calc->>Calc: balance += tx.cash_change
     end
-    
+
     Calc-->>UC: final_balance = Money(3500, "USD")
-    
+
     UC-->>API: BalanceResult(portfolio_id,<br>cash_balance=3500,<br>currency="USD",<br>as_of=now())
-    
+
     API-->>User: 200 OK<br>{cash_balance: 3500.00,<br>currency: "USD"}
 ```
 
@@ -321,26 +321,26 @@ sequenceDiagram
     participant TxRepo as Transaction<br>Repository
     participant Calc as Portfolio<br>Calculator
     participant DB as Database
-    
+
     User->>API: GET /api/v1/portfolios/{id}/holdings
-    
+
     API->>UC: execute(portfolio_id)
-    
+
     UC->>PortRepo: get(portfolio_id)
     PortRepo->>DB: SELECT portfolio
     DB-->>PortRepo: Portfolio
     PortRepo-->>UC: Portfolio entity
-    
+
     UC->>TxRepo: get_by_portfolio(portfolio_id)
     TxRepo->>DB: SELECT transactions
     DB-->>TxRepo: All transactions
     TxRepo-->>UC: List[Transaction]
-    
+
     UC->>Calc: calculate_holdings(transactions)
-    
+
     Note over Calc: Group by ticker and aggregate
     Calc->>Calc: holdings_map = {}
-    
+
     loop For each transaction
         alt transaction.type == BUY
             Calc->>Calc: holdings[ticker].quantity += tx.quantity
@@ -350,16 +350,16 @@ sequenceDiagram
             Calc->>Calc: holdings[ticker].cost ×= remaining/original
         end
     end
-    
+
     Note over Calc: Calculate averages
     loop For each holding
         Calc->>Calc: avg_cost = cost_basis / quantity
     end
-    
+
     Calc-->>UC: List[Holding]<br>AAPL: 5 shares, $750 cost, $150 avg<br>MSFT: 10 shares, $3000 cost, $300 avg
-    
+
     UC-->>API: HoldingsResult(portfolio_id,<br>holdings=[...],<br>as_of=now())
-    
+
     API-->>User: 200 OK<br>[{ticker: "AAPL", quantity: 5, ...},<br>{ticker: "MSFT", quantity: 10, ...}]
 ```
 
@@ -384,45 +384,45 @@ sequenceDiagram
     participant TxRepo as Transaction<br>Repository
     participant Calc as Portfolio<br>Calculator
     participant DB as Database
-    
+
     User->>API: GET /api/v1/portfolios/{id}/value<br>?prices=AAPL:160,MSFT:350
-    
+
     Note over API: In Phase 1, prices provided in request<br>In Phase 2+, fetched from market data API
     API->>API: Parse prices:<br>{AAPL: $160, MSFT: $350}
-    
+
     API->>UC: execute(portfolio_id, current_prices)
-    
+
     UC->>PortRepo: get(portfolio_id)
     PortRepo->>DB: SELECT portfolio
     DB-->>PortRepo: Portfolio
     PortRepo-->>UC: Portfolio entity
-    
+
     UC->>TxRepo: get_by_portfolio(portfolio_id)
     TxRepo->>DB: SELECT transactions
     DB-->>TxRepo: All transactions
     TxRepo-->>UC: List[Transaction]
-    
+
     Note over UC: Calculate cash balance
     UC->>Calc: calculate_cash_balance(transactions)
     Calc-->>UC: cash_balance = $1500
-    
+
     Note over UC: Calculate holdings
     UC->>Calc: calculate_holdings(transactions)
     Calc-->>UC: holdings = [<br>AAPL: 5 shares @ $150 cost,<br>MSFT: 10 shares @ $300 cost]
-    
+
     Note over UC: Calculate market values
     loop For each holding
         UC->>UC: market_value = holding.quantity × current_prices[ticker]
         UC->>UC: unrealized_gain = market_value - holding.cost_basis
     end
-    
+
     Note over UC: AAPL: 5 × $160 = $800 (cost: $750, gain: +$50)<br>MSFT: 10 × $350 = $3500 (cost: $3000, gain: +$500)
-    
+
     UC->>UC: holdings_value = $800 + $3500 = $4300
     UC->>UC: total_value = cash + holdings = $1500 + $4300 = $5800
-    
+
     UC-->>API: ValueResult(<br>cash: $1500,<br>holdings_value: $4300,<br>total_value: $5800,<br>holdings_breakdown=[...])
-    
+
     API-->>User: 200 OK<br>{total_value: 5800.00,<br>unrealized_gain: 550.00}
 ```
 
@@ -446,32 +446,32 @@ sequenceDiagram
     participant PortRepo as Portfolio<br>Repository
     participant TxRepo as Transaction<br>Repository
     participant DB as Database
-    
+
     User->>API: GET /api/v1/portfolios/{id}/transactions<br>?limit=50&offset=0
-    
+
     API->>UC: execute(portfolio_id, limit=50, offset=0)
-    
+
     UC->>PortRepo: get(portfolio_id)
     PortRepo->>DB: SELECT portfolio
     DB-->>PortRepo: Portfolio
     PortRepo-->>UC: Portfolio entity (confirms exists)
-    
+
     Note over UC: Get total count for pagination
     UC->>TxRepo: count_by_portfolio(portfolio_id)
     TxRepo->>DB: SELECT COUNT(*)<br>FROM transaction<br>WHERE portfolio_id=?
     DB-->>TxRepo: total_count = 237
     TxRepo-->>UC: 237
-    
+
     Note over UC: Get paginated transactions
     UC->>TxRepo: get_by_portfolio(portfolio_id,<br>limit=50, offset=0)
     TxRepo->>DB: SELECT * FROM transaction<br>WHERE portfolio_id=?<br>ORDER BY timestamp ASC<br>LIMIT 50 OFFSET 0
     DB-->>TxRepo: First 50 transactions
     TxRepo-->>UC: List[Transaction] (50 items)
-    
+
     UC-->>API: HistoryResult(<br>transactions=[...],<br>total_count=237,<br>limit=50, offset=0)
-    
+
     Note over API: Client can calculate:<br>total_pages = ceil(237 / 50) = 5
-    
+
     API-->>User: 200 OK<br>{transactions: [...],<br>total: 237,<br>page: 1 of 5}
 ```
 
@@ -496,15 +496,15 @@ graph TD
         T4[T4: SELL AAPL +$800<br>5 shares @ $160]
         T5[T5: WITHDRAWAL -$2,000]
     end
-    
+
     subgraph "Derived State (Calculated On-Demand)"
         Cash[Cash Balance<br>$10,000 - $1,500 - $3,000<br>+ $800 - $2,000<br>= $4,300]
-        
+
         H1[AAPL Holding<br>Bought: 10 @ $150<br>Sold: 5 @ $160<br>Remaining: 5 shares<br>Cost: $750<br>Avg: $150]
-        
+
         H2[MSFT Holding<br>Bought: 10 @ $300<br>Sold: 0<br>Remaining: 10 shares<br>Cost: $3,000<br>Avg: $300]
     end
-    
+
     T1 --> Cash
     T2 --> Cash
     T2 --> H1
@@ -513,7 +513,7 @@ graph TD
     T4 --> Cash
     T4 --> H1
     T5 --> Cash
-    
+
     style T1 fill:#90EE90
     style T2 fill:#FFB6C1
     style T3 fill:#FFB6C1
@@ -546,33 +546,33 @@ sequenceDiagram
     participant TxRepo as Transaction<br>Repository
     participant Calc as Portfolio<br>Calculator
     participant DB as Database
-    
+
     User->>API: POST /withdraw {amount: 10000}
     API->>UC: execute(portfolio_id, amount=10000)
-    
+
     UC->>PortRepo: get(portfolio_id)
     PortRepo->>DB: SELECT portfolio
     DB-->>PortRepo: Portfolio
     PortRepo-->>UC: Portfolio entity
-    
+
     UC->>TxRepo: get_by_portfolio(portfolio_id)
     TxRepo->>DB: SELECT transactions
     DB-->>TxRepo: All transactions
     TxRepo-->>UC: List[Transaction]
-    
+
     UC->>Calc: calculate_cash_balance(transactions)
     Calc-->>UC: current_balance = $4300
-    
+
     UC->>UC: Validate: 4300 >= 10000?
     Note over UC: Validation FAILS!
-    
+
     UC-->>API: raise InsufficientFundsError(<br>"Cannot withdraw $10,000 -<br>current balance is $4,300")
-    
+
     Note over API: Convert domain exception<br>to HTTP response
     API->>API: Map to 400 Bad Request
-    
+
     API-->>User: 400 Bad Request<br>{<br>"error": "InsufficientFundsError",<br>"message": "Cannot withdraw...",<br>"details": {<br>"requested": 10000,<br>"available": 4300<br>}<br>}
-    
+
     Note over DB: No database writes occurred
 ```
 

@@ -1,8 +1,8 @@
 # Task 036: Migrate to GitHub's Official Copilot Setup Workflow
 
-**Agent**: quality-infra  
-**Date**: 2026-01-01  
-**Status**: ✅ Complete  
+**Agent**: quality-infra
+**Date**: 2026-01-01
+**Status**: ✅ Complete
 **PR Branch**: `copilot/migrate-to-official-copilot-workflow`
 
 ## Task Summary

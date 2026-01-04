@@ -9,7 +9,7 @@ This guide covers PaperTrade's testing philosophy, test types, and how to run th
 task test:backend              # All backend tests
 task lint:backend              # Linting and type checking
 
-# Frontend tests  
+# Frontend tests
 task test:frontend             # Unit tests (Vitest)
 task test:e2e                  # E2E tests (Playwright)
 
@@ -148,10 +148,10 @@ test('should show error when portfolio name is empty', async () => {
 def test_deposit_increases_balance():
     # Arrange
     portfolio = create_test_portfolio(initial_balance=Money(0, "USD"))
-    
+
     # Act
     portfolio.deposit(Money(Decimal("100"), "USD"))
-    
+
     # Assert
     assert portfolio.get_balance() == Money(Decimal("100"), "USD")
 ```

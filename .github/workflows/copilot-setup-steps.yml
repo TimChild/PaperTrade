@@ -13,12 +13,12 @@ name: "Copilot Setup Steps"
 on:
   # Manual trigger for testing
   workflow_dispatch:
-  
+
   # Auto-validate when this file changes
   push:
     paths:
       - .github/workflows/copilot-setup-steps.yml
-  
+
   # Validate on PRs that modify this file
   pull_request:
     paths:
