@@ -278,6 +278,23 @@ When completing frontend work:
 5. Responsive design considered
 6. Generate progress documentation per `.github/copilot-instructions.md`
 
+## CRITICAL: Pre-Completion Validation
+
+**Before considering your work complete, you MUST run the CI validation tasks:**
+
+```bash
+cd frontend
+task lint:frontend  # Run linting checks (same as CI)
+task test:frontend  # Run all tests (same as CI)
+```
+
+**If either task fails:**
+- Fix all errors before completing
+- Re-run the tasks to confirm
+- Do NOT mark work as complete until both pass
+
+These are the exact same commands run in CI. Catching failures locally saves time and prevents CI failures.
+
 ## Related Documentation
 - See `.github/copilot-instructions.md` for general guidelines
 - See `.github/agents/architect.md` for architectural guidance
