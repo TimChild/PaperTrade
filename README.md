@@ -244,10 +244,21 @@ cp .env.production.example .env
 
 **Required variables:**
 - `ALPHA_VANTAGE_API_KEY`: Get from https://www.alphavantage.co/support/#api-key (free tier available)
+- `VITE_CLERK_PUBLISHABLE_KEY` (frontend): Get from https://dashboard.clerk.com (authentication)
 
 **Optional variables** (defaults provided for development):
 - `POSTGRES_PASSWORD`: Database password (default: papertrade_dev_password)
 - `SECRET_KEY`: App secret key (default: dev-secret-key-change-in-production)
+
+**Frontend-specific environment:**
+
+For frontend development, copy `frontend/.env.example` to `frontend/.env.local`:
+
+```bash
+cd frontend
+cp .env.example .env.local
+# Edit .env.local and add your Clerk publishable key
+```
 
 **Production-only variables:**
 - `APP_LOG_LEVEL`: Logging level (default: INFO)
