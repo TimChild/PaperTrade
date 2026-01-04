@@ -66,11 +66,12 @@ export function PortfolioDetail(): React.JSX.Element {
       <div className="mb-6">
         <Link
           to="/dashboard"
+          data-testid="portfolio-detail-back-link"
           className="mb-4 inline-flex items-center text-blue-600 hover:underline dark:text-blue-400"
         >
           ← Back to Dashboard
         </Link>
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
+        <h1 className="text-4xl font-bold text-gray-900 dark:text-white" data-testid="portfolio-detail-name">
           {portfolio?.name || 'Portfolio Details'}
         </h1>
       </div>

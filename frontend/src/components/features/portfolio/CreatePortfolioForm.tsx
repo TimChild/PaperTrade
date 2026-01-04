@@ -73,6 +73,7 @@ export function CreatePortfolioForm({
         </label>
         <input
           id="portfolio-name"
+          data-testid="create-portfolio-name-input"
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
@@ -99,6 +100,7 @@ export function CreatePortfolioForm({
           <span className="mr-2 text-gray-600 dark:text-gray-400">$</span>
           <input
             id="initial-deposit"
+            data-testid="create-portfolio-deposit-input"
             type="number"
             step="0.01"
             value={initialDeposit}
@@ -140,6 +142,7 @@ export function CreatePortfolioForm({
         {onCancel && (
           <button
             type="button"
+            data-testid="create-portfolio-cancel-button"
             onClick={onCancel}
             className="flex-1 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
           >

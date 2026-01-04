@@ -61,6 +61,7 @@ export function TradeForm({
           <div className="flex gap-2">
             <button
               type="button"
+              data-testid="trade-form-action-buy"
               onClick={() => setAction('BUY')}
               className={`flex-1 rounded-lg px-4 py-2 font-medium transition-colors ${
                 action === 'BUY'
@@ -73,6 +74,7 @@ export function TradeForm({
             </button>
             <button
               type="button"
+              data-testid="trade-form-action-sell"
               onClick={() => setAction('SELL')}
               className={`flex-1 rounded-lg px-4 py-2 font-medium transition-colors ${
                 action === 'SELL'
@@ -96,6 +98,7 @@ export function TradeForm({
           </label>
           <input
             id="ticker"
+            data-testid="trade-form-ticker-input"
             type="text"
             value={ticker}
             onChange={(e) => setTicker(e.target.value)}
@@ -117,6 +120,7 @@ export function TradeForm({
           </label>
           <input
             id="quantity"
+            data-testid="trade-form-quantity-input"
             type="number"
             min="0.0001"
             step="0.0001"
@@ -139,6 +143,7 @@ export function TradeForm({
           </label>
           <input
             id="price"
+            data-testid="trade-form-price-input"
             type="number"
             min="0.01"
             step="0.01"
@@ -175,6 +180,7 @@ export function TradeForm({
         {/* Submit Button */}
         <button
           type="submit"
+          data-testid={action === 'BUY' ? 'trade-form-buy-button' : 'trade-form-sell-button'}
           disabled={!isValid || isSubmitting}
           className={`w-full rounded-lg px-4 py-3 font-semibold text-white transition-colors ${
             action === 'BUY'

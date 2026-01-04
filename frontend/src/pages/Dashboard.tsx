@@ -169,6 +169,7 @@ export function Dashboard(): React.JSX.Element {
             <div className="flex gap-4">
               <Link
                 to={`/portfolio/${primaryPortfolio.id}`}
+                data-testid="dashboard-trade-stocks-link"
                 className="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
               >
                 Trade Stocks
