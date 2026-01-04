@@ -71,7 +71,7 @@ We're building a platform where:
 
 ---
 
-### Phase 3b: User Accounts (Feb-Mar 2026)
+### Phase 3b: User Accounts (Late Jan 2026)
 
 **What**: User authentication and private portfolios
 
@@ -79,13 +79,15 @@ We're building a platform where:
 
 **Features**:
 - ✅ Register with email/password
-- ✅ Login with secure JWT tokens
+- ✅ Login with Clerk (third-party auth - no custom UI needed)
 - ✅ Private portfolios (only you see your data)
-- ✅ User profile management
+- ✅ Pre-built profile management
 
-**When**: 2-3 weeks (after Phase 3a)
+**When**: 2-3 days (after Phase 3a)
 
 **Impact**: Ready for public deployment - data privacy guaranteed
+
+**Decision**: Using Clerk instead of custom JWT saves 3-4 weeks. Auth is commodity infrastructure - we focus on trading features.
 
 ---
 
@@ -241,11 +243,11 @@ How we decide what to build:
 | Milestone | Target Date | Confidence | Features |
 |-----------|-------------|------------|----------|
 | **Phase 3a** | Late Jan 2026 | High | SELL orders |
-| **Phase 3b** | Mid Feb 2026 | Medium | User authentication |
-| **Phase 3c** | Late Mar 2026 | Medium | Analytics & backtesting |
+| **Phase 3b** | Late Jan 2026 | High | User authentication (Clerk) |
+| **Phase 3c** | Late Feb 2026 | Medium | Analytics & backtesting |
 | **Phase 4a** | Q3 2026 | Medium | UX & real-time |
 | **Phase 4b** | Q4 2026 | Low-Medium | Advanced orders |
-| **Public Beta** | Q2 2026 | Medium | After Phase 3b (auth) |
+| **Public Beta** | Early Feb 2026 | High | After Phase 3b (auth) |
 | **V1.0 Launch** | Q4 2026 | Low | After Phase 4 |
 
 **Confidence Levels**:
@@ -261,8 +263,8 @@ Current limitations and when they'll be fixed:
 
 ### Critical (Fixes in Phase 3)
 1. ❌ **No SELL orders** → Phase 3a (Jan 2026)
-2. ❌ **No user authentication** → Phase 3b (Feb 2026)
-3. ❌ **No portfolio analytics** → Phase 3c (Mar 2026)
+2. ❌ **No user authentication** → Phase 3b (Late Jan 2026, 2-3 days with Clerk)
+3. ❌ **No portfolio analytics** → Phase 3c (Feb 2026)
 
 ### Medium (Fixes in Phase 4)
 4. ⚠️ **Browser alert dialogs** → Phase 4a (toast notifications)
@@ -287,7 +289,7 @@ Based on Phase 1-2 performance:
 - **Total**: 2 major phases in ~2 weeks
 
 **Projected**:
-- Phase 3: 7-10 weeks (3 sub-phases)
+- Phase 3: 5-7 weeks (3 sub-phases, Clerk saves 3 weeks on auth)
 - Phase 4: 15-19 weeks (4 sub-phases)
 
 **Key Factors**:
@@ -353,7 +355,7 @@ A: Not in 2026. The web app works on mobile browsers. Phase 4a will improve mobi
 A: Not yet. Planned for future (CSV import). For now, manually re-create trades.
 
 **Q: Is my data safe?**
-A: After Phase 3b (Feb 2026), yes. User authentication will ensure data privacy. Currently it's development mode (not production-safe).
+A: After Phase 3b (Late Jan 2026), yes. Clerk authentication ensures data privacy with industry-standard security. Currently it's development mode (not production-safe).
 
 **Q: How accurate are the prices?**
 A: We use Alpha Vantage API (real market data). Free tier has 15-20 min delays. Paid tier is real-time.

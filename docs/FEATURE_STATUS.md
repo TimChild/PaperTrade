@@ -110,11 +110,11 @@
 
 | Feature | Status | Details | Phase | Notes |
 |---------|--------|---------|-------|-------|
-| **User Registration** | ❌ Not Implemented | Sign up flow | Phase 3 | Required for production |
-| **User Login** | ❌ Not Implemented | Authentication | Phase 3 | JWT/session-based |
-| **Session Management** | 🚧 In Progress | User ID via localStorage | Phase 2 | Temporary solution |
-| **Password Reset** | ❌ Not Implemented | Email-based reset | Phase 3 | Requires email service |
-| **Multi-factor Auth** | ❌ Not Implemented | 2FA/TOTP | Phase 4 | Security enhancement |
+| **User Registration** | ❌ Not Implemented | Sign up flow | Phase 3b | Using Clerk (3rd party) |
+| **User Login** | ❌ Not Implemented | Authentication | Phase 3b | Clerk provides UI/backend |
+| **Session Management** | 🚧 In Progress | User ID via localStorage | Phase 2 | Temporary until Clerk |
+| **Password Reset** | ❌ Not Implemented | Email-based reset | Phase 3b | Clerk includes this |
+| **Multi-factor Auth** | ❌ Not Implemented | 2FA/TOTP | Phase 3b | Clerk supports 2FA |
 | **API Rate Limiting** | ⚠️ Limited | Only for market data | Phase 2 | No user-level limits |
 | **HTTPS** | 🔒 Blocked | TLS encryption | Production | Infrastructure concern |
 | **CORS** | ✅ Full | Configured for frontend | Phase 1 | Development & production |
@@ -150,10 +150,10 @@
 ## Implementation Priority
 
 ### High Priority (Next 3 Months)
-1. SELL order functionality
-2. User authentication & authorization
-3. Portfolio analytics charts
-4. Historical backtesting MVP
+1. SELL order functionality (Phase 3a)
+2. User authentication via Clerk (Phase 3b - 2-3 days)
+3. Portfolio analytics charts (Phase 3c)
+4. Historical backtesting MVP (Phase 3c)
 
 ### Medium Priority (3-6 Months)
 1. Advanced order types (limit, stop)
