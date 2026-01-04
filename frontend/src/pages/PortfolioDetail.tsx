@@ -1,4 +1,5 @@
 import { useParams, Link } from 'react-router-dom'
+import { useRef, useState } from 'react'
 import { usePortfolio, usePortfolioBalance, useExecuteTrade } from '@/hooks/usePortfolio'
 import { useHoldings } from '@/hooks/useHoldings'
 import { useTransactions } from '@/hooks/useTransactions'
@@ -15,6 +16,8 @@ import type { TradeRequest } from '@/services/api/types'
 export function PortfolioDetail(): React.JSX.Element {
   const { id } = useParams<{ id: string }>()
   const portfolioId = id || ''
+  const tradeFormRef = useRef<HTMLElement>(null)
+  const [quickSellData, setQuickSellData] = useState<{ ticker: string; quantity: number } | null>(null)
 
   const { data: portfolioDTO, isLoading: portfolioLoading, isError, error } = usePortfolio(portfolioId)
   const { data: balanceData, isLoading: balanceLoading } = usePortfolioBalance(portfolioId)
@@ -31,11 +34,23 @@ export function PortfolioDetail(): React.JSX.Element {
     executeTrade.mutate(trade, {
       onSuccess: () => {
         alert(`${trade.action === 'BUY' ? 'Buy' : 'Sell'} order executed successfully!`)
+        // Clear quick sell data after successful trade
+        setQuickSellData(null)
       },
       onError: (error) => {
         alert(`Failed to execute trade: ${error instanceof Error ? error.message : 'Unknown error'}`)
       },
     })
+  }
+
+  const handleQuickSell = (ticker: string, quantity: number) => {
+    // Set quick sell data and scroll to trade form
+    setQuickSellData({ ticker, quantity })
+    
+    // Scroll to trade form with smooth behavior
+    setTimeout(() => {
+      tradeFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }, 100)
   }
 
   if (isError) {
@@ -131,6 +146,7 @@ export function PortfolioDetail(): React.JSX.Element {
               holdings={holdings}
               holdingsDTO={holdingsData?.holdings}
               isLoading={holdingsLoading}
+              onQuickSell={handleQuickSell}
             />
           </section>
 
@@ -149,8 +165,14 @@ export function PortfolioDetail(): React.JSX.Element {
         {/* Sidebar */}
         <div className="space-y-8 lg:col-span-1">
           {/* Trade Form */}
-          <section>
-            <TradeForm onSubmit={handleTradeSubmit} isSubmitting={executeTrade.isPending} />
+          <section ref={tradeFormRef}>
+            <TradeForm 
+              onSubmit={handleTradeSubmit} 
+              isSubmitting={executeTrade.isPending}
+              holdings={holdings}
+              portfolioId={portfolioId}
+              quickSellData={quickSellData}
+            />
           </section>
         </div>
       </div>

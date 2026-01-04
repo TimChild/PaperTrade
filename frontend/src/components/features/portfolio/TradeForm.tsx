@@ -1,19 +1,43 @@
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import type { TradeRequest } from '@/services/api/types'
+import type { Holding } from '@/types/portfolio'
 
 interface TradeFormProps {
   onSubmit: (trade: TradeRequest) => void
   isSubmitting?: boolean
+  holdings?: Holding[]
+  portfolioId?: string
+  quickSellData?: { ticker: string; quantity: number } | null
 }
 
 export function TradeForm({
   onSubmit,
   isSubmitting = false,
+  holdings = [],
+  portfolioId,
+  quickSellData,
 }: TradeFormProps): React.JSX.Element {
   const [action, setAction] = useState<'BUY' | 'SELL'>('BUY')
   const [ticker, setTicker] = useState('')
   const [quantity, setQuantity] = useState('')
   const [price, setPrice] = useState('')
+
+  // Handle quick sell data
+  useEffect(() => {
+    if (quickSellData) {
+      setAction('SELL')
+      setTicker(quickSellData.ticker)
+      setQuantity(quickSellData.quantity.toString())
+    }
+  }, [quickSellData])
+
+  // Find holding for the current ticker when SELL is selected
+  const currentHolding = useMemo(() => {
+    if (action === 'SELL' && ticker.trim()) {
+      return holdings.find(h => h.ticker.toUpperCase() === ticker.trim().toUpperCase())
+    }
+    return undefined
+  }, [action, ticker, holdings])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,7 +63,9 @@ export function TradeForm({
   const isValid =
     ticker.trim() !== '' &&
     quantity !== '' &&
-    parseFloat(quantity) > 0
+    parseFloat(quantity) > 0 &&
+    // For SELL: can only sell if holding exists
+    (action === 'BUY' || currentHolding !== undefined)
 
   const estimatedTotal =
     isValid && price !== '' && parseFloat(price) > 0
@@ -131,6 +157,27 @@ export function TradeForm({
             disabled={isSubmitting}
             required
           />
+          {/* Show holdings info for SELL */}
+          {action === 'SELL' && ticker.trim() !== '' && (
+            <div className="mt-2" data-testid="trade-form-holdings-info">
+              {currentHolding ? (
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  You own{' '}
+                  <span className="font-semibold text-gray-900 dark:text-white">
+                    {currentHolding.quantity.toLocaleString('en-US', {
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 4,
+                    })}
+                  </span>{' '}
+                  shares of {ticker.toUpperCase()}
+                </p>
+              ) : (
+                <p className="text-sm text-red-600 dark:text-red-400" data-testid="trade-form-no-holdings">
+                  You don't own any shares of {ticker.toUpperCase()}
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Price Per Share Input (Optional - For Estimation Only) */}

@@ -8,12 +8,14 @@ interface HoldingsTableProps {
   holdings: Holding[]
   holdingsDTO?: HoldingDTO[] // Raw backend DTOs for ticker extraction
   isLoading?: boolean
+  onQuickSell?: (ticker: string, quantity: number) => void
 }
 
 export function HoldingsTable({
   holdings,
   holdingsDTO,
   isLoading = false,
+  onQuickSell,
 }: HoldingsTableProps): React.JSX.Element {
   // Extract tickers from holdings
   const tickers = useMemo(() => {
@@ -124,6 +126,14 @@ export function HoldingsTable({
               >
                 Gain/Loss
               </th>
+              {onQuickSell && (
+                <th
+                  scope="col"
+                  className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-700 dark:text-gray-300"
+                >
+                  Actions
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-800">
@@ -174,8 +184,19 @@ export function HoldingsTable({
                       {isPositive ? '+' : ''}
                       {formatCurrency(holding.gainLoss)}
                     </div>
-                    <div className="text-xs">({formatPercent(holding.gainLossPercent)})</div>
+                    <div className="text-xs">({formatPercent(holding.gainLossPercent / 100)})</div>
                   </td>
+                  {onQuickSell && (
+                    <td className="whitespace-nowrap px-6 py-4 text-right text-sm">
+                      <button
+                        onClick={() => onQuickSell(holding.ticker, holding.quantity)}
+                        data-testid={`holdings-quick-sell-${holding.ticker.toLowerCase()}`}
+                        className="rounded-md border border-gray-300 bg-white px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+                      >
+                        Quick Sell
+                      </button>
+                    </td>
+                  )}
                 </tr>
               )
             })}
