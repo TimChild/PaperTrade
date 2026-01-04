@@ -207,7 +207,7 @@ Phase 4 transforms PaperTrade from a production trading simulator into an advanc
 │     - Portfolio dashboard            │
 │     - Trade form (BUY/SELL)          │
 │     - Analytics charts               │
-│     - Auth (JWT)                     │
+│     - Auth (Clerk)                   │
 └──────────────────────────────────────┘
              │
              │ HTTP/REST
@@ -217,7 +217,7 @@ Phase 4 transforms PaperTrade from a production trading simulator into an advanc
 │      - Portfolio management          │
 │      - Trade execution               │
 │      - Market data integration       │
-│      - Auth (JWT)                    │
+│      - Auth (Clerk tokens)           │
 └──────────────────────────────────────┘
              │
              ├──────────────┬──────────────┬──────────────┐
@@ -295,7 +295,7 @@ Phase 4 transforms PaperTrade from a production trading simulator into an advanc
 **Connection Management**:
 - Auto-reconnect on disconnect
 - Heartbeat/ping-pong (30s interval)
-- Authentication via JWT in initial handshake
+- Authentication via Clerk token in initial handshake
 - Room-based subscriptions (user-specific + global)
 
 ### Advanced Order Types (Phase 4b)

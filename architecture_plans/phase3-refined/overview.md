@@ -44,17 +44,17 @@ After analyzing user needs, implementation velocity, and technical dependencies,
 
 **Value**: Unlocks portfolio rebalancing, users can realize gains/losses
 
-### Phase 3b: Production-Ready Foundation (2-3 weeks)
+### Phase 3b: Production-Ready Foundation (2-3 days)
 **Goal**: Platform ready for multi-user production deployment
 
 **Features**:
-- User authentication (JWT-based)
-- User registration and login
+- User authentication (Clerk-based, third-party)
+- Pre-built login/signup UI components
 - Portfolio ownership model
 - Protected API endpoints
 - Session management
 
-**Value**: Enables public deployment, data privacy, audit trail
+**Value**: Enables public deployment, data privacy, audit trail. Saves 3-4 weeks vs custom JWT implementation.
 
 ### Phase 3c: Analytics & Insights (3-4 weeks)
 **Goal**: Users can visualize performance and make data-driven decisions
@@ -135,11 +135,11 @@ graph TD
 
 ### Phase 3b Completion Criteria
 - [ ] Users can register with email/password
-- [ ] Users can login and receive JWT tokens
-- [ ] API endpoints validate JWT tokens
+- [ ] Users can login via Clerk UI
+- [ ] API endpoints validate Clerk tokens
 - [ ] Portfolios have owner_id (foreign key to users)
 - [ ] Users can only see/modify their own portfolios
-- [ ] Logout invalidates tokens
+- [ ] Logout clears session
 - [ ] E2E tests verify auth workflow
 - [ ] Migration path for existing portfolios
 
@@ -160,10 +160,12 @@ Based on Phase 1-2 velocity (2 phases in ~2 weeks with parallel agents):
 | Sub-Phase | Duration | Calendar Target | Confidence |
 |-----------|----------|-----------------|------------|
 | **Phase 3a** | 2-3 weeks | Jan 5 - Jan 25 | High |
-| **Phase 3b** | 2-3 weeks | Jan 26 - Feb 15 | Medium |
-| **Phase 3c** | 3-4 weeks | Feb 16 - Mar 15 | Medium |
+| **Phase 3b** | 2-3 days | Jan 26 - Jan 28 | High (using Clerk) |
+| **Phase 3c** | 3-4 weeks | Jan 29 - Feb 25 | Medium |
 
-**Total Phase 3**: 7-10 weeks (Jan - Mar 2026)
+**Total Phase 3**: 5-7 weeks (Jan - Feb 2026)
+
+**Note**: Phase 3b timeline reduced from 2-3 weeks to 2-3 days by using Clerk instead of custom JWT authentication.
 
 **Assumptions**:
 - Single agent working sequentially

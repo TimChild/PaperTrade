@@ -76,6 +76,54 @@ We start monolithic for simplicity but strictly modularized by domain contexts. 
 
 ---
 
+## Build vs Buy Decision Framework
+
+### Core Principle: Focus on Product Differentiation
+
+We **buy** (use third-party services) for:
+- ✅ Commodity infrastructure that doesn't differentiate our product
+- ✅ Features where managed services provide better security/reliability
+- ✅ Functionality that would take weeks to build but days to integrate
+
+We **build** (custom implementation) for:
+- ✅ Core domain logic (trading simulation, backtesting, portfolio management)
+- ✅ Features that define our unique value proposition
+- ✅ Business logic that differentiates us from competitors
+
+### Example: Authentication Decision (January 2026)
+
+**Question**: Build custom JWT authentication or use Clerk?
+
+**Analysis**:
+| Factor | Custom Auth | Clerk |
+|--------|-------------|-------|
+| Development time | 3-4 weeks | 2-3 days |
+| Product differentiation | ❌ None | ❌ None |
+| Security expertise | ⚠️ Our responsibility | ✅ Professional team |
+| Features included | ⚠️ Build everything | ✅ Login, signup, profile, reset, social |
+| Cost | $0 | Free tier → $25/month at scale |
+
+**Decision**: **Use Clerk** (Buy)
+- Auth doesn't differentiate our product (users care about trading features)
+- Saves 3-4 weeks to focus on backtesting and analytics
+- Better security through managed service
+- Clean Architecture via adapter pattern preserves ability to switch later
+
+**Trade-off Accepted**: $25/month cost at scale is acceptable for 3-4 weeks saved + ongoing security improvements.
+
+### Other Build vs Buy Decisions
+
+| Component | Decision | Rationale |
+|-----------|----------|-----------|
+| **Market Data** | Buy (Alpha Vantage) | Industry-standard data, saves building scraper infrastructure |
+| **Database** | Buy (PostgreSQL) | Standard tool, no reason to build our own DB |
+| **Trading Logic** | Build | Core product value - our unique algorithms and backtesting |
+| **Charts** | Buy (Recharts library) | Commodity UI component, not differentiating |
+| **Email** | Buy (Clerk/SendGrid) | Commodity service, email delivery is complex |
+| **Analytics** | Build | Trading performance metrics are product-specific |
+
+---
+
 ## Technology Decisions
 
 ### Backend Stack
@@ -267,8 +315,21 @@ tests/
 
 ### Authentication & Authorization
 
-- **Phase 1**: Simple session-based auth (good enough for MVP)
-- **Later**: JWT tokens, OAuth2 providers
+**Decision (January 2026)**: Use Clerk for authentication instead of custom implementation.
+
+**Rationale - Focus on Core Value**:
+- Authentication is commodity infrastructure, not product differentiation
+- Our core value is trading simulation and backtesting features
+- Custom auth would consume 3-4 weeks without adding user value
+- Clerk provides professional auth UI, security, and features out-of-the-box
+
+**Implementation**:
+- Clerk for user authentication (email/password, social login)
+- Clean Architecture preserved via `AuthPort` adapter pattern
+- 90% of tests use `InMemoryAuthAdapter` (no Clerk dependency)
+- Domain layer remains auth-agnostic
+
+**See**: `architecture_plans/phase3-refined/phase3b-authentication.md` for details
 
 ### Data Protection
 
