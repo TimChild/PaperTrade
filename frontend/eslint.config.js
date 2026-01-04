@@ -28,4 +28,11 @@ export default [
       globals: globals.browser,
     },
   },
+  // Disable react-hooks rules for E2E test fixtures (Playwright uses 'use' for fixtures)
+  {
+    files: ['tests/e2e/**/*.ts'],
+    rules: {
+      'react-hooks/rules-of-hooks': 'off',
+    },
+  },
 ]

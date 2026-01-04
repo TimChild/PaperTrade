@@ -10,9 +10,41 @@ import { Dashboard } from '@/pages/Dashboard'
 import { PortfolioDetail } from '@/pages/PortfolioDetail'
 import { useAuthenticatedApi } from '@/hooks/useAuthenticatedApi'
 
+// Check if running in E2E test mode (Playwright tests)
+const isE2ETestMode = () => {
+  return typeof window !== 'undefined' && window.location.search.includes('e2e-test=true')
+}
+
 function App() {
   // Set up authenticated API client
   useAuthenticatedApi()
+
+  const testMode = isE2ETestMode()
+
+  // In E2E test mode, render without Clerk authentication guards
+  if (testMode) {
+    return (
+      <BrowserRouter>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+          <header className="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+            <div className="container mx-auto flex items-center justify-between px-4 py-4">
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                PaperTrade (Test Mode)
+              </h1>
+            </div>
+          </header>
+
+          <main>
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/portfolio/:id" element={<PortfolioDetail />} />
+            </Routes>
+          </main>
+        </div>
+      </BrowserRouter>
+    )
+  }
 
   return (
     <BrowserRouter>
