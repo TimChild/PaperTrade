@@ -169,6 +169,9 @@ jobs:
           timeout 30 bash -c 'until docker compose exec -T db pg_isready -U papertrade; do sleep 1; done'
           timeout 30 bash -c 'until docker compose exec -T redis redis-cli ping; do sleep 1; done'
 
+      - name: Build backend and frontend images
+        run: docker compose build backend frontend
+
       - name: Start backend and frontend servers
         run: task docker:up:all
 
