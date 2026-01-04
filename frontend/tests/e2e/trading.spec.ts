@@ -22,13 +22,17 @@ test.describe('Trading Flow', () => {
     await page.getByTestId('create-portfolio-deposit-input').fill('50000')
     await page.getByTestId('submit-portfolio-form-btn').click()
 
-    // Wait for portfolio to appear on dashboard/detail page
-    await expect(page.getByTestId('portfolio-detail-name')).toHaveText('Trading Portfolio', {
+    // Wait for portfolio to appear on dashboard
+    await expect(page.getByRole('heading', { name: 'Trading Portfolio' })).toBeVisible({
       timeout: 10000,
     })
 
-    // 2. Verify we're on the portfolio detail page with trade form
-    await expect(page.getByRole('heading', { name: 'Trading Portfolio', level: 1 })).toBeVisible()
+    // 2. Navigate to portfolio detail page to access trade form
+    await page.getByTestId('dashboard-trade-stocks-link').click()
+    await page.waitForLoadState('networkidle')
+
+    // Verify we're on the portfolio detail page
+    await expect(page.getByTestId('portfolio-detail-name')).toHaveText('Trading Portfolio')
     await expect(page.getByRole('heading', { name: 'Execute Trade' })).toBeVisible()
 
     // 3. Fill in the trade form using test IDs
@@ -73,12 +77,17 @@ test.describe('Trading Flow', () => {
     await page.getByTestId('create-portfolio-deposit-input').fill('1000')
     await page.getByTestId('submit-portfolio-form-btn').click()
 
-    // Wait for portfolio to appear on detail page
-    await expect(page.getByTestId('portfolio-detail-name')).toHaveText('Poor Portfolio', {
+    // Wait for portfolio to appear on dashboard
+    await expect(page.getByRole('heading', { name: 'Poor Portfolio' })).toBeVisible({
       timeout: 10000,
     })
 
+    // Navigate to portfolio detail page
+    await page.getByTestId('dashboard-trade-stocks-link').click()
+    await page.waitForLoadState('networkidle')
+
     // Verify we're on the portfolio detail page with trade form
+    await expect(page.getByTestId('portfolio-detail-name')).toHaveText('Poor Portfolio')
     await expect(page.getByRole('heading', { name: 'Execute Trade' })).toBeVisible()
 
     // Try to buy expensive stock with insufficient funds
@@ -113,12 +122,17 @@ test.describe('Trading Flow', () => {
     await page.getByTestId('create-portfolio-deposit-input').fill('30000')
     await page.getByTestId('submit-portfolio-form-btn').click()
 
-    // Wait for portfolio to appear on detail page
-    await expect(page.getByTestId('portfolio-detail-name')).toHaveText('Holdings Test', {
+    // Wait for portfolio to appear on dashboard
+    await expect(page.getByRole('heading', { name: 'Holdings Test' })).toBeVisible({
       timeout: 10000,
     })
 
-    // Verify trade form is visible
+    // Navigate to portfolio detail page
+    await page.getByTestId('dashboard-trade-stocks-link').click()
+    await page.waitForLoadState('networkidle')
+
+    // Verify we're on the portfolio detail page
+    await expect(page.getByTestId('portfolio-detail-name')).toHaveText('Holdings Test')
     await expect(page.getByRole('heading', { name: 'Execute Trade' })).toBeVisible()
 
     // Verify holdings section exists (should show "No holdings" initially)

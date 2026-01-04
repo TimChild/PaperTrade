@@ -29,12 +29,13 @@ test.describe('Portfolio Creation Flow', () => {
     // 5. Submit
     await page.getByTestId('submit-portfolio-form-btn').click()
 
-    // 6. Wait for navigation or success (portfolio should appear)
-    // Give it time to create and redirect
+    // 6. Wait for portfolio to be created and modal to close
+    // Portfolio stays on dashboard after creation
     await page.waitForTimeout(2000)
 
-    // 7. Verify portfolio appears by checking for portfolio name heading
-    await expect(page.getByTestId('portfolio-detail-name')).toHaveText('My Test Portfolio', {
+    // 7. Verify portfolio appears on dashboard by checking for the portfolio name
+    // Since we stay on dashboard, check for portfolio summary card or navigate to detail
+    await expect(page.getByRole('heading', { name: 'My Test Portfolio' })).toBeVisible({
       timeout: 10000,
     })
   })
@@ -61,8 +62,8 @@ test.describe('Portfolio Creation Flow', () => {
     await page.reload()
     await page.waitForLoadState('networkidle')
 
-    // Portfolio should still be visible by checking for heading
-    await expect(page.getByTestId('portfolio-detail-name')).toHaveText('Persistent Portfolio', {
+    // Portfolio should still be visible on dashboard by checking for heading
+    await expect(page.getByRole('heading', { name: 'Persistent Portfolio' })).toBeVisible({
       timeout: 10000,
     })
   })
