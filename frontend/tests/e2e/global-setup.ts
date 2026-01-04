@@ -11,7 +11,7 @@ import { clerkSetup } from '@clerk/testing/playwright'
 export default async function globalSetup() {
   // Check if Clerk testing credentials are available
   const secretKey = process.env.CLERK_SECRET_KEY
-  
+
   if (!secretKey) {
     console.log('Playwright global setup: CLERK_SECRET_KEY not set, skipping Clerk setup')
     console.log('Tests requiring authentication will be skipped')
