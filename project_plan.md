@@ -1,5 +1,14 @@
 # PaperTrade Project Plan
 
+**Note**: This is the **original project plan** from December 2025. For the **refined architecture plans** based on Phase 1-2 learnings, see:
+- **Phase 3 Refined**: `architecture_plans/phase3-refined/` (SELL → Auth → Analytics)
+- **Phase 4 Refined**: `architecture_plans/phase4-refined/` (UX, Orders, Multi-Provider, Observability)
+- **Product Roadmap**: `docs/PRODUCT_ROADMAP.md` (user-facing)
+
+The original plan below is preserved for historical context. Phase 3-4 have been refined based on actual implementation velocity and user needs analysis.
+
+---
+
 ## Overview
 
 This document outlines the development phases for PaperTrade, a stock market emulation platform. Each phase builds incrementally on the previous, following Modern Software Engineering principles.
@@ -137,6 +146,16 @@ class MarketDataPort(Protocol):
 
 ### Phase 3: The Time Machine (Historical Backtesting)
 
+> **📝 Note**: This is the **original Phase 3 plan**. Based on Phase 1-2 learnings and user needs analysis (January 2026), Phase 3 has been **refined and restructured** into 3 focused sub-phases:
+> 
+> - **Phase 3a: Complete Trading Loop** (SELL orders) - 2-3 weeks
+> - **Phase 3b: Production-Ready Foundation** (User authentication) - 2-3 weeks
+> - **Phase 3c: Analytics & Insights** (Charts + Backtesting) - 3-4 weeks
+>
+> See `architecture_plans/phase3-refined/` for detailed specifications.
+>
+> **Why the change?** User feedback identified SELL orders and authentication as higher priorities than pure backtesting. The refined plan delivers incremental value faster while incorporating backtesting into Phase 3c alongside analytics.
+
 **Goal**: User can start a portfolio at a past date and simulate trading with historical prices.
 
 **Core Features**:
@@ -181,6 +200,17 @@ async def execute_trade(
 ---
 
 ### Phase 4: Friction & Reality
+
+> **📝 Note**: This is the **original Phase 4 plan**. Based on Phase 3 refinements, Phase 4 has been **restructured to focus on professional polish and operational readiness**:
+>
+> - **Phase 4a: UX & Real-Time** (WebSocket, toasts, mobile, dark mode) - 4-5 weeks
+> - **Phase 4b: Advanced Orders & Realism** (Limit/stop orders, fees, slippage) - 5-6 weeks
+> - **Phase 4c: Multi-Provider & Resilience** (Finnhub, IEX Cloud fallback) - 3-4 weeks
+> - **Phase 4d: Observability & Operations** (Logging, monitoring, backups) - 3-4 weeks
+>
+> See `architecture_plans/phase4-refined/` for detailed specifications.
+>
+> **Why the change?** Phase 4 now emphasizes platform maturity (UX, observability, resilience) over just adding friction. The original "Friction & Reality" features are incorporated into Phase 4b.
 
 **Goal**: Add realistic trading costs and constraints.
 
