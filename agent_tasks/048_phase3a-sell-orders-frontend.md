@@ -1,9 +1,9 @@
 # Task 048: Phase 3a SELL Orders - Frontend Implementation
 
-**Agent**: frontend-swe  
-**Priority**: HIGH  
-**Estimated Effort**: 3-4 days  
-**Dependencies**: Task #047 (Backend) should complete API layer first  
+**Agent**: frontend-swe
+**Priority**: HIGH
+**Estimated Effort**: 3-4 days
+**Dependencies**: Task #047 (Backend) should complete API layer first
 **Parallel Work**: Can start UI work while backend develops domain/application layers
 
 ---
@@ -115,7 +115,7 @@ Implement SELL order functionality in the frontend to enable users to sell stock
 **Error Response Types**:
 - [ ] Add error codes for SELL validation:
   ```typescript
-  type TradeErrorCode = 
+  type TradeErrorCode =
     | "INSUFFICIENT_FUNDS"
     | "INSUFFICIENT_HOLDINGS"
     | "NO_HOLDINGS"

@@ -1,9 +1,9 @@
 # Task 047: Phase 3a SELL Orders - Backend Implementation
 
-**Agent**: backend-swe  
-**Priority**: HIGH  
-**Estimated Effort**: 5-6 days  
-**Dependencies**: None (builds on Phase 2)  
+**Agent**: backend-swe
+**Priority**: HIGH
+**Estimated Effort**: 5-6 days
+**Dependencies**: None (builds on Phase 2)
 **Parallel Work**: Task #048 (Frontend) can run simultaneously
 
 ---
