@@ -165,23 +165,23 @@ jobs:
         run: |
           echo "Validating required environment variables for E2E tests..."
           missing_vars=()
-          
+
           if [ -z "${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}" ]; then
             missing_vars+=("VITE_CLERK_PUBLISHABLE_KEY (secret)")
           fi
-          
+
           if [ -z "${{ secrets.CLERK_SECRET_KEY }}" ]; then
             missing_vars+=("CLERK_SECRET_KEY (secret)")
           fi
-          
+
           if [ -z "${{ vars.E2E_CLERK_USER_EMAIL }}" ]; then
             missing_vars+=("E2E_CLERK_USER_EMAIL (variable)")
           fi
-          
+
           if [ -z "${{ vars.E2E_CLERK_USER_PASSWORD }}" ]; then
             missing_vars+=("E2E_CLERK_USER_PASSWORD (variable)")
           fi
-          
+
           if [ ${#missing_vars[@]} -ne 0 ]; then
             echo "❌ ERROR: Missing required environment variables:"
             printf '  - %s\n' "${missing_vars[@]}"
@@ -191,7 +191,7 @@ jobs:
             echo "  Variables: Settings → Secrets and variables → Actions → Variables"
             exit 1
           fi
-          
+
           echo "✅ All required environment variables are present"
 
       - name: Start Docker services
