@@ -2,12 +2,12 @@ import { test, expect, clerk } from './fixtures'
 
 test.describe('Portfolio Creation Flow', () => {
   test.beforeEach(async ({ page }) => {
-    const username = process.env.E2E_CLERK_USER_USERNAME
+    const email = process.env.E2E_CLERK_USER_EMAIL
     const password = process.env.E2E_CLERK_USER_PASSWORD
 
-    if (!username || !password) {
+    if (!email || !password) {
       throw new Error(
-        'E2E_CLERK_USER_USERNAME and E2E_CLERK_USER_PASSWORD environment variables are required. ' +
+        'E2E_CLERK_USER_EMAIL and E2E_CLERK_USER_PASSWORD environment variables are required. ' +
           'Please set them in your environment or GitHub repository variables.'
       )
     }
@@ -17,7 +17,7 @@ test.describe('Portfolio Creation Flow', () => {
       page,
       signInParams: {
         strategy: 'password',
-        identifier: username,
+        identifier: email,
         password: password,
       },
     })
