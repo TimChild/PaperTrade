@@ -8,7 +8,7 @@ import type { Page } from '@playwright/test'
 async function clickCreatePortfolioButton(page: Page) {
   const headerButton = page.getByTestId('create-portfolio-header-btn')
   const firstTimeButton = page.getByTestId('create-first-portfolio-btn')
-  
+
   // Try header button first (always visible if portfolios exist)
   const isHeaderVisible = await headerButton.isVisible({ timeout: 1000 }).catch(() => false)
   if (isHeaderVisible) {
@@ -49,7 +49,7 @@ test.describe('Portfolio Creation Flow', () => {
     // Wait for either create button (header or first-time)
     const headerButton = page.getByTestId('create-portfolio-header-btn')
     const firstTimeButton = page.getByTestId('create-first-portfolio-btn')
-    
+
     // One of them should be visible
     await expect(headerButton.or(firstTimeButton)).toBeVisible({ timeout: 10000 })
   })

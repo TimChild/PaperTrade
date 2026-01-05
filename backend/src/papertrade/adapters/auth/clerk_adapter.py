@@ -12,14 +12,14 @@ from papertrade.domain.exceptions import InvalidTokenError
 
 class SimpleRequest:
     """Simple request object for Clerk authentication.
-    
+
     Clerk's authenticate_request expects a request-like object with headers.
     This class provides a minimal implementation.
     """
-    
+
     def __init__(self, token: str) -> None:
         """Initialize with Bearer token.
-        
+
         Args:
             token: JWT token from Authorization header
         """
@@ -67,29 +67,31 @@ class ClerkAuthAdapter(AuthPort):
         try:
             # Create a simple request object with the token
             request = SimpleRequest(token)
-            
+
             # Verify JWT with Clerk using authenticate_request
             # Note: This is synchronous, but we use async signature for port consistency
             request_state = self._clerk.authenticate_request(
-                request=request,
-                options=AuthenticateRequestOptions()
+                request=request, options=AuthenticateRequestOptions()
             )
 
             # Check various possible attributes for user identification
             user_id = None
-            if hasattr(request_state, 'payload') and request_state.payload:
+            if hasattr(request_state, "payload") and request_state.payload:
                 # The user ID is in the 'sub' (subject) claim of the JWT payload
-                user_id = request_state.payload.get('sub')
-            elif hasattr(request_state, 'user_id') and request_state.user_id:
+                user_id = request_state.payload.get("sub")
+            elif hasattr(request_state, "user_id") and request_state.user_id:
                 user_id = request_state.user_id
-            elif hasattr(request_state, 'userId'):
+            elif hasattr(request_state, "userId"):
                 user_id = request_state.userId
-                
+
             if not user_id:
                 # Log all attributes to debug
                 import logging
+
                 logger = logging.getLogger(__name__)
-                logger.error(f"Could not find user_id. RequestState: {repr(request_state)}")
+                logger.error(
+                    f"Could not find user_id. RequestState: {repr(request_state)}"
+                )
                 raise InvalidTokenError("Invalid or expired token")
 
             # Get full user details

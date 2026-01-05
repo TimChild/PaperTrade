@@ -8,7 +8,7 @@ import type { Page } from '@playwright/test'
 async function clickCreatePortfolioButton(page: Page) {
   const headerButton = page.getByTestId('create-portfolio-header-btn')
   const firstTimeButton = page.getByTestId('create-first-portfolio-btn')
-  
+
   // Try header button first (always visible if portfolios exist)
   const isHeaderVisible = await headerButton.isVisible({ timeout: 1000 }).catch(() => false)
   if (isHeaderVisible) {
@@ -56,7 +56,7 @@ test.describe('Trading Flow', () => {
     await page.waitForLoadState('networkidle')
 
     await clickCreatePortfolioButton(page)
-    
+
 
     await page.getByTestId('create-portfolio-name-input').fill('Trading Portfolio')
     await page.getByTestId('create-portfolio-deposit-input').fill('50000')
@@ -111,7 +111,7 @@ test.describe('Trading Flow', () => {
     await page.waitForLoadState('networkidle')
 
     await clickCreatePortfolioButton(page)
-    
+
 
     await page.getByTestId('create-portfolio-name-input').fill('Poor Portfolio')
     await page.getByTestId('create-portfolio-deposit-input').fill('1000')
@@ -156,7 +156,7 @@ test.describe('Trading Flow', () => {
     await page.waitForLoadState('networkidle')
 
     await clickCreatePortfolioButton(page)
-    
+
 
     await page.getByTestId('create-portfolio-name-input').fill('Holdings Test')
     await page.getByTestId('create-portfolio-deposit-input').fill('30000')
@@ -223,7 +223,7 @@ test.describe('Trading Flow', () => {
     await page.waitForLoadState('networkidle')
 
     await clickCreatePortfolioButton(page)
-    
+
 
     await page.getByTestId('create-portfolio-name-input').fill('Buy-Sell Portfolio')
     await page.getByTestId('create-portfolio-deposit-input').fill('100000')
@@ -310,7 +310,7 @@ test.describe('Trading Flow', () => {
     await page.waitForLoadState('networkidle')
 
     await clickCreatePortfolioButton(page)
-    
+
 
     await page.getByTestId('create-portfolio-name-input').fill('Empty Portfolio')
     await page.getByTestId('create-portfolio-deposit-input').fill('50000')
@@ -347,7 +347,7 @@ test.describe('Trading Flow', () => {
     await page.waitForLoadState('networkidle')
 
     await clickCreatePortfolioButton(page)
-    
+
 
     await page.getByTestId('create-portfolio-name-input').fill('Quick Sell Test')
     await page.getByTestId('create-portfolio-deposit-input').fill('100000')
