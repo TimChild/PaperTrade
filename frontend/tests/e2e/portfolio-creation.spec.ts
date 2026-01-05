@@ -10,7 +10,7 @@ async function clickCreatePortfolioButton(page: Page) {
   const firstTimeButton = page.getByTestId('create-first-portfolio-btn')
   
   // Try header button first (always visible if portfolios exist)
-  const isHeaderVisible = await headerButton.isVisible().catch(() => false)
+  const isHeaderVisible = await headerButton.isVisible({ timeout: 1000 }).catch(() => false)
   if (isHeaderVisible) {
     await headerButton.click()
   } else {
@@ -30,18 +30,18 @@ test.describe('Portfolio Creation Flow', () => {
       )
     }
 
-    // Sign in with Clerk
+    // Navigate to app first (Clerk must be loaded before signIn can work)
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+
+    // Sign in with Clerk using email (creates sign-in token automatically)
     await clerk.signIn({
       page,
-      signInParams: {
-        strategy: 'password',
-        identifier: email,
-        password: password,
-      },
+      emailAddress: email,
     })
 
-    // Navigate to home page after sign-in
-    await page.goto('/')
+    // Wait for redirect to dashboard after sign-in
+    await page.waitForURL('/dashboard', { timeout: 10000 })
     await page.waitForLoadState('networkidle')
   })
 

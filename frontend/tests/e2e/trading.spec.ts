@@ -10,7 +10,7 @@ async function clickCreatePortfolioButton(page: Page) {
   const firstTimeButton = page.getByTestId('create-first-portfolio-btn')
   
   // Try header button first (always visible if portfolios exist)
-  const isHeaderVisible = await headerButton.isVisible().catch(() => false)
+  const isHeaderVisible = await headerButton.isVisible({ timeout: 1000 }).catch(() => false)
   if (isHeaderVisible) {
     await headerButton.click()
   } else {
@@ -34,14 +34,10 @@ test.describe('Trading Flow', () => {
     // Navigate to app first
     await page.goto('/')
 
-    // Sign in programmatically using Clerk testing helper
+    // Sign in programmatically using Clerk testing helper (email-based creates sign-in token)
     await clerk.signIn({
       page,
-      signInParams: {
-        strategy: 'password',
-        identifier: email,
-        password: password,
-      },
+      emailAddress: email,
     })
 
     // After sign in, go to dashboard
