@@ -1,11 +1,35 @@
-import { test, expect } from '@playwright/test'
+import { clerk } from '@clerk/testing/playwright'
+import { test, expect } from './fixtures'
 
 test.describe('Portfolio Creation Flow', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear localStorage to start fresh
+    // Navigate to app first - Clerk needs to be loaded
     await page.goto('/')
-    await page.evaluate(() => localStorage.clear())
-    await page.reload()
+    await page.waitForLoadState('networkidle')
+
+    // Sign in using Clerk testing (email-based sign-in)
+    const email = process.env.E2E_CLERK_USER_EMAIL
+    if (!email) {
+      throw new Error('E2E_CLERK_USER_EMAIL environment variable is not set')
+    }
+
+    await clerk.signIn({
+      page,
+      emailAddress: email,
+    })
+
+    // Wait for authentication to complete and redirect to dashboard
+    try {
+      await page.waitForURL('**/dashboard', { timeout: 10000 })
+    } catch {
+      // Already on dashboard or different URL structure
+      if (!page.url().includes('/dashboard')) {
+        throw new Error('Failed to navigate to dashboard after sign-in')
+      }
+    }
+
+    // Clear any existing data by clearing localStorage (if needed for test isolation)
+    // Note: This doesn't clear backend data, just frontend state
   })
 
   test('should create portfolio and show it in dashboard', async ({ page }) => {

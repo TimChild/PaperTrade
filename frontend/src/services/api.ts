@@ -9,6 +9,35 @@ export const apiClient = axios.create({
   },
 })
 
+// Global token setter for Clerk authentication
+// This will be called from a hook that has access to Clerk's useAuth
+let tokenGetter: (() => Promise<string | null>) | null = null
+
+export const setAuthTokenGetter = (getter: () => Promise<string | null>) => {
+  tokenGetter = getter
+}
+
+// Request interceptor to add authentication token
+apiClient.interceptors.request.use(
+  async (config) => {
+    // Get token from Clerk if tokenGetter is set
+    if (tokenGetter) {
+      try {
+        const token = await tokenGetter()
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`
+        }
+      } catch (error) {
+        console.error('Failed to get auth token:', error)
+      }
+    }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
+
 // Response interceptor for error handling
 apiClient.interceptors.response.use(
   (response) => response,
