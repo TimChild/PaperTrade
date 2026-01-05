@@ -3,107 +3,113 @@ import { test, expect } from './fixtures'
 
 test.describe('Portfolio Creation Flow', () => {
   test.beforeEach(async ({ page }) => {
+    const email = process.env.E2E_CLERK_USER_EMAIL
+    if (!email) {
+      throw new Error('E2E_CLERK_USER_EMAIL environment variable must be set')
+    }
+
     // Navigate to app first - Clerk needs to be loaded
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    // Sign in using Clerk testing with password strategy
-    const email = process.env.E2E_CLERK_USER_EMAIL
-    const password = process.env.E2E_CLERK_USER_PASSWORD
-    
-    if (!email || !password) {
-      throw new Error('E2E_CLERK_USER_EMAIL and E2E_CLERK_USER_PASSWORD environment variables must be set')
-    }
-
+    // Sign in using email-based approach (creates sign-in token via backend API)
     await clerk.signIn({
       page,
-      signInParams: {
-        strategy: 'password',
-        identifier: email,
-        password: password,
-      },
+      emailAddress: email,
     })
 
     // Wait for authentication to complete and redirect to dashboard
-    try {
-      await page.waitForURL('**/dashboard', { timeout: 10000 })
-    } catch {
-      // Already on dashboard or different URL structure
-      if (!page.url().includes('/dashboard')) {
-        throw new Error('Failed to navigate to dashboard after sign-in')
-      }
-    }
-
-    // Clear any existing data by clearing localStorage (if needed for test isolation)
-    // Note: This doesn't clear backend data, just frontend state
+    await page.waitForURL('**/dashboard', { timeout: 10000 })
   })
 
-  test('should create portfolio and show it in dashboard', async ({ page }) => {
-    // This test verifies Bug #2 fix (balance endpoint) and Bug #1 (user ID persistence)
-    // would have caught the portfolio creation workflow issues
+  test('should create portfolio and navigate to portfolio detail page', async ({ page }) => {
+    // This test verifies the portfolio creation flow and navigation to the new portfolio
 
-    // 1. Navigate to app
-    await page.goto('/')
-
-    // 2. Should see empty state or dashboard
+    // 1. Navigate to dashboard
+    await page.goto('/dashboard')
     await page.waitForLoadState('networkidle')
 
-    // 3. Click create portfolio button
-    const createButton = page.getByTestId('create-first-portfolio-btn')
+    // 2. Click create portfolio button (header button if portfolios exist, otherwise empty state button)
+    const headerButton = page.getByTestId('create-portfolio-header-btn')
+    const emptyStateButton = page.getByTestId('create-first-portfolio-btn')
+    const createButton = (await headerButton.isVisible()) ? headerButton : emptyStateButton
     await createButton.click()
 
-    // 4. Fill out form
-    await page.getByTestId('create-portfolio-name-input').fill('My Test Portfolio')
+    // Use unique name to avoid conflicts with previous test runs
+    const portfolioName = `Test Portfolio ${Date.now()}`
+
+    // 3. Fill out form
+    await page.getByTestId('create-portfolio-name-input').fill(portfolioName)
     await page.getByTestId('create-portfolio-deposit-input').fill('10000')
 
-    // 5. Submit
+    // 4. Submit
     await page.getByTestId('submit-portfolio-form-btn').click()
 
-    // 6. Wait for portfolio to be created and modal to close
-    // Portfolio stays on dashboard after creation
-    await page.waitForTimeout(2000)
+    // 5. Should navigate to the new portfolio's detail page
+    await page.waitForURL('**/portfolio/*', { timeout: 10000 })
 
-    // 7. Verify portfolio appears on dashboard by checking for the portfolio name
-    // Since we stay on dashboard, check for portfolio summary card or navigate to detail
-    await expect(page.getByRole('heading', { name: 'My Test Portfolio' })).toBeVisible({
+    // 6. Verify we're on the portfolio detail page with the correct name
+    await expect(page.getByTestId('portfolio-detail-name')).toHaveText(portfolioName, {
       timeout: 10000,
+    })
+
+    // 7. Verify the initial deposit is reflected in the cash balance
+    await expect(page.getByTestId('portfolio-cash-balance')).toHaveText('$10,000.00', {
+      timeout: 5000,
     })
   })
 
 
   test('should persist portfolio after page refresh', async ({ page }) => {
-    // This test would have caught Bug #1 (user ID persistence) from Task 016
+    // This test verifies portfolio data persists correctly
 
-    // Create portfolio
-    await page.goto('/')
+    // Create portfolio from dashboard
+    await page.goto('/dashboard')
     await page.waitForLoadState('networkidle')
 
-    const createButton = page.getByTestId('create-first-portfolio-btn')
+    // Click create portfolio button (header button if portfolios exist, otherwise empty state button)
+    const headerButton = page.getByTestId('create-portfolio-header-btn')
+    const emptyStateButton = page.getByTestId('create-first-portfolio-btn')
+    const createButton = (await headerButton.isVisible()) ? headerButton : emptyStateButton
     await createButton.click()
 
-    await page.getByTestId('create-portfolio-name-input').fill('Persistent Portfolio')
+    // Use unique name to avoid conflicts with previous test runs
+    const portfolioName = `Persistent ${Date.now()}`
+
+    await page.getByTestId('create-portfolio-name-input').fill(portfolioName)
     await page.getByTestId('create-portfolio-deposit-input').fill('25000')
     await page.getByTestId('submit-portfolio-form-btn').click()
 
-    // Wait for portfolio to be created
-    await page.waitForTimeout(2000)
+    // Wait for navigation to portfolio detail page
+    await page.waitForURL('**/portfolio/*', { timeout: 10000 })
+
+    // Verify we're on the correct portfolio page
+    await expect(page.getByTestId('portfolio-detail-name')).toHaveText(portfolioName)
 
     // Refresh page
     await page.reload()
     await page.waitForLoadState('networkidle')
 
-    // Portfolio should still be visible on dashboard by checking for heading
-    await expect(page.getByRole('heading', { name: 'Persistent Portfolio' })).toBeVisible({
+    // Portfolio should still be visible with the same name after refresh
+    await expect(page.getByTestId('portfolio-detail-name')).toHaveText(portfolioName, {
       timeout: 10000,
+    })
+
+    // Verify the balance persisted
+    await expect(page.getByTestId('portfolio-cash-balance')).toHaveText('$25,000.00', {
+      timeout: 5000,
     })
   })
 
 
   test('should show validation error for empty portfolio name', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/dashboard')
     await page.waitForLoadState('networkidle')
 
-    const createButton = page.getByTestId('create-first-portfolio-btn')
+    // Click create portfolio button (header button if portfolios exist, otherwise empty state button)
+    const headerButton = page.getByTestId('create-portfolio-header-btn')
+    const emptyStateButton = page.getByTestId('create-first-portfolio-btn')
+    const createButton = (await headerButton.isVisible()) ? headerButton : emptyStateButton
     await createButton.click()
 
     // Try to submit without entering name
@@ -116,10 +122,13 @@ test.describe('Portfolio Creation Flow', () => {
   })
 
   test('should show validation error for invalid deposit amount', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/dashboard')
     await page.waitForLoadState('networkidle')
 
-    const createButton = page.getByTestId('create-first-portfolio-btn')
+    // Click create portfolio button (header button if portfolios exist, otherwise empty state button)
+    const headerButton = page.getByTestId('create-portfolio-header-btn')
+    const emptyStateButton = page.getByTestId('create-first-portfolio-btn')
+    const createButton = (await headerButton.isVisible()) ? headerButton : emptyStateButton
     await createButton.click()
 
     await page.getByTestId('create-portfolio-name-input').fill('Test Portfolio')

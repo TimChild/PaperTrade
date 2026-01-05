@@ -2,57 +2,34 @@ import { clerk } from '@clerk/testing/playwright'
 import { test, expect } from './fixtures'
 
 test.describe('Clerk Auth Test', () => {
-  test('should authenticate with Clerk using test email', async ({ page }) => {
-    console.log('Starting Clerk auth test...')
+  test('should authenticate with Clerk and access protected API', async ({ page }) => {
+    const email = process.env.E2E_CLERK_USER_EMAIL || 'test-e2e@papertrade.dev'
     
-    // Navigate to app
+    // Navigate to app first - Clerk must be loaded before signIn
     await page.goto('/')
     await page.waitForLoadState('networkidle')
-    console.log('Page loaded')
 
-    // Take screenshot before sign-in attempt
-    await page.screenshot({ path: '/tmp/clerk-before-signin.png' })
-    
-    // Check if Clerk is loaded
-    const clerkLoaded = await page.evaluate(() => {
-      return {
-        windowClerk: typeof (window as any).Clerk !== 'undefined',
-        clerkLoaded: (window as any).Clerk?.loaded,
-      }
-    })
-    console.log('Clerk load status:', clerkLoaded)
-
-    // Sign in using Clerk testing
-    // Using the actual test user email (not +clerk_test) since the user exists
-    const email = process.env.E2E_CLERK_USER_EMAIL || 'test-e2e@papertrade.dev'
-    const password = process.env.E2E_CLERK_USER_PASSWORD || 'test-clerk-password'
-    
-    console.log(`Attempting to sign in with email: ${email}`)
-
+    // Sign in using email-based approach (creates sign-in token via backend API)
     await clerk.signIn({
       page,
-      signInParams: {
-        strategy: 'password',
-        identifier: email,
-        password: password,
-      },
-    }, { timeout: 60000 }) // Increase timeout to 60 seconds
-    
-    console.log('Sign in completed')
+      emailAddress: email,
+    })
 
-    // Wait a bit for redirect
-    await page.waitForTimeout(3000)
+    // Wait for navigation to dashboard after successful sign-in
+    await page.waitForURL('**/dashboard', { timeout: 10000 })
     
-    // Check if we're authenticated (should see dashboard or user button)
-    const url = page.url()
-    console.log(`Current URL: ${url}`)
-    
-    // Take a screenshot for debugging
-    await page.screenshot({ path: '/tmp/clerk-after-signin.png' })
-    
-    // Verify we're signed in (should be on a page that requires auth)
-    // Could be dashboard or the app homepage if signed in
-    const isAuthenticated = url.includes('/dashboard') || await page.locator('[data-testid="user-button"]').isVisible().catch(() => false)
-    expect(isAuthenticated).toBeTruthy()
+    // Verify user is authenticated in Clerk
+    const clerkUserState = await page.evaluate(() => {
+      return {
+        hasUser: (window as any).Clerk?.user !== null && (window as any).Clerk?.user !== undefined,
+        userId: (window as any).Clerk?.user?.id,
+      }
+    })
+    expect(clerkUserState.hasUser).toBe(true)
+    expect(clerkUserState.userId).toBeTruthy()
+
+    // Verify the page loaded successfully (no auth errors)
+    const pageContent = await page.textContent('body')
+    expect(pageContent).not.toContain('Not authenticated')
   })
 })

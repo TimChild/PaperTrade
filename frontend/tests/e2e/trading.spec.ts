@@ -3,63 +3,49 @@ import { test, expect } from './fixtures'
 
 test.describe('Trading Flow', () => {
   test.beforeEach(async ({ page }) => {
+    const email = process.env.E2E_CLERK_USER_EMAIL
+    if (!email) {
+      throw new Error('E2E_CLERK_USER_EMAIL environment variable must be set')
+    }
+
     // Navigate to app first - Clerk needs to be loaded
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    // Sign in using Clerk testing with password strategy
-    const email = process.env.E2E_CLERK_USER_EMAIL
-    const password = process.env.E2E_CLERK_USER_PASSWORD
-    
-    if (!email || !password) {
-      throw new Error('E2E_CLERK_USER_EMAIL and E2E_CLERK_USER_PASSWORD environment variables must be set')
-    }
-
+    // Sign in using email-based approach (creates sign-in token via backend API)
     await clerk.signIn({
       page,
-      signInParams: {
-        strategy: 'password',
-        identifier: email,
-        password: password,
-      },
+      emailAddress: email,
     })
 
     // Wait for authentication to complete and redirect to dashboard
-    try {
-      await page.waitForURL('**/dashboard', { timeout: 10000 })
-    } catch {
-      // Already on dashboard or different URL structure
-      if (!page.url().includes('/dashboard')) {
-        throw new Error('Failed to navigate to dashboard after sign-in')
-      }
-    }
+    await page.waitForURL('**/dashboard', { timeout: 10000 })
   })
 
   test('should execute buy trade and update portfolio', async ({ page }) => {
     // This test verifies the complete trading flow with real market data
 
     // 1. Create a portfolio first
-    await page.goto('/')
+    await page.goto('/dashboard')
     await page.waitForLoadState('networkidle')
 
-    const createButton = page.getByTestId('create-first-portfolio-btn')
+    // Click create portfolio button (header button if portfolios exist, otherwise empty state button)
+    const headerButton = page.getByTestId('create-portfolio-header-btn')
+    const emptyStateButton = page.getByTestId('create-first-portfolio-btn')
+    const createButton = (await headerButton.isVisible()) ? headerButton : emptyStateButton
     await createButton.click()
 
-    await page.getByTestId('create-portfolio-name-input').fill('Trading Portfolio')
+    // Use unique name to avoid conflicts
+    const portfolioName = `Trading Portfolio ${Date.now()}`
+    await page.getByTestId('create-portfolio-name-input').fill(portfolioName)
     await page.getByTestId('create-portfolio-deposit-input').fill('50000')
     await page.getByTestId('submit-portfolio-form-btn').click()
 
-    // Wait for portfolio to appear on dashboard
-    await expect(page.getByRole('heading', { name: 'Trading Portfolio' })).toBeVisible({
-      timeout: 10000,
-    })
+    // Wait for navigation to portfolio detail page
+    await page.waitForURL('**/portfolio/*', { timeout: 10000 })
+    await expect(page.getByTestId('portfolio-detail-name')).toHaveText(portfolioName)
 
-    // 2. Navigate to portfolio detail page to access trade form
-    await page.getByTestId('dashboard-trade-stocks-link').click()
-    await page.waitForLoadState('networkidle')
-
-    // Verify we're on the portfolio detail page
-    await expect(page.getByTestId('portfolio-detail-name')).toHaveText('Trading Portfolio')
+    // 2. Verify we're on the portfolio detail page with trade form
     await expect(page.getByRole('heading', { name: 'Execute Trade' })).toBeVisible()
 
     // 3. Fill in the trade form using test IDs
@@ -84,7 +70,6 @@ test.describe('Trading Flow', () => {
     await page.waitForLoadState('networkidle')
 
     // 5. Verify trade execution results
-    // Cash balance should have decreased (IBM price is ~$291.50, so 2 shares ~$583)
     // Verify holdings table shows IBM in a table cell
     await expect(page.getByTestId('holding-symbol-IBM')).toBeVisible({ timeout: 5000 })
 
@@ -94,27 +79,26 @@ test.describe('Trading Flow', () => {
 
   test('should show error when buying with insufficient funds', async ({ page }) => {
     // Create portfolio with limited funds
-    await page.goto('/')
+    await page.goto('/dashboard')
     await page.waitForLoadState('networkidle')
 
-    const createButton = page.getByTestId('create-first-portfolio-btn')
+    // Click create portfolio button (header button if portfolios exist, otherwise empty state button)
+    const headerButton = page.getByTestId('create-portfolio-header-btn')
+    const emptyStateButton = page.getByTestId('create-first-portfolio-btn')
+    const createButton = (await headerButton.isVisible()) ? headerButton : emptyStateButton
     await createButton.click()
 
-    await page.getByTestId('create-portfolio-name-input').fill('Poor Portfolio')
+    // Use unique name to avoid conflicts
+    const portfolioName = `Poor Portfolio ${Date.now()}`
+    await page.getByTestId('create-portfolio-name-input').fill(portfolioName)
     await page.getByTestId('create-portfolio-deposit-input').fill('1000')
     await page.getByTestId('submit-portfolio-form-btn').click()
 
-    // Wait for portfolio to appear on dashboard
-    await expect(page.getByRole('heading', { name: 'Poor Portfolio' })).toBeVisible({
-      timeout: 10000,
-    })
-
-    // Navigate to portfolio detail page
-    await page.getByTestId('dashboard-trade-stocks-link').click()
-    await page.waitForLoadState('networkidle')
+    // Wait for navigation to portfolio detail page
+    await page.waitForURL('**/portfolio/*', { timeout: 10000 })
+    await expect(page.getByTestId('portfolio-detail-name')).toHaveText(portfolioName)
 
     // Verify we're on the portfolio detail page with trade form
-    await expect(page.getByTestId('portfolio-detail-name')).toHaveText('Poor Portfolio')
     await expect(page.getByRole('heading', { name: 'Execute Trade' })).toBeVisible()
 
     // Try to buy expensive stock with insufficient funds
@@ -139,27 +123,26 @@ test.describe('Trading Flow', () => {
 
   test('should display portfolio holdings after trade', async ({ page }) => {
     // Create portfolio
-    await page.goto('/')
+    await page.goto('/dashboard')
     await page.waitForLoadState('networkidle')
 
-    const createButton = page.getByTestId('create-first-portfolio-btn')
+    // Click create portfolio button (header button if portfolios exist, otherwise empty state button)
+    const headerButton = page.getByTestId('create-portfolio-header-btn')
+    const emptyStateButton = page.getByTestId('create-first-portfolio-btn')
+    const createButton = (await headerButton.isVisible()) ? headerButton : emptyStateButton
     await createButton.click()
 
-    await page.getByTestId('create-portfolio-name-input').fill('Holdings Test')
+    // Use unique name to avoid conflicts
+    const portfolioName = `Holdings Test ${Date.now()}`
+    await page.getByTestId('create-portfolio-name-input').fill(portfolioName)
     await page.getByTestId('create-portfolio-deposit-input').fill('30000')
     await page.getByTestId('submit-portfolio-form-btn').click()
 
-    // Wait for portfolio to appear on dashboard
-    await expect(page.getByRole('heading', { name: 'Holdings Test' })).toBeVisible({
-      timeout: 10000,
-    })
-
-    // Navigate to portfolio detail page
-    await page.getByTestId('dashboard-trade-stocks-link').click()
-    await page.waitForLoadState('networkidle')
+    // Wait for navigation to portfolio detail page
+    await page.waitForURL('**/portfolio/*', { timeout: 10000 })
+    await expect(page.getByTestId('portfolio-detail-name')).toHaveText(portfolioName)
 
     // Verify we're on the portfolio detail page
-    await expect(page.getByTestId('portfolio-detail-name')).toHaveText('Holdings Test')
     await expect(page.getByRole('heading', { name: 'Execute Trade' })).toBeVisible()
 
     // Verify holdings section exists (should show "No holdings" initially)
@@ -195,38 +178,27 @@ test.describe('Trading Flow', () => {
   test('should execute complete buy-sell trading loop', async ({ page }) => {
     // This test verifies the complete trading flow: BUY → SELL
 
-    // Capture console logs for debugging
-    page.on('console', msg => {
-      console.log(`[Browser ${msg.type()}]:`, msg.text())
-    })
-
-    // Capture page errors
-    page.on('pageerror', error => {
-      console.error('[Browser Error]:', error)
-    })
-
     // 1. Create a portfolio
-    await page.goto('/')
+    await page.goto('/dashboard')
     await page.waitForLoadState('networkidle')
 
-    const createButton = page.getByTestId('create-first-portfolio-btn')
+    // Click create portfolio button (header button if portfolios exist, otherwise empty state button)
+    const headerButton = page.getByTestId('create-portfolio-header-btn')
+    const emptyStateButton = page.getByTestId('create-first-portfolio-btn')
+    const createButton = (await headerButton.isVisible()) ? headerButton : emptyStateButton
     await createButton.click()
 
-    await page.getByTestId('create-portfolio-name-input').fill('Buy-Sell Portfolio')
+    // Use unique name to avoid conflicts
+    const portfolioName = `Buy-Sell Portfolio ${Date.now()}`
+    await page.getByTestId('create-portfolio-name-input').fill(portfolioName)
     await page.getByTestId('create-portfolio-deposit-input').fill('100000')
     await page.getByTestId('submit-portfolio-form-btn').click()
 
-    // Wait for portfolio to appear on dashboard
-    await expect(page.getByRole('heading', { name: 'Buy-Sell Portfolio' })).toBeVisible({
-      timeout: 10000,
-    })
+    // Wait for navigation to portfolio detail page
+    await page.waitForURL('**/portfolio/*', { timeout: 10000 })
+    await expect(page.getByTestId('portfolio-detail-name')).toHaveText(portfolioName)
 
-    // 2. Navigate to portfolio detail page
-    await page.getByTestId('dashboard-trade-stocks-link').click()
-    await page.waitForLoadState('networkidle')
-
-    // Verify we're on the portfolio detail page
-    await expect(page.getByTestId('portfolio-detail-name')).toHaveText('Buy-Sell Portfolio')
+    // 2. Verify we're on the portfolio detail page
     await expect(page.getByRole('heading', { name: 'Execute Trade' })).toBeVisible()
 
     // 3. Execute a BUY order (buy 10 shares of IBM)
@@ -293,26 +265,26 @@ test.describe('Trading Flow', () => {
     // This test verifies SELL validation: can't sell what you don't own
 
     // 1. Create a portfolio
-    await page.goto('/')
+    await page.goto('/dashboard')
     await page.waitForLoadState('networkidle')
 
-    const createButton = page.getByTestId('create-first-portfolio-btn')
+    // Click create portfolio button (header button if portfolios exist, otherwise empty state button)
+    const headerButton = page.getByTestId('create-portfolio-header-btn')
+    const emptyStateButton = page.getByTestId('create-first-portfolio-btn')
+    const createButton = (await headerButton.isVisible()) ? headerButton : emptyStateButton
     await createButton.click()
 
-    await page.getByTestId('create-portfolio-name-input').fill('Empty Portfolio')
+    // Use unique name to avoid conflicts
+    const portfolioName = `Empty Portfolio ${Date.now()}`
+    await page.getByTestId('create-portfolio-name-input').fill(portfolioName)
     await page.getByTestId('create-portfolio-deposit-input').fill('50000')
     await page.getByTestId('submit-portfolio-form-btn').click()
 
-    // Wait for portfolio to appear on dashboard
-    await expect(page.getByRole('heading', { name: 'Empty Portfolio' })).toBeVisible({
-      timeout: 10000,
-    })
+    // Wait for navigation to portfolio detail page
+    await page.waitForURL('**/portfolio/*', { timeout: 10000 })
+    await expect(page.getByTestId('portfolio-detail-name')).toHaveText(portfolioName)
 
-    // 2. Navigate to portfolio detail page
-    await page.getByTestId('dashboard-trade-stocks-link').click()
-    await page.waitForLoadState('networkidle')
-
-    // 3. Try to SELL stock without owning it
+    // 2. Try to SELL stock without owning it
     await page.getByTestId('trade-form-action-sell').click()
     await page.getByTestId('trade-form-ticker-input').fill('TSLA')
     await page.getByTestId('trade-form-quantity-input').fill('10')
@@ -330,22 +302,24 @@ test.describe('Trading Flow', () => {
     // This test verifies Quick Sell functionality
 
     // 1. Create a portfolio and buy some stock
-    await page.goto('/')
+    await page.goto('/dashboard')
     await page.waitForLoadState('networkidle')
 
-    const createButton = page.getByTestId('create-first-portfolio-btn')
+    // Click create portfolio button (header button if portfolios exist, otherwise empty state button)
+    const headerButton = page.getByTestId('create-portfolio-header-btn')
+    const emptyStateButton = page.getByTestId('create-first-portfolio-btn')
+    const createButton = (await headerButton.isVisible()) ? headerButton : emptyStateButton
     await createButton.click()
 
-    await page.getByTestId('create-portfolio-name-input').fill('Quick Sell Test')
+    // Use unique name to avoid conflicts
+    const portfolioName = `Quick Sell Test ${Date.now()}`
+    await page.getByTestId('create-portfolio-name-input').fill(portfolioName)
     await page.getByTestId('create-portfolio-deposit-input').fill('100000')
     await page.getByTestId('submit-portfolio-form-btn').click()
 
-    await expect(page.getByRole('heading', { name: 'Quick Sell Test' })).toBeVisible({
-      timeout: 10000,
-    })
-
-    await page.getByTestId('dashboard-trade-stocks-link').click()
-    await page.waitForLoadState('networkidle')
+    // Wait for navigation to portfolio detail page
+    await page.waitForURL('**/portfolio/*', { timeout: 10000 })
+    await expect(page.getByTestId('portfolio-detail-name')).toHaveText(portfolioName)
 
     // Buy 20 shares of MSFT
     await page.getByTestId('trade-form-ticker-input').fill('MSFT')
