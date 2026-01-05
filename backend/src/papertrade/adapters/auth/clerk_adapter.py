@@ -18,9 +18,6 @@ class SimpleRequest:
     """Simple request object for Clerk's authenticate_request method.
 
     Clerk's SDK expects a request object with a headers dictionary.
-    Both lowercase and capitalized Authorization headers are needed because
-    Clerk's backend SDK checks both header casings for compatibility with
-    different frameworks and environments.
     """
 
     def __init__(self, token: str) -> None:
@@ -30,8 +27,7 @@ class SimpleRequest:
             token: JWT token from the Authorization header
         """
         self.headers = {
-            "authorization": f"Bearer {token}",
-            "Authorization": f"Bearer {token}",  # Clerk checks both casings
+            "Authorization": f"Bearer {token}",
         }
 
 
