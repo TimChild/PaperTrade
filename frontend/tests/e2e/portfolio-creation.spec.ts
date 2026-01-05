@@ -1,4 +1,22 @@
 import { test, expect, clerk } from './fixtures'
+import type { Page } from '@playwright/test'
+
+/**
+ * Helper function to click the create portfolio button
+ * Works whether user has existing portfolios or not
+ */
+async function clickCreatePortfolioButton(page: Page) {
+  const headerButton = page.getByTestId('create-portfolio-header-btn')
+  const firstTimeButton = page.getByTestId('create-first-portfolio-btn')
+  
+  // Try header button first (always visible if portfolios exist)
+  const isHeaderVisible = await headerButton.isVisible().catch(() => false)
+  if (isHeaderVisible) {
+    await headerButton.click()
+  } else {
+    await firstTimeButton.click()
+  }
+}
 
 test.describe('Portfolio Creation Flow', () => {
   test.beforeEach(async ({ page }) => {
@@ -27,20 +45,19 @@ test.describe('Portfolio Creation Flow', () => {
     await page.waitForLoadState('networkidle')
   })
 
-  test('should display create portfolio button when no portfolios exist', async ({
-    page,
-  }) => {
-    // Wait for the create portfolio button
-    const createButton = page.getByTestId('create-first-portfolio-btn')
-    await expect(createButton).toBeVisible({ timeout: 10000 })
+  test('should display create portfolio button', async ({ page }) => {
+    // Wait for either create button (header or first-time)
+    const headerButton = page.getByTestId('create-portfolio-header-btn')
+    const firstTimeButton = page.getByTestId('create-first-portfolio-btn')
+    
+    // One of them should be visible
+    await expect(headerButton.or(firstTimeButton)).toBeVisible({ timeout: 10000 })
   })
 
   test('should open create portfolio modal when clicking create button', async ({
     page,
   }) => {
-    // Click create portfolio button
-    const createButton = page.getByTestId('create-first-portfolio-btn')
-    await createButton.click()
+    await clickCreatePortfolioButton(page)
 
     // Modal should appear
     const modal = page.getByRole('dialog')
@@ -48,9 +65,7 @@ test.describe('Portfolio Creation Flow', () => {
   })
 
   test('should create a new portfolio successfully', async ({ page }) => {
-    // Click create portfolio button
-    const createButton = page.getByTestId('create-first-portfolio-btn')
-    await createButton.click()
+    await clickCreatePortfolioButton(page)
 
     // Fill in portfolio name
     const nameInput = page.getByLabel(/name/i)
@@ -69,9 +84,7 @@ test.describe('Portfolio Creation Flow', () => {
   })
 
   test('should show validation error for empty portfolio name', async ({ page }) => {
-    // Click create portfolio button
-    const createButton = page.getByTestId('create-first-portfolio-btn')
-    await createButton.click()
+    await clickCreatePortfolioButton(page)
 
     // Leave name empty and try to submit
     const submitButton = page.getByRole('button', { name: /create/i })

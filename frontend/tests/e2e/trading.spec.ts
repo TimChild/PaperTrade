@@ -1,4 +1,22 @@
 import { test, expect, clerk } from './fixtures'
+import type { Page } from '@playwright/test'
+
+/**
+ * Helper function to click the create portfolio button
+ * Works whether user has existing portfolios or not
+ */
+async function clickCreatePortfolioButton(page: Page) {
+  const headerButton = page.getByTestId('create-portfolio-header-btn')
+  const firstTimeButton = page.getByTestId('create-first-portfolio-btn')
+  
+  // Try header button first (always visible if portfolios exist)
+  const isHeaderVisible = await headerButton.isVisible().catch(() => false)
+  if (isHeaderVisible) {
+    await headerButton.click()
+  } else {
+    await firstTimeButton.click()
+  }
+}
 
 test.describe('Trading Flow', () => {
   test.beforeEach(async ({ page }) => {
@@ -41,8 +59,8 @@ test.describe('Trading Flow', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    const createButton = page.getByTestId('create-first-portfolio-btn')
-    await createButton.click()
+    await clickCreatePortfolioButton(page)
+    
 
     await page.getByTestId('create-portfolio-name-input').fill('Trading Portfolio')
     await page.getByTestId('create-portfolio-deposit-input').fill('50000')
@@ -96,8 +114,8 @@ test.describe('Trading Flow', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    const createButton = page.getByTestId('create-first-portfolio-btn')
-    await createButton.click()
+    await clickCreatePortfolioButton(page)
+    
 
     await page.getByTestId('create-portfolio-name-input').fill('Poor Portfolio')
     await page.getByTestId('create-portfolio-deposit-input').fill('1000')
@@ -141,8 +159,8 @@ test.describe('Trading Flow', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    const createButton = page.getByTestId('create-first-portfolio-btn')
-    await createButton.click()
+    await clickCreatePortfolioButton(page)
+    
 
     await page.getByTestId('create-portfolio-name-input').fill('Holdings Test')
     await page.getByTestId('create-portfolio-deposit-input').fill('30000')
@@ -208,8 +226,8 @@ test.describe('Trading Flow', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    const createButton = page.getByTestId('create-first-portfolio-btn')
-    await createButton.click()
+    await clickCreatePortfolioButton(page)
+    
 
     await page.getByTestId('create-portfolio-name-input').fill('Buy-Sell Portfolio')
     await page.getByTestId('create-portfolio-deposit-input').fill('100000')
@@ -295,8 +313,8 @@ test.describe('Trading Flow', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    const createButton = page.getByTestId('create-first-portfolio-btn')
-    await createButton.click()
+    await clickCreatePortfolioButton(page)
+    
 
     await page.getByTestId('create-portfolio-name-input').fill('Empty Portfolio')
     await page.getByTestId('create-portfolio-deposit-input').fill('50000')
@@ -332,8 +350,8 @@ test.describe('Trading Flow', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    const createButton = page.getByTestId('create-first-portfolio-btn')
-    await createButton.click()
+    await clickCreatePortfolioButton(page)
+    
 
     await page.getByTestId('create-portfolio-name-input').fill('Quick Sell Test')
     await page.getByTestId('create-portfolio-deposit-input').fill('100000')
