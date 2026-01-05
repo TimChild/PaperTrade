@@ -74,8 +74,7 @@ class ClerkAuthAdapter(AuthPort):
             # Authenticate the request using Clerk's SDK
             # Note: This is synchronous but we use async signature for port consistency
             request_state = self._clerk.authenticate_request(
-                request=request,
-                options=AuthenticateRequestOptions()
+                request=request, options=AuthenticateRequestOptions()
             )
 
             logger.info(f"Clerk auth status: {request_state.status}")
