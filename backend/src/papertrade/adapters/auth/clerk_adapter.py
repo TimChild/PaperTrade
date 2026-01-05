@@ -6,8 +6,7 @@ Implements AuthPort using Clerk's backend SDK for production authentication.
 import logging
 
 from clerk_backend_api import Clerk
-from clerk_backend_api.jwks_helpers import AuthStatus
-from clerk_backend_api.security.types import AuthenticateRequestOptions
+from clerk_backend_api.security.types import AuthenticateRequestOptions, AuthStatus
 
 from papertrade.application.ports.auth_port import AuthenticatedUser, AuthPort
 from papertrade.domain.exceptions import InvalidTokenError
@@ -17,14 +16,14 @@ logger = logging.getLogger(__name__)
 
 class SimpleRequest:
     """Simple request object for Clerk's authenticate_request method.
-    
+
     Clerk's SDK expects a request object with a headers dictionary.
     Both lowercase and capitalized Authorization headers are needed.
     """
 
     def __init__(self, token: str) -> None:
         """Initialize request with Authorization header.
-        
+
         Args:
             token: JWT token from the Authorization header
         """
@@ -71,29 +70,36 @@ class ClerkAuthAdapter(AuthPort):
         try:
             # Create a request object with the token
             request = SimpleRequest(token)
-            
+
             # Authenticate the request using Clerk's SDK
             # Note: This is synchronous but we use async signature for port consistency
             request_state = self._clerk.authenticate_request(
                 request=request,
                 options=AuthenticateRequestOptions()
             )
-            
+
             logger.info(f"Clerk auth status: {request_state.status}")
-            
+
             # Check if authentication was successful
             if request_state.status != AuthStatus.SIGNED_IN:
-                logger.warning(f"Auth failed: status={request_state.status}, reason={request_state.reason}")
-                raise InvalidTokenError(f"Authentication failed: {request_state.reason}")
-            
+                logger.warning(
+                    f"Auth failed: status={request_state.status}, "
+                    f"reason={request_state.reason}"
+                )
+                raise InvalidTokenError(
+                    f"Authentication failed: {request_state.reason}"
+                )
+
             # Extract user ID from JWT payload (not from request_state.user_id)
             if not request_state.payload:
                 raise InvalidTokenError("Token payload is missing")
-            
+
             user_id = request_state.payload.get("sub")
             if not user_id:
-                raise InvalidTokenError("User ID (sub claim) not found in token payload")
-            
+                raise InvalidTokenError(
+                    "User ID (sub claim) not found in token payload"
+                )
+
             logger.info(f"Authenticated user ID: {user_id}")
 
             # Get full user details from Clerk

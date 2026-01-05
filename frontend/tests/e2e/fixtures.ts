@@ -1,9 +1,10 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 import { test as base } from '@playwright/test'
 import { setupClerkTestingToken } from '@clerk/testing/playwright'
 
 /**
  * Custom Playwright test with Clerk authentication setup.
- * 
+ *
  * This extends the base test to automatically set up Clerk testing tokens
  * for each test, allowing tests to sign in users without manual authentication.
  */
@@ -11,7 +12,7 @@ export const test = base.extend({
   page: async ({ page }, use) => {
     // Set up Clerk testing token for this page
     await setupClerkTestingToken({ page })
-    
+
     // Use the page in the test
     await use(page)
   },
