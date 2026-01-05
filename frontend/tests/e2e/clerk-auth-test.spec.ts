@@ -20,7 +20,6 @@ test.describe('Clerk Auth Test', () => {
 
     // Verify user is authenticated in Clerk
     const clerkUserState = await page.evaluate(() => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const clerkWindow = window as unknown as { Clerk?: { user?: { id: string } } }
       return {
         hasUser: clerkWindow.Clerk?.user !== null && clerkWindow.Clerk?.user !== undefined,
