@@ -6,7 +6,7 @@ import { setupClerkTestingToken } from '@clerk/testing/playwright'
  * Custom Playwright test with Clerk authentication setup.
  *
  * This extends the base test to automatically set up Clerk testing tokens
- * for each test, allowing tests to sign in users without manual authentication.
+ * for each test, allowing tests to sign in users without hitting bot protection.
  */
 export const test = base.extend({
   page: async ({ page }, use) => {
