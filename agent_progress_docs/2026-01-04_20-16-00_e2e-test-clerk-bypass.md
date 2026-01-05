@@ -1,8 +1,8 @@
 # E2E Test Fix for Clerk Authentication
 
-**Date**: 2026-01-04  
-**Agent**: frontend-swe  
-**Issue**: E2E tests failing after Clerk integration  
+**Date**: 2026-01-04
+**Agent**: frontend-swe
+**Issue**: E2E tests failing after Clerk integration
 **Status**: ✅ RESOLVED
 
 ---
@@ -56,7 +56,7 @@ useEffect(() => {
     console.log('[Auth] E2E test mode detected, skipping Clerk token injection')
     return
   }
-  
+
   // Normal Clerk token injection for production
   // ...
 }, [getToken])
@@ -75,8 +75,8 @@ export const test = base.extend({
   page: async ({ page }, use) => {
     const originalGoto = page.goto.bind(page)
     page.goto = async (url: string, options?: Parameters<typeof originalGoto>[1]) => {
-      const urlWithParam = url.includes('?') 
-        ? `${url}&e2e-test=true` 
+      const urlWithParam = url.includes('?')
+        ? `${url}&e2e-test=true`
         : `${url}?e2e-test=true`
       return originalGoto(urlWithParam, options)
     }
@@ -205,11 +205,11 @@ $ npm run lint
 ```typescript
 test('should create portfolio', async ({ page }) => {
   await page.goto('/')  // Actually navigates to /?e2e-test=true
-  
+
   // Dashboard loads immediately (no sign-in required)
   const createButton = page.getByTestId('create-first-portfolio-btn')
   await createButton.click()  // ✅ Works!
-  
+
   // ... rest of test
 })
 ```

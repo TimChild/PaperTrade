@@ -1,8 +1,8 @@
 # Backend Clerk Authentication Implementation
 
-**Date**: 2026-01-04  
-**Agent**: backend-swe  
-**Task**: #053 - Implement Clerk Authentication (Backend Part)  
+**Date**: 2026-01-04
+**Agent**: backend-swe
+**Task**: #053 - Implement Clerk Authentication (Backend Part)
 **Status**: ✅ COMPLETE
 
 ---
@@ -68,11 +68,11 @@ class AuthenticatedUser:
 
 class AuthPort(Protocol):
     """Port for authentication operations."""
-    
+
     async def verify_token(self, token: str) -> AuthenticatedUser:
         """Verify token and return authenticated user."""
         ...
-    
+
     async def get_user(self, user_id: str) -> AuthenticatedUser | None:
         """Get user by ID."""
         ...
@@ -89,16 +89,16 @@ class AuthPort(Protocol):
 ```python
 class InMemoryAuthAdapter(AuthPort):
     """In-memory authentication adapter for testing."""
-    
+
     def __init__(self, users: dict[str, AuthenticatedUser] | None = None):
         self._users = users or {}
         self._tokens: dict[str, str] = {}
-    
+
     def add_user(self, user: AuthenticatedUser, token: str) -> None:
         """Add a user with their token for testing."""
         self._users[user.id] = user
         self._tokens[token] = user.id
-    
+
     async def verify_token(self, token: str) -> AuthenticatedUser:
         """Verify token and return user."""
         user_id = self._tokens.get(token)
@@ -120,20 +120,20 @@ class InMemoryAuthAdapter(AuthPort):
 ```python
 class ClerkAuthAdapter(AuthPort):
     """Clerk implementation of AuthPort."""
-    
+
     def __init__(self, secret_key: str):
         self._clerk = Clerk(bearer_auth=secret_key)
-    
+
     async def verify_token(self, token: str) -> AuthenticatedUser:
         """Verify JWT token with Clerk."""
         try:
             request_state = self._clerk.verify_token(token)
             if not request_state or not hasattr(request_state, "user_id"):
                 raise InvalidTokenError("Invalid or expired token")
-            
+
             user = self._clerk.users.get(user_id=request_state.user_id)
             email = user.email_addresses[0].email_address if user.email_addresses else ""
-            
+
             return AuthenticatedUser(id=user.id, email=email)
         except InvalidTokenError:
             raise
@@ -163,10 +163,10 @@ security = HTTPBearer()
 def get_auth_port() -> AuthPort:
     """Get authentication port implementation."""
     clerk_secret_key = os.getenv("CLERK_SECRET_KEY", "")
-    
+
     if clerk_secret_key and clerk_secret_key != "test":
         return ClerkAuthAdapter(secret_key=clerk_secret_key)
-    
+
     # Fall back to in-memory for testing
     return InMemoryAuthAdapter()
 
@@ -192,7 +192,7 @@ async def get_current_user_id(
     current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
 ) -> UUID:
     """Get current user ID as UUID from authenticated user.
-    
+
     Compatibility layer that converts Clerk user ID (string) to UUID.
     Creates deterministic UUID from Clerk user ID string.
     """
@@ -227,7 +227,7 @@ def get_test_auth_port() -> InMemoryAuthAdapter:
         )
         adapter.add_user(test_user, "test-token-default")
         get_test_auth_port._adapter = adapter
-    
+
     return get_test_auth_port._adapter
 
 # In client fixture:
@@ -256,7 +256,7 @@ def auth_headers() -> dict[str, str]:
 Updated **3 test files** to use Bearer token authentication:
 
 1. **test_portfolio_api.py**: 7 tests updated
-2. **test_transaction_api.py**: 6 tests updated  
+2. **test_transaction_api.py**: 6 tests updated
 3. **test_error_handling.py**: 12 tests updated
 
 **Changes**:
