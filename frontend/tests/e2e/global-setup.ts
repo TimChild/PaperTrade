@@ -7,8 +7,17 @@
  * - https://github.com/clerk/clerk-playwright-nextjs
  */
 import { clerkSetup } from '@clerk/testing/playwright'
+import { config } from 'dotenv'
+import { resolve, dirname } from 'path'
+import { fileURLToPath } from 'url'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 export default async function globalSetup() {
+  // Load environment variables from .env file in project root
+  // This works locally; in CI, env vars are already set and take precedence
+  config({ path: resolve(__dirname, '../../../.env') })
+
   // Check if Clerk testing credentials are available
   const secretKey = process.env.CLERK_SECRET_KEY
 
