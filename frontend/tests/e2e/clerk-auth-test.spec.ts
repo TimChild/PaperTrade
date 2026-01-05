@@ -4,7 +4,7 @@ import { test, expect } from './fixtures'
 test.describe('Clerk Auth Test', () => {
   test('should authenticate with Clerk and access protected API', async ({ page }) => {
     const email = process.env.E2E_CLERK_USER_EMAIL || 'test-e2e@papertrade.dev'
-    
+
     // Navigate to app first - Clerk must be loaded before signIn
     await page.goto('/')
     await page.waitForLoadState('networkidle')
@@ -17,12 +17,14 @@ test.describe('Clerk Auth Test', () => {
 
     // Wait for navigation to dashboard after successful sign-in
     await page.waitForURL('**/dashboard', { timeout: 10000 })
-    
+
     // Verify user is authenticated in Clerk
     const clerkUserState = await page.evaluate(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const clerkWindow = window as unknown as { Clerk?: { user?: { id: string } } }
       return {
-        hasUser: (window as any).Clerk?.user !== null && (window as any).Clerk?.user !== undefined,
-        userId: (window as any).Clerk?.user?.id,
+        hasUser: clerkWindow.Clerk?.user !== null && clerkWindow.Clerk?.user !== undefined,
+        userId: clerkWindow.Clerk?.user?.id,
       }
     })
     expect(clerkUserState.hasUser).toBe(true)

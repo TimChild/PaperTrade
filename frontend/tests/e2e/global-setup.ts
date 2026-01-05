@@ -3,7 +3,7 @@ import { clerkSetup } from '@clerk/testing/playwright'
 /**
  * Global setup for Playwright E2E tests.
  * This runs once before all tests.
- * 
+ *
  * Uses @clerk/testing's clerkSetup() to create a testing token.
  */
 export default async function globalSetup() {
