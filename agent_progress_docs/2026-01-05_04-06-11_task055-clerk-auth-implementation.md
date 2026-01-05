@@ -225,10 +225,10 @@ The test user must:
 
 ### 2. Email-Based Sign-In Strategy
 
-Using `emailAddress` parameter instead of `signInParams` with password because:
+E2E tests use Clerk's `emailAddress` parameter (email-based sign-in) instead of the password strategy with `signInParams` because:
 - Avoids 2FA/email verification triggers
 - Creates temporary sign-in token via Clerk API
-- Faster and more reliable for testing
+- Makes E2E authentication flows faster and more reliable for testing
 
 ### 3. Test Data Persistence
 
