@@ -7,15 +7,21 @@ test.describe('Trading Flow', () => {
     await page.goto('/')
     await page.waitForLoadState('networkidle')
 
-    // Sign in using Clerk testing (email-based sign-in)
+    // Sign in using Clerk testing with password strategy
     const email = process.env.E2E_CLERK_USER_EMAIL
-    if (!email) {
-      throw new Error('E2E_CLERK_USER_EMAIL environment variable is not set')
+    const password = process.env.E2E_CLERK_USER_PASSWORD
+    
+    if (!email || !password) {
+      throw new Error('E2E_CLERK_USER_EMAIL and E2E_CLERK_USER_PASSWORD environment variables must be set')
     }
 
     await clerk.signIn({
       page,
-      emailAddress: email,
+      signInParams: {
+        strategy: 'password',
+        identifier: email,
+        password: password,
+      },
     })
 
     // Wait for authentication to complete and redirect to dashboard
