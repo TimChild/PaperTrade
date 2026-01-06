@@ -35,12 +35,11 @@ class SnapshotCalculator:
             PortfolioSnapshot with calculated values
 
         Example:
-            >>> calculator = SnapshotCalculator()
             >>> holdings = [
             ...     ("AAPL", 10, Decimal("150.00")),
             ...     ("IBM", 5, Decimal("180.00"))
             ... ]
-            >>> snapshot = calculator.calculate_snapshot(
+            >>> snapshot = SnapshotCalculator.calculate_snapshot(
             ...     portfolio_id=uuid4(),
             ...     snapshot_date=date.today(),
             ...     cash_balance=Decimal("5000.00"),
@@ -50,14 +49,14 @@ class SnapshotCalculator:
             Decimal('7400.00')  # 5000 cash + 1500 AAPL + 900 IBM
         """
         # Calculate total value of all holdings
-        holdings_value = Decimal(
-            sum(Decimal(quantity) * price for _, quantity, price in holdings)
+        holdings_value = sum(
+            Decimal(quantity) * price for _, quantity, price in holdings
         )
 
         return PortfolioSnapshot.create(
             portfolio_id=portfolio_id,
             snapshot_date=snapshot_date,
             cash_balance=cash_balance,
-            holdings_value=holdings_value,
+            holdings_value=holdings_value if holdings_value else Decimal("0"),
             holdings_count=len(holdings),
         )
