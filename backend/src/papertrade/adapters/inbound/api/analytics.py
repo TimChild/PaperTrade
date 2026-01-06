@@ -156,9 +156,7 @@ async def get_performance(
     current_user_id: CurrentUserDep,
     portfolio_repo: PortfolioRepositoryDep,
     snapshot_repo: SnapshotRepositoryDep,
-    range: Annotated[
-        TimeRange, Query(alias="range")
-    ] = TimeRange.ONE_MONTH,
+    range: Annotated[TimeRange, Query(alias="range")] = TimeRange.ONE_MONTH,
 ) -> PerformanceResponse:
     """Get portfolio performance data for charts.
 

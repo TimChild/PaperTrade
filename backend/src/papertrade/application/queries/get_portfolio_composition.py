@@ -94,9 +94,7 @@ class GetPortfolioCompositionHandler:
         # Verify portfolio exists
         portfolio = await self._portfolio_repository.get(query.portfolio_id)
         if portfolio is None:
-            raise InvalidPortfolioError(
-                f"Portfolio not found: {query.portfolio_id}"
-            )
+            raise InvalidPortfolioError(f"Portfolio not found: {query.portfolio_id}")
 
         # Get all transactions to calculate current state
         transactions = await self._transaction_repository.get_by_portfolio(
@@ -117,12 +115,8 @@ class GetPortfolioCompositionHandler:
         # Add holdings with current market values
         for holding in holdings:
             try:
-                price_point = await self._market_data.get_current_price(
-                    holding.ticker
-                )
-                value = price_point.price.amount * Decimal(
-                    str(holding.quantity.shares)
-                )
+                price_point = await self._market_data.get_current_price(holding.ticker)
+                value = price_point.price.amount * Decimal(str(holding.quantity.shares))
                 total_value += value
 
                 items.append(
