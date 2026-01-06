@@ -3,10 +3,32 @@
 Implements AuthPort using Clerk's backend SDK for production authentication.
 """
 
+import logging
+
 from clerk_backend_api import Clerk
+from clerk_backend_api.security.types import AuthenticateRequestOptions, AuthStatus
 
 from papertrade.application.ports.auth_port import AuthenticatedUser, AuthPort
 from papertrade.domain.exceptions import InvalidTokenError
+
+logger = logging.getLogger(__name__)
+
+
+class SimpleRequest:
+    """Simple request object for Clerk's authenticate_request method.
+
+    Clerk's SDK expects a request object with a headers dictionary.
+    """
+
+    def __init__(self, token: str) -> None:
+        """Initialize request with Authorization header.
+
+        Args:
+            token: JWT token from the Authorization header
+        """
+        self.headers = {
+            "Authorization": f"Bearer {token}",
+        }
 
 
 class ClerkAuthAdapter(AuthPort):
@@ -44,18 +66,40 @@ class ClerkAuthAdapter(AuthPort):
             InvalidTokenError: If token is invalid, expired, or verification fails
         """
         try:
-            # Verify JWT with Clerk
-            # Note: Clerk SDK's verify_token is synchronous, but we use async
-            # signature for consistency with the port interface
-            request_state = self._clerk.verify_token(token)
+            # Create a request object with the token
+            request = SimpleRequest(token)
 
-            if not request_state or not hasattr(request_state, "user_id"):
-                raise InvalidTokenError("Invalid or expired token")
+            # Authenticate the request using Clerk's SDK
+            # Note: This is synchronous but we use async signature for port consistency
+            request_state = self._clerk.authenticate_request(
+                request=request, options=AuthenticateRequestOptions()
+            )
 
-            # Extract user ID from verified token
-            user_id = request_state.user_id
+            logger.info(f"Clerk auth status: {request_state.status}")
 
-            # Get full user details
+            # Check if authentication was successful
+            if request_state.status != AuthStatus.SIGNED_IN:
+                logger.warning(
+                    f"Auth failed: status={request_state.status}, "
+                    f"reason={request_state.reason}"
+                )
+                raise InvalidTokenError(
+                    f"Authentication failed: {request_state.reason}"
+                )
+
+            # Extract user ID from JWT payload (not from request_state.user_id)
+            if not request_state.payload:
+                raise InvalidTokenError("Token payload is missing")
+
+            user_id = request_state.payload.get("sub")
+            if not user_id:
+                raise InvalidTokenError(
+                    "User ID (sub claim) not found in token payload"
+                )
+
+            logger.info(f"Authenticated user ID: {user_id}")
+
+            # Get full user details from Clerk
             user = self._clerk.users.get(user_id=user_id)
 
             # Extract email (take first email address)
@@ -72,6 +116,7 @@ class ClerkAuthAdapter(AuthPort):
             raise
         except Exception as e:
             # Convert any Clerk SDK exceptions to our domain exception
+            logger.error(f"Token verification failed: {str(e)}", exc_info=True)
             raise InvalidTokenError(f"Token verification failed: {str(e)}") from e
 
     async def get_user(self, user_id: str) -> AuthenticatedUser | None:

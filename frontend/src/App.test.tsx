@@ -1,7 +1,34 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ClerkProvider } from '@clerk/clerk-react'
 import App from '@/App'
+
+// Mock Clerk hooks
+vi.mock('@clerk/clerk-react', async () => {
+  const actual = await vi.importActual('@clerk/clerk-react')
+  return {
+    ...actual,
+    ClerkProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    useAuth: () => ({
+      isLoaded: true,
+      isSignedIn: true,
+      userId: 'test-user-id',
+      getToken: async () => 'mock-token',
+    }),
+    useUser: () => ({
+      isLoaded: true,
+      isSignedIn: true,
+      user: {
+        id: 'test-user-id',
+        emailAddresses: [{ emailAddress: 'test@example.com' }],
+      },
+    }),
+    SignedIn: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    SignedOut: () => null,
+    UserButton: () => null,
+  }
+})
 
 // Create a test query client
 function createTestQueryClient() {
@@ -19,9 +46,11 @@ describe('App', () => {
     const queryClient = createTestQueryClient()
 
     render(
-      <QueryClientProvider client={queryClient}>
-        <App />
-      </QueryClientProvider>
+      <ClerkProvider publishableKey="test">
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </ClerkProvider>
     )
 
     // Wait for data to load (MSW will respond)
@@ -34,9 +63,11 @@ describe('App', () => {
     const queryClient = createTestQueryClient()
 
     render(
-      <QueryClientProvider client={queryClient}>
-        <App />
-      </QueryClientProvider>
+      <ClerkProvider publishableKey="test">
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </ClerkProvider>
     )
 
     await waitFor(() => {
@@ -48,9 +79,11 @@ describe('App', () => {
     const queryClient = createTestQueryClient()
 
     render(
-      <QueryClientProvider client={queryClient}>
-        <App />
-      </QueryClientProvider>
+      <ClerkProvider publishableKey="test">
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      </ClerkProvider>
     )
 
     // Wait for portfolio data to load

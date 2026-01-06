@@ -163,6 +163,9 @@ jobs:
 
       - name: Start Docker services
         run: task docker:up
+        env:
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
 
       - name: Wait for services to be ready
         run: |
@@ -171,6 +174,9 @@ jobs:
 
       - name: Start backend and frontend servers
         run: task docker:up:all
+        env:
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
 
       - name: Wait for backend and frontend to be ready
         run: |
@@ -179,6 +185,13 @@ jobs:
 
       - name: Run E2E tests
         run: task test:e2e
+        env:
+          # CLERK_PUBLISHABLE_KEY is needed by @clerk/testing's clerkSetup()
+          # VITE_CLERK_PUBLISHABLE_KEY is needed by the frontend app (Vite exposes VITE_ prefixed vars)
+          CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
+          E2E_CLERK_USER_EMAIL: ${{ vars.E2E_CLERK_USER_EMAIL }}
 
       - name: Upload Playwright report
         if: always()

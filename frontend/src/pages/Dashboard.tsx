@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { usePortfolios, usePortfolioBalance } from '@/hooks/usePortfolio'
 import { useHoldings } from '@/hooks/useHoldings'
 import { useTransactions } from '@/hooks/useTransactions'
@@ -15,6 +15,7 @@ import { adaptPortfolio, adaptHolding, adaptTransaction } from '@/utils/adapters
 
 export function Dashboard(): React.JSX.Element {
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const navigate = useNavigate()
   const { data: portfolios, isLoading: portfoliosLoading, isError, error } = usePortfolios()
 
   // For the dashboard, we'll show the first portfolio
@@ -193,9 +194,10 @@ export function Dashboard(): React.JSX.Element {
         className="max-w-md"
       >
         <CreatePortfolioForm
-          onSuccess={() => {
+          onSuccess={(portfolioId) => {
             setShowCreateModal(false)
-            // Portfolio list will be automatically refreshed via query invalidation
+            // Navigate to the newly created portfolio so user can see it immediately
+            navigate(`/portfolio/${portfolioId}`)
           }}
           onCancel={() => setShowCreateModal(false)}
         />

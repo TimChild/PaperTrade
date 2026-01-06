@@ -81,7 +81,7 @@ export function PortfolioSummaryCard({
       <div className="space-y-4">
         <div>
           <p className="text-sm text-gray-600 dark:text-gray-400">Total Value</p>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">
+          <p className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="portfolio-total-value">
             {formatCurrency(totalValue)}
           </p>
           {staleness && (
@@ -94,11 +94,11 @@ export function PortfolioSummaryCard({
         <div>
           <p className="text-sm text-gray-600 dark:text-gray-400">Daily Change</p>
           <div className="flex items-baseline gap-2">
-            <p className={`text-xl font-semibold ${changeColorClass}`}>
+            <p className={`text-xl font-semibold ${changeColorClass}`} data-testid="portfolio-daily-change">
               {isPositiveChange ? '+' : ''}
               {formatCurrency(portfolio.dailyChange)}
             </p>
-            <p className={`text-lg font-medium ${changeColorClass}`}>
+            <p className={`text-lg font-medium ${changeColorClass}`} data-testid="portfolio-daily-change-percent">
               ({formatPercent(portfolio.dailyChangePercent)})
             </p>
           </div>
@@ -107,7 +107,7 @@ export function PortfolioSummaryCard({
         <div className="border-t border-gray-200 pt-4 dark:border-gray-700">
           <div className="flex justify-between">
             <p className="text-sm text-gray-600 dark:text-gray-400">Cash Balance</p>
-            <p className="text-sm font-medium text-gray-900 dark:text-white">
+            <p className="text-sm font-medium text-gray-900 dark:text-white" data-testid="portfolio-cash-balance">
               {formatCurrency(portfolio.cashBalance)}
             </p>
           </div>

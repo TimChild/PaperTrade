@@ -7,50 +7,36 @@ import type { ErrorResponse } from './types'
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
 
-/**
- * Get or create a stable mock user ID for Phase 1.
- * Stored in localStorage to persist across sessions.
- *
- * TODO: Replace with real authentication in Phase 2
- */
-function getMockUserId(): string {
-  const STORAGE_KEY = 'papertrade_mock_user_id'
+// Global token setter for Clerk authentication
+// This will be called from AuthProvider which has access to Clerk's useAuth
+let tokenGetter: (() => Promise<string | null>) | null = null
 
-  // Check localStorage for existing ID
-  const stored = localStorage.getItem(STORAGE_KEY)
-  if (stored) {
-    return stored
-  }
-
-  // Generate new ID and store it
-  const newId = crypto.randomUUID()
-  localStorage.setItem(STORAGE_KEY, newId)
-  return newId
+export const setAuthTokenGetter = (getter: () => Promise<string | null>) => {
+  tokenGetter = getter
 }
-
-const MOCK_USER_ID = getMockUserId()
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
-    'X-User-Id': MOCK_USER_ID, // Mock authentication header (persisted in localStorage)
   },
   timeout: 10000,
 })
 
-// Request interceptor (for future auth token injection)
+// Request interceptor to add authentication token
 apiClient.interceptors.request.use(
-  (config) => {
-    // Log the full URL for debugging (especially useful in CI)
-    const fullUrl = `${config.baseURL}${config.url}`
-    console.log(`[API Request] ${config.method?.toUpperCase()} ${fullUrl}`)
-
-    // Add auth token when implemented
-    // const token = localStorage.getItem('authToken')
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`
-    // }
+  async (config) => {
+    // Get token from Clerk if tokenGetter is set
+    if (tokenGetter) {
+      try {
+        const token = await tokenGetter()
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`
+        }
+      } catch (error) {
+        console.error('Failed to get auth token:', error)
+      }
+    }
     return config
   },
   (error) => {
