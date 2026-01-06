@@ -248,9 +248,7 @@ async def calculate_daily_snapshots() -> None:
     finally:
         # Log summary
         duration = datetime.now(UTC) - start_time
-        logger.info(
-            f"Daily snapshot job completed in {duration.total_seconds():.1f}s"
-        )
+        logger.info(f"Daily snapshot job completed in {duration.total_seconds():.1f}s")
 
 
 async def start_scheduler(config: SchedulerConfig | None = None) -> None:

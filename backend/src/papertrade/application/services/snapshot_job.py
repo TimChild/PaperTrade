@@ -131,8 +131,7 @@ class SnapshotJobService:
             >>> print(f"Backfilled {result['succeeded']} snapshots")
         """
         logger.info(
-            f"Backfilling snapshots for {portfolio_id} "
-            f"from {start_date} to {end_date}"
+            f"Backfilling snapshots for {portfolio_id} from {start_date} to {end_date}"
         )
 
         results: dict[str, int] = {"processed": 0, "succeeded": 0, "failed": 0}
@@ -208,7 +207,7 @@ class SnapshotJobService:
                     holdings_data.append(
                         (
                             holding.ticker.symbol,
-                            holding.quantity.shares,
+                            int(holding.quantity.shares),
                             price_point.price.amount,
                         )
                     )

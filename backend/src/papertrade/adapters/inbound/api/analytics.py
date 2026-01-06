@@ -262,7 +262,7 @@ async def backfill_portfolio_snapshots(
     end_date: date,
     snapshot_job: SnapshotJobDep,
     current_user_id: CurrentUserDep,
-) -> dict[str, int | str]:
+) -> dict[str, str | dict[str, int]]:
     """Backfill historical snapshots for a portfolio.
 
     Generates snapshots for each day in the specified date range.
@@ -329,7 +329,7 @@ admin_router = APIRouter(prefix="/analytics", tags=["analytics-admin"])
 async def trigger_daily_snapshots(
     snapshot_job: SnapshotJobDep,
     current_user_id: CurrentUserDep,
-) -> dict[str, int | str]:
+) -> dict[str, str | dict[str, int]]:
     """Manually trigger daily snapshot job for all portfolios.
 
     Calculates snapshots for all portfolios for today's date.
