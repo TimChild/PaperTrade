@@ -4,13 +4,14 @@ These models represent the database schema and provide conversion functions
 to/from domain entities.
 """
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from uuid import UUID
 
 from sqlmodel import Field, Index, SQLModel
 
 from papertrade.domain.entities.portfolio import Portfolio
+from papertrade.domain.entities.portfolio_snapshot import PortfolioSnapshot
 from papertrade.domain.entities.transaction import Transaction, TransactionType
 from papertrade.domain.value_objects.money import Money
 from papertrade.domain.value_objects.quantity import Quantity
@@ -212,5 +213,87 @@ class TransactionModel(SQLModel, table=True):
             price_per_share_amount=price_amount,
             price_per_share_currency=price_currency,
             notes=transaction.notes,
+            created_at=created_at_naive,
+        )
+
+
+class PortfolioSnapshotModel(SQLModel, table=True):
+    """Database model for portfolio snapshots.
+
+    Snapshots represent the daily state of a portfolio for analytics.
+    One snapshot per portfolio per day (unique constraint enforced).
+
+    Attributes:
+        id: Primary key (UUID)
+        portfolio_id: Foreign key to portfolio (UUID) - indexed
+        snapshot_date: Date of snapshot (end-of-day)
+        total_value: Total portfolio value (cash + holdings)
+        cash_balance: Available cash
+        holdings_value: Total value of all holdings
+        holdings_count: Number of unique stocks held
+        created_at: When snapshot was calculated
+    """
+
+    __tablename__ = "portfolio_snapshots"  # type: ignore[assignment]  # SQLModel requires string literal for __tablename__
+    __table_args__ = (
+        Index("idx_snapshot_portfolio_id", "portfolio_id"),
+        Index("idx_snapshot_portfolio_date", "portfolio_id", "snapshot_date"),
+        Index("idx_snapshot_date", "snapshot_date"),
+    )
+
+    id: UUID = Field(primary_key=True)
+    portfolio_id: UUID = Field(index=True)
+    snapshot_date: date
+    total_value: Decimal = Field(max_digits=15, decimal_places=2)
+    cash_balance: Decimal = Field(max_digits=15, decimal_places=2)
+    holdings_value: Decimal = Field(max_digits=15, decimal_places=2)
+    holdings_count: int
+    created_at: datetime
+
+    def to_domain(self) -> PortfolioSnapshot:
+        """Convert database model to domain entity.
+
+        Returns:
+            PortfolioSnapshot domain entity
+        """
+        # Database stores naive UTC datetimes - add UTC timezone back
+        created_at_utc = self.created_at.replace(tzinfo=UTC)
+
+        return PortfolioSnapshot(
+            id=self.id,
+            portfolio_id=self.portfolio_id,
+            snapshot_date=self.snapshot_date,
+            total_value=self.total_value,
+            cash_balance=self.cash_balance,
+            holdings_value=self.holdings_value,
+            holdings_count=self.holdings_count,
+            created_at=created_at_utc,
+        )
+
+    @classmethod
+    def from_domain(cls, snapshot: PortfolioSnapshot) -> "PortfolioSnapshotModel":
+        """Convert domain entity to database model.
+
+        Args:
+            snapshot: Domain PortfolioSnapshot entity
+
+        Returns:
+            PortfolioSnapshotModel for database persistence
+        """
+        # Strip timezone for PostgreSQL TIMESTAMP WITHOUT TIME ZONE columns
+        if snapshot.created_at.tzinfo:
+            created_at_naive = snapshot.created_at.astimezone(UTC).replace(tzinfo=None)
+        else:
+            # Assume naive datetimes are already UTC (per domain contract)
+            created_at_naive = snapshot.created_at
+
+        return cls(
+            id=snapshot.id,
+            portfolio_id=snapshot.portfolio_id,
+            snapshot_date=snapshot.snapshot_date,
+            total_value=snapshot.total_value,
+            cash_balance=snapshot.cash_balance,
+            holdings_value=snapshot.holdings_value,
+            holdings_count=snapshot.holdings_count,
             created_at=created_at_naive,
         )
