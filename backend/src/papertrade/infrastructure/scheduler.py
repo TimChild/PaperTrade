@@ -1,8 +1,8 @@
 """Background job scheduler for automated price refresh and maintenance tasks.
 
 This module provides a background scheduler using APScheduler to run periodic jobs
-like price refresh, data cleanup, and other maintenance tasks without blocking the
-main API server.
+like price refresh, snapshot calculation, and other maintenance tasks without blocking
+the main API server.
 
 The scheduler is integrated into the FastAPI application lifecycle and starts/stops
 automatically with the application.
@@ -15,6 +15,15 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 from papertrade.adapters.inbound.api.dependencies import get_market_data
+from papertrade.adapters.outbound.database.portfolio_repository import (
+    SQLModelPortfolioRepository,
+)
+from papertrade.adapters.outbound.database.snapshot_repository import (
+    SQLModelSnapshotRepository,
+)
+from papertrade.adapters.outbound.database.transaction_repository import (
+    SQLModelTransactionRepository,
+)
 from papertrade.adapters.outbound.repositories.watchlist_manager import (
     WatchlistManager,
 )
@@ -22,6 +31,7 @@ from papertrade.application.queries.get_active_tickers import (
     GetActiveTickersHandler,
     GetActiveTickersQuery,
 )
+from papertrade.application.services.snapshot_job import SnapshotJobService
 from papertrade.infrastructure.database import async_session_maker
 
 logger = logging.getLogger(__name__)
@@ -186,6 +196,63 @@ async def refresh_active_stocks(config: SchedulerConfig) -> None:
         )
 
 
+async def calculate_daily_snapshots() -> None:
+    """Background job to calculate daily portfolio snapshots.
+
+    This job:
+    1. Gets all portfolios
+    2. For each portfolio, calculates current snapshot
+    3. Saves snapshot to database for analytics
+
+    The job is designed to be idempotent and can be safely re-run.
+    Snapshots are upserted (updated if already exist for the date).
+    """
+    logger.info("Starting daily snapshot calculation job")
+    start_time = datetime.now(UTC)
+
+    try:
+        # Create database session
+        async with async_session_maker() as session:
+            # Create repositories
+            portfolio_repo = SQLModelPortfolioRepository(session)
+            transaction_repo = SQLModelTransactionRepository(session)
+            snapshot_repo = SQLModelSnapshotRepository(session)
+
+            # Get market data adapter
+            market_data = await get_market_data(session)
+
+            # Create snapshot job service
+            snapshot_service = SnapshotJobService(
+                portfolio_repo=portfolio_repo,
+                transaction_repo=transaction_repo,
+                snapshot_repo=snapshot_repo,
+                market_data=market_data,
+            )
+
+            # Run daily snapshot
+            results = await snapshot_service.run_daily_snapshot()
+
+            # Commit all snapshots
+            await session.commit()
+
+            logger.info(
+                f"Daily snapshot job completed: "
+                f"{results['succeeded']}/{results['processed']} succeeded, "
+                f"{results['failed']} failed"
+            )
+
+    except Exception as e:
+        logger.error(f"Daily snapshot job failed: {e}", exc_info=True)
+        raise
+
+    finally:
+        # Log summary
+        duration = datetime.now(UTC) - start_time
+        logger.info(
+            f"Daily snapshot job completed in {duration.total_seconds():.1f}s"
+        )
+
+
 async def start_scheduler(config: SchedulerConfig | None = None) -> None:
     """Initialize and start the background scheduler.
 
@@ -228,6 +295,18 @@ async def start_scheduler(config: SchedulerConfig | None = None) -> None:
         f"Scheduled price refresh job with cron: {config.refresh_cron} "
         f"(timezone: {config.timezone})"
     )
+
+    # Add daily snapshot job (midnight UTC)
+    _scheduler.add_job(
+        calculate_daily_snapshots,
+        trigger=CronTrigger(hour=0, minute=0, timezone="UTC"),
+        id="daily_portfolio_snapshot",
+        name="Calculate Daily Portfolio Snapshots",
+        max_instances=1,
+        replace_existing=True,
+    )
+
+    logger.info("Scheduled daily snapshot job at midnight UTC")
 
     # Start the scheduler
     _scheduler.start()

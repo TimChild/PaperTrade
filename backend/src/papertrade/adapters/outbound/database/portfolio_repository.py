@@ -99,3 +99,16 @@ class SQLModelPortfolioRepository:
         statement = select(PortfolioModel.id).where(PortfolioModel.id == portfolio_id)
         result = await self._session.exec(statement)
         return result.first() is not None
+
+    async def list_all(self) -> list[Portfolio]:
+        """Retrieve all portfolios across all users.
+
+        Portfolios are returned in creation order (oldest first).
+
+        Returns:
+            List of Portfolio entities (may be empty)
+        """
+        statement = select(PortfolioModel).order_by(PortfolioModel.created_at.asc())  # type: ignore[attr-defined]  # SQLModel field has SQLAlchemy column methods
+        result = await self._session.exec(statement)
+        models = result.all()
+        return [model.to_domain() for model in models]

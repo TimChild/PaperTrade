@@ -3,14 +3,16 @@
 Provides REST endpoints for portfolio analytics:
 - Performance data over time
 - Portfolio composition (asset allocation)
+- Snapshot job management (admin)
 """
 
+import logging
 from datetime import date
 from decimal import Decimal
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 
 from papertrade.adapters.inbound.api.dependencies import (
@@ -19,6 +21,7 @@ from papertrade.adapters.inbound.api.dependencies import (
     PortfolioRepositoryDep,
     SnapshotRepositoryDep,
     TransactionRepositoryDep,
+    get_snapshot_job,
 )
 from papertrade.application.queries.get_portfolio_composition import (
     GetPortfolioCompositionHandler,
@@ -31,7 +34,10 @@ from papertrade.application.queries.get_portfolio_performance import (
     GetPortfolioPerformanceResult,
     TimeRange,
 )
+from papertrade.application.services.snapshot_job import SnapshotJobService
 from papertrade.domain.exceptions import InvalidPortfolioError
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/portfolios", tags=["analytics"])
 
@@ -241,3 +247,114 @@ async def get_composition(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
         ) from e
+
+
+# Route Handlers - Snapshot Job Admin Endpoints
+
+
+@router.post("/{portfolio_id}/snapshots/backfill", status_code=201)
+async def backfill_portfolio_snapshots(
+    portfolio_id: UUID,
+    start_date: date,
+    end_date: date,
+    snapshot_job: SnapshotJobService = Depends(get_snapshot_job),
+    current_user_id: UUID = Depends(CurrentUserDep),
+) -> dict[str, int | str]:
+    """Backfill historical snapshots for a portfolio.
+
+    Generates snapshots for each day in the specified date range.
+    Useful for new portfolios or fixing gaps in snapshot history.
+
+    **Admin only** (TODO: Add admin authentication)
+
+    Args:
+        portfolio_id: Portfolio to backfill
+        start_date: Start of date range (inclusive)
+        end_date: End of date range (inclusive)
+        snapshot_job: Snapshot job service (injected)
+        current_user_id: Current user ID (injected, for future admin check)
+
+    Returns:
+        dict with results: {"status": "completed", "results": {...}}
+
+    Raises:
+        HTTPException: 404 if portfolio not found
+        HTTPException: 400 if date range is invalid
+        HTTPException: 501 if service not configured
+    """
+    # Validate date range
+    if start_date > end_date:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"start_date ({start_date}) must be <= end_date ({end_date})",
+        )
+
+    # TODO: Add admin authentication check
+    # TODO: Verify user owns the portfolio
+
+    logger.info(
+        f"Backfill requested for portfolio {portfolio_id} "
+        f"from {start_date} to {end_date}"
+    )
+
+    try:
+        results = await snapshot_job.backfill_snapshots(
+            portfolio_id=portfolio_id,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        return {"status": "completed", "results": results}
+    except ValueError as e:
+        # Portfolio not found
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        ) from e
+    except Exception as e:
+        logger.error(f"Backfill failed for portfolio {portfolio_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Backfill failed: {str(e)}",
+        ) from e
+
+
+# Separate router for admin-level snapshot operations
+admin_router = APIRouter(prefix="/analytics", tags=["analytics-admin"])
+
+
+@admin_router.post("/snapshots/daily", status_code=201)
+async def trigger_daily_snapshots(
+    snapshot_job: SnapshotJobService = Depends(get_snapshot_job),
+    current_user_id: UUID = Depends(CurrentUserDep),
+) -> dict[str, int | str]:
+    """Manually trigger daily snapshot job for all portfolios.
+
+    Calculates snapshots for all portfolios for today's date.
+    Snapshots are upserted (updated if already exist).
+
+    **Admin only** (TODO: Add admin authentication)
+
+    Args:
+        snapshot_job: Snapshot job service (injected)
+        current_user_id: Current user ID (injected, for future admin check)
+
+    Returns:
+        dict with results: {"status": "completed", "results": {...}}
+
+    Raises:
+        HTTPException: 501 if service not configured
+    """
+    # TODO: Add admin authentication check
+
+    logger.info("Manual daily snapshot triggered")
+
+    try:
+        results = await snapshot_job.run_daily_snapshot()
+        return {"status": "completed", "results": results}
+    except Exception as e:
+        logger.error(f"Daily snapshot failed: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Daily snapshot failed: {str(e)}",
+        ) from e
+

@@ -45,6 +45,11 @@ class InMemoryPortfolioRepository:
         with self._lock:
             return portfolio_id in self._portfolios
 
+    async def list_all(self) -> list[Portfolio]:
+        """Retrieve all portfolios, ordered by creation date."""
+        with self._lock:
+            return sorted(self._portfolios.values(), key=lambda p: p.created_at)
+
     def clear(self) -> None:
         """Clear all portfolios (for testing)."""
         with self._lock:
