@@ -64,7 +64,17 @@
 - ⏳ Holdings composition (pie charts)
 - ⏳ Simple backtesting (time-travel trades)
 - **Value**: Data-driven decision making
-- **Estimated Effort**: 2-3 weeks
+- **Estimated Effort**: 3-4 weeks
+
+**Phase 3c Task Breakdown** (agent_tasks/):
+| Task | Description | Depends On | Estimate |
+|------|-------------|------------|----------|
+| 056 | Domain Layer (PortfolioSnapshot, PerformanceMetrics) | - | 2-3 days |
+| 057 | Database & Repository (snapshot storage) | 056 | 2 days |
+| 058 | API Endpoints (performance, composition) | 056, 057 | 2-3 days |
+| 059 | Background Snapshot Job (daily calculation) | 056, 057 | 2 days |
+| 060 | Frontend Charts (Recharts components) | 056-059 | 4-5 days |
+| 061 | Backtesting Feature (as_of trades) | 056-060 | 3-4 days |
 
 **Architecture Decision Records**:
 - SELL before Auth: High user value, no dependencies, fast to implement
