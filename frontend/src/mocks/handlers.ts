@@ -207,4 +207,65 @@ export const handlers = [
       interval: '1day',
     })
   }),
+
+  // Get portfolio performance analytics
+  http.get(`${API_BASE_URL}/portfolios/:id/performance`, ({ request }) => {
+    const url = new URL(request.url)
+    const range = url.searchParams.get('range') || '1M'
+
+    return HttpResponse.json({
+      portfolio_id: '00000000-0000-0000-0000-000000000001',
+      range,
+      data_points: [
+        {
+          date: '2026-01-01',
+          total_value: 10000,
+          cash_balance: 10000,
+          holdings_value: 0,
+        },
+        {
+          date: '2026-01-02',
+          total_value: 10500,
+          cash_balance: 5000,
+          holdings_value: 5500,
+        },
+      ],
+      metrics: {
+        starting_value: 10000,
+        ending_value: 10500,
+        absolute_gain: 500,
+        percentage_gain: 5.0,
+        highest_value: 10500,
+        lowest_value: 10000,
+      },
+    })
+  }),
+
+  // Get portfolio composition analytics
+  http.get(`${API_BASE_URL}/portfolios/:id/composition`, () => {
+    return HttpResponse.json({
+      portfolio_id: '00000000-0000-0000-0000-000000000001',
+      total_value: 12500,
+      composition: [
+        {
+          ticker: 'IBM',
+          value: 5500,
+          percentage: 44.0,
+          quantity: 30,
+        },
+        {
+          ticker: 'AAPL',
+          value: 4000,
+          percentage: 32.0,
+          quantity: 20,
+        },
+        {
+          ticker: 'CASH',
+          value: 3000,
+          percentage: 24.0,
+          quantity: null,
+        },
+      ],
+    })
+  }),
 ]
