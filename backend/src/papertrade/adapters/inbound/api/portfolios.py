@@ -112,7 +112,9 @@ class TradeRequest(BaseModel):
     ticker: str = Field(..., min_length=1, max_length=5)
     quantity: Decimal = Field(..., gt=0, decimal_places=4)
     as_of: datetime | None = Field(
-        default=None, description="Optional timestamp for backtesting"
+        default=None,
+        description="Optional ISO 8601 timestamp (UTC) for backtesting. "
+        "Trade will use historical price from this date/time.",
     )
 
     @field_validator("as_of")

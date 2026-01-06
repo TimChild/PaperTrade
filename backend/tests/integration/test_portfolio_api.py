@@ -4,9 +4,24 @@ These tests verify that the portfolio endpoints work correctly end-to-end,
 including database persistence and proper error handling.
 """
 
+from datetime import datetime
 from uuid import UUID
 
 from fastapi.testclient import TestClient
+
+
+def _parse_iso_datetime(iso_string: str) -> datetime:
+    """Parse ISO 8601 datetime string to datetime object.
+
+    Handles both 'Z' suffix and '+00:00' timezone formats.
+
+    Args:
+        iso_string: ISO 8601 formatted datetime string
+
+    Returns:
+        datetime object in UTC timezone
+    """
+    return datetime.fromisoformat(iso_string.replace("Z", "+00:00"))
 
 
 def test_create_portfolio_with_initial_deposit(
@@ -413,9 +428,7 @@ def test_execute_trade_with_as_of_uses_historical_price(
     assert buy_transaction["ticker"] == "AAPL"
     assert buy_transaction["quantity"] == "10.0000"
     # Verify the timestamp matches the backtest date (within a second)
-    transaction_timestamp = datetime.fromisoformat(
-        buy_transaction["timestamp"].replace("Z", "+00:00")
-    )
+    transaction_timestamp = _parse_iso_datetime(buy_transaction["timestamp"])
     # Allow 1 second tolerance for timestamp comparison
     time_diff = abs((transaction_timestamp - backtest_date).total_seconds())
     assert time_diff < 1.0
@@ -470,9 +483,7 @@ def test_execute_trade_without_as_of_uses_current_price(
     assert len(buy_transactions) == 1
 
     buy_transaction = buy_transactions[0]
-    transaction_timestamp = datetime.fromisoformat(
-        buy_transaction["timestamp"].replace("Z", "+00:00")
-    )
+    transaction_timestamp = _parse_iso_datetime(buy_transaction["timestamp"])
 
     # Transaction should be within a few seconds of now
     assert before_trade <= transaction_timestamp <= after_trade + timedelta(seconds=5)
