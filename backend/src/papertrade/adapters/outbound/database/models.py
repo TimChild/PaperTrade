@@ -236,13 +236,12 @@ class PortfolioSnapshotModel(SQLModel, table=True):
 
     __tablename__ = "portfolio_snapshots"  # type: ignore[assignment]  # SQLModel requires string literal for __tablename__
     __table_args__ = (
-        Index("idx_snapshot_portfolio_id", "portfolio_id"),
         Index("idx_snapshot_portfolio_date", "portfolio_id", "snapshot_date"),
         Index("idx_snapshot_date", "snapshot_date"),
     )
 
     id: UUID = Field(primary_key=True)
-    portfolio_id: UUID = Field(index=True)
+    portfolio_id: UUID = Field(index=False)  # Index covered by composite index
     snapshot_date: date
     total_value: Decimal = Field(max_digits=15, decimal_places=2)
     cash_balance: Decimal = Field(max_digits=15, decimal_places=2)

@@ -152,12 +152,16 @@ class SQLModelSnapshotRepository:
         Returns:
             Count of snapshots deleted (0 if none existed)
         """
-        # First, count how many we're about to delete
-        count_statement = select(PortfolioSnapshotModel).where(
-            PortfolioSnapshotModel.portfolio_id == portfolio_id
+        # Count snapshots before deleting (using scalar query for efficiency)
+        from sqlmodel import func
+
+        count_statement = (
+            select(func.count())
+            .select_from(PortfolioSnapshotModel)
+            .where(PortfolioSnapshotModel.portfolio_id == portfolio_id)
         )
         count_result = await self._session.exec(count_statement)
-        count = len(count_result.all())
+        count = count_result.one()
 
         # Now delete them
         statement = delete(PortfolioSnapshotModel).where(
