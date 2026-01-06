@@ -41,6 +41,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/portfolios", tags=["analytics"])
 
+# Type alias for dependency injection
+SnapshotJobDep = Annotated[SnapshotJobService, Depends(get_snapshot_job)]
+
 
 # Response Models
 
@@ -257,8 +260,8 @@ async def backfill_portfolio_snapshots(
     portfolio_id: UUID,
     start_date: date,
     end_date: date,
-    snapshot_job: SnapshotJobService = Depends(get_snapshot_job),
-    current_user_id: UUID = Depends(CurrentUserDep),
+    snapshot_job: SnapshotJobDep,
+    current_user_id: CurrentUserDep,
 ) -> dict[str, int | str]:
     """Backfill historical snapshots for a portfolio.
 
@@ -324,8 +327,8 @@ admin_router = APIRouter(prefix="/analytics", tags=["analytics-admin"])
 
 @admin_router.post("/snapshots/daily", status_code=201)
 async def trigger_daily_snapshots(
-    snapshot_job: SnapshotJobService = Depends(get_snapshot_job),
-    current_user_id: UUID = Depends(CurrentUserDep),
+    snapshot_job: SnapshotJobDep,
+    current_user_id: CurrentUserDep,
 ) -> dict[str, int | str]:
     """Manually trigger daily snapshot job for all portfolios.
 

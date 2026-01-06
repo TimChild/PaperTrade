@@ -58,9 +58,10 @@ class SnapshotJobService:
     ) -> dict[str, int]:
         """Calculate snapshots for all portfolios for the given date.
 
-        This method is designed to be called by a scheduled job (e.g., daily at midnight).
-        It processes all portfolios and handles errors gracefully, continuing to process
-        remaining portfolios even if some fail.
+        This method is designed to be called by a scheduled job
+        (e.g., daily at midnight).
+        It processes all portfolios and handles errors gracefully, continuing
+        to process remaining portfolios even if some fail.
 
         Args:
             snapshot_date: Date for the snapshot (defaults to today)
@@ -97,7 +98,8 @@ class SnapshotJobService:
                 logger.error(f"Failed to snapshot portfolio {portfolio.id}: {e}")
 
         logger.info(
-            f"Daily snapshot complete: {results['succeeded']}/{results['processed']} succeeded"
+            f"Daily snapshot complete: "
+            f"{results['succeeded']}/{results['processed']} succeeded"
         )
         return results
 

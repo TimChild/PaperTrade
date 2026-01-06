@@ -1,11 +1,14 @@
 """Tests for SnapshotJobService."""
 
-import pytest
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from uuid import uuid4
 
-from papertrade.application.exceptions import MarketDataUnavailableError
+import pytest
+
+from papertrade.adapters.outbound.market_data.in_memory_adapter import (
+    InMemoryMarketDataAdapter,
+)
 from papertrade.application.ports.in_memory_portfolio_repository import (
     InMemoryPortfolioRepository,
 )
@@ -13,9 +16,6 @@ from papertrade.application.ports.in_memory_transaction_repository import (
     InMemoryTransactionRepository,
 )
 from papertrade.application.services.snapshot_job import SnapshotJobService
-from papertrade.adapters.outbound.market_data.in_memory_adapter import (
-    InMemoryMarketDataAdapter,
-)
 from papertrade.domain.entities.portfolio import Portfolio
 from papertrade.domain.entities.transaction import Transaction, TransactionType
 from papertrade.domain.value_objects.money import Money
@@ -76,9 +76,7 @@ class InMemorySnapshotRepository:
     async def delete_by_portfolio(self, portfolio_id):  # type: ignore[no-untyped-def]
         """Delete all snapshots for a portfolio."""
         count = sum(1 for s in self._snapshots if s.portfolio_id == portfolio_id)
-        self._snapshots = [
-            s for s in self._snapshots if s.portfolio_id != portfolio_id
-        ]
+        self._snapshots = [s for s in self._snapshots if s.portfolio_id != portfolio_id]
         return count
 
 
@@ -96,9 +94,24 @@ class TestRunDailySnapshot:
 
         # Create 3 portfolios
         user_id = uuid4()
-        portfolio1 = Portfolio(id=uuid4(), user_id=user_id, name="Portfolio 1", created_at=datetime.now(UTC))
-        portfolio2 = Portfolio(id=uuid4(), user_id=user_id, name="Portfolio 2", created_at=datetime.now(UTC))
-        portfolio3 = Portfolio(id=uuid4(), user_id=user_id, name="Portfolio 3", created_at=datetime.now(UTC))
+        portfolio1 = Portfolio(
+            id=uuid4(),
+            user_id=user_id,
+            name="Portfolio 1",
+            created_at=datetime.now(UTC),
+        )
+        portfolio2 = Portfolio(
+            id=uuid4(),
+            user_id=user_id,
+            name="Portfolio 2",
+            created_at=datetime.now(UTC),
+        )
+        portfolio3 = Portfolio(
+            id=uuid4(),
+            user_id=user_id,
+            name="Portfolio 3",
+            created_at=datetime.now(UTC),
+        )
 
         await portfolio_repo.save(portfolio1)
         await portfolio_repo.save(portfolio2)
@@ -154,7 +167,12 @@ class TestRunDailySnapshot:
         market_data = InMemoryMarketDataAdapter()
 
         user_id = uuid4()
-        portfolio = Portfolio(id=uuid4(), user_id=user_id, name="Test Portfolio", created_at=datetime.now(UTC))
+        portfolio = Portfolio(
+            id=uuid4(),
+            user_id=user_id,
+            name="Test Portfolio",
+            created_at=datetime.now(UTC),
+        )
         await portfolio_repo.save(portfolio)
 
         service = SnapshotJobService(
@@ -188,7 +206,12 @@ class TestBackfillSnapshots:
         market_data = InMemoryMarketDataAdapter()
 
         user_id = uuid4()
-        portfolio = Portfolio(id=uuid4(), user_id=user_id, name="Test Portfolio", created_at=datetime.now(UTC))
+        portfolio = Portfolio(
+            id=uuid4(),
+            user_id=user_id,
+            name="Test Portfolio",
+            created_at=datetime.now(UTC),
+        )
         await portfolio_repo.save(portfolio)
 
         service = SnapshotJobService(
@@ -235,7 +258,12 @@ class TestBackfillSnapshots:
         market_data = InMemoryMarketDataAdapter()
 
         user_id = uuid4()
-        portfolio = Portfolio(id=uuid4(), user_id=user_id, name="Test Portfolio", created_at=datetime.now(UTC))
+        portfolio = Portfolio(
+            id=uuid4(),
+            user_id=user_id,
+            name="Test Portfolio",
+            created_at=datetime.now(UTC),
+        )
         await portfolio_repo.save(portfolio)
 
         service = SnapshotJobService(
@@ -307,7 +335,12 @@ class TestCalculateSnapshotForPortfolio:
         market_data = InMemoryMarketDataAdapter()
 
         user_id = uuid4()
-        portfolio = Portfolio(id=uuid4(), user_id=user_id, name="Test Portfolio", created_at=datetime.now(UTC))
+        portfolio = Portfolio(
+            id=uuid4(),
+            user_id=user_id,
+            name="Test Portfolio",
+            created_at=datetime.now(UTC),
+        )
         await portfolio_repo.save(portfolio)
 
         # Add deposit transaction (cash only)
@@ -350,7 +383,12 @@ class TestCalculateSnapshotForPortfolio:
         market_data = InMemoryMarketDataAdapter()
 
         user_id = uuid4()
-        portfolio = Portfolio(id=uuid4(), user_id=user_id, name="Test Portfolio", created_at=datetime.now(UTC))
+        portfolio = Portfolio(
+            id=uuid4(),
+            user_id=user_id,
+            name="Test Portfolio",
+            created_at=datetime.now(UTC),
+        )
         await portfolio_repo.save(portfolio)
 
         # Add deposit
@@ -380,7 +418,7 @@ class TestCalculateSnapshotForPortfolio:
         # Seed current price for AAPL
         from papertrade.application.dtos.price_point import PricePoint
         from papertrade.domain.value_objects.money import Money as MoneyVO
-        
+
         market_data.seed_price(
             PricePoint(
                 ticker=ticker,
