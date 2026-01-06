@@ -39,8 +39,8 @@ class TestSnapshotCalculator:
 
         holdings = [
             ("AAPL", 10, Decimal("150.00")),  # $1,500
-            ("IBM", 5, Decimal("180.00")),    # $900
-            ("MSFT", 8, Decimal("250.00")),   # $2,000
+            ("IBM", 5, Decimal("180.00")),  # $900
+            ("MSFT", 8, Decimal("250.00")),  # $2,000
         ]
 
         snapshot = SnapshotCalculator.calculate_snapshot(
@@ -102,8 +102,8 @@ class TestSnapshotCalculator:
         cash_balance = Decimal("1000.00")
 
         holdings = [
-            ("AAPL", 7, Decimal("123.45")),   # $864.15
-            ("GOOGL", 3, Decimal("2567.89")), # $7,703.67
+            ("AAPL", 7, Decimal("123.45")),  # $864.15
+            ("GOOGL", 3, Decimal("2567.89")),  # $7,703.67
         ]
 
         snapshot = SnapshotCalculator.calculate_snapshot(
@@ -147,7 +147,7 @@ class TestSnapshotCalculator:
 
         holdings = [
             ("PENNY", 10000, Decimal("0.50")),  # $5,000
-            ("IBM", 500, Decimal("180.00")),    # $90,000
+            ("IBM", 500, Decimal("180.00")),  # $90,000
         ]
 
         snapshot = SnapshotCalculator.calculate_snapshot(

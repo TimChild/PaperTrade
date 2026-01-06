@@ -120,7 +120,9 @@ class TestPortfolioSnapshotConstruction:
         portfolio_id = uuid4()
 
         # Negative cash_balance
-        with pytest.raises(InvalidPortfolioError, match="cash_balance cannot be negative"):
+        with pytest.raises(
+            InvalidPortfolioError, match="cash_balance cannot be negative"
+        ):
             PortfolioSnapshot.create(
                 portfolio_id=portfolio_id,
                 snapshot_date=date.today(),
@@ -130,7 +132,9 @@ class TestPortfolioSnapshotConstruction:
             )
 
         # Negative holdings_value
-        with pytest.raises(InvalidPortfolioError, match="holdings_value cannot be negative"):
+        with pytest.raises(
+            InvalidPortfolioError, match="holdings_value cannot be negative"
+        ):
             PortfolioSnapshot.create(
                 portfolio_id=portfolio_id,
                 snapshot_date=date.today(),
@@ -172,7 +176,9 @@ class TestPortfolioSnapshotConstruction:
         """Should reject negative holdings_count."""
         portfolio_id = uuid4()
 
-        with pytest.raises(InvalidPortfolioError, match="holdings_count cannot be negative"):
+        with pytest.raises(
+            InvalidPortfolioError, match="holdings_count cannot be negative"
+        ):
             PortfolioSnapshot.create(
                 portfolio_id=portfolio_id,
                 snapshot_date=date.today(),
@@ -248,7 +254,7 @@ class TestPortfolioSnapshotEquality:
 
         assert snapshot != "not a snapshot"
         assert snapshot != 123
-        assert snapshot != None
+        assert snapshot is not None
 
     def test_hash_based_on_id(self) -> None:
         """Should hash consistently based on ID."""

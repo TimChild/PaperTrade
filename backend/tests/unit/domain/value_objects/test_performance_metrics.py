@@ -1,6 +1,6 @@
 """Tests for PerformanceMetrics value object."""
 
-from datetime import date, datetime, timedelta
+from datetime import date
 from decimal import Decimal
 from uuid import uuid4
 
@@ -38,7 +38,9 @@ class TestPerformanceMetricsConstruction:
 
     def test_invalid_period_end_before_start(self) -> None:
         """Should reject period_end before period_start."""
-        with pytest.raises(InvalidPortfolioError, match="period_end must be >= period_start"):
+        with pytest.raises(
+            InvalidPortfolioError, match="period_end must be >= period_start"
+        ):
             PerformanceMetrics(
                 period_start=date(2024, 1, 31),
                 period_end=date(2024, 1, 1),  # Before start
@@ -67,7 +69,10 @@ class TestPerformanceMetricsConstruction:
     def test_invalid_highest_value_too_low(self) -> None:
         """Should reject highest_value below starting or ending value."""
         # highest_value < starting_value
-        with pytest.raises(InvalidPortfolioError, match="highest_value must be >= starting_value"):
+        with pytest.raises(
+            InvalidPortfolioError,
+            match="highest_value must be >= starting_value",
+        ):
             PerformanceMetrics(
                 period_start=date(2024, 1, 1),
                 period_end=date(2024, 1, 31),
@@ -80,7 +85,10 @@ class TestPerformanceMetricsConstruction:
             )
 
         # highest_value < ending_value
-        with pytest.raises(InvalidPortfolioError, match="highest_value must be >= ending_value"):
+        with pytest.raises(
+            InvalidPortfolioError,
+            match="highest_value must be >= ending_value",
+        ):
             PerformanceMetrics(
                 period_start=date(2024, 1, 1),
                 period_end=date(2024, 1, 31),
@@ -95,7 +103,10 @@ class TestPerformanceMetricsConstruction:
     def test_invalid_lowest_value_too_high(self) -> None:
         """Should reject lowest_value above starting or ending value."""
         # lowest_value > starting_value
-        with pytest.raises(InvalidPortfolioError, match="lowest_value must be <= starting_value"):
+        with pytest.raises(
+            InvalidPortfolioError,
+            match="lowest_value must be <= starting_value",
+        ):
             PerformanceMetrics(
                 period_start=date(2024, 1, 1),
                 period_end=date(2024, 1, 31),
@@ -107,8 +118,12 @@ class TestPerformanceMetricsConstruction:
                 lowest_value=Decimal("11000.00"),  # Too high
             )
 
-        # lowest_value > ending_value (with starting_value > ending_value to trigger ending check)
-        with pytest.raises(InvalidPortfolioError, match="lowest_value must be <= ending_value"):
+        # lowest_value > ending_value
+        # (with starting_value > ending_value to trigger ending check)
+        with pytest.raises(
+            InvalidPortfolioError,
+            match="lowest_value must be <= ending_value",
+        ):
             PerformanceMetrics(
                 period_start=date(2024, 1, 1),
                 period_end=date(2024, 1, 31),
@@ -217,7 +232,9 @@ class TestPerformanceMetricsCalculation:
 
     def test_calculate_metrics_empty_snapshots_raises(self) -> None:
         """Should raise error when calculating from empty snapshots."""
-        with pytest.raises(InvalidPortfolioError, match="Cannot calculate metrics from empty"):
+        with pytest.raises(
+            InvalidPortfolioError, match="Cannot calculate metrics from empty"
+        ):
             PerformanceMetrics.calculate([])
 
     def test_calculate_metrics_single_snapshot(self) -> None:

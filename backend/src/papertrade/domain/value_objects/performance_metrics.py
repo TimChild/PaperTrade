@@ -1,10 +1,19 @@
-"""Performance metrics value object - Calculated performance metrics for a time period."""
+"""Performance metrics value object.
+
+Calculated performance metrics for a time period.
+"""
+
+from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from papertrade.domain.exceptions import InvalidPortfolioError
+
+if TYPE_CHECKING:
+    from papertrade.domain.entities.portfolio_snapshot import PortfolioSnapshot
 
 
 @dataclass(frozen=True)
@@ -82,7 +91,7 @@ class PerformanceMetrics:
             )
 
     @classmethod
-    def calculate(cls, snapshots: list) -> "PerformanceMetrics":
+    def calculate(cls, snapshots: list[PortfolioSnapshot]) -> PerformanceMetrics:
         """Calculate metrics from a list of PortfolioSnapshot instances.
 
         Args:
