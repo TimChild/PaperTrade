@@ -6,9 +6,14 @@
  * Format a number as currency
  * @param value - The numeric value to format
  * @param currency - The currency code (default: 'USD')
+ * @param notation - Formatting notation: 'standard' | 'compact' (default: 'standard')
  * @returns Formatted currency string, or fallback string if value is invalid
  */
-export function formatCurrency(value: number | undefined | null, currency = 'USD'): string {
+export function formatCurrency(
+  value: number | undefined | null,
+  currency = 'USD',
+  notation: 'standard' | 'compact' = 'standard'
+): string {
   // Handle invalid values
   if (value === null || value === undefined || !Number.isFinite(value)) {
     return '---'
@@ -17,6 +22,8 @@ export function formatCurrency(value: number | undefined | null, currency = 'USD
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency,
+    notation,
+    compactDisplay: notation === 'compact' ? 'short' : undefined,
   }).format(value)
 }
 
@@ -64,14 +71,34 @@ export function formatNumber(value: number | undefined | null, decimals: number 
 /**
  * Format a date/time string
  * @param dateString - ISO date string
- * @param includeTime - Whether to include time (default: true)
+ * @param format - Format style: true/false for includeTime, 'short' for compact, 'long' for full
  * @returns Formatted date string
  */
 export function formatDate(
   dateString: string,
-  includeTime: boolean = true
+  format: boolean | 'short' | 'long' = true
 ): string {
   const date = new Date(dateString)
+
+  // 'short' format for chart axis labels (e.g., "Jan 5" or "1/5")
+  if (format === 'short') {
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+    }).format(date)
+  }
+
+  // 'long' format for tooltips (e.g., "January 5, 2026")
+  if (format === 'long') {
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    }).format(date)
+  }
+
+  // Legacy boolean support for includeTime
+  const includeTime = format === true
 
   if (includeTime) {
     return new Intl.DateTimeFormat('en-US', {
