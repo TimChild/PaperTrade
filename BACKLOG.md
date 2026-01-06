@@ -2,7 +2,21 @@
 
 Minor improvements, tech debt, and enhancements that don't block main development.
 
-**Last Updated**: January 1, 2026
+**Last Updated**: January 6, 2026
+
+## 🚨 Critical Issues (Task #062)
+
+**Must fix before continuing new features:**
+
+1. **Multi-Portfolio Dashboard Bug** - CRITICAL
+   - Dashboard only shows first portfolio when user has multiple
+   - Other portfolios hidden with no way to access through UI
+   - File: `frontend/src/pages/Dashboard.tsx`
+
+2. **Trade Execution 400 Error** - CRITICAL
+   - BUY trades failing with 400 Bad Request
+   - Root cause TBD (validation? auth? market data?)
+   - Files: `TradeForm.tsx`, `portfolios.py`
 
 ## Active Backlog
 

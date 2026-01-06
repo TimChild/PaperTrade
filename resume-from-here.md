@@ -1,124 +1,93 @@
-# Resume From Here: Phase 3c Analytics Implementation
+# Resume From Here
 
-**Created**: January 5, 2026
-**Last Phase Completed**: Phase 3b Authentication (PR #72)
-**Next Phase**: Phase 3c Analytics & Insights
+**Last Updated**: January 6, 2026 (Evening Session)
 
-## Quick Context
+## Current State Summary
 
-PaperTrade is a stock market emulation platform. We just completed Clerk authentication integration. Now implementing portfolio analytics: performance charts, composition visualizations, and simple backtesting.
+### Phase 3c Analytics - Near Complete (5/6 Tasks)
+- ✅ Task 056: Domain Layer (PR #73 merged)
+- ✅ Task 057: Repository Layer (PR #74 merged)
+- ✅ Task 058: API Endpoints (PR #75 merged)
+- ✅ Task 059: Background Job (PR #76 merged)
+- ✅ Task 061: Backtesting Support (PR #78 merged)
+- 🔄 Task 060: Frontend Charts (PR #77 - MSW fix requested)
 
-## Current State
+### 🚨 Critical UX Bugs Discovered
 
-### What's Complete
-- ✅ Phase 1: Core ledger (portfolios, transactions, holdings)
-- ✅ Phase 2a: Real-time prices (Alpha Vantage integration)
-- ✅ Phase 2b: Historical price data with charts
-- ✅ Phase 3a: SELL orders (complete trading loop)
-- ✅ Phase 3b: Clerk authentication with E2E tests
-- ✅ Infrastructure: Docker, CI/CD, 499+ tests passing
+During manual testing, two critical bugs were found that make the app essentially unusable:
 
-### Repository Status
-- **Branch**: `main` (clean working tree)
-- **All CI**: Passing
-- **No open PRs**
+1. **Multi-Portfolio Dashboard Bug** (CRITICAL)
+   - Dashboard only shows first portfolio when user has multiple
+   - Other portfolios inaccessible through UI
+   - Location: `frontend/src/pages/Dashboard.tsx`
 
-## Phase 3c Tasks Ready
+2. **Trade Execution 400 Error** (CRITICAL)
+   - BUY trades fail with 400 Bad Request
+   - Root cause needs investigation
+   - Affects: `TradeForm.tsx`, `portfolios.py`
 
-Six task files created in `agent_tasks/`:
+**Task #062 created** to address these bugs: `agent_tasks/062_critical-ux-fixes.md`
 
-| Task | File | Description | Effort |
-|------|------|-------------|--------|
-| **056** | `056_phase3c-analytics-domain-layer.md` | `PortfolioSnapshot` entity, `PerformanceMetrics` value object | 2-3 days |
-| **057** | `057_phase3c-analytics-repository.md` | Database schema, `SnapshotRepositoryPort` | 2 days |
-| **058** | `058_phase3c-analytics-api.md` | `/performance` and `/composition` endpoints | 2-3 days |
-| **059** | `059_phase3c-analytics-snapshot-job.md` | Daily snapshot background job | 2 days |
-| **060** | `060_phase3c-analytics-frontend-charts.md` | Recharts components (line, pie, metrics) | 4-5 days |
-| **061** | `061_phase3c-analytics-backtesting.md` | `as_of` parameter for time-travel trades | 3-4 days |
+## Immediate Next Steps
 
-### Dependency Order
-```
-056 (Domain) → 057 (Repository) → 058 (API) + 059 (Job) → 060 (Charts) → 061 (Backtest)
+### Priority 1: Critical UX Fixes (Task #062)
+These bugs block real user testing. Start the frontend-swe agent:
+```bash
+gh agent-task create --custom-agent frontend-swe -F agent_tasks/062_critical-ux-fixes.md
 ```
 
-## Architecture Reference
+### Priority 2: PR #77 MSW Fix
+A comment was posted requesting @copilot fix the MSW test configuration.
+- Tests pass (15/15) but MSW throws unhandled request errors
+- CI fails due to `onUnhandledRequest: 'error'` strategy
+- Monitor for agent response, approve workflow if needed
 
-**Full specification**: `architecture_plans/phase3-refined/phase3c-analytics.md`
+### Priority 3: Phase 3d Planning (After UX fixes)
+- Task 063: Historical charts (daily snapshots visualization)
+- Task 064: Portfolio comparison features
+- Task 065: Export/download functionality
 
-### Key Design Decisions
-1. **Pre-computed snapshots** - Daily snapshot calculation (not real-time) for chart performance
-2. **Recharts** - Already used in Phase 2b, React-native, MVP-appropriate
-3. **Time-travel backtesting** - `as_of` parameter on existing trade use case (DRY)
-4. **End-of-day prices** - MVP simplicity
+## PR Status
 
-### New Domain Entities
-- `PortfolioSnapshot` - Daily portfolio value snapshot (total, cash, holdings)
-- `PerformanceMetrics` - Calculated gain/loss, ROI, high/low values
+| PR | Description | Status |
+|----|-------------|--------|
+| #77 | Frontend Analytics Charts | ⏳ MSW fix requested |
+| #78 | Backtesting Support | ✅ Merged |
 
-### New API Endpoints
-- `GET /api/v1/portfolios/{id}/performance?range={1W|1M|3M|1Y|ALL}`
-- `GET /api/v1/portfolios/{id}/composition`
-- `POST /api/v1/portfolios/{id}/trades` (updated with optional `as_of`)
+## Test Coverage
 
-### New Frontend Components
-- `PerformanceChart` - Line chart with time range selector
-- `CompositionChart` - Pie chart for holdings allocation
-- `MetricsCards` - Summary statistics display
+- Backend: 489+ tests passing
+- Frontend: 135+ tests (Vitest)
+- E2E: 14+ tests (Playwright)
 
-## Recommended Approach
+## Session Notes
 
-### Option A: Sequential (Safer)
-1. Start Task 056 (Domain) - Foundation for everything else
-2. Then 057 (Repository) - Persistence layer
-3. Then 058 + 059 in parallel (API + Job)
-4. Then 060 (Frontend)
-5. Finally 061 (Backtesting)
+1. All Phase 3c backend work is complete and merged
+2. Frontend charts PR needs minor test config fix
+3. UX bugs are higher priority than new features
+4. CI requires manual workflow approval for copilot branches
 
-### Option B: Parallel Backend/Frontend
-1. Backend agent: Tasks 056 → 057 → 058 → 059
-2. Frontend agent: Task 060 (can mock API responses with MSW)
-3. Integration: Task 061 after both complete
+## Files Changed This Session
+
+- `agent_tasks/062_critical-ux-fixes.md` - Created
+- `PROGRESS.md` - Updated Phase 3c status
+- `BACKLOG.md` - Added critical issues section
+- `resume-from-here.md` - Recreated
 
 ## Commands Reference
 
 ```bash
-# Development
-task dev              # Start all services
-task test             # Run all tests
-task test:backend     # Backend tests only
-task test:frontend    # Frontend tests only
-task test:e2e         # E2E tests
+# Start UX fix task
+gh agent-task create --custom-agent frontend-swe -F agent_tasks/062_critical-ux-fixes.md
 
-# Create feature branch
-git checkout -b feat/phase3c-analytics
+# Check PR status
+gh pr view 77
+gh pr view 78
+
+# Run tests locally
+task test:backend
+task test:frontend
+
+# View all agent tasks
+ls agent_tasks/
 ```
-
-## Success Criteria (from architecture doc)
-
-- [ ] Users can view portfolio value chart (line chart)
-- [ ] Chart supports 1W, 1M, 3M, 1Y, ALL time ranges
-- [ ] Users can see gain/loss metrics ($ and %)
-- [ ] Users can view holdings composition (pie chart)
-- [ ] Daily snapshots calculated automatically
-- [ ] Users can execute trades with `as_of` parameter (backtesting)
-- [ ] All existing tests still pass
-- [ ] 40+ new tests for analytics functionality
-- [ ] E2E tests verify chart rendering
-
-## Files to Review First
-
-1. `architecture_plans/phase3-refined/phase3c-analytics.md` - Full spec
-2. `agent_tasks/056_phase3c-analytics-domain-layer.md` - First task
-3. `backend/app/domain/` - Existing domain patterns
-4. `frontend/src/components/prices/PriceHistoryChart.tsx` - Existing Recharts usage
-
-## Notes
-
-- Recharts is already installed (used in Phase 2b)
-- Follow existing Clean Architecture patterns
-- All tasks include detailed implementation guidance and test requirements
-- Estimated total: 3-4 weeks
-
----
-
-*Delete this file after starting Phase 3c implementation.*

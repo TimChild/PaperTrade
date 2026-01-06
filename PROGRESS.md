@@ -1,6 +1,6 @@
 # PaperTrade Development Progress
 
-**Last Updated**: January 5, 2026
+**Last Updated**: January 6, 2026
 
 ## Current Status
 
@@ -11,9 +11,23 @@
 | Phase 2b: Historical Data | ✅ Complete | 460+ tests, 1 day |
 | Phase 3a: SELL Orders | ✅ Complete | Complete trading loop |
 | Phase 3b: Authentication | ✅ Complete | Clerk integration |
+| Phase 3c: Analytics | 🏃 In Progress | 489+ tests |
 | Infrastructure | ✅ Production-Ready | Docker, CI/CD, E2E testing |
 
-### Recent Work (Jan 5, 2026)
+### Recent Work (Jan 6, 2026)
+- ✅ **Phase 3c Analytics - Backend Complete**:
+  - PR #73: Domain Layer (PortfolioSnapshot, PerformanceMetrics, SnapshotCalculator)
+  - PR #74: Repository Layer (SQLModel, SnapshotRepository port/adapter)
+  - PR #75: API Endpoints (/performance, /composition)
+  - PR #76: Background Snapshot Job (daily calculation via APScheduler)
+  - PR #78: Backtesting (`as_of` parameter for historical trade execution)
+  - 489+ backend tests passing, 85% coverage
+- 🔄 **PR #77 Frontend Charts**: Under review (MSW test config fix needed)
+- 🚨 **Critical UX Bugs Found**: Task #062 created
+  - Multi-portfolio dashboard (only shows first portfolio)
+  - Trade execution failing with 400 error
+
+### Previous Work (Jan 5, 2026)
 - ✅ **Phase 3b Authentication Complete** (PR #72): Clerk integration with E2E tests
   - Backend: ClerkAuthAdapter with correct SDK usage (`authenticate_request`)
   - Frontend: ClerkProvider, SignIn/SignUp/UserButton components
@@ -21,21 +35,10 @@
   - All 14 E2E tests passing with real Clerk authentication
   - See `clerk-implementation-info.md` for critical implementation details
 
-### Previous Work (Jan 4, 2026)
-- ✅ **Phase 3a SELL Orders** (PR #63): Complete trading loop
-- ✅ **Auth Strategy Pivot**: Custom JWT → Clerk (third-party auth)
-  - PR #65, #67, #71 closed/merged during iteration
-  - Decision: Auth is commodity infrastructure, not core product value
-  - Backend auth merged in PR #67, frontend/E2E in PR #72
-- ✅ **Documentation**: Architecture plans updated for Clerk (PR #66)
-
 ### Active Work
-- 🚀 **Phase 3c Analytics & Insights**: Next phase to implement
-  - Portfolio performance charts (Recharts)
-  - Gain/loss calculations and visualizations
-  - Holdings composition (pie charts)
-  - Simple backtesting (time-travel trades)
-  - **Value**: Data-driven decision making
+- 🔄 **PR #77**: Frontend analytics charts (pending MSW fix)
+- 🚨 **Task #062**: Critical UX fixes (multi-portfolio, trade execution)
+- 📊 **Phase 3c Frontend**: Performance charts, composition pie charts
 
 ## Phase 3 Summary
 
@@ -58,23 +61,31 @@
 - **Value**: Ready for public deployment with data privacy
 - **Effort**: ~2 days (saved 3-4 weeks vs custom implementation)
 
-#### Phase 3c: Analytics & Insights 🚀 NEXT
-- ⏳ Portfolio performance charts (Recharts)
-- ⏳ Gain/loss calculations
-- ⏳ Holdings composition (pie charts)
-- ⏳ Simple backtesting (time-travel trades)
+#### Phase 3c: Analytics & Insights 🏃 IN PROGRESS (Jan 6, 2026)
+- ✅ Domain Layer (PR #73): PortfolioSnapshot, PerformanceMetrics, SnapshotCalculator
+- ✅ Repository Layer (PR #74): Database schema, SnapshotRepository port/adapter
+- ✅ API Endpoints (PR #75): /performance, /composition
+- ✅ Background Job (PR #76): Daily snapshot calculation via APScheduler
+- ✅ Backtesting (PR #78): `as_of` parameter for historical trade execution
+- 🔄 Frontend Charts (PR #77): PerformanceChart, CompositionChart, MetricsCards (pending fix)
 - **Value**: Data-driven decision making
-- **Estimated Effort**: 3-4 weeks
+- **Backend Complete**: 489+ tests passing
 
-**Phase 3c Task Breakdown** (agent_tasks/):
-| Task | Description | Depends On | Estimate |
-|------|-------------|------------|----------|
-| 056 | Domain Layer (PortfolioSnapshot, PerformanceMetrics) | - | 2-3 days |
-| 057 | Database & Repository (snapshot storage) | 056 | 2 days |
-| 058 | API Endpoints (performance, composition) | 056, 057 | 2-3 days |
-| 059 | Background Snapshot Job (daily calculation) | 056, 057 | 2 days |
-| 060 | Frontend Charts (Recharts components) | 056-059 | 4-5 days |
-| 061 | Backtesting Feature (as_of trades) | 056-060 | 3-4 days |
+**Phase 3c Task Status**:
+| Task | Description | Status | PR |
+|------|-------------|--------|-----|
+| 056 | Domain Layer | ✅ Complete | #73 |
+| 057 | Database & Repository | ✅ Complete | #74 |
+| 058 | API Endpoints | ✅ Complete | #75 |
+| 059 | Background Snapshot Job | ✅ Complete | #76 |
+| 060 | Frontend Charts | 🔄 In Review | #77 |
+| 061 | Backtesting Feature | ✅ Complete | #78 |
+
+**Critical UX Bugs** (Task #062):
+| Issue | Description | Priority |
+|-------|-------------|----------|
+| Multi-portfolio | Dashboard only shows first portfolio | CRITICAL |
+| Trade execution | 400 error on BUY trades | CRITICAL |
 
 **Architecture Decision Records**:
 - SELL before Auth: High user value, no dependencies, fast to implement
