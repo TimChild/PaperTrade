@@ -17,6 +17,9 @@ from papertrade.adapters.auth.in_memory_adapter import InMemoryAuthAdapter
 from papertrade.adapters.outbound.database.portfolio_repository import (
     SQLModelPortfolioRepository,
 )
+from papertrade.adapters.outbound.database.snapshot_repository import (
+    SQLModelSnapshotRepository,
+)
 from papertrade.adapters.outbound.database.transaction_repository import (
     SQLModelTransactionRepository,
 )
@@ -77,6 +80,20 @@ def get_price_repository(
         PriceRepository instance
     """
     return PriceRepository(session)
+
+
+def get_snapshot_repository(
+    session: SessionDep,
+) -> SQLModelSnapshotRepository:
+    """Get snapshot repository instance.
+
+    Args:
+        session: Database session from dependency injection
+
+    Returns:
+        SQLModelSnapshotRepository instance
+    """
+    return SQLModelSnapshotRepository(session)
 
 
 def get_auth_port() -> AuthPort:
@@ -246,6 +263,9 @@ TransactionRepositoryDep = Annotated[
     SQLModelTransactionRepository, Depends(get_transaction_repository)
 ]
 PriceRepositoryDep = Annotated[PriceRepository, Depends(get_price_repository)]
+SnapshotRepositoryDep = Annotated[
+    SQLModelSnapshotRepository, Depends(get_snapshot_repository)
+]
 AuthPortDep = Annotated[AuthPort, Depends(get_auth_port)]
 CurrentUser = Annotated[AuthenticatedUser, Depends(get_current_user)]
 CurrentUserDep = Annotated[UUID, Depends(get_current_user_id)]
