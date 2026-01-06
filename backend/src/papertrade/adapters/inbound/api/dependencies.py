@@ -31,6 +31,7 @@ from papertrade.adapters.outbound.repositories.price_repository import (
 )
 from papertrade.application.ports.auth_port import AuthenticatedUser, AuthPort
 from papertrade.application.ports.market_data_port import MarketDataPort
+from papertrade.application.services.snapshot_job import SnapshotJobService
 from papertrade.domain.exceptions import InvalidTokenError
 from papertrade.infrastructure.cache.price_cache import PriceCache
 from papertrade.infrastructure.database import SessionDep
@@ -252,6 +253,32 @@ async def get_market_data(session: SessionDep) -> MarketDataPort:
         http_client=_http_client,
         api_key=alpha_vantage_api_key,
         price_repository=price_repository,
+    )
+
+
+async def get_snapshot_job(
+    session: SessionDep,
+) -> SnapshotJobService:
+    """Get snapshot job service instance.
+
+    Creates SnapshotJobService with all required dependencies.
+
+    Args:
+        session: Database session from dependency injection
+
+    Returns:
+        SnapshotJobService instance
+    """
+    portfolio_repo = get_portfolio_repository(session)
+    transaction_repo = get_transaction_repository(session)
+    snapshot_repo = get_snapshot_repository(session)
+    market_data = await get_market_data(session)
+
+    return SnapshotJobService(
+        portfolio_repo=portfolio_repo,
+        transaction_repo=transaction_repo,
+        snapshot_repo=snapshot_repo,
+        market_data=market_data,
     )
 
 

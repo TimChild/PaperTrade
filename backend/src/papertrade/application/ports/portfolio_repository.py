@@ -76,3 +76,15 @@ class PortfolioRepository(Protocol):
             RepositoryError: If database connection fails
         """
         ...
+
+    async def list_all(self) -> list[Portfolio]:
+        """Retrieve all portfolios across all users.
+
+        Returns:
+            List of Portfolio entities (may be empty)
+            Portfolios are returned in creation order (oldest first)
+
+        Raises:
+            RepositoryError: If database connection or query fails
+        """
+        ...

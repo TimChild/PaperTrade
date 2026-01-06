@@ -5,6 +5,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from papertrade.adapters.inbound.api.analytics import (
+    admin_router as analytics_admin_router,
+)
 from papertrade.adapters.inbound.api.analytics import router as analytics_router
 from papertrade.adapters.inbound.api.error_handlers import register_exception_handlers
 from papertrade.adapters.inbound.api.portfolios import router as portfolios_router
@@ -68,6 +71,7 @@ app.include_router(portfolios_router, prefix="/api/v1")
 app.include_router(transactions_router, prefix="/api/v1")
 app.include_router(prices_router, prefix="/api/v1")
 app.include_router(analytics_router, prefix="/api/v1")
+app.include_router(analytics_admin_router, prefix="/api/v1")
 
 
 @app.get("/health")
