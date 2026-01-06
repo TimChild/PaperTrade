@@ -21,6 +21,11 @@ describe('formatters', () => {
       expect(formatCurrency(0)).toBe('$0.00')
     })
 
+    it('formats with compact notation', () => {
+      expect(formatCurrency(1000, 'USD', 'compact')).toBe('$1K')
+      expect(formatCurrency(1500000, 'USD', 'compact')).toBe('$1.5M')
+    })
+
     it('handles NaN gracefully', () => {
       expect(formatCurrency(NaN)).toBe('---')
     })
@@ -105,6 +110,20 @@ describe('formatters', () => {
     it('formats date without time when includeTime is false', () => {
       const result = formatDate('2024-01-15T14:30:00Z', false)
       expect(result).toContain('Jan')
+      expect(result).toContain('15')
+      expect(result).toContain('2024')
+    })
+
+    it('formats date in short format for chart labels', () => {
+      const result = formatDate('2024-01-15T14:30:00Z', 'short')
+      expect(result).toContain('Jan')
+      expect(result).toContain('15')
+      expect(result).not.toContain('2024') // Short format doesn't include year
+    })
+
+    it('formats date in long format for tooltips', () => {
+      const result = formatDate('2024-01-15T14:30:00Z', 'long')
+      expect(result).toContain('January') // Full month name
       expect(result).toContain('15')
       expect(result).toContain('2024')
     })
