@@ -9,11 +9,12 @@ Provides REST endpoints for portfolio operations:
 - Query balance, holdings, value
 """
 
+from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from papertrade.adapters.inbound.api.dependencies import (
     CurrentUserDep,
@@ -110,6 +111,19 @@ class TradeRequest(BaseModel):
     action: str = Field(..., pattern="^(BUY|SELL)$")
     ticker: str = Field(..., min_length=1, max_length=5)
     quantity: Decimal = Field(..., gt=0, decimal_places=4)
+    as_of: datetime | None = Field(
+        default=None,
+        description="Optional ISO 8601 timestamp (UTC) for backtesting. "
+        "Trade will use historical price from this date/time.",
+    )
+
+    @field_validator("as_of")
+    @classmethod
+    def validate_as_of_not_future(cls, v: datetime | None) -> datetime | None:
+        """Validate that as_of is not in the future."""
+        if v is not None and v > datetime.now(UTC):
+            raise ValueError("as_of cannot be in the future")
+        return v
 
 
 class TransactionResponse(BaseModel):
@@ -299,13 +313,16 @@ async def execute_trade(
 ) -> TransactionResponse:
     """Execute a buy or sell trade.
 
-    Fetches the current market price automatically and executes the trade
-    at that price. This prevents price manipulation and ensures trades
-    execute at real market prices.
+    Fetches the market price (current or historical based on as_of) automatically
+    and executes the trade at that price. This prevents price manipulation and
+    ensures trades execute at real market prices.
+
+    If as_of is provided, uses historical price for backtesting.
 
     Raises:
         HTTPException: 404 if ticker not found in market data
         HTTPException: 503 if market data service is unavailable
+        HTTPException: 400 if as_of is in the future
     """
     # Log the trade request for debugging (especially useful in CI)
     import logging
@@ -313,17 +330,23 @@ async def execute_trade(
     logger = logging.getLogger(__name__)
     logger.info(
         f"Trade request received: portfolio_id={portfolio_id}, "
-        f"action={request.action}, ticker={request.ticker}, quantity={request.quantity}"
+        f"action={request.action}, ticker={request.ticker}, "
+        f"quantity={request.quantity}, as_of={request.as_of}"
     )
 
     # Verify user owns this portfolio
     await _verify_portfolio_ownership(portfolio_id, current_user, portfolio_repo)
 
-    # Fetch current market price
+    # Fetch market price (current or historical based on as_of)
     ticker = Ticker(request.ticker)
 
     try:
-        price_point = await market_data.get_current_price(ticker)
+        if request.as_of:
+            # Backtesting mode - get historical price
+            price_point = await market_data.get_price_at(ticker, request.as_of)
+        else:
+            # Normal mode - get current price
+            price_point = await market_data.get_current_price(ticker)
     except TickerNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -342,6 +365,7 @@ async def execute_trade(
             quantity_shares=request.quantity,
             price_per_share_amount=price_point.price.amount,
             price_per_share_currency=price_point.price.currency,
+            as_of=request.as_of,
         )
         handler = BuyStockHandler(portfolio_repo, transaction_repo)
         result = await handler.execute(command)
@@ -352,6 +376,7 @@ async def execute_trade(
             quantity_shares=request.quantity,
             price_per_share_amount=price_point.price.amount,
             price_per_share_currency=price_point.price.currency,
+            as_of=request.as_of,
         )
         handler = SellStockHandler(portfolio_repo, transaction_repo)
         result = await handler.execute(command)

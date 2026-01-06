@@ -20,6 +20,8 @@ export function TradeForm({
   const [ticker, setTicker] = useState('')
   const [quantity, setQuantity] = useState('')
   const [price, setPrice] = useState('')
+  const [backtestMode, setBacktestMode] = useState(false)
+  const [backtestDate, setBacktestDate] = useState('')
 
   // Handle quick sell data using a microtask to batch state updates
   useEffect(() => {
@@ -54,9 +56,14 @@ export function TradeForm({
       quantity: quantity,
     }
 
+    // Add as_of if in backtest mode
+    if (backtestMode && backtestDate) {
+      trade.as_of = new Date(backtestDate).toISOString()
+    }
+
     onSubmit(trade)
 
-    // Reset form
+    // Reset form (keep backtest mode settings)
     setTicker('')
     setQuantity('')
     setPrice('')
@@ -203,8 +210,70 @@ export function TradeForm({
             disabled={isSubmitting}
           />
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Actual trade will execute at current market price
+            {backtestMode && backtestDate
+              ? 'Trade will execute with historical price from selected date'
+              : 'Actual trade will execute at current market price'}
           </p>
+        </div>
+
+        {/* Backtest Mode Section */}
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-amber-950">
+          <label className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              data-testid="backtest-mode-toggle"
+              checked={backtestMode}
+              onChange={(e) => setBacktestMode(e.target.checked)}
+              disabled={isSubmitting}
+              className="h-4 w-4 rounded border-gray-300 bg-gray-100 text-blue-600 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:ring-offset-gray-800 dark:focus:ring-blue-600"
+            />
+            <span className="font-medium text-gray-900 dark:text-white">
+              Backtest Mode
+            </span>
+          </label>
+          <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+            Execute trade with historical prices for strategy testing
+          </p>
+
+          {backtestMode && (
+            <div className="mt-3">
+              <label
+                htmlFor="backtest-date"
+                className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+              >
+                Trade Date
+              </label>
+              <input
+                id="backtest-date"
+                type="date"
+                data-testid="backtest-date-picker"
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-400"
+                max={new Date().toISOString().split('T')[0]}
+                value={backtestDate}
+                onChange={(e) => setBacktestDate(e.target.value)}
+                disabled={isSubmitting}
+              />
+
+              {/* Warning indicator */}
+              <div className="mt-2 flex items-center gap-1 text-amber-700 dark:text-amber-400">
+                <svg
+                  className="h-4 w-4"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                <span className="text-sm" data-testid="backtest-mode-warning">
+                  Trade will use historical prices
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Preview */}
@@ -214,6 +283,11 @@ export function TradeForm({
               {action === 'BUY' ? 'Buying' : 'Selling'} {quantity} shares of{' '}
               {ticker.toUpperCase()}
               {price !== '' && parseFloat(price) > 0 ? ` at ~$${price}` : ''}
+              {backtestMode && backtestDate && (
+                <span className="ml-2 text-amber-600 dark:text-amber-400">
+                  (Backtest: {new Date(backtestDate).toLocaleDateString()})
+                </span>
+              )}
             </p>
             {estimatedTotal > 0 && (
               <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
@@ -221,7 +295,9 @@ export function TradeForm({
               </p>
             )}
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Trade will execute at current market price
+              {backtestMode && backtestDate
+                ? 'Trade will execute with historical price from selected date'
+                : 'Trade will execute at current market price'}
             </p>
           </div>
         )}
@@ -239,9 +315,11 @@ export function TradeForm({
         >
           {isSubmitting
             ? 'Processing...'
-            : action === 'BUY'
-              ? 'Execute Buy Order'
-              : 'Execute Sell Order'}
+            : backtestMode
+              ? `Execute Backtest ${action === 'BUY' ? 'Buy' : 'Sell'} Order`
+              : action === 'BUY'
+                ? 'Execute Buy Order'
+                : 'Execute Sell Order'}
         </button>
       </form>
     </div>
