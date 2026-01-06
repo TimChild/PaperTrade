@@ -1,9 +1,25 @@
+import { clerk } from '@clerk/testing/playwright'
 import { test, expect } from './fixtures'
-import { authenticateUser, clickCreatePortfolioButton } from './helpers'
 
 test.describe('Portfolio Creation Flow', () => {
   test.beforeEach(async ({ page }) => {
-    await authenticateUser(page)
+    const email = process.env.E2E_CLERK_USER_EMAIL
+    if (!email) {
+      throw new Error('E2E_CLERK_USER_EMAIL environment variable must be set')
+    }
+
+    // Navigate to app first - Clerk needs to be loaded
+    await page.goto('/')
+    await page.waitForLoadState('networkidle')
+
+    // Sign in using email-based approach (creates sign-in token via backend API)
+    await clerk.signIn({
+      page,
+      emailAddress: email,
+    })
+
+    // Wait for authentication to complete and redirect to dashboard
+    await page.waitForURL('**/dashboard', { timeout: 10000 })
   })
 
   test('should create portfolio and navigate to portfolio detail page', async ({ page }) => {
@@ -13,8 +29,11 @@ test.describe('Portfolio Creation Flow', () => {
     await page.goto('/dashboard')
     await page.waitForLoadState('networkidle')
 
-    // 2. Click create portfolio button
-    await clickCreatePortfolioButton(page)
+    // 2. Click create portfolio button (header button if portfolios exist, otherwise empty state button)
+    const headerButton = page.getByTestId('create-portfolio-header-btn')
+    const emptyStateButton = page.getByTestId('create-first-portfolio-btn')
+    const createButton = (await headerButton.isVisible()) ? headerButton : emptyStateButton
+    await createButton.click()
 
     // Use unique name to avoid conflicts with previous test runs
     const portfolioName = `Test Portfolio ${Date.now()}`

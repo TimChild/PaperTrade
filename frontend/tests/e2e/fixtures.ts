@@ -6,16 +6,14 @@ import { setupClerkTestingToken } from '@clerk/testing/playwright'
  *
  * This extends the base test to automatically set up Clerk testing tokens
  * for each test, allowing tests to sign in users without hitting bot protection.
- *
- * Note: The ESLint disable is needed because Playwright's `use` function
- * triggers the react-hooks/rules-of-hooks rule, even though this is not React code.
  */
 export const test = base.extend({
   page: async ({ page }, use) => {
     // Set up Clerk testing token for this page
     await setupClerkTestingToken({ page })
 
-    // Use the page in the test
+    // Use the page in the test (this is Playwright's use(), not a React hook)
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(page)
   },
 })

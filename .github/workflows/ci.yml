@@ -186,6 +186,9 @@ jobs:
       - name: Run E2E tests
         run: task test:e2e
         env:
+          # CLERK_PUBLISHABLE_KEY is needed by @clerk/testing's clerkSetup()
+          # VITE_CLERK_PUBLISHABLE_KEY is needed by the frontend app (Vite exposes VITE_ prefixed vars)
+          CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
           E2E_CLERK_USER_EMAIL: ${{ vars.E2E_CLERK_USER_EMAIL }}

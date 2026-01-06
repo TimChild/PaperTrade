@@ -7,7 +7,7 @@ import { setAuthTokenGetter } from '@/services/api/client'
  * for API requests. This should be rendered inside ClerkProvider.
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { getToken } = useAuth()
+  const { getToken, isLoaded, isSignedIn } = useAuth()
 
   useEffect(() => {
     // Set up the token getter for API requests
@@ -22,9 +22,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Cleanup on unmount
     return () => {
-      setAuthTokenGetter(null)
+      setAuthTokenGetter(async () => null)
     }
-  }, [getToken])
+  }, [getToken, isLoaded, isSignedIn])
 
   return <>{children}</>
 }
