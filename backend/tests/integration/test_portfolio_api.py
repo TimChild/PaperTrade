@@ -354,3 +354,165 @@ def test_multiple_portfolios_for_same_user(
     portfolio_names = {p["name"] for p in portfolios}
     assert "Growth Portfolio" in portfolio_names
     assert "Income Portfolio" in portfolio_names
+
+
+def test_execute_trade_with_as_of_uses_historical_price(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    default_user_id: UUID,
+) -> None:
+    """Test that trades with as_of parameter use historical prices for backtesting."""
+    from datetime import UTC, datetime
+
+    # Create portfolio
+    response = client.post(
+        "/api/v1/portfolios",
+        headers=auth_headers,
+        json={
+            "name": "Backtest Portfolio",
+            "initial_deposit": "100000.00",
+            "currency": "USD",
+        },
+    )
+    portfolio_id = response.json()["portfolio_id"]
+
+    # Execute backtest trade with as_of timestamp
+    # Use AAPL which is seeded in test fixtures
+    # The fixture creates a price with current timestamp, which should be
+    # within the ±1 hour window for get_price_at
+    backtest_date = datetime.now(UTC)
+
+    trade_response = client.post(
+        f"/api/v1/portfolios/{portfolio_id}/trades",
+        headers=auth_headers,
+        json={
+            "action": "BUY",
+            "ticker": "AAPL",
+            "quantity": "10",
+            "as_of": backtest_date.isoformat(),
+        },
+    )
+
+    assert trade_response.status_code == 201
+    trade_data = trade_response.json()
+    assert "transaction_id" in trade_data
+
+    # Verify the transaction was created with correct timestamp
+    transactions_response = client.get(
+        f"/api/v1/portfolios/{portfolio_id}/transactions",
+        headers=auth_headers,
+    )
+    assert transactions_response.status_code == 200
+
+    transactions = transactions_response.json()["transactions"]
+    # Filter out the initial deposit transaction
+    buy_transactions = [t for t in transactions if t["transaction_type"] == "BUY"]
+    assert len(buy_transactions) == 1
+
+    buy_transaction = buy_transactions[0]
+    assert buy_transaction["ticker"] == "AAPL"
+    assert buy_transaction["quantity"] == "10.0000"
+    # Verify the timestamp matches the backtest date (within a second)
+    transaction_timestamp = datetime.fromisoformat(
+        buy_transaction["timestamp"].replace("Z", "+00:00")
+    )
+    # Allow 1 second tolerance for timestamp comparison
+    time_diff = abs((transaction_timestamp - backtest_date).total_seconds())
+    assert time_diff < 1.0
+
+
+def test_execute_trade_without_as_of_uses_current_price(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    default_user_id: UUID,
+) -> None:
+    """Test that trades without as_of parameter use current prices (normal mode)."""
+    from datetime import UTC, datetime, timedelta
+
+    # Create portfolio
+    response = client.post(
+        "/api/v1/portfolios",
+        headers=auth_headers,
+        json={
+            "name": "Normal Trading Portfolio",
+            "initial_deposit": "50000.00",
+            "currency": "USD",
+        },
+    )
+    portfolio_id = response.json()["portfolio_id"]
+
+    # Execute normal trade without as_of
+    before_trade = datetime.now(UTC)
+
+    trade_response = client.post(
+        f"/api/v1/portfolios/{portfolio_id}/trades",
+        headers=auth_headers,
+        json={
+            "action": "BUY",
+            "ticker": "AAPL",
+            "quantity": "5",
+            # No as_of parameter - should use current time
+        },
+    )
+
+    after_trade = datetime.now(UTC)
+
+    assert trade_response.status_code == 201
+
+    # Verify the transaction timestamp is recent (within last minute)
+    transactions_response = client.get(
+        f"/api/v1/portfolios/{portfolio_id}/transactions",
+        headers=auth_headers,
+    )
+
+    transactions = transactions_response.json()["transactions"]
+    buy_transactions = [t for t in transactions if t["transaction_type"] == "BUY"]
+    assert len(buy_transactions) == 1
+
+    buy_transaction = buy_transactions[0]
+    transaction_timestamp = datetime.fromisoformat(
+        buy_transaction["timestamp"].replace("Z", "+00:00")
+    )
+
+    # Transaction should be within a few seconds of now
+    assert before_trade <= transaction_timestamp <= after_trade + timedelta(seconds=5)
+
+
+def test_trade_with_future_as_of_rejected(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    default_user_id: UUID,
+) -> None:
+    """Test that trades with future as_of timestamps are rejected."""
+    from datetime import UTC, datetime, timedelta
+
+    # Create portfolio
+    response = client.post(
+        "/api/v1/portfolios",
+        headers=auth_headers,
+        json={
+            "name": "Future Test Portfolio",
+            "initial_deposit": "50000.00",
+            "currency": "USD",
+        },
+    )
+    portfolio_id = response.json()["portfolio_id"]
+
+    # Try to execute trade with future timestamp
+    future_date = datetime.now(UTC) + timedelta(days=7)
+
+    trade_response = client.post(
+        f"/api/v1/portfolios/{portfolio_id}/trades",
+        headers=auth_headers,
+        json={
+            "action": "BUY",
+            "ticker": "AAPL",
+            "quantity": "10",
+            "as_of": future_date.isoformat(),
+        },
+    )
+
+    # Should be rejected with validation error
+    assert trade_response.status_code == 422  # Unprocessable Entity (validation error)
+    error_data = trade_response.json()
+    assert "detail" in error_data

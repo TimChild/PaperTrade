@@ -29,6 +29,7 @@ class SellStockCommand:
         price_per_share_amount: Price per share (decimal)
         price_per_share_currency: Currency code (default "USD")
         notes: Optional description
+        as_of: Optional timestamp for backtesting (defaults to now)
     """
 
     portfolio_id: UUID
@@ -37,6 +38,7 @@ class SellStockCommand:
     price_per_share_amount: Decimal
     price_per_share_currency: str = "USD"
     notes: str | None = None
+    as_of: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -123,12 +125,15 @@ class SellStockHandler:
         # Generate transaction ID
         transaction_id = uuid4()
 
+        # Use as_of timestamp if provided, otherwise use current time
+        effective_timestamp = command.as_of if command.as_of else datetime.now(UTC)
+
         # Create SELL transaction (positive cash_change)
         transaction = Transaction(
             id=transaction_id,
             portfolio_id=command.portfolio_id,
             transaction_type=TransactionType.SELL,
-            timestamp=datetime.now(UTC),
+            timestamp=effective_timestamp,
             cash_change=total_proceeds,  # Positive for sale
             ticker=ticker,
             quantity=quantity,
