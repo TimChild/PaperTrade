@@ -31,7 +31,7 @@ test.describe('Multi-Portfolio Display', () => {
 
     // Get initial portfolio count
     const initialText = await page.getByText(/You have \d+ portfolio/).textContent()
-    const initialCount = initialText ? parseInt(initialText.match(/\d+/)?.[0] || '0') : 0
+    const initialCount = initialText ? parseInt(initialText.match(/\d+/)?.[0] ?? '0') : 0
 
     // Create first test portfolio
     const createButton = page.getByTestId('create-portfolio-header-btn')
@@ -147,8 +147,8 @@ test.describe('Multi-Portfolio Display', () => {
     await page.goto('/dashboard')
     await page.waitForLoadState('networkidle')
 
-    // Check if portfolios exist
-    const hasPortfolios = await page.getByTestId('portfolio-grid').isVisible().catch(() => false)
+    // Check if portfolios exist by counting portfolio grid items
+    const hasPortfolios = await page.getByTestId('portfolio-grid').count() > 0
     
     if (!hasPortfolios) {
       // Verify empty state is shown

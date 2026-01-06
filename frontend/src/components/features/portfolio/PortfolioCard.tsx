@@ -34,7 +34,7 @@ export function PortfolioCard({
       className="block rounded-lg border border-gray-300 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:border-blue-400 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-500"
     >
       <div className="mb-4">
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-white" data-testid={`portfolio-card-name-${portfolio.id}`}>
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
           {portfolio.name}
         </h3>
       </div>
