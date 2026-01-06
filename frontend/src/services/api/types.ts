@@ -62,6 +62,7 @@ export interface TradeRequest {
   action: 'BUY' | 'SELL'
   ticker: string
   quantity: string // Decimal as string
+  as_of?: string // Optional ISO 8601 timestamp for backtesting
 }
 
 // Balance types
