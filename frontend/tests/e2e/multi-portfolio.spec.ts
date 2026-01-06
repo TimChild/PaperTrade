@@ -29,12 +29,14 @@ test.describe('Multi-Portfolio Display', () => {
     await page.goto('/dashboard')
     await page.waitForLoadState('networkidle')
 
-    // Get initial portfolio count
-    const initialText = await page.getByText(/You have \d+ portfolio/).textContent()
-    const initialCount = initialText ? parseInt(initialText.match(/\d+/)?.[0] ?? '0') : 0
+    // Check if we're starting with empty state or existing portfolios
+    const hasEmptyState = await page.getByTestId('create-first-portfolio-btn').isVisible().catch(() => false)
+    const initialCount = hasEmptyState ? 0 : await page.getByTestId('portfolio-grid').locator('[data-testid^="portfolio-card-"]').count()
 
     // Create first test portfolio
-    const createButton = page.getByTestId('create-portfolio-header-btn')
+    const createButton = hasEmptyState 
+      ? page.getByTestId('create-first-portfolio-btn')
+      : page.getByTestId('create-portfolio-header-btn')
     await createButton.click()
 
     const portfolio1Name = `Multi Test Portfolio 1 ${Date.now()}`
@@ -42,8 +44,10 @@ test.describe('Multi-Portfolio Display', () => {
     await page.getByTestId('create-portfolio-deposit-input').fill('10000')
     await page.getByTestId('submit-portfolio-form-btn').click()
 
-    // Wait for navigation to portfolio detail page
+    // Wait for navigation to portfolio detail page and extract ID
     await page.waitForURL('**/portfolio/*', { timeout: 10000 })
+    const portfolio1Url = page.url()
+    const portfolio1ActualId = portfolio1Url.split('/').pop() || ''
 
     // Go back to dashboard
     await page.goto('/dashboard')
@@ -57,8 +61,10 @@ test.describe('Multi-Portfolio Display', () => {
     await page.getByTestId('create-portfolio-deposit-input').fill('20000')
     await page.getByTestId('submit-portfolio-form-btn').click()
 
-    // Wait for navigation to portfolio detail page
+    // Wait for navigation to portfolio detail page and extract ID
     await page.waitForURL('**/portfolio/*', { timeout: 10000 })
+    const portfolio2Url = page.url()
+    const portfolio2ActualId = portfolio2Url.split('/').pop() || ''
 
     // Go back to dashboard
     await page.goto('/dashboard')
@@ -72,14 +78,16 @@ test.describe('Multi-Portfolio Display', () => {
     await page.getByTestId('create-portfolio-deposit-input').fill('30000')
     await page.getByTestId('submit-portfolio-form-btn').click()
 
-    // Wait for navigation to portfolio detail page
+    // Wait for navigation to portfolio detail page and extract ID
     await page.waitForURL('**/portfolio/*', { timeout: 10000 })
+    const portfolio3Url = page.url()
+    const portfolio3ActualId = portfolio3Url.split('/').pop() || ''
 
     // Go back to dashboard
     await page.goto('/dashboard')
     await page.waitForLoadState('networkidle')
 
-    // Verify the portfolio count text
+    // Verify the portfolio count text (only shown when portfolios exist)
     const expectedCount = initialCount + 3
     await expect(page.getByText(`You have ${expectedCount} portfolio${expectedCount !== 1 ? 's' : ''}`)).toBeVisible()
 
@@ -92,15 +100,15 @@ test.describe('Multi-Portfolio Display', () => {
     await expect(page.getByText(portfolio2Name)).toBeVisible()
     await expect(page.getByText(portfolio3Name)).toBeVisible()
 
-    // Verify portfolio cards show expected values
-    // Portfolio 1 should show $10,000
-    await expect(page.locator(`text=${portfolio1Name}`).locator('..').locator('..').getByText('$10,000.00')).toBeVisible()
+    // Verify portfolio cards show expected values using robust test IDs
+    // Portfolio 1 should show $10,000.00
+    await expect(page.getByTestId(`portfolio-card-value-${portfolio1ActualId}`)).toHaveText('$10,000.00')
     
-    // Portfolio 2 should show $20,000
-    await expect(page.locator(`text=${portfolio2Name}`).locator('..').locator('..').getByText('$20,000.00')).toBeVisible()
+    // Portfolio 2 should show $20,000.00
+    await expect(page.getByTestId(`portfolio-card-value-${portfolio2ActualId}`)).toHaveText('$20,000.00')
     
-    // Portfolio 3 should show $30,000
-    await expect(page.locator(`text=${portfolio3Name}`).locator('..').locator('..').getByText('$30,000.00')).toBeVisible()
+    // Portfolio 3 should show $30,000.00
+    await expect(page.getByTestId(`portfolio-card-value-${portfolio3ActualId}`)).toHaveText('$30,000.00')
   })
 
   test('should navigate to portfolio detail when clicking portfolio card', async ({ page }) => {
