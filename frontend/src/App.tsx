@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { SignedIn, SignedOut, SignIn, UserButton } from '@clerk/clerk-react'
 import { Dashboard } from '@/pages/Dashboard'
 import { PortfolioDetail } from '@/pages/PortfolioDetail'
+import { PortfolioAnalytics } from '@/pages/PortfolioAnalytics'
 
 function App() {
   return (
@@ -52,6 +53,7 @@ function App() {
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/portfolio/:id" element={<PortfolioDetail />} />
+                <Route path="/portfolio/:id/analytics" element={<PortfolioAnalytics />} />
               </Routes>
             </main>
           </div>

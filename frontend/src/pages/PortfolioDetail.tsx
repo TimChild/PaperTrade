@@ -88,9 +88,18 @@ export function PortfolioDetail(): React.JSX.Element {
         >
           ← Back to Dashboard
         </Link>
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-white" data-testid="portfolio-detail-name">
-          {portfolio?.name || 'Portfolio Details'}
-        </h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white" data-testid="portfolio-detail-name">
+            {portfolio?.name || 'Portfolio Details'}
+          </h1>
+          <Link
+            to={`/portfolio/${portfolioId}/analytics`}
+            data-testid="analytics-tab"
+            className="rounded-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+          >
+            View Analytics
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
