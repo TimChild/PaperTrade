@@ -2,6 +2,13 @@
 
 from papertrade.domain.entities.holding import Holding
 from papertrade.domain.entities.portfolio import Portfolio
+from papertrade.domain.entities.portfolio_snapshot import PortfolioSnapshot
 from papertrade.domain.entities.transaction import Transaction, TransactionType
 
-__all__ = ["Holding", "Portfolio", "Transaction", "TransactionType"]
+__all__ = [
+    "Holding",
+    "Portfolio",
+    "PortfolioSnapshot",
+    "Transaction",
+    "TransactionType",
+]
