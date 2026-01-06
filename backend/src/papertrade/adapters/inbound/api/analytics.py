@@ -360,4 +360,3 @@ async def trigger_daily_snapshots(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Daily snapshot failed: {str(e)}",
         ) from e
-
