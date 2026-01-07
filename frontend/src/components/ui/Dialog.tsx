@@ -12,7 +12,13 @@ interface DialogProps {
   className?: string
 }
 
-export function Dialog({ isOpen, onClose, title, children, className = '' }: DialogProps) {
+export function Dialog({
+  isOpen,
+  onClose,
+  title,
+  children,
+  className = '',
+}: DialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -72,7 +78,9 @@ export function Dialog({ isOpen, onClose, title, children, className = '' }: Dia
       className={`rounded-lg border-0 bg-white p-6 shadow-xl backdrop:bg-black backdrop:bg-opacity-50 dark:bg-gray-800 ${className}`}
     >
       {title && (
-        <h2 className="mb-4 text-xl font-semibold text-gray-900 dark:text-white">{title}</h2>
+        <h2 className="mb-4 text-xl font-semibold text-gray-900 dark:text-white">
+          {title}
+        </h2>
       )}
       <div>{children}</div>
     </dialog>

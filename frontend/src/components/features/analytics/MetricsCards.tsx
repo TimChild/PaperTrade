@@ -8,7 +8,9 @@ interface MetricsCardsProps {
   portfolioId: string
 }
 
-export function MetricsCards({ portfolioId }: MetricsCardsProps): React.JSX.Element {
+export function MetricsCards({
+  portfolioId,
+}: MetricsCardsProps): React.JSX.Element {
   const { data, isLoading } = usePerformance(portfolioId, '1M')
 
   if (isLoading || !data?.metrics) {

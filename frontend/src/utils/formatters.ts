@@ -56,7 +56,10 @@ export function formatPercent(
  * @param decimals - Number of decimal places (default: 2)
  * @returns Formatted number string, or fallback string if value is invalid
  */
-export function formatNumber(value: number | undefined | null, decimals: number = 2): string {
+export function formatNumber(
+  value: number | undefined | null,
+  decimals: number = 2
+): string {
   // Handle invalid values
   if (value === null || value === undefined || !Number.isFinite(value)) {
     return '---'

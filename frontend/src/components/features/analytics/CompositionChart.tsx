@@ -1,7 +1,14 @@
 /**
  * Composition pie chart component displaying portfolio asset allocation
  */
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts'
 import { useComposition } from '@/hooks/useAnalytics'
 import { formatCurrency } from '@/utils/formatters'
 
@@ -9,9 +16,18 @@ interface CompositionChartProps {
   portfolioId: string
 }
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#6b7280']
+const COLORS = [
+  '#3b82f6',
+  '#10b981',
+  '#f59e0b',
+  '#ef4444',
+  '#8b5cf6',
+  '#6b7280',
+]
 
-export function CompositionChart({ portfolioId }: CompositionChartProps): React.JSX.Element {
+export function CompositionChart({
+  portfolioId,
+}: CompositionChartProps): React.JSX.Element {
   const { data, isLoading, error } = useComposition(portfolioId)
 
   if (isLoading) {
@@ -58,7 +74,10 @@ export function CompositionChart({ portfolioId }: CompositionChartProps): React.
             label={renderLabel}
           >
             {chartData.map((_, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              <Cell
+                key={`cell-${index}`}
+                fill={COLORS[index % COLORS.length]}
+              />
             ))}
           </Pie>
           <Tooltip

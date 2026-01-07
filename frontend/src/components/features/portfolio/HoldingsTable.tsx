@@ -26,10 +26,8 @@ export function HoldingsTable({
   }, [holdings, holdingsDTO])
 
   // Fetch real-time prices
-  const {
-    data: priceMap,
-    isLoading: pricesLoading,
-  } = useBatchPricesQuery(tickers)
+  const { data: priceMap, isLoading: pricesLoading } =
+    useBatchPricesQuery(tickers)
 
   // Calculate holdings with real prices
   const holdingsWithRealPrices = useMemo(() => {
@@ -54,7 +52,9 @@ export function HoldingsTable({
         gainLoss,
         gainLossPercent,
         // Track whether we're using real-time data or fallback
-        usingRealTimePrice: Boolean(price && Number.isFinite(price.price.amount)),
+        usingRealTimePrice: Boolean(
+          price && Number.isFinite(price.price.amount)
+        ),
       }
     })
   }, [holdings, priceMap])
@@ -66,7 +66,10 @@ export function HoldingsTable({
           <div className="mb-4 h-6 w-32 rounded bg-gray-300 dark:bg-gray-700"></div>
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-12 rounded bg-gray-300 dark:bg-gray-700"></div>
+              <div
+                key={i}
+                className="h-12 rounded bg-gray-300 dark:bg-gray-700"
+              ></div>
             ))}
           </div>
         </div>
@@ -87,7 +90,10 @@ export function HoldingsTable({
   return (
     <div className="overflow-hidden rounded-lg border border-gray-300 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
       <div className="overflow-x-auto">
-        <table data-testid="holdings-table" className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <table
+          data-testid="holdings-table"
+          className="min-w-full divide-y divide-gray-200 dark:divide-gray-700"
+        >
           <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
               <th
@@ -144,7 +150,9 @@ export function HoldingsTable({
                 : 'text-negative dark:text-negative-light'
 
               // Check if we're using real-time price or fallback
-              const usingFallback = !('usingRealTimePrice' in holding && holding.usingRealTimePrice)
+              const usingFallback = !(
+                'usingRealTimePrice' in holding && holding.usingRealTimePrice
+              )
 
               return (
                 <tr
@@ -152,10 +160,16 @@ export function HoldingsTable({
                   data-testid={`holding-row-${holding.ticker}`}
                   className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
                 >
-                  <td className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900 dark:text-white" data-testid={`holding-symbol-${holding.ticker}`}>
+                  <td
+                    className="whitespace-nowrap px-6 py-4 text-sm font-medium text-gray-900 dark:text-white"
+                    data-testid={`holding-symbol-${holding.ticker}`}
+                  >
                     {holding.ticker}
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-gray-700 dark:text-gray-300" data-testid={`holding-quantity-${holding.ticker}`}>
+                  <td
+                    className="whitespace-nowrap px-6 py-4 text-right text-sm text-gray-700 dark:text-gray-300"
+                    data-testid={`holding-quantity-${holding.ticker}`}
+                  >
                     {formatNumber(holding.quantity, 0)}
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 text-right text-sm text-gray-700 dark:text-gray-300">
@@ -174,7 +188,10 @@ export function HoldingsTable({
                       )}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium text-gray-900 dark:text-white" data-testid={`holding-value-${holding.ticker}`}>
+                  <td
+                    className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium text-gray-900 dark:text-white"
+                    data-testid={`holding-value-${holding.ticker}`}
+                  >
                     {formatCurrency(holding.marketValue)}
                   </td>
                   <td
@@ -184,12 +201,16 @@ export function HoldingsTable({
                       {isPositive ? '+' : ''}
                       {formatCurrency(holding.gainLoss)}
                     </div>
-                    <div className="text-xs">({formatPercent(holding.gainLossPercent / 100)})</div>
+                    <div className="text-xs">
+                      ({formatPercent(holding.gainLossPercent / 100)})
+                    </div>
                   </td>
                   {onQuickSell && (
                     <td className="whitespace-nowrap px-6 py-4 text-right text-sm">
                       <button
-                        onClick={() => onQuickSell(holding.ticker, holding.quantity)}
+                        onClick={() =>
+                          onQuickSell(holding.ticker, holding.quantity)
+                        }
                         data-testid={`holdings-quick-sell-${holding.ticker.toLowerCase()}`}
                         className="rounded-md border border-gray-300 bg-white px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
                       >

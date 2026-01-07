@@ -9,7 +9,9 @@ vi.mock('@clerk/clerk-react', async () => {
   const actual = await vi.importActual('@clerk/clerk-react')
   return {
     ...actual,
-    ClerkProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    ClerkProvider: ({ children }: { children: React.ReactNode }) => (
+      <>{children}</>
+    ),
     useAuth: () => ({
       isLoaded: true,
       isSignedIn: true,
@@ -71,7 +73,9 @@ describe('App', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText(/Track your investments and performance/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/Track your investments and performance/i)
+      ).toBeInTheDocument()
     })
   })
 

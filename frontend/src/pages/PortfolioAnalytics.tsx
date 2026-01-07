@@ -52,7 +52,10 @@ export function PortfolioAnalytics(): React.JSX.Element {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8" data-testid="portfolio-analytics">
+    <div
+      className="container mx-auto px-4 py-8"
+      data-testid="portfolio-analytics"
+    >
       {/* Header with navigation */}
       <div className="mb-6">
         <Link

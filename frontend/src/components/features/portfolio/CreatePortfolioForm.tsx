@@ -57,7 +57,9 @@ export function CreatePortfolioForm({
         navigate(`/portfolio/${result.portfolio_id}`)
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create portfolio')
+      setError(
+        err instanceof Error ? err.message : 'Failed to create portfolio'
+      )
     }
   }
 
@@ -83,7 +85,10 @@ export function CreatePortfolioForm({
           className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
           aria-describedby="portfolio-name-help"
         />
-        <p id="portfolio-name-help" className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+        <p
+          id="portfolio-name-help"
+          className="mt-1 text-xs text-gray-500 dark:text-gray-400"
+        >
           Give your portfolio a descriptive name (1-100 characters)
         </p>
       </div>
@@ -110,7 +115,10 @@ export function CreatePortfolioForm({
             aria-describedby="initial-deposit-help"
           />
         </div>
-        <p id="initial-deposit-help" className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+        <p
+          id="initial-deposit-help"
+          className="mt-1 text-xs text-gray-500 dark:text-gray-400"
+        >
           Start with an initial cash balance (must be greater than $0.00)
         </p>
       </div>

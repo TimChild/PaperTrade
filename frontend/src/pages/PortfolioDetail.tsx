@@ -1,6 +1,10 @@
 import { useParams, Link } from 'react-router-dom'
 import { useRef, useState } from 'react'
-import { usePortfolio, usePortfolioBalance, useExecuteTrade } from '@/hooks/usePortfolio'
+import {
+  usePortfolio,
+  usePortfolioBalance,
+  useExecuteTrade,
+} from '@/hooks/usePortfolio'
 import { useHoldings } from '@/hooks/useHoldings'
 import { useTransactions } from '@/hooks/useTransactions'
 import { PortfolioSummaryCard } from '@/components/features/portfolio/PortfolioSummaryCard'
@@ -10,37 +14,61 @@ import { TradeForm } from '@/components/features/portfolio/TradeForm'
 import { PriceChart } from '@/components/features/PriceChart'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { ErrorDisplay } from '@/components/ui/ErrorDisplay'
-import { adaptPortfolio, adaptHolding, adaptTransaction } from '@/utils/adapters'
+import {
+  adaptPortfolio,
+  adaptHolding,
+  adaptTransaction,
+} from '@/utils/adapters'
 import type { TradeRequest } from '@/services/api/types'
 
 export function PortfolioDetail(): React.JSX.Element {
   const { id } = useParams<{ id: string }>()
   const portfolioId = id || ''
   const tradeFormRef = useRef<HTMLElement>(null)
-  const [quickSellData, setQuickSellData] = useState<{ ticker: string; quantity: number } | null>(null)
+  const [quickSellData, setQuickSellData] = useState<{
+    ticker: string
+    quantity: number
+  } | null>(null)
 
-  const { data: portfolioDTO, isLoading: portfolioLoading, isError, error } = usePortfolio(portfolioId)
-  const { data: balanceData, isLoading: balanceLoading } = usePortfolioBalance(portfolioId)
-  const { data: holdingsData, isLoading: holdingsLoading } = useHoldings(portfolioId)
-  const { data: transactionsData, isLoading: transactionsLoading } = useTransactions(portfolioId)
+  const {
+    data: portfolioDTO,
+    isLoading: portfolioLoading,
+    isError,
+    error,
+  } = usePortfolio(portfolioId)
+  const { data: balanceData, isLoading: balanceLoading } =
+    usePortfolioBalance(portfolioId)
+  const { data: holdingsData, isLoading: holdingsLoading } =
+    useHoldings(portfolioId)
+  const { data: transactionsData, isLoading: transactionsLoading } =
+    useTransactions(portfolioId)
   const executeTrade = useExecuteTrade(portfolioId)
 
   // Adapt backend DTOs to frontend types
-  const portfolio = portfolioDTO ? adaptPortfolio(portfolioDTO, balanceData || null) : null
+  const portfolio = portfolioDTO
+    ? adaptPortfolio(portfolioDTO, balanceData || null)
+    : null
   const holdings = holdingsData?.holdings.map(adaptHolding) || []
-  const transactions = transactionsData?.transactions.map(adaptTransaction) || []
+  const transactions =
+    transactionsData?.transactions.map(adaptTransaction) || []
 
   const handleTradeSubmit = (trade: TradeRequest) => {
-    console.log(`[TradeSubmit] Portfolio ID: ${portfolioId}, Action: ${trade.action}, Ticker: ${trade.ticker}, Quantity: ${trade.quantity}`)
+    console.log(
+      `[TradeSubmit] Portfolio ID: ${portfolioId}, Action: ${trade.action}, Ticker: ${trade.ticker}, Quantity: ${trade.quantity}`
+    )
     executeTrade.mutate(trade, {
       onSuccess: () => {
-        alert(`${trade.action === 'BUY' ? 'Buy' : 'Sell'} order executed successfully!`)
+        alert(
+          `${trade.action === 'BUY' ? 'Buy' : 'Sell'} order executed successfully!`
+        )
         // Clear quick sell data after successful trade
         setQuickSellData(null)
       },
       onError: (error) => {
         console.error(`[TradeSubmit Error] Portfolio ID: ${portfolioId}`, error)
-        alert(`Failed to execute trade: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        alert(
+          `Failed to execute trade: ${error instanceof Error ? error.message : 'Unknown error'}`
+        )
       },
     })
   }
@@ -51,7 +79,10 @@ export function PortfolioDetail(): React.JSX.Element {
 
     // Scroll to trade form with smooth behavior
     setTimeout(() => {
-      tradeFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      tradeFormRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      })
     }, 100)
   }
 
@@ -89,7 +120,10 @@ export function PortfolioDetail(): React.JSX.Element {
           ← Back to Dashboard
         </Link>
         <div className="flex items-center justify-between">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white" data-testid="portfolio-detail-name">
+          <h1
+            className="text-4xl font-bold text-gray-900 dark:text-white"
+            data-testid="portfolio-detail-name"
+          >
             {portfolio?.name || 'Portfolio Details'}
           </h1>
           <Link

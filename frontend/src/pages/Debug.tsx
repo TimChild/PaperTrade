@@ -1,3 +1,4 @@
+import type { JSX } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth, useClerk } from '@clerk/clerk-react'
 import { debugApi } from '@/services/api/debug'
@@ -5,12 +6,16 @@ import { debugApi } from '@/services/api/debug'
 /**
  * Debug page that displays runtime environment information
  * Path: /debug
- * 
+ *
  * Security Note: This page displays redacted API key information
  * and is intended for development/debugging only.
  */
 export function Debug(): JSX.Element {
-  const { data: backendInfo, isLoading, error } = useQuery({
+  const {
+    data: backendInfo,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ['debug'],
     queryFn: () => debugApi.getInfo(),
   })
@@ -53,7 +58,8 @@ export function Debug(): JSX.Element {
                 Development Only
               </p>
               <p className="text-sm text-yellow-700 dark:text-yellow-400">
-                This page is for development and debugging. It will be removed or protected before production deployment.
+                This page is for development and debugging. It will be removed
+                or protected before production deployment.
               </p>
             </div>
           </div>
@@ -69,31 +75,38 @@ export function Debug(): JSX.Element {
 
           {/* Authentication Status */}
           <DebugSection title="Authentication (Clerk)">
-            <DebugRow label="Clerk loaded" value={clerk.loaded ? '✅ Yes' : '❌ No'} />
-            <DebugRow 
-              label="Publishable key present" 
-              value={frontendEnv.clerkPublishableKey ? '✅ Yes' : '❌ No'} 
+            <DebugRow
+              label="Clerk loaded"
+              value={clerk.loaded ? '✅ Yes' : '❌ No'}
+            />
+            <DebugRow
+              label="Publishable key present"
+              value={frontendEnv.clerkPublishableKey ? '✅ Yes' : '❌ No'}
             />
             {frontendEnv.clerkPublishableKey && (
-              <DebugRow 
-                label="Publishable key (prefix)" 
-                value={frontendEnv.clerkPublishableKey.substring(0, 20) + '...'} 
+              <DebugRow
+                label="Publishable key (prefix)"
+                value={frontendEnv.clerkPublishableKey.substring(0, 20) + '...'}
                 mono
               />
             )}
-            <DebugRow label="Signed in" value={isSignedIn ? '✅ Yes' : '❌ No'} />
+            <DebugRow
+              label="Signed in"
+              value={isSignedIn ? '✅ Yes' : '❌ No'}
+            />
             {userId && <DebugRow label="User ID" value={userId} mono />}
           </DebugSection>
 
           {/* Browser/Client Info */}
           <DebugSection title="Browser / Client">
             <DebugRow label="Window size" value={browserInfo.windowSize} />
-            <DebugRow 
-              label="LocalStorage keys" 
-              value={browserInfo.localStorageKeys.length > 0 
-                ? browserInfo.localStorageKeys.join(', ') 
-                : 'None'
-              } 
+            <DebugRow
+              label="LocalStorage keys"
+              value={
+                browserInfo.localStorageKeys.length > 0
+                  ? browserInfo.localStorageKeys.join(', ')
+                  : 'None'
+              }
             />
             <DebugRow label="User Agent" value={browserInfo.userAgent} small />
           </DebugSection>
@@ -124,40 +137,70 @@ export function Debug(): JSX.Element {
             <>
               {/* Backend Environment */}
               <DebugSection title="Backend Environment">
-                <DebugRow label="Environment" value={backendInfo.environment.environment} />
-                <DebugRow label="Python" value={backendInfo.environment.python_version} />
-                <DebugRow label="FastAPI" value={backendInfo.environment.fastapi_version} />
+                <DebugRow
+                  label="Environment"
+                  value={backendInfo.environment.environment}
+                />
+                <DebugRow
+                  label="Python"
+                  value={backendInfo.environment.python_version}
+                />
+                <DebugRow
+                  label="FastAPI"
+                  value={backendInfo.environment.fastapi_version}
+                />
               </DebugSection>
 
               {/* Database Status */}
               <DebugSection title="Database">
-                <DebugRow 
-                  label="Connected" 
-                  value={backendInfo.database.connected ? '✅ Connected' : '❌ Not connected'} 
+                <DebugRow
+                  label="Connected"
+                  value={
+                    backendInfo.database.connected
+                      ? '✅ Connected'
+                      : '❌ Not connected'
+                  }
                 />
-                <DebugRow label="URL" value={backendInfo.database.url} mono small />
-                <DebugRow label="Pool size" value={backendInfo.database.pool_size.toString()} />
+                <DebugRow
+                  label="URL"
+                  value={backendInfo.database.url}
+                  mono
+                  small
+                />
+                <DebugRow
+                  label="Pool size"
+                  value={backendInfo.database.pool_size.toString()}
+                />
               </DebugSection>
 
               {/* Redis Status */}
               <DebugSection title="Redis">
-                <DebugRow 
-                  label="Connected" 
-                  value={backendInfo.redis.connected ? '✅ Connected' : '❌ Not connected'} 
+                <DebugRow
+                  label="Connected"
+                  value={
+                    backendInfo.redis.connected
+                      ? '✅ Connected'
+                      : '❌ Not connected'
+                  }
                 />
-                <DebugRow label="URL" value={backendInfo.redis.url} mono small />
+                <DebugRow
+                  label="URL"
+                  value={backendInfo.redis.url}
+                  mono
+                  small
+                />
                 <DebugRow label="Ping" value={backendInfo.redis.ping} />
               </DebugSection>
 
               {/* API Keys */}
               <DebugSection title="API Keys (Redacted)">
-                <ApiKeyRow 
-                  label="Clerk Secret Key" 
-                  keyInfo={backendInfo.api_keys.clerk_secret_key} 
+                <ApiKeyRow
+                  label="Clerk Secret Key"
+                  keyInfo={backendInfo.api_keys.clerk_secret_key}
                 />
-                <ApiKeyRow 
-                  label="Alpha Vantage API Key" 
-                  keyInfo={backendInfo.api_keys.alpha_vantage_api_key} 
+                <ApiKeyRow
+                  label="Alpha Vantage API Key"
+                  keyInfo={backendInfo.api_keys.alpha_vantage_api_key}
                 />
               </DebugSection>
 
@@ -165,15 +208,15 @@ export function Debug(): JSX.Element {
               {Object.keys(backendInfo.services).length > 0 && (
                 <DebugSection title="External Services">
                   {backendInfo.services.clerk && (
-                    <DebugRow 
-                      label="Clerk API" 
-                      value={`✅ Configured (checked: ${new Date(backendInfo.services.clerk.last_check).toLocaleTimeString()})`} 
+                    <DebugRow
+                      label="Clerk API"
+                      value={`✅ Configured (checked: ${new Date(backendInfo.services.clerk.last_check).toLocaleTimeString()})`}
                     />
                   )}
                   {backendInfo.services.alpha_vantage && (
-                    <DebugRow 
-                      label="Alpha Vantage" 
-                      value={`✅ Configured (checked: ${new Date(backendInfo.services.alpha_vantage.last_check).toLocaleTimeString()})`} 
+                    <DebugRow
+                      label="Alpha Vantage"
+                      value={`✅ Configured (checked: ${new Date(backendInfo.services.alpha_vantage.last_check).toLocaleTimeString()})`}
                     />
                   )}
                 </DebugSection>
@@ -209,13 +252,18 @@ interface DebugRowProps {
   small?: boolean
 }
 
-function DebugRow({ label, value, mono = false, small = false }: DebugRowProps): JSX.Element {
+function DebugRow({
+  label,
+  value,
+  mono = false,
+  small = false,
+}: DebugRowProps): JSX.Element {
   return (
     <div className="flex flex-col gap-1 sm:flex-row sm:gap-4">
       <dt className="min-w-[200px] font-medium text-gray-700 dark:text-gray-300">
         {label}:
       </dt>
-      <dd 
+      <dd
         className={`
           text-gray-900 dark:text-gray-100
           ${mono ? 'font-mono' : ''}

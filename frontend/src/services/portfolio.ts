@@ -58,7 +58,8 @@ export const portfolioService = {
     const transactions = mockTransactions[portfolioId] || []
     // Return sorted by timestamp (most recent first)
     return [...transactions].sort(
-      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     )
   },
 

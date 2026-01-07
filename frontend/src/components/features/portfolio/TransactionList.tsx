@@ -56,14 +56,19 @@ export function TransactionList({
       <div className="rounded-lg border border-gray-300 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
         <div className="animate-pulse space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 rounded bg-gray-300 dark:bg-gray-700"></div>
+            <div
+              key={i}
+              className="h-16 rounded bg-gray-300 dark:bg-gray-700"
+            ></div>
           ))}
         </div>
       </div>
     )
   }
 
-  const displayTransactions = limit ? transactions.slice(0, limit) : transactions
+  const displayTransactions = limit
+    ? transactions.slice(0, limit)
+    : transactions
 
   if (displayTransactions.length === 0) {
     return (
@@ -77,7 +82,10 @@ export function TransactionList({
 
   return (
     <div className="rounded-lg border border-gray-300 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-      <div className="divide-y divide-gray-200 dark:divide-gray-700" data-testid="transaction-history-table">
+      <div
+        className="divide-y divide-gray-200 dark:divide-gray-700"
+        data-testid="transaction-history-table"
+      >
         {displayTransactions.map((transaction, idx) => {
           const colorClass = getTransactionColorClass(transaction.type)
           const isPositive = transaction.amount > 0
@@ -89,16 +97,26 @@ export function TransactionList({
               className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50"
             >
               <div className="flex items-start gap-3">
-                <span className="text-2xl" role="img" aria-label={transaction.type}>
+                <span
+                  className="text-2xl"
+                  role="img"
+                  aria-label={transaction.type}
+                >
                   {getTransactionIcon(transaction.type)}
                 </span>
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="font-medium text-gray-900 dark:text-white" data-testid={`transaction-type-${idx}`}>
+                    <p
+                      className="font-medium text-gray-900 dark:text-white"
+                      data-testid={`transaction-type-${idx}`}
+                    >
                       {getTransactionLabel(transaction.type)}
                     </p>
                     {transaction.ticker && (
-                      <span className="rounded bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-300" data-testid={`transaction-symbol-${idx}`}>
+                      <span
+                        className="rounded bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                        data-testid={`transaction-symbol-${idx}`}
+                      >
                         {transaction.ticker}
                       </span>
                     )}
@@ -107,7 +125,8 @@ export function TransactionList({
                     <span>{formatDate(transaction.timestamp)}</span>
                     {transaction.quantity && transaction.pricePerShare && (
                       <span className="ml-2">
-                        {transaction.quantity} shares @ {formatCurrency(transaction.pricePerShare)}
+                        {transaction.quantity} shares @{' '}
+                        {formatCurrency(transaction.pricePerShare)}
                       </span>
                     )}
                   </div>
@@ -119,7 +138,10 @@ export function TransactionList({
                 </div>
               </div>
               <div className={`text-right ${colorClass}`}>
-                <p className="text-lg font-semibold" data-testid={`transaction-amount-${idx}`}>
+                <p
+                  className="text-lg font-semibold"
+                  data-testid={`transaction-amount-${idx}`}
+                >
                   {isPositive ? '+' : ''}
                   {formatCurrency(Math.abs(transaction.amount))}
                 </p>

@@ -11,7 +11,9 @@ import { AuthProvider } from './components/AuthProvider.tsx'
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
 if (!CLERK_PUBLISHABLE_KEY) {
-  throw new Error('Missing Clerk publishable key. Please set VITE_CLERK_PUBLISHABLE_KEY in your .env.local file.')
+  throw new Error(
+    'Missing Clerk publishable key. Please set VITE_CLERK_PUBLISHABLE_KEY in your .env.local file.'
+  )
 }
 
 // Create a client

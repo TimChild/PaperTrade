@@ -95,7 +95,9 @@ describe('TradeForm', () => {
 
       // Should show holdings info
       await waitFor(() => {
-        expect(screen.getByTestId('trade-form-holdings-info')).toBeInTheDocument()
+        expect(
+          screen.getByTestId('trade-form-holdings-info')
+        ).toBeInTheDocument()
         expect(screen.getByText(/You own/i)).toBeInTheDocument()
         expect(screen.getByText(/100/)).toBeInTheDocument()
         expect(screen.getByText(/shares of AAPL/)).toBeInTheDocument()
@@ -115,7 +117,9 @@ describe('TradeForm', () => {
       // Should show no holdings message
       await waitFor(() => {
         expect(screen.getByTestId('trade-form-no-holdings')).toBeInTheDocument()
-        expect(screen.getByText(/You don't own any shares of IBM/i)).toBeInTheDocument()
+        expect(
+          screen.getByText(/You don't own any shares of IBM/i)
+        ).toBeInTheDocument()
       })
     })
 
@@ -193,8 +197,12 @@ describe('TradeForm', () => {
       })
 
       // Should pre-fill ticker and quantity
-      const tickerInput = screen.getByTestId('trade-form-ticker-input') as HTMLInputElement
-      const quantityInput = screen.getByTestId('trade-form-quantity-input') as HTMLInputElement
+      const tickerInput = screen.getByTestId(
+        'trade-form-ticker-input'
+      ) as HTMLInputElement
+      const quantityInput = screen.getByTestId(
+        'trade-form-quantity-input'
+      ) as HTMLInputElement
 
       expect(tickerInput.value).toBe('AAPL')
       expect(quantityInput.value).toBe('100')
@@ -202,11 +210,17 @@ describe('TradeForm', () => {
 
     it('should update form when quickSellData changes', async () => {
       const { rerender } = render(
-        <TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} quickSellData={null} />
+        <TradeForm
+          onSubmit={mockOnSubmit}
+          holdings={mockHoldings}
+          quickSellData={null}
+        />
       )
 
       // Initially should be BUY mode
-      expect(screen.getByTestId('trade-form-action-buy')).toHaveClass('bg-blue-600')
+      expect(screen.getByTestId('trade-form-action-buy')).toHaveClass(
+        'bg-blue-600'
+      )
 
       // Update with quick sell data
       const quickSellData = { ticker: 'MSFT', quantity: 50 }
@@ -219,12 +233,18 @@ describe('TradeForm', () => {
       )
 
       await waitFor(() => {
-        const tickerInput = screen.getByTestId('trade-form-ticker-input') as HTMLInputElement
-        const quantityInput = screen.getByTestId('trade-form-quantity-input') as HTMLInputElement
+        const tickerInput = screen.getByTestId(
+          'trade-form-ticker-input'
+        ) as HTMLInputElement
+        const quantityInput = screen.getByTestId(
+          'trade-form-quantity-input'
+        ) as HTMLInputElement
 
         expect(tickerInput.value).toBe('MSFT')
         expect(quantityInput.value).toBe('50')
-        expect(screen.getByTestId('trade-form-action-sell')).toHaveClass('bg-negative')
+        expect(screen.getByTestId('trade-form-action-sell')).toHaveClass(
+          'bg-negative'
+        )
       })
     })
   })
@@ -255,8 +275,12 @@ describe('TradeForm', () => {
       await user.type(screen.getByTestId('trade-form-quantity-input'), '10')
       await user.click(screen.getByTestId('trade-form-buy-button'))
 
-      const tickerInput = screen.getByTestId('trade-form-ticker-input') as HTMLInputElement
-      const quantityInput = screen.getByTestId('trade-form-quantity-input') as HTMLInputElement
+      const tickerInput = screen.getByTestId(
+        'trade-form-ticker-input'
+      ) as HTMLInputElement
+      const quantityInput = screen.getByTestId(
+        'trade-form-quantity-input'
+      ) as HTMLInputElement
 
       expect(tickerInput.value).toBe('')
       expect(quantityInput.value).toBe('')

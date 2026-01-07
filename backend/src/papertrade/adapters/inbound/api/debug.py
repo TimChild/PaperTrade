@@ -11,17 +11,18 @@ passwords) and only shows safe metadata like key prefixes and lengths.
 import os
 import sys
 from datetime import UTC, datetime
+from typing import Any
 
 import fastapi
 from redis.asyncio import Redis
-from sqlalchemy import text
+from sqlmodel import select
 
 from papertrade.infrastructure.database import SessionDep, engine
 
 router = fastapi.APIRouter(prefix="/debug", tags=["debug"])
 
 
-def _redact_api_key(key: str | None) -> dict[str, str | int | bool]:
+def _redact_api_key(key: str | None) -> dict[str, Any]:
     """Safely redact an API key, showing only metadata.
 
     Args:
@@ -44,7 +45,7 @@ def _redact_api_key(key: str | None) -> dict[str, str | int | bool]:
     }
 
 
-def _get_environment_info() -> dict[str, str]:
+def _get_environment_info() -> dict[str, Any]:
     """Get environment and runtime information.
 
     Returns:
@@ -59,7 +60,7 @@ def _get_environment_info() -> dict[str, str]:
     }
 
 
-async def _get_database_status(session: SessionDep) -> dict[str, str | bool | int]:
+async def _get_database_status(session: SessionDep) -> dict[str, Any]:
     """Get database connection status.
 
     Args:
@@ -70,7 +71,9 @@ async def _get_database_status(session: SessionDep) -> dict[str, str | bool | in
     """
     try:
         # Try to execute a simple query to verify connection
-        await session.exec(text("SELECT 1"))
+        # Use SQLModel select with literal 1
+        stmt = select(1)  # type: ignore[arg-type]  # select(1) is valid for testing connection
+        await session.exec(stmt)
         connected = True
     except Exception:
         connected = False
@@ -84,14 +87,24 @@ async def _get_database_status(session: SessionDep) -> dict[str, str | bool | in
             user_part = parts[0].split(":")[0]
             db_url = f"{user_part}:***@{parts[1]}"
 
+    # Get pool size - it's a property/method depending on pool type
+    pool_size = 0
+    try:
+        if hasattr(engine.pool, "size"):
+            pool_size_val = engine.pool.size  # type: ignore[attr-defined]
+            # size() is callable in some pool types
+            pool_size = pool_size_val() if callable(pool_size_val) else pool_size_val
+    except Exception:
+        pool_size = 0
+
     return {
         "connected": connected,
         "url": db_url,
-        "pool_size": engine.pool.size() if hasattr(engine.pool, "size") else 0,
+        "pool_size": pool_size,
     }
 
 
-async def _get_redis_status() -> dict[str, str | bool]:
+async def _get_redis_status() -> dict[str, Any]:
     """Get Redis connection status.
 
     Returns:
@@ -106,9 +119,16 @@ async def _get_redis_status() -> dict[str, str | bool]:
             encoding="utf-8",
             decode_responses=True,
         )
-        ping_result = await redis.ping()
+        # ping() returns Union[Awaitable[bool], bool]
+        # We need to handle both cases
+        ping_response = redis.ping()
+        # Check if it's awaitable
+        if hasattr(ping_response, "__await__"):
+            ping_result = await ping_response  # type: ignore[misc]
+        else:
+            ping_result = ping_response  # type: ignore[assignment]
         await redis.aclose()
-        connected = ping_result
+        connected = bool(ping_result)
     except Exception:
         connected = False
 
@@ -127,7 +147,7 @@ async def _get_redis_status() -> dict[str, str | bool]:
     }
 
 
-def _get_api_keys_status() -> dict[str, dict[str, str | int | bool]]:
+def _get_api_keys_status() -> dict[str, Any]:
     """Get API keys status (redacted).
 
     Returns:
@@ -142,15 +162,13 @@ def _get_api_keys_status() -> dict[str, dict[str, str | int | bool]]:
     }
 
 
-async def _get_services_health() -> dict[str, dict[str, str | bool]]:
+async def _get_services_health() -> dict[str, Any]:
     """Get external services health status.
 
     Returns:
         Dictionary with service health information
     """
-    # For now, just report configured status
-    # Future enhancement: actually ping these services
-    services = {}
+    services: dict[str, Any] = {}
 
     clerk_key = os.getenv("CLERK_SECRET_KEY")
     if clerk_key and clerk_key not in ("", "your_api_key_here", "test"):
@@ -172,7 +190,7 @@ async def _get_services_health() -> dict[str, dict[str, str | bool]]:
 @router.get("")
 async def get_debug_info(
     session: SessionDep,
-) -> dict[str, dict[str, str | int | bool] | dict[str, dict[str, str | bool | int]]]:
+) -> dict[str, Any]:
     """Get runtime debug information.
 
     Returns diagnostic information about the application's runtime

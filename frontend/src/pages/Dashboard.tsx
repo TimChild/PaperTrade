@@ -13,17 +13,26 @@ import type { PortfolioDTO } from '@/services/api/types'
 /**
  * Component that fetches balance for a single portfolio and renders the card
  */
-function PortfolioCardWithBalance({ portfolioDTO }: { portfolioDTO: PortfolioDTO }) {
+function PortfolioCardWithBalance({
+  portfolioDTO,
+}: {
+  portfolioDTO: PortfolioDTO
+}) {
   const { data: balanceData } = usePortfolioBalance(portfolioDTO.id)
   const portfolio = adaptPortfolio(portfolioDTO, balanceData || null)
-  
+
   return <PortfolioCard portfolio={portfolio} isLoading={!balanceData} />
 }
 
 export function Dashboard(): React.JSX.Element {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const navigate = useNavigate()
-  const { data: portfolios, isLoading: portfoliosLoading, isError, error } = usePortfolios()
+  const {
+    data: portfolios,
+    isLoading: portfoliosLoading,
+    isError,
+    error,
+  } = usePortfolios()
 
   if (isError) {
     return (
@@ -85,12 +94,19 @@ export function Dashboard(): React.JSX.Element {
                   Your Portfolios
                 </h2>
                 <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                  You have {portfolios.length} portfolio{portfolios.length !== 1 ? 's' : ''}
+                  You have {portfolios.length} portfolio
+                  {portfolios.length !== 1 ? 's' : ''}
                 </p>
               </div>
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" data-testid="portfolio-grid">
+              <div
+                className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+                data-testid="portfolio-grid"
+              >
                 {portfolios.map((portfolioDTO) => (
-                  <PortfolioCardWithBalance key={portfolioDTO.id} portfolioDTO={portfolioDTO} />
+                  <PortfolioCardWithBalance
+                    key={portfolioDTO.id}
+                    portfolioDTO={portfolioDTO}
+                  />
                 ))}
               </div>
             </>

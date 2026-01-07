@@ -15,7 +15,9 @@ export function ChartError({
   return (
     <div className="flex h-64 flex-col items-center justify-center rounded-lg border border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950">
       <div className="text-center">
-        <p className="mb-4 text-lg font-medium text-red-800 dark:text-red-200">{message}</p>
+        <p className="mb-4 text-lg font-medium text-red-800 dark:text-red-200">
+          {message}
+        </p>
         <button
           onClick={onRetry}
           className="rounded-lg bg-red-600 px-4 py-2 text-white transition-colors hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600"

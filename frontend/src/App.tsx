@@ -67,7 +67,10 @@ function AuthenticatedApp() {
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/portfolio/:id" element={<PortfolioDetail />} />
-              <Route path="/portfolio/:id/analytics" element={<PortfolioAnalytics />} />
+              <Route
+                path="/portfolio/:id/analytics"
+                element={<PortfolioAnalytics />}
+              />
             </Routes>
           </main>
         </div>

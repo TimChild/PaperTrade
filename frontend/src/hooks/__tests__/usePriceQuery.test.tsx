@@ -6,7 +6,11 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
-import { usePriceQuery, useBatchPricesQuery, usePriceStaleness } from '../usePriceQuery'
+import {
+  usePriceQuery,
+  useBatchPricesQuery,
+  usePriceStaleness,
+} from '../usePriceQuery'
 import type { PricePoint } from '@/types/price'
 import React from 'react'
 
@@ -26,7 +30,10 @@ const server = setupServer(
 
     const price = mockPrices[ticker as string]
     if (!price) {
-      return HttpResponse.json({ detail: `Ticker ${ticker} not found` }, { status: 404 })
+      return HttpResponse.json(
+        { detail: `Ticker ${ticker} not found` },
+        { status: 404 }
+      )
     }
 
     return HttpResponse.json({
@@ -99,9 +106,12 @@ describe('usePriceQuery', () => {
 
 describe('useBatchPricesQuery', () => {
   it('fetches prices for multiple tickers successfully', async () => {
-    const { result } = renderHook(() => useBatchPricesQuery(['AAPL', 'GOOGL', 'MSFT']), {
-      wrapper: createWrapper(),
-    })
+    const { result } = renderHook(
+      () => useBatchPricesQuery(['AAPL', 'GOOGL', 'MSFT']),
+      {
+        wrapper: createWrapper(),
+      }
+    )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
@@ -118,9 +128,12 @@ describe('useBatchPricesQuery', () => {
   })
 
   it('handles partial failures gracefully', async () => {
-    const { result } = renderHook(() => useBatchPricesQuery(['AAPL', 'INVALID', 'MSFT']), {
-      wrapper: createWrapper(),
-    })
+    const { result } = renderHook(
+      () => useBatchPricesQuery(['AAPL', 'INVALID', 'MSFT']),
+      {
+        wrapper: createWrapper(),
+      }
+    )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
@@ -142,9 +155,12 @@ describe('useBatchPricesQuery', () => {
   })
 
   it('returns empty map when all tickers fail', async () => {
-    const { result } = renderHook(() => useBatchPricesQuery(['INVALID1', 'INVALID2']), {
-      wrapper: createWrapper(),
-    })
+    const { result } = renderHook(
+      () => useBatchPricesQuery(['INVALID1', 'INVALID2']),
+      {
+        wrapper: createWrapper(),
+      }
+    )
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
 
