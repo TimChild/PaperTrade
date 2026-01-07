@@ -150,10 +150,8 @@ def test_check_historical_data_available(
 
     now = datetime.now(UTC)
     # Format as ISO 8601 with Z suffix (FastAPI expects this format)
-    date_str = now.replace(microsecond=0).isoformat().replace('+00:00', 'Z')
-    response = client.get(
-        f"/api/v1/prices/AAPL/check?date={date_str}"
-    )
+    date_str = now.replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    response = client.get(f"/api/v1/prices/AAPL/check?date={date_str}")
 
     assert response.status_code == 200
     data = response.json()
@@ -173,9 +171,7 @@ def test_check_historical_data_not_available(
     """Test checking historical data availability when no data exists."""
     # Use a date far in the past where we have no data
     # InMemoryAdapter only has ±1 hour window
-    response = client.get(
-        "/api/v1/prices/AAPL/check?date=2020-01-01T00:00:00Z"
-    )
+    response = client.get("/api/v1/prices/AAPL/check?date=2020-01-01T00:00:00Z")
 
     assert response.status_code == 200
     data = response.json()
@@ -194,9 +190,7 @@ def test_check_historical_data_invalid_ticker(
 ) -> None:
     """Test checking historical data with unknown ticker returns not available."""
     # Use a valid ticker format but unknown ticker (max 5 chars)
-    response = client.get(
-        "/api/v1/prices/XXXXX/check?date=2024-01-01T00:00:00Z"
-    )
+    response = client.get("/api/v1/prices/XXXXX/check?date=2024-01-01T00:00:00Z")
 
     assert response.status_code == 200
     data = response.json()

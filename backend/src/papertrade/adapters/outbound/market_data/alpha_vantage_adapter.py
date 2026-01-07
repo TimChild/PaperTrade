@@ -585,9 +585,7 @@ class AlphaVantageAdapter:
                 # Parse date and create timestamp at market close
                 # (4:00 PM ET = 21:00 UTC)
                 date_obj = datetime.strptime(date_str, "%Y-%m-%d")
-                timestamp = date_obj.replace(
-                    hour=21, minute=0, second=0, tzinfo=UTC
-                )
+                timestamp = date_obj.replace(hour=21, minute=0, second=0, tzinfo=UTC)
 
                 # Extract optional OHLCV data
                 open_value = None
