@@ -233,3 +233,6 @@ docker-compose.override.yml
 
 # Task
 .task/
+
+# Playwright MCP
+.playwright-mcp/
