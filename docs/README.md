@@ -8,12 +8,12 @@
 | [testing.md](testing.md) | Testing quick reference |
 | [mcp-tools.md](mcp-tools.md) | MCP tools for AI assistants |
 
-## Project Documentation (Root)
+## Project Documentation
 
 | Document | Purpose |
-|----------|---------|
-| [../project_plan.md](../project_plan.md) | Development phases and roadmap |
-| [../project_strategy.md](../project_strategy.md) | Architecture and tech decisions |
+|----------|---------||
+| [planning/project_plan.md](planning/project_plan.md) | Development phases and roadmap |
+| [planning/project_strategy.md](planning/project_strategy.md) | Architecture and tech decisions |
 | [../PROGRESS.md](../PROGRESS.md) | Current status and recent work |
 | [../BACKLOG.md](../BACKLOG.md) | Minor improvements and tech debt |
 | [../AGENT_ORCHESTRATION.md](../AGENT_ORCHESTRATION.md) | AI agent workflow guide |

@@ -20,7 +20,7 @@ A stock market emulation platform for practicing trading strategies without risk
 
 **Project Information:**
 - [Development Progress](PROGRESS.md) - Phase completion tracking
-- [Project Plan](project_plan.md) - Roadmap and architecture
+- [Project Plan](docs/planning/project_plan.md) - Roadmap and architecture
 - [Backlog](BACKLOG.md) - Planned improvements
 
 ## Overview
@@ -396,8 +396,7 @@ PaperTrade/
 │   └── tests/
 ├── infrastructure/          # AWS CDK
 ├── agent_progress_docs/     # AI agent work documentation
-├── project_plan.md
-├── project_strategy.md
+├── docs/planning/           # Project plan and strategy
 └── README.md
 ```
 
@@ -563,7 +562,7 @@ task ci:fast
 
 ## Roadmap
 
-See [project_plan.md](project_plan.md) for detailed development phases:
+See [project_plan.md](docs/planning/project_plan.md) for detailed development phases:
 
 1. **Phase 0**: Foundation (current) - Project setup, CI/CD, tooling
 2. **Phase 1**: The Ledger MVP - Basic portfolio and trade tracking
@@ -575,7 +574,7 @@ See [project_plan.md](project_plan.md) for detailed development phases:
 
 We welcome contributions! Please:
 1. Read the [copilot instructions](.github/copilot-instructions.md) for coding standards
-2. Check the [project strategy](project_strategy.md) for architectural guidance
+2. Check the [project strategy](docs/planning/project_strategy.md) for architectural guidance
 3. Follow our PR template when submitting changes
 
 ## License

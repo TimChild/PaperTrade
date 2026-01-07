@@ -12,12 +12,12 @@ Guide for orchestrating AI coding agents to develop PaperTrade (a stock market p
 
 ```bash
 # 1. Setup environment
-task setup                    # or ./.github/copilot-setup.sh
+task setup                           # Full development environment setup
 
 # 2. Get current state
-cat PROGRESS.md               # Current status and next steps
-cat project_plan.md           # Development phases
-GH_PAGER="" gh pr list        # Open PRs
+cat PROGRESS.md                      # Current status and next steps
+cat docs/planning/project_plan.md    # Development phases
+GH_PAGER="" gh pr list               # Open PRs
 
 # 3. Pull latest
 git checkout main && git pull origin main
@@ -103,8 +103,8 @@ task lint           # Run linters
 |------|---------|
 | `PROGRESS.md` | **Current status**, recent work, next steps |
 | `.github/copilot-instructions.md` | Agent guidelines, MCP setup |
-| `project_plan.md` | Development phases |
-| `project_strategy.md` | Architecture decisions |
+| `docs/planning/project_plan.md` | Development phases |
+| `docs/planning/project_strategy.md` | Architecture decisions |
 | `agent_tasks/*.md` | Task definitions |
 | `.github/agents/*.md` | Role-specific agent instructions |
 | `Taskfile.yml` | Commands (`task --list`) |
