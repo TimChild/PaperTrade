@@ -2,13 +2,27 @@
 
 Minor improvements, tech debt, and enhancements that don't block main development.
 
-**Last Updated**: January 6, 2026
+**Last Updated**: January 7, 2026
 
 ## Active Backlog
 
 ### Testing & Quality (MEDIUM PRIORITY)
 
-1. **Implement Skipped Scheduler Tests** - ~4-6 hours
+1. **Fix E2E Tests in Agent Environment** - ~2-4 hours
+   - **Problem**: E2E tests fail at runtime in agent environment despite Clerk auth fix (PR #83)
+   - **Root Cause**: Frontend container not accessible at `localhost:5173` + Playwright browser download blocked by firewall
+   - **Findings from PR #83**:
+     - ✅ Clerk authentication tokens now work (switched from `@clerk/backend` SDK to direct axios API calls)
+     - ✅ `.env` file created correctly with secrets
+     - ❌ Playwright can't download Chrome (firewall blocks `storage.googleapis.com`)
+     - ❌ Frontend container not reachable from test runner
+   - **Solution Options**:
+     - Add `storage.googleapis.com` to Copilot agent firewall allowlist
+     - Pre-install Playwright browsers in `copilot-setup-steps.yml`
+     - Investigate Docker networking for frontend accessibility
+   - **Reference**: `agent_progress_docs/2026-01-07_05-47-05_verify-e2e-tests-agent-environment.md`
+
+2. **Implement Skipped Scheduler Tests** - ~4-6 hours
    - 4 tests in `tests/unit/infrastructure/test_scheduler.py` are skipped
    - Reasons: "Requires database setup", "timing-dependent", "complex integration"
    - Solution: Proper mocking for market data, event-based assertions, split complex tests
