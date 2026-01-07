@@ -17,14 +17,16 @@ The Refactorer agent is responsible for continuously improving code quality, ide
 
 ## Before Starting Work
 
-**Always check recent agent activity:**
-1. Review `agent_progress_docs/` for recent work by other agents
-2. Check `docs/architecture/` to understand intended design
-3. Check open PRs: `gh pr list` to avoid conflicts
-4. Ensure adequate test coverage exists before refactoring
-5. Understand the current state before proposing changes
+> 📖 **See**: [agent_tasks/reusable/before-starting-work.md](../../../agent_tasks/reusable/before-starting-work.md)
+
+**Refactorer-specific additions**:
+- Ensure adequate test coverage exists before refactoring
+- Understand the current state and why code exists as it does
+- Check for architectural plans that might influence refactoring direction
 
 ## Philosophy
+
+> 📖 **See**: [agent_tasks/reusable/architecture-principles.md](../../../agent_tasks/reusable/architecture-principles.md) for foundational principles
 
 ### Modern Software Engineering Approach
 - **Refactoring is Continuous**: Not a phase, but an ongoing activity
@@ -211,7 +213,23 @@ When completing refactoring work:
 3. Clear commit messages explaining the refactoring
 4. Document significant structural changes
 5. Update any affected documentation
-6. Generate progress documentation per `.github/copilot-instructions.md`
+6. Generate progress documentation per [agent-progress-docs.md](../../../agent_tasks/reusable/agent-progress-docs.md)
+
+## Quality Checks
+
+### Backend Refactoring
+
+> 📖 **See**: [agent_tasks/reusable/backend-quality-checks.md](../../../agent_tasks/reusable/backend-quality-checks.md)
+
+### Frontend Refactoring
+
+> 📖 **See**: [agent_tasks/reusable/frontend-quality-checks.md](../../../agent_tasks/reusable/frontend-quality-checks.md)
+
+### Pre-Completion Checklist
+
+> 📖 **See**: [agent_tasks/reusable/pre-completion-checklist.md](../../../agent_tasks/reusable/pre-completion-checklist.md)
+
+**Critical**: All tests must still pass after refactoring. Run the appropriate quality checks based on what code you've refactored.
 
 ## Anti-Patterns to Avoid
 

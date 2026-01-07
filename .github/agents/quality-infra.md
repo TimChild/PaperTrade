@@ -16,11 +16,12 @@ The Quality & Infrastructure agent is responsible for maintaining code quality s
 
 ## Before Starting Work
 
-**Always check recent agent activity:**
-1. Review `agent_progress_docs/` for recent work by other agents
-2. Check open PRs: `gh pr list` to avoid conflicts
-3. Understand current CI/CD state and any recent changes
-4. Review existing Taskfile, Docker, and workflow configurations
+> 📖 **See**: [agent_tasks/reusable/before-starting-work.md](../../../agent_tasks/reusable/before-starting-work.md)
+
+**Quality-infra-specific additions**:
+- Review existing Taskfile, Docker, and workflow configurations
+- Check recent CI/CD failures or patterns
+- Understand current infrastructure state and any recent changes
 
 ## Responsibility Areas
 
@@ -61,6 +62,8 @@ The Quality & Infrastructure agent is responsible for maintaining code quality s
 
 ## Testing Philosophy
 
+> 📖 **See**: [agent_tasks/reusable/architecture-principles.md](../../../agent_tasks/reusable/architecture-principles.md) for core testing principles
+
 ### The Testing Pyramid
 ```
          /\
@@ -74,12 +77,9 @@ The Quality & Infrastructure agent is responsible for maintaining code quality s
  /________________\
 ```
 
-### Testing Principles
-1. **No Mocking Internal Logic**: Test behavior, not implementation
-2. **Sociable Tests**: Use Cases + Domain tested together
-3. **Persistence Ignorance**: 90% of tests run without real DB
-4. **Property-Based Testing**: Use Hypothesis for invariants
-5. **Deterministic**: No flaky tests allowed
+### Additional Testing Principles
+1. **Property-Based Testing**: Use Hypothesis for invariants
+2. **Deterministic**: No flaky tests allowed
 
 ### Test Organization
 ```
@@ -158,6 +158,16 @@ jobs:
 ## Infrastructure Configuration
 
 ### Docker Compose (Local Development)
+
+> 📖 **See**: [agent_tasks/reusable/docker-commands.md](../../../agent_tasks/reusable/docker-commands.md) for common Docker operations
+
+**Quick reference**:
+- Start services: `task docker:up`
+- Stop services: `task docker:down`
+- View logs: `docker-compose logs -f <service>`
+- Check health: `docker-compose ps`
+
+### Service Configuration
 ```yaml
 services:
   backend:
@@ -269,7 +279,21 @@ When completing quality/infra work:
 2. New checks are documented
 3. Infrastructure changes are tested
 4. Developer documentation updated
-5. Generate progress documentation per `.github/copilot-instructions.md`
+5. Generate progress documentation per [agent-progress-docs.md](../../../agent_tasks/reusable/agent-progress-docs.md)
+
+## Quality Checks
+
+### Backend Quality
+
+> 📖 **See**: [agent_tasks/reusable/backend-quality-checks.md](../../../agent_tasks/reusable/backend-quality-checks.md)
+
+### Frontend Quality
+
+> 📖 **See**: [agent_tasks/reusable/frontend-quality-checks.md](../../../agent_tasks/reusable/frontend-quality-checks.md)
+
+### Pre-Completion Checklist
+
+> 📖 **See**: [agent_tasks/reusable/pre-completion-checklist.md](../../../agent_tasks/reusable/pre-completion-checklist.md)
 
 ## Related Documentation
 - See `.github/copilot-instructions.md` for general guidelines

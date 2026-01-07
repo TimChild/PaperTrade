@@ -6,23 +6,12 @@ PaperTrade is a stock market emulation platform where users can practice trading
 
 ## Core Principles
 
-### 1. Modern Software Engineering Mindset
-- **Iterative & Incremental**: Build the smallest valuable increment and evolve
-- **Experimental & Empirical**: Make hypotheses, test them, use data to decide
-- **Manage Complexity**: High cohesion, loose coupling, information hiding
-- **Testability as Design**: If it's hard to test, the design is flawed
+> 📖 **See**: [agent_tasks/reusable/architecture-principles.md](../agent_tasks/reusable/architecture-principles.md)
 
-### 2. Clean Architecture
-- **Dependency Rule**: Dependencies point inwards (Domain → Application → Adapters → Infrastructure)
-- **Domain is Pure**: No I/O, no side effects in domain logic
-- **Composition over Inheritance**: Favor object composition
-- **Dependency Injection**: Manage external services via DI
-
-### 3. Testing Philosophy
-- **Behavior over Implementation**: Test what the system does, not how
-- **Sociable Tests**: Exercise Use Cases and Domain together
-- **No Mocking Internal Logic**: Only mock at architectural boundaries
-- **Persistence Ignorance**: 90% of tests should run without a real database
+The reusable chunk covers:
+- Modern Software Engineering mindset (iterative, empirical, managing complexity)
+- Clean Architecture principles (dependency rule, pure domain, composition over inheritance)
+- Testing philosophy (behavior over implementation, sociable tests, persistence ignorance)
 
 ## Technology Stack
 
@@ -45,35 +34,15 @@ PaperTrade is a stock market emulation platform where users can practice trading
 
 ## Agent Progress Documentation
 
+> 📖 **See**: [agent_tasks/reusable/agent-progress-docs.md](../agent_tasks/reusable/agent-progress-docs.md)
+
 **For PR-based coding agents only** (not for orchestration sessions).
 
-### Purpose
-When a coding agent creates a PR, it should document decisions and changes in `agent_progress_docs/`. This helps the orchestrator review work and provides context for future development.
-
-### When Required
-- Coding agents creating PRs (backend-swe, frontend-swe, etc.)
-- Architectural decisions
-- Complex bug fixes
-
-### When NOT Required
-- Orchestration sessions (direct conversations in VS Code)
-- Simple questions or explorations
-- Documentation-only changes
-
-### Format
-```
-agent_progress_docs/YYYY-MM-DD_HH-MM-SS_short-description.md
-```
-
-Get timestamp: `date "+%Y-%m-%d_%H-%M-%S"`
-
-### Content
-1. Task Summary
-2. Decisions Made
-3. Files Changed
-4. Testing Notes
-5. Known Issues/Next Steps
-6. (Optional) Next step suggestions -- Only if applicable
+The reusable chunk covers:
+- When documentation is required vs. optional
+- File naming format and timestamp generation
+- Content template with all required sections
+- Best practices for writing progress docs
 
 
 ## Code Quality Standards
@@ -105,7 +74,16 @@ Get timestamp: `date "+%Y-%m-%d_%H-%M-%S"`
 
 ## Git & GitHub CLI Workflow (REQUIRED)
 
+> 📖 **See**: [agent_tasks/reusable/git-workflow.md](../agent_tasks/reusable/git-workflow.md)
+
 **All agents MUST use git and the GitHub CLI (`gh`) appropriately.**
+
+The reusable chunk covers:
+- Branch management (checking status, creating feature branches)
+- Committing changes (conventional commit format)
+- Pull request creation via GitHub CLI
+- GitHub CLI best practices (using `GH_PAGER=""` to prevent hangs)
+- Keeping branches up to date
 
 ### Environment Setup for Copilot Agents
 
@@ -133,69 +111,6 @@ The following secrets should be configured in the repository for CI/CD and Copil
   - Configure at: Repository Settings → Secrets and variables → Actions → New repository secret
 
 **Note**: For local development, copy `.env.example` to `.env` and add your own API key. For production deployments, use `.env.production.example` as a template and configure appropriate secrets management (AWS Secrets Manager, etc.).
-
-### Branch Management
-1. **Check current branch status** before starting work:
-   ```bash
-   git branch --show-current
-   git status
-   ```
-2. **Create a feature branch** if on `main`:
-   ```bash
-   git checkout -b <type>/<short-description>
-   ```
-   Branch naming: `feat/add-portfolio-api`, `fix/trade-calculation`, `docs/update-readme`
-
-### Committing Changes
-1. **Stage changes** selectively:
-   ```bash
-   git add <specific-files>
-   # or for all changes:
-   git add -A
-   ```
-2. **Commit with conventional format**:
-   ```bash
-   git commit -m "type(scope): description"
-   ```
-3. **Push to remote**:
-   ```bash
-   git push -u origin <branch-name>
-   ```
-
-### Pull Request Creation
-If not already on a branch with an open PR, use the GitHub CLI to create one:
-
-```bash
-# Check if PR already exists for current branch
-gh pr view --web 2>/dev/null || gh pr create --fill
-```
-
-Or with more control:
-```bash
-gh pr create --title "feat(scope): description" --body "## Summary
-- Change 1
-- Change 2
-
-## Related Issues
-Closes #123"
-```
-
-### Keeping Up to Date
-```bash
-# Fetch latest changes
-git fetch origin
-
-# If on a feature branch, rebase on main when needed
-git rebase origin/main
-```
-
-### Workflow Summary
-1. Check/create feature branch
-2. Make changes
-3. Stage and commit (conventional commits)
-4. Push to remote
-5. Create PR via `gh pr create` if none exists
-6. Update PR description if needed
 
 ## Available Agents
 
