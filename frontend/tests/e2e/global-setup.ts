@@ -1,10 +1,12 @@
-import { clerkSetup } from '@clerk/testing/playwright'
+import axios from 'axios'
 
 /**
  * Global setup for Playwright E2E tests.
  * This runs once before all tests.
  *
- * Uses @clerk/testing's clerkSetup() to create a testing token.
+ * Creates a Clerk testing token using direct API call with axios.
+ * NOTE: Using axios instead of @clerk/backend SDK due to compatibility issues
+ * with the SDK's testing token endpoint in version 2.29.0.
  */
 export default async function globalSetup() {
   // Clerk requires CLERK_PUBLISHABLE_KEY (not VITE_CLERK_PUBLISHABLE_KEY)
@@ -18,7 +20,53 @@ export default async function globalSetup() {
   console.log('CLERK_SECRET_KEY:', process.env.CLERK_SECRET_KEY ? 'SET' : 'NOT SET')
   console.log('E2E_CLERK_USER_EMAIL:', process.env.E2E_CLERK_USER_EMAIL || 'NOT SET')
 
-  // Initialize Clerk testing infrastructure
-  await clerkSetup()
-  console.log('✓ Clerk testing setup complete')
+  const secretKey = process.env.CLERK_SECRET_KEY
+  const publishableKey = process.env.CLERK_PUBLISHABLE_KEY
+
+  if (!secretKey) {
+    throw new Error('CLERK_SECRET_KEY environment variable is required')
+  }
+  if (!publishableKey) {
+    throw new Error('CLERK_PUBLISHABLE_KEY environment variable is required')
+  }
+
+  // Extract frontend API URL from publishable key
+  // Format: pk_test_<base64> where base64 decodes to "<frontend-api>#<key>"
+  const base64Part = publishableKey.replace(/^pk_(test|live)_/, '')
+  const decoded = Buffer.from(base64Part, 'base64').toString('utf-8')
+  const frontendApi = decoded.split('#')[0]
+
+  console.log('Creating Clerk testing token via API...')
+
+  try {
+    // Call Clerk API directly using axios (which handles Cloudflare better than fetch)
+    const response = await axios.post(
+      'https://api.clerk.com/v1/testing_tokens',
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${secretKey}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    )
+
+    const testingToken = response.data.token
+
+    // Set environment variables for Playwright tests to use
+    process.env.CLERK_FAPI = frontendApi
+    process.env.CLERK_TESTING_TOKEN = testingToken
+
+    console.log('✓ Clerk testing token created successfully')
+    console.log('Frontend API:', frontendApi)
+  } catch (error) {
+    console.error('✗ Failed to create Clerk testing token:')
+    if (error.response) {
+      console.error('Status:', error.response.status)
+      console.error('Data:', error.response.data)
+    } else {
+      console.error('Error:', error.message)
+    }
+    throw error
+  }
 }
