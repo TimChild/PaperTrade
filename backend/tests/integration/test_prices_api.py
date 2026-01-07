@@ -144,9 +144,15 @@ def test_check_historical_data_available(
     client: TestClient,
 ) -> None:
     """Test checking historical data availability when data exists."""
-    # AAPL has seeded data in conftest
+    # AAPL has seeded data in conftest (timestamp = now)
+    # Check for data close to now - use a formatted datetime string
+    from datetime import UTC, datetime
+    
+    now = datetime.now(UTC)
+    # Format as ISO 8601 with Z suffix (FastAPI expects this format)
+    date_str = now.replace(microsecond=0).isoformat().replace('+00:00', 'Z')
     response = client.get(
-        "/api/v1/prices/AAPL/check?date=2024-01-01T00:00:00Z"
+        f"/api/v1/prices/AAPL/check?date={date_str}"
     )
 
     assert response.status_code == 200
@@ -156,7 +162,7 @@ def test_check_historical_data_available(
     assert "available" in data
     assert "closest_date" in data
 
-    # Should find data (seeded in conftest)
+    # Should find data (seeded in conftest with current timestamp)
     assert data["available"] is True
     assert data["closest_date"] is not None
 
@@ -166,6 +172,7 @@ def test_check_historical_data_not_available(
 ) -> None:
     """Test checking historical data availability when no data exists."""
     # Use a date far in the past where we have no data
+    # InMemoryAdapter only has ±1 hour window
     response = client.get(
         "/api/v1/prices/AAPL/check?date=2020-01-01T00:00:00Z"
     )
@@ -177,7 +184,7 @@ def test_check_historical_data_not_available(
     assert "available" in data
     assert "closest_date" in data
 
-    # Should not find data
+    # Should not find data (outside ±1 hour window)
     assert data["available"] is False
     assert data["closest_date"] is None
 
@@ -185,15 +192,18 @@ def test_check_historical_data_not_available(
 def test_check_historical_data_invalid_ticker(
     client: TestClient,
 ) -> None:
-    """Test checking historical data with invalid ticker returns 404."""
+    """Test checking historical data with unknown ticker returns not available."""
+    # Use a valid ticker format but unknown ticker (max 5 chars)
     response = client.get(
-        "/api/v1/prices/INVALID/check?date=2024-01-01T00:00:00Z"
+        "/api/v1/prices/XXXXX/check?date=2024-01-01T00:00:00Z"
     )
 
-    # Should return 404 for unknown ticker
-    assert response.status_code == 404
+    assert response.status_code == 200
     data = response.json()
-    assert "detail" in data
+    
+    # Should return available=False for unknown ticker
+    assert "available" in data
+    assert data["available"] is False
 
 
 def test_fetch_historical_data(

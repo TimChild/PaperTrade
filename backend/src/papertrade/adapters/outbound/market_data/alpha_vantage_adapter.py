@@ -490,13 +490,16 @@ class AlphaVantageAdapter:
 
                 # Check HTTP status
                 if response.status_code == 200:
-                    price_points = self._parse_daily_history_response(ticker, response.json())
-                    
+                    response_data = response.json()
+                    price_points = self._parse_daily_history_response(
+                        ticker, response_data
+                    )
+
                     # Store all fetched data in repository
                     if self.price_repository:
                         for price_point in price_points:
                             await self.price_repository.upsert_price(price_point)
-                    
+
                     return price_points
                 elif response.status_code == 404:
                     raise TickerNotFoundError(ticker.symbol)
@@ -579,9 +582,12 @@ class AlphaVantageAdapter:
                 if close_value <= 0:
                     continue  # Skip invalid prices
 
-                # Parse date and create timestamp at market close (4:00 PM ET = 21:00 UTC)
+                # Parse date and create timestamp at market close
+                # (4:00 PM ET = 21:00 UTC)
                 date_obj = datetime.strptime(date_str, "%Y-%m-%d")
-                timestamp = date_obj.replace(hour=21, minute=0, second=0, tzinfo=UTC)
+                timestamp = date_obj.replace(
+                    hour=21, minute=0, second=0, tzinfo=UTC
+                )
 
                 # Extract optional OHLCV data
                 open_value = None

@@ -286,7 +286,7 @@ async def check_historical_data(
         CheckHistoricalDataResponse with availability status
 
     Raises:
-        HTTPException: 404 if ticker not found, 503 if service unavailable
+        HTTPException: 400 if invalid ticker format, 503 if service unavailable
     """
     try:
         # Parse ticker
@@ -300,11 +300,13 @@ async def check_historical_data(
             closest_date=price.timestamp,
         )
 
-    except TickerNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Ticker not found: {ticker}",
-        ) from e
+    except TickerNotFoundError:
+        # Ticker not found - return available=False instead of error
+        # This allows frontend to handle gracefully
+        return CheckHistoricalDataResponse(
+            available=False,
+            closest_date=None,
+        )
 
     except MarketDataUnavailableError:
         # No data available - return False instead of error
