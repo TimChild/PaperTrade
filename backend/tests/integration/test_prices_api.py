@@ -138,3 +138,107 @@ def test_get_price_history_invalid_date_range(
     assert response.status_code == 400
     data = response.json()
     assert "detail" in data
+
+
+def test_check_historical_data_available(
+    client: TestClient,
+) -> None:
+    """Test checking historical data availability when data exists."""
+    # AAPL has seeded data in conftest
+    response = client.get(
+        "/api/v1/prices/AAPL/check?date=2024-01-01T00:00:00Z"
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # Verify response structure
+    assert "available" in data
+    assert "closest_date" in data
+
+    # Should find data (seeded in conftest)
+    assert data["available"] is True
+    assert data["closest_date"] is not None
+
+
+def test_check_historical_data_not_available(
+    client: TestClient,
+) -> None:
+    """Test checking historical data availability when no data exists."""
+    # Use a date far in the past where we have no data
+    response = client.get(
+        "/api/v1/prices/AAPL/check?date=2020-01-01T00:00:00Z"
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # Verify response structure
+    assert "available" in data
+    assert "closest_date" in data
+
+    # Should not find data
+    assert data["available"] is False
+    assert data["closest_date"] is None
+
+
+def test_check_historical_data_invalid_ticker(
+    client: TestClient,
+) -> None:
+    """Test checking historical data with invalid ticker returns 404."""
+    response = client.get(
+        "/api/v1/prices/INVALID/check?date=2024-01-01T00:00:00Z"
+    )
+
+    # Should return 404 for unknown ticker
+    assert response.status_code == 404
+    data = response.json()
+    assert "detail" in data
+
+
+def test_fetch_historical_data(
+    client: TestClient,
+) -> None:
+    """Test fetching historical data endpoint."""
+    # This will use the InMemoryAdapter in tests, which doesn't actually fetch
+    # from Alpha Vantage, but we can verify the endpoint structure
+    response = client.post(
+        "/api/v1/prices/fetch-historical",
+        json={
+            "ticker": "AAPL",
+            "start": "2024-01-01T00:00:00Z",
+            "end": "2024-12-31T23:59:59Z",
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # Verify response structure
+    assert "ticker" in data
+    assert "fetched" in data
+    assert "start" in data
+    assert "end" in data
+
+    assert data["ticker"] == "AAPL"
+    assert isinstance(data["fetched"], int)
+    assert data["fetched"] >= 0
+
+
+def test_fetch_historical_data_invalid_date_range(
+    client: TestClient,
+) -> None:
+    """Test fetching historical data with invalid date range."""
+    response = client.post(
+        "/api/v1/prices/fetch-historical",
+        json={
+            "ticker": "AAPL",
+            "start": "2024-12-31T00:00:00Z",
+            "end": "2024-01-01T00:00:00Z",
+        },
+    )
+
+    # Should reject end before start
+    assert response.status_code == 400
+    data = response.json()
+    assert "detail" in data

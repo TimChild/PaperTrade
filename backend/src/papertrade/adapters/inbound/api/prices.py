@@ -65,6 +65,32 @@ class SupportedTickersResponse(BaseModel):
     count: int = Field(..., description="Number of tickers")
 
 
+class CheckHistoricalDataResponse(BaseModel):
+    """Response model for historical data availability check."""
+
+    available: bool = Field(..., description="Whether historical data exists")
+    closest_date: datetime | None = Field(
+        None, description="Closest available date if data exists"
+    )
+
+
+class FetchHistoricalDataRequest(BaseModel):
+    """Request model for fetching historical data."""
+
+    ticker: str = Field(..., min_length=1, max_length=5)
+    start: datetime = Field(..., description="Start date (UTC)")
+    end: datetime = Field(..., description="End date (UTC)")
+
+
+class FetchHistoricalDataResponse(BaseModel):
+    """Response model for historical data fetch."""
+
+    ticker: str = Field(..., description="Stock ticker symbol")
+    fetched: int = Field(..., description="Number of price points fetched")
+    start: datetime = Field(..., description="Start of time range (UTC)")
+    end: datetime = Field(..., description="End of time range (UTC)")
+
+
 # Route Handlers
 
 
@@ -227,6 +253,124 @@ async def get_supported_tickers(
             tickers=[t.symbol for t in tickers],
             count=len(tickers),
         )
+
+    except MarketDataUnavailableError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(e),
+        ) from e
+
+
+@router.get(
+    "/{ticker}/check",
+    response_model=CheckHistoricalDataResponse,
+    summary="Check historical data availability",
+    description="Check if historical price data exists for a ticker at a specific date",
+)
+async def check_historical_data(
+    ticker: str,
+    date: Annotated[datetime, Query(description="Date to check (UTC)")],
+    market_data: MarketDataDep,
+) -> CheckHistoricalDataResponse:
+    """Check if historical data exists for a ticker on a specific date.
+
+    This endpoint is used by the frontend to determine if historical price data
+    is available before executing a backtest trade.
+
+    Args:
+        ticker: Stock ticker symbol (e.g., "AAPL")
+        date: Date to check for data availability (UTC)
+        market_data: Market data port implementation (injected)
+
+    Returns:
+        CheckHistoricalDataResponse with availability status
+
+    Raises:
+        HTTPException: 404 if ticker not found, 503 if service unavailable
+    """
+    try:
+        # Parse ticker
+        ticker_obj = Ticker(ticker.upper())
+
+        # Try to get price at the specified date
+        price = await market_data.get_price_at(ticker_obj, date)
+
+        return CheckHistoricalDataResponse(
+            available=True,
+            closest_date=price.timestamp,
+        )
+
+    except TickerNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Ticker not found: {ticker}",
+        ) from e
+
+    except MarketDataUnavailableError:
+        # No data available - return False instead of error
+        return CheckHistoricalDataResponse(
+            available=False,
+            closest_date=None,
+        )
+
+
+@router.post(
+    "/fetch-historical",
+    response_model=FetchHistoricalDataResponse,
+    summary="Fetch historical data",
+    description="Fetch and store historical price data for a ticker",
+)
+async def fetch_historical_data(
+    request: FetchHistoricalDataRequest,
+    market_data: MarketDataDep,
+) -> FetchHistoricalDataResponse:
+    """Fetch historical data for a ticker and date range.
+
+    This endpoint is called by the frontend when backtest mode detects missing
+    historical data. It fetches data from Alpha Vantage and stores it in the
+    database for future use.
+
+    Args:
+        request: Request with ticker and date range
+        market_data: Market data port implementation (injected)
+
+    Returns:
+        FetchHistoricalDataResponse with fetch results
+
+    Raises:
+        HTTPException: 400 if invalid parameters, 404 if ticker not found,
+                      503 if market data unavailable
+    """
+    try:
+        # Parse ticker
+        ticker_obj = Ticker(request.ticker.upper())
+
+        # Fetch price history from API (will auto-store in database)
+        history = await market_data.get_price_history(
+            ticker_obj,
+            start=request.start,
+            end=request.end,
+            interval="1day",
+        )
+
+        return FetchHistoricalDataResponse(
+            ticker=ticker_obj.symbol,
+            fetched=len(history),
+            start=request.start,
+            end=request.end,
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
+
+    except TickerNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Ticker not found: {request.ticker}",
+        ) from e
 
     except MarketDataUnavailableError as e:
         raise HTTPException(

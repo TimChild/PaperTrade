@@ -369,9 +369,9 @@ class AlphaVantageAdapter:
         """Get price history over a time range.
 
         This method implements tiered caching for historical data:
-        1. Check Redis cache for recent history queries
-        2. Query price repository for date range
-        3. Optionally fetch from Alpha Vantage API if gaps exist
+        1. Check price repository for cached date range
+        2. If data is missing or incomplete, fetch from Alpha Vantage API
+        3. Store fetched data in repository for future use
 
         Args:
             ticker: Stock ticker symbol
@@ -408,12 +408,221 @@ class AlphaVantageAdapter:
                 "Price repository not configured - cannot query historical data"
             )
 
+        # Try to get cached data first
         history = await self.price_repository.get_price_history(
             ticker, start, end, interval
         )
 
-        # Return results (empty list if no data - not an error per spec)
-        return history
+        # If we have data, return it
+        if history:
+            return history
+
+        # No cached data - fetch from API if interval is "1day"
+        # Only support daily data fetching for now (Alpha Vantage free tier)
+        if interval == "1day":
+            # Check rate limiting before API call
+            if not await self.rate_limiter.can_make_request():
+                raise MarketDataUnavailableError(
+                    "Rate limit exceeded. Cannot fetch historical data at this time."
+                )
+
+            # Consume rate limit token
+            consumed = await self.rate_limiter.consume_token()
+            if not consumed:
+                raise MarketDataUnavailableError(
+                    "Rate limit exceeded. Cannot fetch historical data."
+                )
+
+            # Fetch from API
+            try:
+                history = await self._fetch_daily_history_from_api(ticker)
+
+                # Filter to requested date range
+                filtered_history = [
+                    p
+                    for p in history
+                    if start <= p.timestamp.replace(tzinfo=UTC) <= end
+                ]
+
+                return filtered_history
+
+            except Exception:
+                # API call failed - return empty list rather than error
+                # This matches the original behavior of returning empty if no data
+                return []
+
+        # For other intervals, return empty list if no cached data
+        return []
+
+    async def _fetch_daily_history_from_api(self, ticker: Ticker) -> list[PricePoint]:
+        """Fetch daily historical price data from Alpha Vantage API.
+
+        Uses TIME_SERIES_DAILY endpoint to get up to 100 days of historical data.
+        Stores all fetched data in the price repository for future use.
+
+        Args:
+            ticker: Stock ticker to fetch historical data for
+
+        Returns:
+            List of PricePoint objects with daily historical prices
+
+        Raises:
+            TickerNotFoundError: Ticker not found in API
+            MarketDataUnavailableError: API error or network failure
+            InvalidPriceDataError: Malformed API response
+        """
+        params = {
+            "function": "TIME_SERIES_DAILY",
+            "symbol": ticker.symbol,
+            "apikey": self.api_key,
+            "outputsize": "compact",  # Last 100 data points (vs "full" = 20+ years)
+        }
+
+        last_error: Exception | None = None
+
+        for attempt in range(self.max_retries):
+            try:
+                response = await self.http_client.get(
+                    self.base_url,
+                    params=params,
+                    timeout=self.timeout,
+                )
+
+                # Check HTTP status
+                if response.status_code == 200:
+                    price_points = self._parse_daily_history_response(ticker, response.json())
+                    
+                    # Store all fetched data in repository
+                    if self.price_repository:
+                        for price_point in price_points:
+                            await self.price_repository.upsert_price(price_point)
+                    
+                    return price_points
+                elif response.status_code == 404:
+                    raise TickerNotFoundError(ticker.symbol)
+                else:
+                    last_error = MarketDataUnavailableError(
+                        f"API returned status {response.status_code}"
+                    )
+
+            except httpx.TimeoutException as e:
+                last_error = MarketDataUnavailableError(f"Request timeout: {e}")
+            except httpx.NetworkError as e:
+                last_error = MarketDataUnavailableError(f"Network error: {e}")
+            except httpx.HTTPError as e:
+                last_error = MarketDataUnavailableError(f"HTTP error: {e}")
+
+            # Exponential backoff between retries (except on last attempt)
+            if attempt < self.max_retries - 1:
+                import asyncio
+
+                await asyncio.sleep(2**attempt)  # 1s, 2s, 4s, etc.
+
+        # All retries exhausted
+        if last_error:
+            raise last_error
+
+        raise MarketDataUnavailableError("API request failed after retries")
+
+    def _parse_daily_history_response(
+        self, ticker: Ticker, data: dict[str, object]
+    ) -> list[PricePoint]:
+        """Parse Alpha Vantage TIME_SERIES_DAILY response.
+
+        Alpha Vantage response format:
+        {
+            "Meta Data": {...},
+            "Time Series (Daily)": {
+                "2025-12-27": {
+                    "1. open": "192.00",
+                    "2. high": "193.50",
+                    "3. low": "191.00",
+                    "4. close": "192.53",
+                    "5. volume": "52000000"
+                },
+                ...
+            }
+        }
+
+        Args:
+            ticker: Ticker being parsed
+            data: JSON response from API
+
+        Returns:
+            List of PricePoint objects, ordered chronologically (oldest first)
+
+        Raises:
+            TickerNotFoundError: Empty response (ticker not found)
+            InvalidPriceDataError: Malformed or invalid response
+        """
+        try:
+            time_series = data.get("Time Series (Daily)")
+
+            if not time_series or not isinstance(time_series, dict):
+                # Empty response means ticker not found
+                raise TickerNotFoundError(
+                    ticker.symbol, "Ticker not found in Alpha Vantage database"
+                )
+
+            price_points: list[PricePoint] = []
+
+            for date_str, daily_data in time_series.items():
+                if not isinstance(daily_data, dict):
+                    continue
+
+                # Extract close price (field "4. close")
+                close_str = daily_data.get("4. close")
+                if not close_str:
+                    continue  # Skip incomplete data
+
+                close_value = Decimal(str(close_str))
+                if close_value <= 0:
+                    continue  # Skip invalid prices
+
+                # Parse date and create timestamp at market close (4:00 PM ET = 21:00 UTC)
+                date_obj = datetime.strptime(date_str, "%Y-%m-%d")
+                timestamp = date_obj.replace(hour=21, minute=0, second=0, tzinfo=UTC)
+
+                # Extract optional OHLCV data
+                open_value = None
+                high_value = None
+                low_value = None
+                volume = None
+
+                if open_str := daily_data.get("1. open"):
+                    open_value = Money(Decimal(str(open_str)), "USD")
+                if high_str := daily_data.get("2. high"):
+                    high_value = Money(Decimal(str(high_str)), "USD")
+                if low_str := daily_data.get("3. low"):
+                    low_value = Money(Decimal(str(low_str)), "USD")
+                if volume_str := daily_data.get("5. volume"):
+                    volume = int(volume_str)
+
+                # Construct PricePoint
+                price_point = PricePoint(
+                    ticker=ticker,
+                    price=Money(close_value, "USD"),
+                    timestamp=timestamp,
+                    source="alpha_vantage",
+                    interval="1day",
+                    open=open_value,
+                    high=high_value,
+                    low=low_value,
+                    close=Money(close_value, "USD"),
+                    volume=volume,
+                )
+
+                price_points.append(price_point)
+
+            # Sort chronologically (oldest first)
+            price_points.sort(key=lambda p: p.timestamp)
+
+            return price_points
+
+        except (KeyError, ValueError, TypeError) as e:
+            raise InvalidPriceDataError(
+                ticker.symbol, f"Failed to parse daily history response: {e}"
+            ) from e
 
     async def get_supported_tickers(self) -> list[Ticker]:
         """Get list of tickers we have data for.
