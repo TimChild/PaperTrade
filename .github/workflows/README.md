@@ -37,26 +37,35 @@ This directory contains the CI/CD pipeline definitions for PaperTrade.
 - Comprehensive coverage reporting
 - E2E tests only run if unit tests pass
 
-### `copilot-setup.yml` - Development Environment Setup
+### `copilot-setup-steps.yml` - Development Environment Setup
 
 **Triggers:**
 - Manual dispatch (workflow_dispatch)
+- Push to this workflow file (auto-validation)
+- Pull request modifying this workflow file
 
 **Purpose:**
-Sets up a complete development environment for GitHub Copilot coding agents or CI runners.
+Sets up a complete development environment for GitHub Copilot coding agents.
 
-**What it installs:**
-- Python 3.13 and uv (package manager)
+**What it configures:**
+- Python 3.12 and uv (package manager)
 - Node.js 20 and npm
 - Task (task runner)
 - pre-commit hooks
 - Project dependencies (backend and frontend)
-- Docker services
+- Docker services (PostgreSQL, Redis)
+- **`.env` file with Clerk authentication secrets** (for E2E tests)
+
+**Environment variables configured:**
+- `CLERK_SECRET_KEY` (from GitHub Secrets) - for backend JWT validation
+- `CLERK_PUBLISHABLE_KEY` (from GitHub Secrets) - for frontend/E2E tests
+- `VITE_CLERK_PUBLISHABLE_KEY` (from GitHub Secrets) - for Vite frontend
+- `E2E_CLERK_USER_EMAIL` (from GitHub Variables) - for E2E test user
 
 **When to use:**
-- Setting up a new Copilot workspace
-- Verifying environment setup in CI
-- Testing the complete setup process
+- Automatically runs when Copilot agents start work
+- Manually trigger for testing: `gh workflow run copilot-setup-steps.yml`
+- Verifying environment setup works correctly
 
 **Alternative methods:**
 - Shell script: `./.github/copilot-setup.sh`
@@ -156,10 +165,18 @@ Planned additions:
 
 ## Secrets and Environment Variables
 
-Required secrets (set in GitHub repository settings):
+Required secrets (set in GitHub repository settings → Secrets and variables → Actions):
 
+**Secrets:**
+- `CLERK_SECRET_KEY` - Clerk API secret key for JWT validation (required for E2E tests)
+- `CLERK_PUBLISHABLE_KEY` - Clerk publishable key for frontend/E2E tests (required for E2E tests)
 - `CODECOV_TOKEN` - For uploading coverage reports to Codecov (optional, fails gracefully)
 - `GITHUB_TOKEN` - Automatically provided by GitHub Actions
+
+**Variables:**
+- `E2E_CLERK_USER_EMAIL` - Email address of test user in Clerk (required for E2E tests)
+
+**Note**: The `copilot-setup-steps.yml` workflow creates a `.env` file with these secrets for Copilot agents to use during their work sessions.
 
 ## Performance Optimization
 
@@ -205,10 +222,17 @@ Potential future optimizations:
 
 ## Changelog
 
+### 2026-01-07: Fixed Copilot Agent E2E Test Failures
+- **Fixed**: `copilot-setup-steps.yml` now creates `.env` file with Clerk secrets
+- **Added**: Environment variable verification step for debugging
+- **Added**: Clerk authentication secrets passed to Docker services
+- **Impact**: Copilot agents can now successfully run E2E tests with Clerk authentication
+- **Files**: `.github/workflows/copilot-setup-steps.yml`, updated workflow README
+
 ### 2026-01-01: Major Workflow Cleanup
 - Fixed syntax error in ci.yml (removed invalid hashFiles condition)
 - Removed redundant `main.yml` and `pr.yml` workflows
-- Created `copilot-setup.yml` for automated environment setup
+- Created `copilot-setup-steps.yml` for automated environment setup
 - Added npm audit security scanning to frontend checks
 - Fixed shellcheck warnings
 - All workflows validated with actionlint
