@@ -147,7 +147,7 @@ def test_check_historical_data_available(
     # AAPL has seeded data in conftest (timestamp = now)
     # Check for data close to now - use a formatted datetime string
     from datetime import UTC, datetime
-    
+
     now = datetime.now(UTC)
     # Format as ISO 8601 with Z suffix (FastAPI expects this format)
     date_str = now.replace(microsecond=0).isoformat().replace('+00:00', 'Z')
@@ -200,7 +200,7 @@ def test_check_historical_data_invalid_ticker(
 
     assert response.status_code == 200
     data = response.json()
-    
+
     # Should return available=False for unknown ticker
     assert "available" in data
     assert data["available"] is False
