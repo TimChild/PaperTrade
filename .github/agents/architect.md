@@ -79,11 +79,12 @@ docs/architecture/
 
 ## Before Starting Work
 
-**Always check recent agent activity:**
-1. Review `agent_progress_docs/` for recent work
-2. Check open PRs: `gh pr list`
-3. Read relevant existing architecture docs
-4. Understand what has already been implemented
+> 📖 **See**: [agent_tasks/reusable/before-starting-work.md](../../../agent_tasks/reusable/before-starting-work.md)
+
+**Architect-specific additions**:
+- Review existing architecture plans in `architecture_plans/`
+- Check ADRs in `docs/architecture/decisions/` for precedent
+- Understand what has already been implemented before designing new features
 
 ## Architecture Plan Format
 
@@ -156,45 +157,13 @@ What becomes easier or more difficult to do because of this change?
 
 ## Architecture Layers Reference
 
-```
-┌─────────────────────────────────────────┐
-│           Infrastructure                │
-│  (Docker, AWS CDK, DB Config)           │
-├─────────────────────────────────────────┤
-│              Adapters                   │
-│  ┌─────────────┐    ┌─────────────┐     │
-│  │   Inbound   │    │  Outbound   │     │
-│  │  (FastAPI,  │    │ (Postgres,  │     │
-│  │    CLI)     │    │  APIs)      │     │
-│  └─────────────┘    └─────────────┘     │
-├─────────────────────────────────────────┤
-│           Application                   │
-│  (Use Cases: ExecuteTrade,              │
-│   GetPortfolioValue, etc.)              │
-├─────────────────────────────────────────┤
-│              Domain                     │
-│  (Entities: Portfolio, Asset, Order)    │
-│  (Value Objects: Money, Ticker)         │
-│  (Domain Services)                      │
-└─────────────────────────────────────────┘
+> 📖 **See**: [agent_tasks/reusable/architecture-principles.md](../../../agent_tasks/reusable/architecture-principles.md)
 
-Dependencies point INWARD only.
-```
-
-## Guiding Principles
-
-### Dependency Rule
-- Domain MUST NOT depend on Infrastructure
-- Application layer depends only on Domain
-- Adapters implement interfaces defined by inner layers
-
-### Composition over Inheritance
-- Prefer object composition for code reuse
-- Keep inheritance hierarchies shallow
-
-### Pure Domain Logic
-- Domain layer has no I/O operations
-- Domain services are pure functions where possible
+The reusable chunk includes:
+- Complete layer diagram (Domain → Application → Adapters → Infrastructure)
+- Dependency rule explanation
+- Composition over inheritance principle
+- Pure domain logic requirements
 
 ## When to Engage This Agent
 
@@ -211,7 +180,7 @@ Use the Architect agent when:
 2. Clear specifications that backend-swe/frontend-swe can implement
 3. Diagrams in Mermaid format
 4. ADRs for significant decisions
-5. Progress documentation per `.github/copilot-instructions.md`
+5. Progress documentation per [agent-progress-docs.md](../../../agent_tasks/reusable/agent-progress-docs.md)
 
 ## Handoff to Implementation
 

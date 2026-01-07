@@ -16,12 +16,12 @@ The Backend SWE is responsible for implementing robust, type-safe, and performan
 
 ## Before Starting Work
 
-**Always check recent agent activity and architecture docs:**
-1. Review `agent_progress_docs/` for recent work by other agents
-2. Check `docs/architecture/` for design specifications to implement
-3. Check open PRs: `gh pr list` to avoid conflicts
-4. Read relevant existing code to understand current patterns
-5. If architecture docs exist for this feature, implement according to spec
+> 📖 **See**: [agent_tasks/reusable/before-starting-work.md](../../../agent_tasks/reusable/before-starting-work.md)
+
+**Backend-specific additions**:
+- Check `backend/pyproject.toml` for recent dependency changes
+- Review `backend/tests/conftest.py` for test fixtures
+- If architecture docs exist in `docs/architecture/` for this feature, implement according to spec
 
 ## Technology Stack
 
@@ -210,22 +210,35 @@ When completing backend work:
 3. Code passes ruff and pyright checks
 4. Follow conventional commit messages
 5. Document public APIs with docstrings
-6. Generate progress documentation per `.github/copilot-instructions.md`
+6. Generate progress documentation per [agent-progress-docs.md](../../../agent_tasks/reusable/agent-progress-docs.md)
+
+## Architecture Principles
+
+> 📖 **See**: [agent_tasks/reusable/architecture-principles.md](../../../agent_tasks/reusable/architecture-principles.md)
+
+Key principles for backend work:
+- Follow the dependency rule: Domain → Application → Adapters → Infrastructure
+- Keep domain logic pure (no I/O, no side effects)
+- Use composition over inheritance
+- Manage external services via dependency injection
+
+## Quality Checks
+
+> 📖 **See**: [agent_tasks/reusable/backend-quality-checks.md](../../../agent_tasks/reusable/backend-quality-checks.md)
+
+**Quick validation**: Run all backend quality checks with:
+```bash
+cd backend && uv run ruff format . && task lint:backend && task test:backend
+```
 
 ## CRITICAL: Pre-Completion Validation
 
-**Before considering your work complete, you MUST run the CI validation tasks:**
+> 📖 **See**: [agent_tasks/reusable/pre-completion-checklist.md](../../../agent_tasks/reusable/pre-completion-checklist.md)
 
-```bash
-cd backend
-task lint:backend  # Run linting checks (same as CI)
-task test:backend  # Run all tests with coverage (same as CI)
-```
-
-**If either task fails:**
-- Fix all errors before completing
-- Re-run the tasks to confirm
-- Do NOT mark work as complete until both pass
+**Before considering your work complete:**
+- Format code: `cd backend && uv run ruff format .`
+- Run linting: `task lint:backend`
+- Run tests: `task test:backend`
 
 These are the exact same commands run in CI. Catching failures locally saves time and prevents CI failures.
 

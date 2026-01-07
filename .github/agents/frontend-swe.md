@@ -16,12 +16,13 @@ The Frontend SWE is responsible for building a responsive, high-performance fina
 
 ## Before Starting Work
 
-**Always check recent agent activity and architecture docs:**
-1. Review `agent_progress_docs/` for recent work by other agents
-2. Check `docs/architecture/` for design specifications and API contracts
-3. Check open PRs: `gh pr list` to avoid conflicts
-4. Read relevant existing code to understand current patterns
-5. If architecture docs exist for this feature, implement according to spec
+> 📖 **See**: [agent_tasks/reusable/before-starting-work.md](../../../agent_tasks/reusable/before-starting-work.md)
+
+**Frontend-specific additions**:
+- Check `frontend/package.json` for recent dependency changes
+- Review `frontend/src/components/` for reusable components
+- Check API contracts in `docs/architecture/api/` for backend integration
+- If architecture docs exist for this feature, implement according to spec
 
 ## Technology Stack
 
@@ -276,22 +277,36 @@ When completing frontend work:
 3. Tests accompany new components
 4. Code passes ESLint and Prettier
 5. Responsive design considered
-6. Generate progress documentation per `.github/copilot-instructions.md`
+6. Generate progress documentation per [agent-progress-docs.md](../../../agent_tasks/reusable/agent-progress-docs.md)
+
+## Architecture Principles
+
+> 📖 **See**: [agent_tasks/reusable/architecture-principles.md](../../../agent_tasks/reusable/architecture-principles.md)
+
+Key principles for frontend work:
+- Keep UI components thin and focused
+- Use composition over inheritance
+- Separate concerns: UI logic vs. business logic
+- Follow the dependency rule when integrating with backend
+
+## Quality Checks
+
+> 📖 **See**: [agent_tasks/reusable/frontend-quality-checks.md](../../../agent_tasks/reusable/frontend-quality-checks.md)
+
+**Quick validation**: Run all frontend quality checks with:
+```bash
+cd frontend && npm run format && task lint:frontend && task test:frontend
+```
 
 ## CRITICAL: Pre-Completion Validation
 
-**Before considering your work complete, you MUST run the CI validation tasks:**
+> 📖 **See**: [agent_tasks/reusable/pre-completion-checklist.md](../../../agent_tasks/reusable/pre-completion-checklist.md)
 
-```bash
-cd frontend
-task lint:frontend  # Run linting checks (same as CI)
-task test:frontend  # Run all tests (same as CI)
-```
-
-**If either task fails:**
-- Fix all errors before completing
-- Re-run the tasks to confirm
-- Do NOT mark work as complete until both pass
+**Before considering your work complete:**
+- Format code: `cd frontend && npm run format`
+- Run linting: `task lint:frontend`
+- Run tests: `task test:frontend`
+- If UI changes: `task test:e2e` (end-to-end tests)
 
 These are the exact same commands run in CI. Catching failures locally saves time and prevents CI failures.
 
