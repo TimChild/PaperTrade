@@ -73,7 +73,41 @@ pytest --cov=papertrade --cov-report=html
 - `tests/` - Test suite
   - `unit/` - Unit tests (domain and application logic)
   - `integration/` - Integration tests (API, database)
+- `scripts/` - Utility scripts for development
+  - `seed_db.py` - Seed database with sample portfolios and recent price data
+  - `seed_historical_data.py` - Fetch historical price data from Alpha Vantage
 - `pyproject.toml` - Project configuration and dependencies
+
+## Development Utilities
+
+### Database Seeding
+
+Seed the database with sample portfolios and recent price data:
+
+```bash
+# Using task
+task db:seed
+
+# Or directly
+uv run python scripts/seed_db.py
+```
+
+### Historical Price Data Seeding
+
+For testing backtest mode, fetch historical price data from Alpha Vantage:
+
+```bash
+# Fetch 30 days of history for default tickers (AAPL, MSFT, GOOGL, TSLA, NVDA)
+task seed-historical-data
+
+# Fetch specific tickers with custom date range
+task seed-historical-data -- --tickers AAPL,IBM,MSFT --days 365
+
+# Or directly
+uv run python scripts/seed_historical_data.py --tickers AAPL,IBM --days 365
+```
+
+**Note**: Requires `ALPHA_VANTAGE_API_KEY` environment variable. Get a free API key at [alphavantage.co](https://www.alphavantage.co/support/#api-key). The free tier allows 5 API calls per minute and 500 per day.
 
 ## Technology Stack
 

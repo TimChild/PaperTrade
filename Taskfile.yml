@@ -449,3 +449,9 @@ tasks:
     cmds:
       - uv run python scripts/seed_db.py
       - echo "✓ Database seeded with sample data"
+
+  seed-historical-data:
+    desc: "Seed historical price data from Alpha Vantage (usage: task seed-historical-data -- --tickers AAPL,MSFT --days 365)"
+    dir: "{{.BACKEND_DIR}}"
+    cmds:
+      - uv run python scripts/seed_historical_data.py {{.CLI_ARGS}}
