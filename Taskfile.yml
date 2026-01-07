@@ -308,6 +308,17 @@ tasks:
     dir: "{{.FRONTEND_DIR}}"
     deps:
       - docker:up:all  # Ensure full stack is running
+    env:
+      # Load environment variables from .env file in repository root
+      # These are required for Clerk authentication in E2E tests
+      CLERK_SECRET_KEY:
+        sh: grep "^CLERK_SECRET_KEY=" ../.env | cut -d= -f2- || echo ""
+      CLERK_PUBLISHABLE_KEY:
+        sh: grep "^CLERK_PUBLISHABLE_KEY=" ../.env | cut -d= -f2- || echo ""
+      VITE_CLERK_PUBLISHABLE_KEY:
+        sh: grep "^VITE_CLERK_PUBLISHABLE_KEY=" ../.env | cut -d= -f2- || echo ""
+      E2E_CLERK_USER_EMAIL:
+        sh: grep "^E2E_CLERK_USER_EMAIL=" ../.env | cut -d= -f2- || echo ""
     cmds:
       - echo "Running E2E tests..."
       - npm run test:e2e
@@ -320,6 +331,16 @@ tasks:
     dir: "{{.FRONTEND_DIR}}"
     deps:
       - docker:up:all  # Ensure full stack is running
+    env:
+      # Load environment variables from .env file in repository root
+      CLERK_SECRET_KEY:
+        sh: grep "^CLERK_SECRET_KEY=" ../.env | cut -d= -f2- || echo ""
+      CLERK_PUBLISHABLE_KEY:
+        sh: grep "^CLERK_PUBLISHABLE_KEY=" ../.env | cut -d= -f2- || echo ""
+      VITE_CLERK_PUBLISHABLE_KEY:
+        sh: grep "^VITE_CLERK_PUBLISHABLE_KEY=" ../.env | cut -d= -f2- || echo ""
+      E2E_CLERK_USER_EMAIL:
+        sh: grep "^E2E_CLERK_USER_EMAIL=" ../.env | cut -d= -f2- || echo ""
     cmds:
       - echo "Running E2E tests with UI..."
       - npm run test:e2e:ui
