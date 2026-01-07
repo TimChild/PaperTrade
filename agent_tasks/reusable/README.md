@@ -11,7 +11,9 @@ Unlike one-time tasks in `agent_tasks/`, these templates are designed to be:
 
 ## Current Templates
 
-### [e2e_qa_validation.md](e2e_qa_validation.md)
+### Complete Task Templates
+
+#### [e2e_qa_validation.md](e2e_qa_validation.md)
 **Agent**: qa
 **Purpose**: Comprehensive end-to-end quality assurance testing
 
@@ -25,6 +27,88 @@ Execute all critical user workflows to validate application quality. Produces de
 - Regression testing after critical fixes
 
 **See**: [orchestrator_procedures/run_qa_validation.md](../../orchestrator_procedures/run_qa_validation.md)
+
+### Reusable Guidance Chunks
+
+These small, focused documents can be referenced from agent instruction files to reduce duplication:
+
+#### [pre-completion-checklist.md](pre-completion-checklist.md)
+**For**: All coding agents
+**Purpose**: Final validation steps before marking work complete
+
+Critical commands to run before completing work (formatting, linting, testing). Prevents CI failures.
+
+**Referenced by**: All agent files, orchestration procedures
+
+---
+
+#### [git-workflow.md](git-workflow.md)
+**For**: All agents
+**Purpose**: Standard Git and GitHub CLI workflow
+
+Branch management, committing, PR creation, and GitHub CLI best practices.
+
+**Referenced by**: `.github/copilot-instructions.md`, `AGENT_ORCHESTRATION.md`
+
+---
+
+#### [architecture-principles.md](architecture-principles.md)
+**For**: All technical agents
+**Purpose**: Clean Architecture and testing philosophy summary
+
+Core principles, layer diagram, dependency rules, and testing philosophy.
+
+**Referenced by**: `architect.md`, `backend-swe.md`, `frontend-swe.md`, `refactorer.md`
+
+---
+
+#### [backend-quality-checks.md](backend-quality-checks.md)
+**For**: backend-swe, refactorer, quality-infra
+**Purpose**: Backend code quality validation
+
+Commands for formatting, linting, type checking, and testing Python code.
+
+**Referenced by**: `backend-swe.md`, `quality-infra.md`
+
+---
+
+#### [frontend-quality-checks.md](frontend-quality-checks.md)
+**For**: frontend-swe, refactorer, quality-infra
+**Purpose**: Frontend code quality validation
+
+Commands for formatting, linting, type checking, and testing TypeScript code.
+
+**Referenced by**: `frontend-swe.md`, `quality-infra.md`
+
+---
+
+#### [docker-commands.md](docker-commands.md)
+**For**: All agents
+**Purpose**: Common Docker and Docker Compose operations
+
+Starting/stopping services, viewing logs, troubleshooting containers.
+
+**Referenced by**: `quality-infra.md`, `AGENT_ORCHESTRATION.md`, `qa.md`
+
+---
+
+#### [agent-progress-docs.md](agent-progress-docs.md)
+**For**: All PR-based coding agents
+**Purpose**: Documentation requirements for PR-based work
+
+When and how to create progress documentation for completed work.
+
+**Referenced by**: All agent files
+
+---
+
+#### [before-starting-work.md](before-starting-work.md)
+**For**: All agents
+**Purpose**: Standard pre-work checklist
+
+Check recent activity, open PRs, architecture docs, and project context before starting.
+
+**Referenced by**: All agent files
 
 ## How to Use Reusable Tasks
 
