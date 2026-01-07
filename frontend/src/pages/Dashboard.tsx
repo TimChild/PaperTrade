@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { usePortfolios } from '@/hooks/usePortfolio'
+import { usePortfolios, usePortfolioBalance } from '@/hooks/usePortfolio'
 import { PortfolioCard } from '@/components/features/portfolio/PortfolioCard'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { ErrorDisplay } from '@/components/ui/ErrorDisplay'
@@ -8,17 +8,22 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Dialog } from '@/components/ui/Dialog'
 import { CreatePortfolioForm } from '@/components/features/portfolio/CreatePortfolioForm'
 import { adaptPortfolio } from '@/utils/adapters'
+import type { PortfolioDTO } from '@/services/api/types'
+
+/**
+ * Component that fetches balance for a single portfolio and renders the card
+ */
+function PortfolioCardWithBalance({ portfolioDTO }: { portfolioDTO: PortfolioDTO }) {
+  const { data: balanceData } = usePortfolioBalance(portfolioDTO.id)
+  const portfolio = adaptPortfolio(portfolioDTO, balanceData || null)
+  
+  return <PortfolioCard portfolio={portfolio} isLoading={!balanceData} />
+}
 
 export function Dashboard(): React.JSX.Element {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const navigate = useNavigate()
   const { data: portfolios, isLoading: portfoliosLoading, isError, error } = usePortfolios()
-
-  // Adapt all portfolios to frontend types (with placeholder data for now)
-  const adaptedPortfolios =
-    portfolios?.map((portfolioDTO) =>
-      adaptPortfolio(portfolioDTO, null)
-    ) || []
 
   if (isError) {
     return (
@@ -60,7 +65,7 @@ export function Dashboard(): React.JSX.Element {
       <div className="space-y-8">
         {/* Portfolio Grid */}
         <section>
-          {adaptedPortfolios.length === 0 ? (
+          {!portfolios || portfolios.length === 0 ? (
             <EmptyState
               message="No portfolios found. Create your first portfolio to get started!"
               action={
@@ -80,12 +85,12 @@ export function Dashboard(): React.JSX.Element {
                   Your Portfolios
                 </h2>
                 <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                  You have {adaptedPortfolios.length} portfolio{adaptedPortfolios.length !== 1 ? 's' : ''}
+                  You have {portfolios.length} portfolio{portfolios.length !== 1 ? 's' : ''}
                 </p>
               </div>
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" data-testid="portfolio-grid">
-                {adaptedPortfolios.map((portfolio) => (
-                  <PortfolioCard key={portfolio.id} portfolio={portfolio} />
+                {portfolios.map((portfolioDTO) => (
+                  <PortfolioCardWithBalance key={portfolioDTO.id} portfolioDTO={portfolioDTO} />
                 ))}
               </div>
             </>
