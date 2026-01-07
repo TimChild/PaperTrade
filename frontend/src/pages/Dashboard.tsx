@@ -1,38 +1,29 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { usePortfolios, usePortfolioBalance } from '@/hooks/usePortfolio'
-import { useHoldings } from '@/hooks/useHoldings'
-import { useTransactions } from '@/hooks/useTransactions'
-import { PortfolioSummaryCard } from '@/components/features/portfolio/PortfolioSummaryCard'
-import { HoldingsTable } from '@/components/features/portfolio/HoldingsTable'
-import { TransactionList } from '@/components/features/portfolio/TransactionList'
+import { PortfolioCard } from '@/components/features/portfolio/PortfolioCard'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { ErrorDisplay } from '@/components/ui/ErrorDisplay'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Dialog } from '@/components/ui/Dialog'
 import { CreatePortfolioForm } from '@/components/features/portfolio/CreatePortfolioForm'
-import { adaptPortfolio, adaptHolding, adaptTransaction } from '@/utils/adapters'
+import { adaptPortfolio } from '@/utils/adapters'
+import type { PortfolioDTO } from '@/services/api/types'
+
+/**
+ * Component that fetches balance for a single portfolio and renders the card
+ */
+function PortfolioCardWithBalance({ portfolioDTO }: { portfolioDTO: PortfolioDTO }) {
+  const { data: balanceData } = usePortfolioBalance(portfolioDTO.id)
+  const portfolio = adaptPortfolio(portfolioDTO, balanceData || null)
+  
+  return <PortfolioCard portfolio={portfolio} isLoading={!balanceData} />
+}
 
 export function Dashboard(): React.JSX.Element {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const navigate = useNavigate()
   const { data: portfolios, isLoading: portfoliosLoading, isError, error } = usePortfolios()
-
-  // For the dashboard, we'll show the first portfolio
-  const primaryPortfolioDTO = portfolios?.[0]
-  const portfolioId = primaryPortfolioDTO?.id || ''
-
-  const { data: balanceData, isLoading: balanceLoading } = usePortfolioBalance(portfolioId)
-  const { data: holdingsData, isLoading: holdingsLoading } = useHoldings(portfolioId)
-  const { data: transactionsData, isLoading: transactionsLoading } = useTransactions(portfolioId)
-
-  // Adapt backend DTOs to frontend types
-  const primaryPortfolio = primaryPortfolioDTO
-    ? adaptPortfolio(primaryPortfolioDTO, balanceData || null)
-    : null
-
-  const holdings = holdingsData?.holdings.map(adaptHolding) || []
-  const transactions = transactionsData?.transactions.map(adaptTransaction) || []
 
   if (isError) {
     return (
@@ -72,40 +63,9 @@ export function Dashboard(): React.JSX.Element {
       </header>
 
       <div className="space-y-8">
-        {/* Portfolio Summary */}
+        {/* Portfolio Grid */}
         <section>
-          {balanceLoading ? (
-            <PortfolioSummaryCard
-              portfolio={{
-                id: '',
-                name: 'Loading...',
-                userId: '',
-                cashBalance: 0,
-                totalValue: 0,
-                dailyChange: 0,
-                dailyChangePercent: 0,
-                createdAt: '',
-              }}
-              isLoading={true}
-            />
-          ) : primaryPortfolio ? (
-            <div>
-              <PortfolioSummaryCard portfolio={primaryPortfolio} />
-              {portfolios && portfolios.length > 1 && (
-                <div className="mt-4">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    You have {portfolios.length} portfolios.{' '}
-                    <Link
-                      to={`/portfolio/${primaryPortfolio.id}`}
-                      className="text-blue-600 hover:underline dark:text-blue-400"
-                    >
-                      View details
-                    </Link>
-                  </p>
-                </div>
-              )}
-            </div>
-          ) : (
+          {!portfolios || portfolios.length === 0 ? (
             <EmptyState
               message="No portfolios found. Create your first portfolio to get started!"
               action={
@@ -118,72 +78,24 @@ export function Dashboard(): React.JSX.Element {
                 </button>
               }
             />
+          ) : (
+            <>
+              <div className="mb-6">
+                <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+                  Your Portfolios
+                </h2>
+                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                  You have {portfolios.length} portfolio{portfolios.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3" data-testid="portfolio-grid">
+                {portfolios.map((portfolioDTO) => (
+                  <PortfolioCardWithBalance key={portfolioDTO.id} portfolioDTO={portfolioDTO} />
+                ))}
+              </div>
+            </>
           )}
         </section>
-
-        {/* Holdings */}
-        {primaryPortfolio && (
-          <section>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
-                Holdings
-              </h2>
-              <Link
-                to={`/portfolio/${primaryPortfolio.id}`}
-                className="text-sm text-blue-600 hover:underline dark:text-blue-400"
-              >
-                View all
-              </Link>
-            </div>
-            <HoldingsTable holdings={holdings} isLoading={holdingsLoading} />
-          </section>
-        )}
-
-        {/* Recent Transactions */}
-        {primaryPortfolio && (
-          <section>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
-                Recent Transactions
-              </h2>
-              <Link
-                to={`/portfolio/${primaryPortfolio.id}`}
-                className="text-sm text-blue-600 hover:underline dark:text-blue-400"
-              >
-                View all
-              </Link>
-            </div>
-            <TransactionList
-              transactions={transactions}
-              limit={5}
-              isLoading={transactionsLoading}
-            />
-          </section>
-        )}
-
-        {/* Quick Actions */}
-        {primaryPortfolio && (
-          <section>
-            <h2 className="mb-4 text-2xl font-semibold text-gray-900 dark:text-white">
-              Quick Actions
-            </h2>
-            <div className="flex gap-4">
-              <Link
-                to={`/portfolio/${primaryPortfolio.id}`}
-                data-testid="dashboard-trade-stocks-link"
-                className="rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-blue-700"
-              >
-                Trade Stocks
-              </Link>
-              <button
-                className="rounded-lg border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                onClick={() => alert('Deposit feature coming soon!')}
-              >
-                Deposit Funds
-              </button>
-            </div>
-          </section>
-        )}
       </div>
 
       {/* Portfolio Creation Modal */}
