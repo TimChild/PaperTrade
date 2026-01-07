@@ -6,7 +6,7 @@ interface TradeFormProps {
   onSubmit: (trade: TradeRequest) => void
   isSubmitting?: boolean
   holdings?: Holding[]
-  portfolioId?: string  // Reserved for future use (e.g., analytics)
+  portfolioId?: string // Reserved for future use (e.g., analytics)
   quickSellData?: { ticker: string; quantity: number } | null
 }
 
@@ -38,7 +38,9 @@ export function TradeForm({
   // Find holding for the current ticker when SELL is selected
   const currentHolding = useMemo(() => {
     if (action === 'SELL' && ticker.trim()) {
-      return holdings.find(h => h.ticker.toUpperCase() === ticker.trim().toUpperCase())
+      return holdings.find(
+        (h) => h.ticker.toUpperCase() === ticker.trim().toUpperCase()
+      )
     }
     return undefined
   }, [action, ticker, holdings])
@@ -181,7 +183,10 @@ export function TradeForm({
                   shares of {ticker.toUpperCase()}
                 </p>
               ) : (
-                <p className="text-sm text-red-600 dark:text-red-400" data-testid="trade-form-no-holdings">
+                <p
+                  className="text-sm text-red-600 dark:text-red-400"
+                  data-testid="trade-form-no-holdings"
+                >
                   You don't own any shares of {ticker.toUpperCase()}
                 </p>
               )}
@@ -195,7 +200,8 @@ export function TradeForm({
             htmlFor="price"
             className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
           >
-            Price Per Share ($) <span className="text-gray-500">(Optional - for estimation)</span>
+            Price Per Share ($){' '}
+            <span className="text-gray-500">(Optional - for estimation)</span>
           </label>
           <input
             id="price"
@@ -305,7 +311,11 @@ export function TradeForm({
         {/* Submit Button */}
         <button
           type="submit"
-          data-testid={action === 'BUY' ? 'trade-form-buy-button' : 'trade-form-sell-button'}
+          data-testid={
+            action === 'BUY'
+              ? 'trade-form-buy-button'
+              : 'trade-form-sell-button'
+          }
           disabled={!isValid || isSubmitting}
           className={`w-full rounded-lg px-4 py-3 font-semibold text-white transition-colors ${
             action === 'BUY'

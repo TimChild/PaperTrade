@@ -54,7 +54,9 @@ apiClient.interceptors.response.use(
       const { status, data } = error.response
 
       const requestUrl = error.config?.url
-      const fullUrl = error.config?.baseURL ? `${error.config.baseURL}${requestUrl}` : requestUrl
+      const fullUrl = error.config?.baseURL
+        ? `${error.config.baseURL}${requestUrl}`
+        : requestUrl
 
       switch (status) {
         case 401:

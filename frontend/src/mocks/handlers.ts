@@ -171,7 +171,9 @@ export const handlers = [
     }
 
     // Generate mock price history data
-    const startDate = start ? new Date(start) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    const startDate = start
+      ? new Date(start)
+      : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
     const endDate = end ? new Date(end) : new Date()
     const dataPoints: Array<{
       ticker: { symbol: string }
@@ -181,11 +183,16 @@ export const handlers = [
       interval: string
     }> = []
 
-    const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000))
+    const daysDiff = Math.ceil(
+      (endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000)
+    )
     const numPoints = Math.min(daysDiff, 100) // Limit to 100 points
 
     for (let i = 0; i < numPoints; i++) {
-      const date = new Date(startDate.getTime() + (i * (endDate.getTime() - startDate.getTime())) / numPoints)
+      const date = new Date(
+        startDate.getTime() +
+          (i * (endDate.getTime() - startDate.getTime())) / numPoints
+      )
       // Add some variance to the price (±5%)
       const variance = (Math.random() - 0.5) * 0.1 * basePrice
       const price = basePrice + variance

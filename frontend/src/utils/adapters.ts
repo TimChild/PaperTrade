@@ -2,7 +2,12 @@
  * Adapter functions to convert backend DTOs to frontend types
  */
 import type { Portfolio, Holding, Transaction } from '@/types/portfolio'
-import type { PortfolioDTO, HoldingDTO, TransactionDTO, BalanceResponse } from '@/services/api/types'
+import type {
+  PortfolioDTO,
+  HoldingDTO,
+  TransactionDTO,
+  BalanceResponse,
+} from '@/services/api/types'
 
 /**
  * Convert backend PortfolioDTO to frontend Portfolio type
@@ -84,7 +89,9 @@ export function adaptTransaction(dto: TransactionDTO): Transaction {
     amount: Math.abs(parseFloat(dto.cash_change)),
     ticker: dto.ticker || undefined,
     quantity: dto.quantity ? parseFloat(dto.quantity) : undefined,
-    pricePerShare: dto.price_per_share ? parseFloat(dto.price_per_share) : undefined,
+    pricePerShare: dto.price_per_share
+      ? parseFloat(dto.price_per_share)
+      : undefined,
     timestamp: dto.timestamp,
     notes: dto.notes || undefined,
   }

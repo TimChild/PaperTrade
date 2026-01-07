@@ -41,21 +41,30 @@ export function PortfolioCard({
 
       <div className="space-y-3">
         <div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Total Value</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white" data-testid={`portfolio-card-value-${portfolio.id}`}>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            Total Value
+          </p>
+          <p
+            className="text-2xl font-bold text-gray-900 dark:text-white"
+            data-testid={`portfolio-card-value-${portfolio.id}`}
+          >
             {formatCurrency(portfolio.totalValue)}
           </p>
         </div>
 
         <div className="flex items-center justify-between border-t border-gray-200 pt-3 dark:border-gray-700">
           <div>
-            <p className="text-xs text-gray-600 dark:text-gray-400">Cash Balance</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400">
+              Cash Balance
+            </p>
             <p className="text-sm font-medium text-gray-900 dark:text-white">
               {formatCurrency(portfolio.cashBalance)}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-xs text-gray-600 dark:text-gray-400">Daily Change</p>
+            <p className="text-xs text-gray-600 dark:text-gray-400">
+              Daily Change
+            </p>
             <p className={`text-sm font-medium ${changeColorClass}`}>
               {isPositiveChange ? '+' : ''}
               {formatCurrency(portfolio.dailyChange)}

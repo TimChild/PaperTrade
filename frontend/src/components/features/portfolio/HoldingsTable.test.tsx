@@ -10,9 +10,27 @@ import type { HoldingDTO } from '@/services/api/types'
 vi.mock('@/hooks/usePriceQuery', () => ({
   useBatchPricesQuery: vi.fn((tickers: string[]) => {
     const priceMap = new Map([
-      ['AAPL', { price: { amount: 175.0, currency: 'USD' }, timestamp: '2024-01-01T12:00:00Z' }],
-      ['MSFT', { price: { amount: 350.0, currency: 'USD' }, timestamp: '2024-01-01T12:00:00Z' }],
-      ['LOSS', { price: { amount: 150.0, currency: 'USD' }, timestamp: '2024-01-01T12:00:00Z' }],
+      [
+        'AAPL',
+        {
+          price: { amount: 175.0, currency: 'USD' },
+          timestamp: '2024-01-01T12:00:00Z',
+        },
+      ],
+      [
+        'MSFT',
+        {
+          price: { amount: 350.0, currency: 'USD' },
+          timestamp: '2024-01-01T12:00:00Z',
+        },
+      ],
+      [
+        'LOSS',
+        {
+          price: { amount: 150.0, currency: 'USD' },
+          timestamp: '2024-01-01T12:00:00Z',
+        },
+      ],
     ])
 
     // Only return prices for requested tickers
@@ -81,7 +99,9 @@ describe('HoldingsTable', () => {
 
   describe('Basic rendering', () => {
     it('should render holdings table with data', () => {
-      render(<HoldingsTable holdings={mockHoldings} />, { wrapper: createWrapper() })
+      render(<HoldingsTable holdings={mockHoldings} />, {
+        wrapper: createWrapper(),
+      })
 
       expect(screen.getByTestId('holdings-table')).toBeInTheDocument()
       expect(screen.getByTestId('holding-row-AAPL')).toBeInTheDocument()
@@ -89,39 +109,61 @@ describe('HoldingsTable', () => {
     })
 
     it('should display holding symbols correctly', () => {
-      render(<HoldingsTable holdings={mockHoldings} />, { wrapper: createWrapper() })
+      render(<HoldingsTable holdings={mockHoldings} />, {
+        wrapper: createWrapper(),
+      })
 
-      expect(screen.getByTestId('holding-symbol-AAPL')).toHaveTextContent('AAPL')
-      expect(screen.getByTestId('holding-symbol-MSFT')).toHaveTextContent('MSFT')
+      expect(screen.getByTestId('holding-symbol-AAPL')).toHaveTextContent(
+        'AAPL'
+      )
+      expect(screen.getByTestId('holding-symbol-MSFT')).toHaveTextContent(
+        'MSFT'
+      )
     })
 
     it('should display holding quantities', () => {
-      render(<HoldingsTable holdings={mockHoldings} />, { wrapper: createWrapper() })
+      render(<HoldingsTable holdings={mockHoldings} />, {
+        wrapper: createWrapper(),
+      })
 
-      expect(screen.getByTestId('holding-quantity-AAPL')).toHaveTextContent('100')
-      expect(screen.getByTestId('holding-quantity-MSFT')).toHaveTextContent('50')
+      expect(screen.getByTestId('holding-quantity-AAPL')).toHaveTextContent(
+        '100'
+      )
+      expect(screen.getByTestId('holding-quantity-MSFT')).toHaveTextContent(
+        '50'
+      )
     })
 
     it('should display market values', () => {
-      render(<HoldingsTable holdings={mockHoldings} />, { wrapper: createWrapper() })
+      render(<HoldingsTable holdings={mockHoldings} />, {
+        wrapper: createWrapper(),
+      })
 
-      expect(screen.getByTestId('holding-value-AAPL')).toHaveTextContent('$17,500.00')
-      expect(screen.getByTestId('holding-value-MSFT')).toHaveTextContent('$17,500.00')
+      expect(screen.getByTestId('holding-value-AAPL')).toHaveTextContent(
+        '$17,500.00'
+      )
+      expect(screen.getByTestId('holding-value-MSFT')).toHaveTextContent(
+        '$17,500.00'
+      )
     })
 
     it('should show empty state when no holdings', () => {
       render(<HoldingsTable holdings={[]} />, { wrapper: createWrapper() })
 
-      expect(screen.getByText(/No holdings in this portfolio yet/i)).toBeInTheDocument()
+      expect(
+        screen.getByText(/No holdings in this portfolio yet/i)
+      ).toBeInTheDocument()
     })
 
     it('should show loading state', () => {
-      render(<HoldingsTable holdings={[]} isLoading={true} />, { wrapper: createWrapper() })
+      render(<HoldingsTable holdings={[]} isLoading={true} />, {
+        wrapper: createWrapper(),
+      })
 
       // Should show skeleton loaders
-      const skeletons = screen.getAllByRole('generic').filter((el) =>
-        el.className.includes('animate-pulse')
-      )
+      const skeletons = screen
+        .getAllByRole('generic')
+        .filter((el) => el.className.includes('animate-pulse'))
       expect(skeletons.length).toBeGreaterThan(0)
     })
   })
@@ -129,28 +171,40 @@ describe('HoldingsTable', () => {
   describe('Quick Sell button', () => {
     it('should render Quick Sell button when onQuickSell provided', () => {
       const mockOnQuickSell = vi.fn()
-      render(<HoldingsTable holdings={mockHoldings} onQuickSell={mockOnQuickSell} />, {
-        wrapper: createWrapper(),
-      })
+      render(
+        <HoldingsTable holdings={mockHoldings} onQuickSell={mockOnQuickSell} />,
+        {
+          wrapper: createWrapper(),
+        }
+      )
 
       expect(screen.getByTestId('holdings-quick-sell-aapl')).toBeInTheDocument()
       expect(screen.getByTestId('holdings-quick-sell-msft')).toBeInTheDocument()
     })
 
     it('should not render Quick Sell button when onQuickSell not provided', () => {
-      render(<HoldingsTable holdings={mockHoldings} />, { wrapper: createWrapper() })
+      render(<HoldingsTable holdings={mockHoldings} />, {
+        wrapper: createWrapper(),
+      })
 
-      expect(screen.queryByTestId('holdings-quick-sell-aapl')).not.toBeInTheDocument()
-      expect(screen.queryByTestId('holdings-quick-sell-msft')).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId('holdings-quick-sell-aapl')
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId('holdings-quick-sell-msft')
+      ).not.toBeInTheDocument()
     })
 
     it('should call onQuickSell with correct ticker and quantity when clicked', async () => {
       const user = userEvent.setup()
       const mockOnQuickSell = vi.fn()
 
-      render(<HoldingsTable holdings={mockHoldings} onQuickSell={mockOnQuickSell} />, {
-        wrapper: createWrapper(),
-      })
+      render(
+        <HoldingsTable holdings={mockHoldings} onQuickSell={mockOnQuickSell} />,
+        {
+          wrapper: createWrapper(),
+        }
+      )
 
       const quickSellButton = screen.getByTestId('holdings-quick-sell-aapl')
       await user.click(quickSellButton)
@@ -160,15 +214,20 @@ describe('HoldingsTable', () => {
 
     it('should have Actions column header when onQuickSell provided', () => {
       const mockOnQuickSell = vi.fn()
-      render(<HoldingsTable holdings={mockHoldings} onQuickSell={mockOnQuickSell} />, {
-        wrapper: createWrapper(),
-      })
+      render(
+        <HoldingsTable holdings={mockHoldings} onQuickSell={mockOnQuickSell} />,
+        {
+          wrapper: createWrapper(),
+        }
+      )
 
       expect(screen.getByText('Actions')).toBeInTheDocument()
     })
 
     it('should not have Actions column header when onQuickSell not provided', () => {
-      render(<HoldingsTable holdings={mockHoldings} />, { wrapper: createWrapper() })
+      render(<HoldingsTable holdings={mockHoldings} />, {
+        wrapper: createWrapper(),
+      })
 
       expect(screen.queryByText('Actions')).not.toBeInTheDocument()
     })
@@ -177,9 +236,12 @@ describe('HoldingsTable', () => {
       const user = userEvent.setup()
       const mockOnQuickSell = vi.fn()
 
-      render(<HoldingsTable holdings={mockHoldings} onQuickSell={mockOnQuickSell} />, {
-        wrapper: createWrapper(),
-      })
+      render(
+        <HoldingsTable holdings={mockHoldings} onQuickSell={mockOnQuickSell} />,
+        {
+          wrapper: createWrapper(),
+        }
+      )
 
       // Click AAPL Quick Sell
       await user.click(screen.getByTestId('holdings-quick-sell-aapl'))
@@ -195,7 +257,9 @@ describe('HoldingsTable', () => {
 
   describe('Gain/Loss display', () => {
     it('should show positive gain/loss in green', () => {
-      render(<HoldingsTable holdings={mockHoldings} />, { wrapper: createWrapper() })
+      render(<HoldingsTable holdings={mockHoldings} />, {
+        wrapper: createWrapper(),
+      })
 
       const rows = screen.getAllByRole('row')
       // Find rows with gain/loss cells (skip header)
@@ -216,14 +280,18 @@ describe('HoldingsTable', () => {
         },
       ]
 
-      render(<HoldingsTable holdings={holdingsWithLoss} />, { wrapper: createWrapper() })
+      render(<HoldingsTable holdings={holdingsWithLoss} />, {
+        wrapper: createWrapper(),
+      })
 
       expect(screen.getByText(/-\$5,000\.00/)).toBeInTheDocument()
       expect(screen.getByText(/25\.00%/)).toBeInTheDocument()
     })
 
     it('should format gain/loss percentage correctly', () => {
-      render(<HoldingsTable holdings={mockHoldings} />, { wrapper: createWrapper() })
+      render(<HoldingsTable holdings={mockHoldings} />, {
+        wrapper: createWrapper(),
+      })
 
       // Should show percentage for AAPL (16.67% shown as +16.67%)
       const percentages = screen.getAllByText(/\+16\.67%/)
@@ -233,9 +301,12 @@ describe('HoldingsTable', () => {
 
   describe('Price display', () => {
     it('should display current prices', () => {
-      render(<HoldingsTable holdings={mockHoldings} holdingsDTO={mockHoldingsDTO} />, {
-        wrapper: createWrapper(),
-      })
+      render(
+        <HoldingsTable holdings={mockHoldings} holdingsDTO={mockHoldingsDTO} />,
+        {
+          wrapper: createWrapper(),
+        }
+      )
 
       // Prices should be displayed (mocked to return real-time prices)
       expect(screen.getAllByText(/\$175.00/).length).toBeGreaterThan(0)
@@ -243,7 +314,9 @@ describe('HoldingsTable', () => {
     })
 
     it('should display average cost', () => {
-      render(<HoldingsTable holdings={mockHoldings} />, { wrapper: createWrapper() })
+      render(<HoldingsTable holdings={mockHoldings} />, {
+        wrapper: createWrapper(),
+      })
 
       expect(screen.getByText('$150.00')).toBeInTheDocument()
       expect(screen.getByText('$300.00')).toBeInTheDocument()
@@ -252,7 +325,9 @@ describe('HoldingsTable', () => {
 
   describe('Table structure', () => {
     it('should have correct column headers', () => {
-      render(<HoldingsTable holdings={mockHoldings} />, { wrapper: createWrapper() })
+      render(<HoldingsTable holdings={mockHoldings} />, {
+        wrapper: createWrapper(),
+      })
 
       expect(screen.getByText('Symbol')).toBeInTheDocument()
       expect(screen.getByText('Shares')).toBeInTheDocument()
@@ -263,7 +338,9 @@ describe('HoldingsTable', () => {
     })
 
     it('should have correct number of rows', () => {
-      render(<HoldingsTable holdings={mockHoldings} />, { wrapper: createWrapper() })
+      render(<HoldingsTable holdings={mockHoldings} />, {
+        wrapper: createWrapper(),
+      })
 
       // 1 header row + 2 data rows
       const rows = screen.getAllByRole('row')
@@ -271,7 +348,9 @@ describe('HoldingsTable', () => {
     })
 
     it('should apply hover styles to rows', () => {
-      render(<HoldingsTable holdings={mockHoldings} />, { wrapper: createWrapper() })
+      render(<HoldingsTable holdings={mockHoldings} />, {
+        wrapper: createWrapper(),
+      })
 
       const aaplRow = screen.getByTestId('holding-row-AAPL')
       expect(aaplRow).toHaveClass('hover:bg-gray-50')

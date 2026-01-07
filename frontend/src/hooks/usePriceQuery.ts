@@ -20,7 +20,10 @@ export function usePriceQuery(ticker: string) {
     retry: (failureCount, error) => {
       const axiosError = error as AxiosError
       // Don't retry on rate limit (503) or not found (404)
-      if (axiosError?.response?.status === 503 || axiosError?.response?.status === 404) {
+      if (
+        axiosError?.response?.status === 503 ||
+        axiosError?.response?.status === 404
+      ) {
         return false
       }
       return failureCount < 2
@@ -60,7 +63,9 @@ export function useBatchPricesQuery(tickers: string[]) {
  * Utility hook for price staleness calculation
  * Returns a human-readable string indicating how old the price is
  */
-export function usePriceStaleness(pricePoint: PricePoint | undefined): string | null {
+export function usePriceStaleness(
+  pricePoint: PricePoint | undefined
+): string | null {
   if (!pricePoint) return null
 
   const now = new Date()

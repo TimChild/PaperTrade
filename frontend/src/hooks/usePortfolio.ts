@@ -63,10 +63,15 @@ export function useDeposit(portfolioId: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: DepositRequest) => portfoliosApi.deposit(portfolioId, data),
+    mutationFn: (data: DepositRequest) =>
+      portfoliosApi.deposit(portfolioId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['portfolio', portfolioId, 'balance'] })
-      queryClient.invalidateQueries({ queryKey: ['portfolio', portfolioId, 'transactions'] })
+      queryClient.invalidateQueries({
+        queryKey: ['portfolio', portfolioId, 'balance'],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ['portfolio', portfolioId, 'transactions'],
+      })
     },
   })
 }
@@ -78,10 +83,15 @@ export function useWithdraw(portfolioId: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: WithdrawRequest) => portfoliosApi.withdraw(portfolioId, data),
+    mutationFn: (data: WithdrawRequest) =>
+      portfoliosApi.withdraw(portfolioId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['portfolio', portfolioId, 'balance'] })
-      queryClient.invalidateQueries({ queryKey: ['portfolio', portfolioId, 'transactions'] })
+      queryClient.invalidateQueries({
+        queryKey: ['portfolio', portfolioId, 'balance'],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ['portfolio', portfolioId, 'transactions'],
+      })
     },
   })
 }
@@ -93,11 +103,18 @@ export function useExecuteTrade(portfolioId: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (data: TradeRequest) => portfoliosApi.executeTrade(portfolioId, data),
+    mutationFn: (data: TradeRequest) =>
+      portfoliosApi.executeTrade(portfolioId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['portfolio', portfolioId, 'balance'] })
-      queryClient.invalidateQueries({ queryKey: ['portfolio', portfolioId, 'holdings'] })
-      queryClient.invalidateQueries({ queryKey: ['portfolio', portfolioId, 'transactions'] })
+      queryClient.invalidateQueries({
+        queryKey: ['portfolio', portfolioId, 'balance'],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ['portfolio', portfolioId, 'holdings'],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ['portfolio', portfolioId, 'transactions'],
+      })
     },
   })
 }

@@ -32,13 +32,17 @@ function createWrapper() {
 describe('PortfolioSummaryCard', () => {
   it('renders portfolio name', () => {
     const Wrapper = createWrapper()
-    render(<PortfolioSummaryCard portfolio={mockPortfolio} />, { wrapper: Wrapper })
+    render(<PortfolioSummaryCard portfolio={mockPortfolio} />, {
+      wrapper: Wrapper,
+    })
     expect(screen.getByText('Test Portfolio')).toBeInTheDocument()
   })
 
   it('displays total value formatted as currency', () => {
     const Wrapper = createWrapper()
-    render(<PortfolioSummaryCard portfolio={mockPortfolio} />, { wrapper: Wrapper })
+    render(<PortfolioSummaryCard portfolio={mockPortfolio} />, {
+      wrapper: Wrapper,
+    })
     // With no holdings, total value equals cash balance
     const totalValueElement = screen.getByText('Total Value').nextElementSibling
     expect(totalValueElement).toHaveTextContent('$25,000.00')
@@ -46,23 +50,30 @@ describe('PortfolioSummaryCard', () => {
 
   it('displays daily change with positive formatting', () => {
     const Wrapper = createWrapper()
-    render(<PortfolioSummaryCard portfolio={mockPortfolio} />, { wrapper: Wrapper })
+    render(<PortfolioSummaryCard portfolio={mockPortfolio} />, {
+      wrapper: Wrapper,
+    })
     expect(screen.getByText(/\+\$2,450\.00/)).toBeInTheDocument()
     expect(screen.getByText(/\+1\.59%/)).toBeInTheDocument()
   })
 
   it('displays cash balance', () => {
     const Wrapper = createWrapper()
-    render(<PortfolioSummaryCard portfolio={mockPortfolio} />, { wrapper: Wrapper })
+    render(<PortfolioSummaryCard portfolio={mockPortfolio} />, {
+      wrapper: Wrapper,
+    })
     const cashBalanceElement = screen.getByText('Cash Balance').parentElement
     expect(cashBalanceElement).toHaveTextContent('$25,000.00')
   })
 
   it('shows loading state when isLoading is true', () => {
     const Wrapper = createWrapper()
-    render(<PortfolioSummaryCard portfolio={mockPortfolio} isLoading={true} />, {
-      wrapper: Wrapper,
-    })
+    render(
+      <PortfolioSummaryCard portfolio={mockPortfolio} isLoading={true} />,
+      {
+        wrapper: Wrapper,
+      }
+    )
     expect(screen.queryByText('Test Portfolio')).not.toBeInTheDocument()
   })
 
@@ -73,7 +84,9 @@ describe('PortfolioSummaryCard', () => {
       dailyChange: -1500,
       dailyChangePercent: -0.0096,
     }
-    render(<PortfolioSummaryCard portfolio={negativePortfolio} />, { wrapper: Wrapper })
+    render(<PortfolioSummaryCard portfolio={negativePortfolio} />, {
+      wrapper: Wrapper,
+    })
     expect(screen.getByText(/-\$1,500\.00/)).toBeInTheDocument()
   })
 })

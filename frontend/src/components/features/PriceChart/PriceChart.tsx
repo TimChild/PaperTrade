@@ -42,7 +42,9 @@ export function PriceChart({
     return (
       <div className="price-chart">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{ticker}</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            {ticker}
+          </h3>
           <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
         </div>
         <ChartSkeleton />
@@ -55,7 +57,9 @@ export function PriceChart({
     return (
       <div className="price-chart">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{ticker}</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            {ticker}
+          </h3>
           <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
         </div>
         <ChartError onRetry={() => refetch()} />
@@ -68,11 +72,15 @@ export function PriceChart({
     return (
       <div className="price-chart">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{ticker}</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            {ticker}
+          </h3>
           <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
         </div>
         <div className="flex h-64 items-center justify-center rounded-lg border border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
-          <p className="text-gray-600 dark:text-gray-400">No price data available</p>
+          <p className="text-gray-600 dark:text-gray-400">
+            No price data available
+          </p>
         </div>
       </div>
     )
@@ -95,7 +103,9 @@ export function PriceChart({
     return (
       <div className="price-chart">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{ticker}</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            {ticker}
+          </h3>
           <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
         </div>
         <div className="flex h-64 items-center justify-center rounded-lg border border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
@@ -113,7 +123,9 @@ export function PriceChart({
     <div className="price-chart">
       {/* Header */}
       <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{ticker}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          {ticker}
+        </h3>
         <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
       </div>
 
@@ -128,11 +140,7 @@ export function PriceChart({
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-          <XAxis
-            dataKey="time"
-            stroke="#6b7280"
-            style={{ fontSize: '12px' }}
-          />
+          <XAxis dataKey="time" stroke="#6b7280" style={{ fontSize: '12px' }} />
           <YAxis
             domain={['dataMin - 5', 'dataMax + 5']}
             stroke="#6b7280"
@@ -147,7 +155,9 @@ export function PriceChart({
               color: '#fff',
             }}
             formatter={(value: number | undefined) =>
-              value !== undefined ? [`$${value.toFixed(2)}`, 'Price'] : ['N/A', 'Price']
+              value !== undefined
+                ? [`$${value.toFixed(2)}`, 'Price']
+                : ['N/A', 'Price']
             }
             labelFormatter={(label, payload) =>
               payload?.[0]?.payload.fullDate || label
@@ -193,6 +203,9 @@ function formatDateForAxis(timestamp: string, range: TimeRange): string {
         year: '2-digit',
       })
     default:
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      })
   }
 }

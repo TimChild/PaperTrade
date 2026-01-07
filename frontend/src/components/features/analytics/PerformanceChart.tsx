@@ -22,7 +22,9 @@ interface PerformanceChartProps {
 
 const TIME_RANGES: TimeRange[] = ['1W', '1M', '3M', '1Y', 'ALL']
 
-export function PerformanceChart({ portfolioId }: PerformanceChartProps): React.JSX.Element {
+export function PerformanceChart({
+  portfolioId,
+}: PerformanceChartProps): React.JSX.Element {
   const [range, setRange] = useState<TimeRange>('1M')
   const { data, isLoading, error } = usePerformance(portfolioId, range)
 
@@ -77,11 +79,18 @@ export function PerformanceChart({ portfolioId }: PerformanceChartProps): React.
       <ResponsiveContainer width="100%" height={400}>
         <LineChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="date" tickFormatter={(date) => formatDate(date, 'short')} />
-          <YAxis tickFormatter={(value) => formatCurrency(value, 'USD', 'compact')} />
+          <XAxis
+            dataKey="date"
+            tickFormatter={(date) => formatDate(date, 'short')}
+          />
+          <YAxis
+            tickFormatter={(value) => formatCurrency(value, 'USD', 'compact')}
+          />
           <Tooltip
             formatter={(value: number | undefined) =>
-              value !== undefined ? [formatCurrency(value), 'Value'] : ['---', 'Value']
+              value !== undefined
+                ? [formatCurrency(value), 'Value']
+                : ['---', 'Value']
             }
             labelFormatter={(label) => formatDate(label, 'long')}
           />
@@ -93,7 +102,13 @@ export function PerformanceChart({ portfolioId }: PerformanceChartProps): React.
               label="Start"
             />
           )}
-          <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} dot={false} />
+          <Line
+            type="monotone"
+            dataKey="value"
+            stroke="#3b82f6"
+            strokeWidth={2}
+            dot={false}
+          />
         </LineChart>
       </ResponsiveContainer>
     </div>

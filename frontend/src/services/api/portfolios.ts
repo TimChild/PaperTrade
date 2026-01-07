@@ -18,8 +18,13 @@ export const portfoliosApi = {
   /**
    * Create a new portfolio with initial deposit
    */
-  create: async (data: CreatePortfolioRequest): Promise<CreatePortfolioResponse> => {
-    const response = await apiClient.post<CreatePortfolioResponse>('/portfolios', data)
+  create: async (
+    data: CreatePortfolioRequest
+  ): Promise<CreatePortfolioResponse> => {
+    const response = await apiClient.post<CreatePortfolioResponse>(
+      '/portfolios',
+      data
+    )
     return response.data
   },
 
@@ -35,7 +40,9 @@ export const portfoliosApi = {
    * Get a specific portfolio by ID
    */
   getById: async (portfolioId: string): Promise<PortfolioDTO> => {
-    const response = await apiClient.get<PortfolioDTO>(`/portfolios/${portfolioId}`)
+    const response = await apiClient.get<PortfolioDTO>(
+      `/portfolios/${portfolioId}`
+    )
     return response.data
   },
 

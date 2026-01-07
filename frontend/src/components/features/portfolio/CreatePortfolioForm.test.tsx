@@ -32,7 +32,9 @@ describe('CreatePortfolioForm', () => {
 
     expect(screen.getByLabelText(/Portfolio Name/i)).toBeInTheDocument()
     expect(screen.getByLabelText(/Initial Deposit/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Create Portfolio/i })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: /Create Portfolio/i })
+    ).toBeInTheDocument()
   })
 
   it('shows cancel button when onCancel is provided', () => {
@@ -54,7 +56,9 @@ describe('CreatePortfolioForm', () => {
       </TestWrapper>
     )
 
-    expect(screen.queryByRole('button', { name: /Cancel/i })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /Cancel/i })
+    ).not.toBeInTheDocument()
   })
 
   it('calls onCancel when cancel button is clicked', async () => {
@@ -81,7 +85,9 @@ describe('CreatePortfolioForm', () => {
     )
 
     const nameInput = screen.getByLabelText(/Portfolio Name/i)
-    const submitButton = screen.getByRole('button', { name: /Create Portfolio/i })
+    const submitButton = screen.getByRole('button', {
+      name: /Create Portfolio/i,
+    })
 
     // Submit button should NOT be disabled (HTML5 validation will handle empty name)
     expect(submitButton).not.toBeDisabled()
@@ -127,8 +133,12 @@ describe('CreatePortfolioForm', () => {
     )
 
     const nameInput = screen.getByLabelText(/Portfolio Name/i)
-    const depositInput = screen.getByLabelText(/Initial Deposit/i) as HTMLInputElement
-    const submitButton = screen.getByRole('button', { name: /Create Portfolio/i })
+    const depositInput = screen.getByLabelText(
+      /Initial Deposit/i
+    ) as HTMLInputElement
+    const submitButton = screen.getByRole('button', {
+      name: /Create Portfolio/i,
+    })
 
     await user.type(nameInput, 'Test Portfolio')
     await user.clear(depositInput)
@@ -147,7 +157,9 @@ describe('CreatePortfolioForm', () => {
 
     // Use findByRole to wait for the error to appear (handles async state update)
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent(/Initial deposit must be a positive number/i)
+    expect(alert).toHaveTextContent(
+      /Initial deposit must be a positive number/i
+    )
   })
 
   it('shows error for portfolio name exceeding 100 characters', async () => {
@@ -159,8 +171,12 @@ describe('CreatePortfolioForm', () => {
       </TestWrapper>
     )
 
-    const nameInput = screen.getByLabelText(/Portfolio Name/i) as HTMLInputElement
-    const submitButton = screen.getByRole('button', { name: /Create Portfolio/i })
+    const nameInput = screen.getByLabelText(
+      /Portfolio Name/i
+    ) as HTMLInputElement
+    const submitButton = screen.getByRole('button', {
+      name: /Create Portfolio/i,
+    })
 
     // Type a name longer than 100 characters (bypassing maxLength by setting value directly)
     const longName = 'A'.repeat(101)
@@ -183,7 +199,9 @@ describe('CreatePortfolioForm', () => {
 
     // Use findByRole to wait for the error to appear (handles async state update)
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent(/Portfolio name must be 100 characters or less/i)
+    expect(alert).toHaveTextContent(
+      /Portfolio name must be 100 characters or less/i
+    )
   })
 
   it('trims whitespace from portfolio name', async () => {
@@ -197,7 +215,9 @@ describe('CreatePortfolioForm', () => {
     )
 
     const nameInput = screen.getByLabelText(/Portfolio Name/i)
-    const submitButton = screen.getByRole('button', { name: /Create Portfolio/i })
+    const submitButton = screen.getByRole('button', {
+      name: /Create Portfolio/i,
+    })
 
     await user.type(nameInput, '  Test Portfolio  ')
     await user.click(submitButton)
@@ -218,7 +238,9 @@ describe('CreatePortfolioForm', () => {
     )
 
     const nameInput = screen.getByLabelText(/Portfolio Name/i)
-    const submitButton = screen.getByRole('button', { name: /Create Portfolio/i })
+    const submitButton = screen.getByRole('button', {
+      name: /Create Portfolio/i,
+    })
 
     await user.type(nameInput, 'Test Portfolio')
 
@@ -247,7 +269,9 @@ describe('CreatePortfolioForm', () => {
 
     const nameInput = screen.getByLabelText(/Portfolio Name/i)
     const depositInput = screen.getByLabelText(/Initial Deposit/i)
-    const submitButton = screen.getByRole('button', { name: /Create Portfolio/i })
+    const submitButton = screen.getByRole('button', {
+      name: /Create Portfolio/i,
+    })
 
     await user.type(nameInput, 'My New Portfolio')
     await user.clear(depositInput)
@@ -255,7 +279,9 @@ describe('CreatePortfolioForm', () => {
     await user.click(submitButton)
 
     await waitFor(() => {
-      expect(onSuccess).toHaveBeenCalledWith('00000000-0000-0000-0000-000000000001')
+      expect(onSuccess).toHaveBeenCalledWith(
+        '00000000-0000-0000-0000-000000000001'
+      )
     })
   })
 

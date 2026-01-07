@@ -4,13 +4,17 @@ import { PriceStats } from '@/components/features/PriceChart/PriceStats'
 
 describe('PriceStats', () => {
   it('displays current price formatted as currency', () => {
-    render(<PriceStats currentPrice={150.25} change={5.25} changePercent={3.61} />)
+    render(
+      <PriceStats currentPrice={150.25} change={5.25} changePercent={3.61} />
+    )
 
     expect(screen.getByText('$150.25')).toBeInTheDocument()
   })
 
   it('displays positive change with green color and plus sign', () => {
-    render(<PriceStats currentPrice={150.25} change={5.25} changePercent={3.61} />)
+    render(
+      <PriceStats currentPrice={150.25} change={5.25} changePercent={3.61} />
+    )
 
     const changeAmount = screen.getByText('+$5.25')
     expect(changeAmount).toBeInTheDocument()
@@ -22,7 +26,9 @@ describe('PriceStats', () => {
   })
 
   it('displays negative change with red color and minus sign', () => {
-    render(<PriceStats currentPrice={145.0} change={-5.25} changePercent={-3.48} />)
+    render(
+      <PriceStats currentPrice={145.0} change={-5.25} changePercent={-3.48} />
+    )
 
     const changeAmount = screen.getByText('-$5.25')
     expect(changeAmount).toBeInTheDocument()
@@ -45,7 +51,9 @@ describe('PriceStats', () => {
   })
 
   it('formats large numbers correctly', () => {
-    render(<PriceStats currentPrice={1250.5} change={125.5} changePercent={11.14} />)
+    render(
+      <PriceStats currentPrice={1250.5} change={125.5} changePercent={11.14} />
+    )
 
     expect(screen.getByText('$1,250.50')).toBeInTheDocument()
     expect(screen.getByText('+$125.50')).toBeInTheDocument()
@@ -53,21 +61,31 @@ describe('PriceStats', () => {
   })
 
   it('displays fallback when currentPrice is undefined', () => {
-    render(<PriceStats currentPrice={undefined} change={5.25} changePercent={3.61} />)
+    render(
+      <PriceStats currentPrice={undefined} change={5.25} changePercent={3.61} />
+    )
 
     expect(screen.getByText('---')).toBeInTheDocument()
     expect(screen.getByText('Price data unavailable')).toBeInTheDocument()
   })
 
   it('displays fallback when change is NaN', () => {
-    render(<PriceStats currentPrice={150.25} change={NaN} changePercent={3.61} />)
+    render(
+      <PriceStats currentPrice={150.25} change={NaN} changePercent={3.61} />
+    )
 
     expect(screen.getByText('---')).toBeInTheDocument()
     expect(screen.getByText('Price data unavailable')).toBeInTheDocument()
   })
 
   it('displays fallback when all values are undefined', () => {
-    render(<PriceStats currentPrice={undefined} change={undefined} changePercent={undefined} />)
+    render(
+      <PriceStats
+        currentPrice={undefined}
+        change={undefined}
+        changePercent={undefined}
+      />
+    )
 
     expect(screen.getByText('---')).toBeInTheDocument()
     expect(screen.getByText('Price data unavailable')).toBeInTheDocument()
