@@ -1,9 +1,9 @@
 # Task 080: Display Structured Error Messages in Frontend
 
-**Agent**: frontend-swe  
-**Status**: Not Started  
-**Priority**: High  
-**Complexity**: Medium  
+**Agent**: frontend-swe
+**Status**: Not Started
+**Priority**: High
+**Complexity**: Medium
 **Created**: 2026-01-08
 
 ## Context
@@ -74,7 +74,7 @@ catch (error) {
 ```typescript
 function formatTradeError(error: AxiosError): string {
   const detail = error.response?.data?.detail;
-  
+
   if (typeof detail === 'object' && detail.type) {
     switch (detail.type) {
       case 'insufficient_funds':
@@ -86,7 +86,7 @@ function formatTradeError(error: AxiosError): string {
         return detail.message || 'Unknown error';
     }
   }
-  
+
   // Fallback for non-structured errors
   return error.response?.data?.detail || error.message || 'Unknown error';
 }
