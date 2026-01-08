@@ -57,17 +57,19 @@ export function TradeForm({
     setIsPriceManuallySet(true)
   }
 
-  // Handle quick sell data using a microtask to batch state updates
+  // Handle quick sell data
+  // Note: We intentionally call setState synchronously here (vs using Promise.resolve)
+  // because the microtask delay was causing race conditions in E2E tests.
+  // The quick sell feature sets multiple related form fields that should update together.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (quickSellData) {
-      // Use a microtask to batch the updates
-      Promise.resolve().then(() => {
-        setAction('SELL')
-        setTicker(quickSellData.ticker)
-        setQuantity(quickSellData.quantity.toString())
-      })
+      setAction('SELL')
+      setTicker(quickSellData.ticker)
+      setQuantity(quickSellData.quantity.toString())
     }
   }, [quickSellData])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Find holding for the current ticker when SELL is selected
   const currentHolding = useMemo(() => {
