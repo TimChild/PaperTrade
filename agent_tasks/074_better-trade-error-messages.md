@@ -1,8 +1,8 @@
 # Task 074: Better Trade Error Messages
 
-**Agent**: backend-swe  
-**Priority**: Medium  
-**Estimated Effort**: 1-2 hours  
+**Agent**: backend-swe
+**Priority**: Medium
+**Estimated Effort**: 1-2 hours
 
 ## Problem
 

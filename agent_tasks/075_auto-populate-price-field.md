@@ -1,8 +1,8 @@
 # Task 075: Auto-Populate Price Per Share Field
 
-**Agent**: frontend-swe  
-**Priority**: Medium  
-**Estimated Effort**: 2-3 hours  
+**Agent**: frontend-swe
+**Priority**: Medium
+**Estimated Effort**: 2-3 hours
 
 ## Problem
 
@@ -46,7 +46,7 @@ Auto-fetch and populate the current stock price when user enters a ticker symbol
   ```typescript
   const debouncedTicker = useDebouncedValue(ticker, 500);
   const { data: price, isLoading, error } = useStockPrice(debouncedTicker);
-  
+
   useEffect(() => {
     if (price) {
       setPricePerShare(price.toString());
