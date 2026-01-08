@@ -6,6 +6,37 @@ Minor improvements, tech debt, and enhancements that don't block main developmen
 
 ## Active Backlog
 
+### UX Improvements (MEDIUM-HIGH PRIORITY)
+
+1. **Show Real-Time Stock Prices in Holdings** - ~2-3 hours
+   - **Problem**: Holdings table shows "Using average cost (current price unavailable)" with asterisk
+   - **Impact**: Users can't see if their stocks went up or down
+   - **Solution**: Fetch current prices from Alpha Vantage for each holding, display in "Current Price" column
+   - **Implementation**:
+     - Reuse existing `MarketDataPort` and `AlphaVantageAdapter`
+     - Add batch price fetch endpoint: `GET /api/v1/prices/batch?tickers=AAPL,MSFT`
+     - Update holdings query to include current prices
+     - Cache prices in Redis (5-minute TTL)
+   - **Depends On**: Task 075 (auto-populate price field) should be complete to avoid conflicts
+   - **Found**: Manual UI testing (2026-01-07)
+
+2. **Add Toast Notifications for Trade Actions** - ~1 hour
+   - **Problem**: Only modal alerts for trade success/failure, no persistent feedback
+   - **Solution**: Add toast notifications (react-hot-toast or similar)
+   - **Features**:
+     - Success toast: "Bought 2 shares of MSFT at $472.85"
+     - Error toast: "Trade failed: Insufficient funds"
+     - Auto-dismiss after 5 seconds
+     - Clickable to view transaction details
+   - **Benefits**: Better UX, less intrusive than modals
+   - **Found**: Manual UI testing (2026-01-07)
+
+3. **Highlight New Transactions** - ~30 minutes
+   - **Problem**: After trade execution, hard to find the new transaction in history
+   - **Solution**: Briefly highlight (pulse animation) newly added transaction row
+   - **Implementation**: Add CSS class for 3-second pulse animation on new items
+   - **Found**: Manual UI testing (2026-01-07)
+
 ### Testing & Quality (MEDIUM PRIORITY)
 
 1. **Fix E2E Tests in Agent Environment** - ~2-4 hours
