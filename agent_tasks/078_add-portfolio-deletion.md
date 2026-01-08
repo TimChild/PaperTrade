@@ -1,8 +1,8 @@
 # Task 078: Add Portfolio Deletion
 
-**Agent**: backend-swe  
-**Priority**: Medium  
-**Estimated Effort**: 2-3 hours  
+**Agent**: backend-swe
+**Priority**: Medium
+**Estimated Effort**: 2-3 hours
 
 ## Problem
 
@@ -63,13 +63,13 @@ Implement full delete functionality for portfolios:
 class DeletePortfolioUseCase:
     def __init__(self, portfolio_repo: PortfolioRepository):
         self._portfolio_repo = portfolio_repo
-    
+
     def execute(self, portfolio_id: str) -> None:
         """Delete portfolio and all related data."""
         portfolio = self._portfolio_repo.get(portfolio_id)
         if not portfolio:
             raise PortfolioNotFoundError(portfolio_id)
-        
+
         self._portfolio_repo.delete(portfolio_id)
 ```
 
@@ -88,7 +88,7 @@ async def delete_portfolio(portfolio_id: str) -> None:
 ```typescript
 export function useDeletePortfolio() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: (portfolioId: string) =>
       api.delete(`/portfolios/${portfolioId}`),

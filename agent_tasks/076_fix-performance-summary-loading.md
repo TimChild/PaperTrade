@@ -1,8 +1,8 @@
 # Task 076: Fix Performance Summary Loading State
 
-**Agent**: frontend-swe  
-**Priority**: High (Critical Bug)  
-**Estimated Effort**: 30 minutes  
+**Agent**: frontend-swe
+**Priority**: High (Critical Bug)
+**Estimated Effort**: 30 minutes
 
 ## Problem
 

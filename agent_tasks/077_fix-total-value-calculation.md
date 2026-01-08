@@ -1,8 +1,8 @@
 # Task 077: Fix Total Value Calculation
 
-**Agent**: backend-swe  
-**Priority**: High (Critical Bug)  
-**Estimated Effort**: 30-60 minutes  
+**Agent**: backend-swe
+**Priority**: High (Critical Bug)
+**Estimated Effort**: 30-60 minutes
 
 ## Problem
 
