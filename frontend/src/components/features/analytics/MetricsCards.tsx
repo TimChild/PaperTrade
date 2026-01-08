@@ -11,10 +11,27 @@ interface MetricsCardsProps {
 export function MetricsCards({
   portfolioId,
 }: MetricsCardsProps): React.JSX.Element {
-  const { data, isLoading } = usePerformance(portfolioId, '1M')
+  const { data, isLoading, error } = usePerformance(portfolioId, '1M')
 
-  if (isLoading || !data?.metrics) {
+  if (isLoading) {
     return <div data-testid="metrics-cards-loading">Loading metrics...</div>
+  }
+
+  if (error) {
+    return (
+      <div data-testid="metrics-cards-error" className="text-red-500">
+        Failed to load performance metrics. Please try again.
+      </div>
+    )
+  }
+
+  if (!data?.metrics) {
+    return (
+      <div data-testid="metrics-cards-empty" className="text-gray-500">
+        No performance data available yet. Metrics will be calculated after the
+        first daily snapshot is generated.
+      </div>
+    )
   }
 
   const { metrics } = data

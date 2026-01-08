@@ -125,4 +125,39 @@ describe('MetricsCards', () => {
       expect(screen.getByText('-$1,500.00')).toBeInTheDocument()
     })
   })
+
+  it('renders error state when API call fails', async () => {
+    vi.spyOn(analyticsApi.analyticsApi, 'getPerformance').mockRejectedValue(
+      new Error('API Error')
+    )
+
+    const Wrapper = createWrapper()
+    render(<MetricsCards portfolioId="test-id" />, { wrapper: Wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('metrics-cards-error')).toBeInTheDocument()
+      expect(
+        screen.getByText(/Failed to load performance metrics/)
+      ).toBeInTheDocument()
+    })
+  })
+
+  it('renders empty state when metrics is null', async () => {
+    vi.spyOn(analyticsApi.analyticsApi, 'getPerformance').mockResolvedValue({
+      portfolio_id: 'test-id',
+      range: '1M',
+      data_points: [],
+      metrics: null,
+    })
+
+    const Wrapper = createWrapper()
+    render(<MetricsCards portfolioId="test-id" />, { wrapper: Wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('metrics-cards-empty')).toBeInTheDocument()
+      expect(
+        screen.getByText(/No performance data available yet/)
+      ).toBeInTheDocument()
+    })
+  })
 })
