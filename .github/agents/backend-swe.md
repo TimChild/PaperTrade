@@ -224,20 +224,19 @@ Key principles for backend work:
 
 ## Quality Checks
 
-> 📖 **See**: [agent_tasks/reusable/backend-quality-checks.md](../../../agent_tasks/reusable/backend-quality-checks.md)
+> 📖 **See**: [agent_tasks/reusable/quality-and-tooling.md](../../../agent_tasks/reusable/quality-and-tooling.md)
 
 **Quick validation**: Run all backend quality checks with:
 ```bash
-cd backend && uv run ruff format . && task lint:backend && task test:backend
+task quality:backend
 ```
 
 ## CRITICAL: Pre-Completion Validation
 
-> 📖 **See**: [agent_tasks/reusable/pre-completion-checklist.md](../../../agent_tasks/reusable/pre-completion-checklist.md)
+> 📖 **See**: [agent_tasks/reusable/quality-and-tooling.md](../../../agent_tasks/reusable/quality-and-tooling.md)
 
 **Before considering your work complete:**
-- Format code: `cd backend && uv run ruff format .`
-- Run linting: `task lint:backend`
+- Run all checks: `task quality:backend`
 - Run tests: `task test:backend`
 
 These are the exact same commands run in CI. Catching failures locally saves time and prevents CI failures.

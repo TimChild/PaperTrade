@@ -291,21 +291,19 @@ Key principles for frontend work:
 
 ## Quality Checks
 
-> 📖 **See**: [agent_tasks/reusable/frontend-quality-checks.md](../../../agent_tasks/reusable/frontend-quality-checks.md)
+> 📖 **See**: [agent_tasks/reusable/quality-and-tooling.md](../../../agent_tasks/reusable/quality-and-tooling.md)
 
 **Quick validation**: Run all frontend quality checks with:
 ```bash
-cd frontend && npm run format && task lint:frontend && task test:frontend
+task quality:frontend
 ```
 
 ## CRITICAL: Pre-Completion Validation
 
-> 📖 **See**: [agent_tasks/reusable/pre-completion-checklist.md](../../../agent_tasks/reusable/pre-completion-checklist.md)
+> 📖 **See**: [agent_tasks/reusable/quality-and-tooling.md](../../../agent_tasks/reusable/quality-and-tooling.md)
 
 **Before considering your work complete:**
-- Format code: `cd frontend && npm run format`
-- Run linting: `task lint:frontend`
-- Run tests: `task test:frontend`
+- Run all checks: `task quality:frontend`
 - If UI changes: `task test:e2e` (end-to-end tests)
 
 These are the exact same commands run in CI. Catching failures locally saves time and prevents CI failures.

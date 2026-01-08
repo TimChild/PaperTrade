@@ -49,11 +49,8 @@ jobs:
       - name: Install dependencies
         run: task setup:backend
 
-      - name: Run linters
-        run: task lint:backend
-
-      - name: Run tests with coverage
-        run: task test:backend
+      - name: Run quality checks
+        run: task quality:backend
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
@@ -88,14 +85,8 @@ jobs:
       - name: Install dependencies
         run: task setup:frontend
 
-      - name: Run linters
-        run: task lint:frontend
-
-      - name: Run tests
-        run: task test:frontend
-
-      - name: Build check
-        run: task build:frontend
+      - name: Run quality checks
+        run: task quality:frontend
 
       - name: Security audit
         run: npm audit --audit-level=moderate

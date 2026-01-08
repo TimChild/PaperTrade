@@ -19,8 +19,10 @@ tasks:
       - echo "  - Docker services started (PostgreSQL, Redis)"
       - echo ""
       - 'echo "Next steps:"'
-      - 'echo "  - Run ''task dev'' to start development servers"'
-      - 'echo "  - Run ''task test'' to run all tests"'
+      - 'echo "  - Run ''task test:all'' to run all tests"'
+      - 'echo "  - Run ''task dev:backend'' to start backend server if dev mode"'
+      - 'echo "  - Run ''task dev:frontend'' to start frontend server in dev mode"'
+      - 'echo "  - OR use ''task docker:up:all'' to run the full app stack"'
 
   setup:backend:
     desc: "Install backend dependencies"
@@ -39,14 +41,6 @@ tasks:
       - echo "✓ Frontend dependencies installed"
     status:
       - test -d node_modules
-
-  dev:
-    desc: "Start all development servers (docker services, backend, frontend)"
-    deps:
-      - docker:up
-    cmds:
-      - echo "Starting development servers..."
-      - 'echo "Note: Run ''task dev:backend'' and ''task dev:frontend'' in separate terminals"'
 
   dev:backend:
     desc: "Start backend development server"
@@ -67,12 +61,12 @@ tasks:
       - sh: test -f package.json
         msg: "Frontend not found. Run 'task setup:frontend' first or create frontend directory."
 
-  test:
-    desc: "Run all tests (backend and frontend)"
+  test:all:
+    desc: "Run all tests (backend + frontend unit + E2E)"
     cmds:
       - task: test:backend
       - task: test:frontend
-
+      - task: test:e2e
   test:backend:
     desc: "Run backend tests with coverage"
     dir: "{{.BACKEND_DIR}}"
@@ -89,6 +83,51 @@ tasks:
     preconditions:
       - sh: test -f package.json
         msg: "Frontend not found. Run 'task setup:frontend' first."
+
+  test:e2e:
+    desc: "Run end-to-end tests with Playwright"
+    dir: "{{.FRONTEND_DIR}}"
+    deps:
+      - docker:up:all  # Ensure full stack is running
+    env:
+      # Load environment variables from .env file in repository root
+      # These are required for Clerk authentication in E2E tests
+      CLERK_SECRET_KEY:
+        sh: grep "^CLERK_SECRET_KEY=" ../.env | cut -d= -f2- || echo ""
+      CLERK_PUBLISHABLE_KEY:
+        sh: grep "^CLERK_PUBLISHABLE_KEY=" ../.env | cut -d= -f2- || echo ""
+      VITE_CLERK_PUBLISHABLE_KEY:
+        sh: grep "^VITE_CLERK_PUBLISHABLE_KEY=" ../.env | cut -d= -f2- || echo ""
+      E2E_CLERK_USER_EMAIL:
+        sh: grep "^E2E_CLERK_USER_EMAIL=" ../.env | cut -d= -f2- || echo ""
+    cmds:
+      - echo "Running E2E tests..."
+      - npm run test:e2e
+    preconditions:
+      - sh: test -f package.json
+        msg: "Frontend not found"
+
+  test:e2e:ui:
+    desc: "Run E2E tests with Playwright UI"
+    dir: "{{.FRONTEND_DIR}}"
+    deps:
+      - docker:up:all  # Ensure full stack is running
+    env:
+      # Load environment variables from .env file in repository root
+      CLERK_SECRET_KEY:
+        sh: grep "^CLERK_SECRET_KEY=" ../.env | cut -d= -f2- || echo ""
+      CLERK_PUBLISHABLE_KEY:
+        sh: grep "^CLERK_PUBLISHABLE_KEY=" ../.env | cut -d= -f2- || echo ""
+      VITE_CLERK_PUBLISHABLE_KEY:
+        sh: grep "^VITE_CLERK_PUBLISHABLE_KEY=" ../.env | cut -d= -f2- || echo ""
+      E2E_CLERK_USER_EMAIL:
+        sh: grep "^E2E_CLERK_USER_EMAIL=" ../.env | cut -d= -f2- || echo ""
+    cmds:
+      - echo "Running E2E tests with UI..."
+      - npm run test:e2e:ui
+    preconditions:
+      - sh: test -f package.json
+        msg: "Frontend not found"
 
   lint:
     desc: "Run all linters (backend and frontend)"
@@ -303,58 +342,6 @@ tasks:
       - sh: test -f package.json
         msg: "Frontend not found. Run 'task setup:frontend' first."
 
-  test:e2e:
-    desc: "Run end-to-end tests with Playwright"
-    dir: "{{.FRONTEND_DIR}}"
-    deps:
-      - docker:up:all  # Ensure full stack is running
-    env:
-      # Load environment variables from .env file in repository root
-      # These are required for Clerk authentication in E2E tests
-      CLERK_SECRET_KEY:
-        sh: grep "^CLERK_SECRET_KEY=" ../.env | cut -d= -f2- || echo ""
-      CLERK_PUBLISHABLE_KEY:
-        sh: grep "^CLERK_PUBLISHABLE_KEY=" ../.env | cut -d= -f2- || echo ""
-      VITE_CLERK_PUBLISHABLE_KEY:
-        sh: grep "^VITE_CLERK_PUBLISHABLE_KEY=" ../.env | cut -d= -f2- || echo ""
-      E2E_CLERK_USER_EMAIL:
-        sh: grep "^E2E_CLERK_USER_EMAIL=" ../.env | cut -d= -f2- || echo ""
-    cmds:
-      - echo "Running E2E tests..."
-      - npm run test:e2e
-    preconditions:
-      - sh: test -f package.json
-        msg: "Frontend not found"
-
-  test:e2e:ui:
-    desc: "Run E2E tests with Playwright UI"
-    dir: "{{.FRONTEND_DIR}}"
-    deps:
-      - docker:up:all  # Ensure full stack is running
-    env:
-      # Load environment variables from .env file in repository root
-      CLERK_SECRET_KEY:
-        sh: grep "^CLERK_SECRET_KEY=" ../.env | cut -d= -f2- || echo ""
-      CLERK_PUBLISHABLE_KEY:
-        sh: grep "^CLERK_PUBLISHABLE_KEY=" ../.env | cut -d= -f2- || echo ""
-      VITE_CLERK_PUBLISHABLE_KEY:
-        sh: grep "^VITE_CLERK_PUBLISHABLE_KEY=" ../.env | cut -d= -f2- || echo ""
-      E2E_CLERK_USER_EMAIL:
-        sh: grep "^E2E_CLERK_USER_EMAIL=" ../.env | cut -d= -f2- || echo ""
-    cmds:
-      - echo "Running E2E tests with UI..."
-      - npm run test:e2e:ui
-    preconditions:
-      - sh: test -f package.json
-        msg: "Frontend not found"
-
-  test:all:
-    desc: "Run all tests (backend + frontend unit + E2E)"
-    cmds:
-      - task: test:backend
-      - task: test:frontend
-      - task: test:e2e
-
   test:docker:dev:
     desc: "Test Docker development setup (health checks and connectivity)"
     cmds:
@@ -389,20 +376,6 @@ tasks:
       - echo "Cleaning up production stack..."
       - docker compose -f docker-compose.prod.yml down
       - echo "✅ Production test complete"
-
-  ci:
-    desc: "Run all CI checks locally (same as GitHub Actions)"
-    cmds:
-      - task: lint
-      - task: test
-      - task: build
-      - echo "✓ All CI checks passed!"
-
-  ci:fast:
-    desc: "Run fast CI checks (lint only, skip tests)"
-    cmds:
-      - task: lint
-      - echo "✓ Fast checks passed. Run 'task ci' for full suite."
 
   # =========================================================================
   # Quality Checks (combined format + lint + test)
@@ -497,7 +470,7 @@ tasks:
       - uv run python scripts/seed_db.py
       - echo "✓ Database seeded with sample data"
 
-  seed-historical-data:
+  db:seed:historical-data:
     desc: "Seed historical price data from Alpha Vantage (usage: task seed-historical-data -- --tickers AAPL,MSFT --days 365)"
     dir: "{{.BACKEND_DIR}}"
     cmds:

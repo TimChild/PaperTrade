@@ -159,13 +159,13 @@ jobs:
 
 ### Docker Compose (Local Development)
 
-> 📖 **See**: [agent_tasks/reusable/docker-commands.md](../../../agent_tasks/reusable/docker-commands.md) for common Docker operations
+> 📖 **See**: [agent_tasks/reusable/quality-and-tooling.md](../../../agent_tasks/reusable/quality-and-tooling.md) for common Docker operations
 
 **Quick reference**:
 - Start services: `task docker:up`
 - Stop services: `task docker:down`
-- View logs: `docker-compose logs -f <service>`
-- Check health: `docker-compose ps`
+- View logs: `task docker:logs`
+- Check health: `docker compose ps`
 
 ### Service Configuration
 ```yaml
@@ -283,17 +283,15 @@ When completing quality/infra work:
 
 ## Quality Checks
 
-### Backend Quality
+### Quality Checks
 
-> 📖 **See**: [agent_tasks/reusable/backend-quality-checks.md](../../../agent_tasks/reusable/backend-quality-checks.md)
+> 📖 **See**: [agent_tasks/reusable/quality-and-tooling.md](../../../agent_tasks/reusable/quality-and-tooling.md)
 
-### Frontend Quality
-
-> 📖 **See**: [agent_tasks/reusable/frontend-quality-checks.md](../../../agent_tasks/reusable/frontend-quality-checks.md)
+Use `task quality:backend` and `task quality:frontend` for comprehensive checks.
 
 ### Pre-Completion Checklist
 
-> 📖 **See**: [agent_tasks/reusable/pre-completion-checklist.md](../../../agent_tasks/reusable/pre-completion-checklist.md)
+> 📖 **See**: [agent_tasks/reusable/quality-and-tooling.md](../../../agent_tasks/reusable/quality-and-tooling.md)
 
 ## Related Documentation
 - See `.github/copilot-instructions.md` for general guidelines

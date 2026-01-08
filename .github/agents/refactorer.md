@@ -217,17 +217,15 @@ When completing refactoring work:
 
 ## Quality Checks
 
-### Backend Refactoring
+### Quality Checks
 
-> 📖 **See**: [agent_tasks/reusable/backend-quality-checks.md](../../../agent_tasks/reusable/backend-quality-checks.md)
+> 📖 **See**: [agent_tasks/reusable/quality-and-tooling.md](../../../agent_tasks/reusable/quality-and-tooling.md)
 
-### Frontend Refactoring
-
-> 📖 **See**: [agent_tasks/reusable/frontend-quality-checks.md](../../../agent_tasks/reusable/frontend-quality-checks.md)
+Run `task quality:backend` and/or `task quality:frontend` depending on what you're refactoring.
 
 ### Pre-Completion Checklist
 
-> 📖 **See**: [agent_tasks/reusable/pre-completion-checklist.md](../../../agent_tasks/reusable/pre-completion-checklist.md)
+> 📖 **See**: [agent_tasks/reusable/quality-and-tooling.md](../../../agent_tasks/reusable/quality-and-tooling.md)
 
 **Critical**: All tests must still pass after refactoring. Run the appropriate quality checks based on what code you've refactored.
 
