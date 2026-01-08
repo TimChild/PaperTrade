@@ -24,6 +24,8 @@ import sys
 from datetime import UTC, datetime, timedelta
 
 import httpx
+from dotenv import load_dotenv
+from fakeredis import aioredis as fakeredis
 
 from papertrade.adapters.outbound.market_data.alpha_vantage_adapter import (
     AlphaVantageAdapter,
@@ -33,7 +35,7 @@ from papertrade.adapters.outbound.repositories.price_repository import (
 )
 from papertrade.domain.value_objects.ticker import Ticker
 from papertrade.infrastructure.cache.price_cache import PriceCache
-from papertrade.infrastructure.database import async_session_maker, init_db
+from papertrade.infrastructure.database import async_session_maker, engine, init_db
 from papertrade.infrastructure.rate_limiter import RateLimiter
 
 # Default tickers to seed (common stocks for testing)
@@ -80,6 +82,9 @@ async def seed_ticker_history(
 
 async def main() -> None:
     """Run historical data seeding."""
+    # Load environment variables from .env file
+    load_dotenv()
+
     # Parse command-line arguments
     parser = argparse.ArgumentParser(
         description="Seed historical price data from Alpha Vantage"
@@ -120,35 +125,22 @@ async def main() -> None:
     # Initialize database
     await init_db()
 
-    # Create Alpha Vantage adapter with minimal dependencies
-    # Note: We don't need Redis for this one-off script
+    # Create Alpha Vantage adapter with fakeredis
+    # Note: We use fakeredis for this one-off script instead of real Redis
     async with async_session_maker() as session:
-        # Create mock Redis client (not used for this script)
-        class MockRedis:
-            """Mock Redis client for script usage."""
-
-            async def get(self, key: str) -> None:
-                return None
-
-            async def setex(self, key: str, ttl: int, value: str) -> None:
-                pass
-
-            async def delete(self, key: str) -> None:
-                pass
-
-        # Create adapter
-        redis_client = MockRedis()
+        # Create fakeredis client with Lua support
+        redis_client = await fakeredis.FakeRedis()
         http_client = httpx.AsyncClient(timeout=10.0)
 
         rate_limiter = RateLimiter(
-            redis=redis_client,  # type: ignore[arg-type]
+            redis=redis_client,
             key_prefix="papertrade:ratelimit:alphavantage:seed",
             calls_per_minute=5,  # Alpha Vantage free tier
             calls_per_day=500,
         )
 
         price_cache = PriceCache(
-            redis=redis_client,  # type: ignore[arg-type]
+            redis=redis_client,
             key_prefix="papertrade:price:seed",
             default_ttl=3600,
         )
@@ -178,6 +170,9 @@ async def main() -> None:
 
         # Clean up
         await http_client.aclose()
+
+    # Dispose database engine to prevent hanging
+    await engine.dispose()
 
     print()
     print(f"✅ Seeding complete! Total data points: {total_points}")
