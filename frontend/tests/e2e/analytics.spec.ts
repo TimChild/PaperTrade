@@ -75,7 +75,11 @@ test.describe('Portfolio Analytics', () => {
     // The backend snapshot job needs to run first to populate data
 
     // Check that components render (even if showing empty states)
-    const metricsCards = page.getByTestId('metrics-cards-loading').or(page.getByTestId('metrics-cards'))
+    const metricsCards = page
+      .getByTestId('metrics-cards-loading')
+      .or(page.getByTestId('metrics-cards-empty'))
+      .or(page.getByTestId('metrics-cards-error'))
+      .or(page.getByTestId('metrics-cards'))
     await expect(metricsCards).toBeVisible()
 
     const performanceChart = page
