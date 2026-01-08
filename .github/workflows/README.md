@@ -105,8 +105,8 @@ task test:e2e
 
 | CI Job | Task Commands |
 |--------|---------------|
-| `backend-checks` | `task setup:backend && task lint:backend && task test:backend` |
-| `frontend-checks` | `task setup:frontend && task lint:frontend && task test:frontend && task build:frontend` |
+| `backend-checks` | `task setup:backend && task quality:backend` |
+| `frontend-checks` | `task setup:frontend && task quality:frontend` |
 | `e2e-tests` | `task docker:up && task test:e2e` |
 
 ## Workflow Maintenance
