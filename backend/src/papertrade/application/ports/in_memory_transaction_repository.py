@@ -94,6 +94,25 @@ class InMemoryTransactionRepository:
                 )
             self._transactions[transaction.id] = transaction
 
+    async def delete_by_portfolio(self, portfolio_id: UUID) -> int:
+        """Delete all transactions for a portfolio.
+
+        Args:
+            portfolio_id: Portfolio identifier
+
+        Returns:
+            Count of transactions deleted
+        """
+        with self._lock:
+            to_delete = [
+                tid
+                for tid, t in self._transactions.items()
+                if t.portfolio_id == portfolio_id
+            ]
+            for tid in to_delete:
+                del self._transactions[tid]
+            return len(to_delete)
+
     def clear(self) -> None:
         """Clear all transactions (for testing)."""
         with self._lock:

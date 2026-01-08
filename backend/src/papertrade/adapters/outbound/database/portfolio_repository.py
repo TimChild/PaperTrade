@@ -6,7 +6,7 @@ Provides portfolio persistence using SQLModel ORM with SQLite/PostgreSQL.
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlmodel import select
+from sqlmodel import delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from papertrade.adapters.outbound.database.models import PortfolioModel
@@ -112,3 +112,17 @@ class SQLModelPortfolioRepository:
         result = await self._session.exec(statement)
         models = result.all()
         return [model.to_domain() for model in models]
+
+    async def delete(self, portfolio_id: UUID) -> None:
+        """Delete a portfolio by ID.
+
+        This method only deletes the portfolio entity itself. The caller is responsible
+        for deleting related data (transactions, snapshots) before calling this method.
+
+        Args:
+            portfolio_id: Unique identifier of the portfolio to delete
+        """
+        statement = delete(PortfolioModel).where(
+            PortfolioModel.id == portfolio_id  # type: ignore[arg-type]  # SQLModel field comparison returns bool-like column expression
+        )
+        await self._session.exec(statement)

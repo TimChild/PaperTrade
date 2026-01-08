@@ -91,3 +91,20 @@ class TransactionRepository(Protocol):
             RepositoryError: If transaction already exists or save fails
         """
         ...
+
+    async def delete_by_portfolio(self, portfolio_id: UUID) -> int:
+        """Delete all transactions for a portfolio.
+
+        Used for cleanup when a portfolio is deleted. This is the only scenario
+        where transactions are deleted, as they are otherwise immutable.
+
+        Args:
+            portfolio_id: Portfolio identifier
+
+        Returns:
+            Count of transactions deleted (0 if none existed)
+
+        Raises:
+            RepositoryError: If database connection or delete fails
+        """
+        ...

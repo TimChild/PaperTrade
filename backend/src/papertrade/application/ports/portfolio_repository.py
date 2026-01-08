@@ -88,3 +88,18 @@ class PortfolioRepository(Protocol):
             RepositoryError: If database connection or query fails
         """
         ...
+
+    async def delete(self, portfolio_id: UUID) -> None:
+        """Delete a portfolio by ID.
+
+        This method only deletes the portfolio entity itself. The caller is responsible
+        for deleting related data (transactions, snapshots, holdings) before calling
+        this method to maintain referential integrity.
+
+        Args:
+            portfolio_id: Unique identifier of the portfolio to delete
+
+        Raises:
+            RepositoryError: If database connection or delete fails
+        """
+        ...

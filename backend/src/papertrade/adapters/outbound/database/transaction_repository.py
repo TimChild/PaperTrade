@@ -5,8 +5,9 @@ Provides transaction persistence using SQLModel ORM with append-only semantics.
 
 from uuid import UUID
 
+from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import select
+from sqlmodel import delete, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from papertrade.adapters.outbound.database.models import TransactionModel
@@ -104,8 +105,6 @@ class SQLModelTransactionRepository:
         Returns:
             Total count of matching transactions (0 if none)
         """
-        from sqlalchemy import func
-
         statement = (
             select(func.count())
             .select_from(TransactionModel)
@@ -146,3 +145,32 @@ class SQLModelTransactionRepository:
             raise DuplicateTransactionError(
                 f"Transaction already exists: {transaction.id}"
             ) from e
+
+    async def delete_by_portfolio(self, portfolio_id: UUID) -> int:
+        """Delete all transactions for a portfolio.
+
+        Used for cleanup when a portfolio is deleted. This is the only scenario
+        where transactions are deleted, as they are otherwise immutable.
+
+        Args:
+            portfolio_id: Portfolio identifier
+
+        Returns:
+            Count of transactions deleted (0 if none existed)
+        """
+        # Count transactions before deleting
+        count_statement = (
+            select(func.count())
+            .select_from(TransactionModel)
+            .where(TransactionModel.portfolio_id == portfolio_id)
+        )
+        count_result = await self._session.exec(count_statement)
+        count = count_result.one()
+
+        # Now delete them
+        statement = delete(TransactionModel).where(
+            TransactionModel.portfolio_id == portfolio_id  # type: ignore[arg-type]  # SQLModel field comparison returns bool-like column expression
+        )
+        await self._session.exec(statement)
+
+        return count
