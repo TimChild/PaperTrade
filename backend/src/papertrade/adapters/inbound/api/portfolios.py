@@ -138,9 +138,11 @@ class TransactionResponse(BaseModel):
 
 
 class BalanceResponse(BaseModel):
-    """Cash balance response."""
+    """Portfolio balance response with cash, holdings, and total value."""
 
-    amount: str
+    cash_balance: str
+    holdings_value: str
+    total_value: str
     currency: str
     as_of: str  # ISO 8601 timestamp
 
@@ -446,7 +448,7 @@ async def get_balance(
     transaction_repo: TransactionRepositoryDep,
     market_data: MarketDataDep,
 ) -> BalanceResponse:
-    """Get current cash balance for a portfolio."""
+    """Get current portfolio balance including cash, holdings value, and total value."""
     # Verify user owns this portfolio
     await _verify_portfolio_ownership(portfolio_id, current_user, portfolio_repo)
 
@@ -455,7 +457,9 @@ async def get_balance(
     result = await handler.execute(query)
 
     return BalanceResponse(
-        amount=str(result.cash_balance.amount),
+        cash_balance=f"{result.cash_balance.amount:.2f}",
+        holdings_value=f"{result.holdings_value.amount:.2f}",
+        total_value=f"{result.total_value.amount:.2f}",
         currency=result.cash_balance.currency,
         as_of=result.as_of.isoformat(),
     )

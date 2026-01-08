@@ -94,10 +94,14 @@ def test_get_portfolio_balance_after_creation(
     assert balance_response.status_code == 200
 
     balance_data = balance_response.json()
-    assert "amount" in balance_data
+    assert "cash_balance" in balance_data
+    assert "holdings_value" in balance_data
+    assert "total_value" in balance_data
     assert "currency" in balance_data
     assert "as_of" in balance_data
-    assert balance_data["amount"] == "10000.00"
+    assert balance_data["cash_balance"] == "10000.00"
+    assert balance_data["holdings_value"] == "0.00"
+    assert balance_data["total_value"] == "10000.00"
     assert balance_data["currency"] == "USD"
 
 
@@ -152,14 +156,18 @@ def test_execute_buy_trade_and_verify_holdings(
     assert holdings[0]["ticker"] == "AAPL"
     assert holdings[0]["quantity"] == "10.0000"
 
-    # Verify balance decreased
+    # Verify balance decreased and holdings value increased
     balance_response = client.get(
         f"/api/v1/portfolios/{portfolio_id}/balance",
         headers=auth_headers,
     )
     balance_data = balance_response.json()
-    # $50,000 - (10 shares * $150) = $48,500
-    assert balance_data["amount"] == "48500.00"
+    # $50,000 - (10 shares * $150) = $48,500 cash
+    # Holdings: 10 shares * $150 = $1,500
+    # Total: $50,000 (unchanged)
+    assert balance_data["cash_balance"] == "48500.00"
+    assert balance_data["holdings_value"] == "1500.00"
+    assert balance_data["total_value"] == "50000.00"
 
 
 def test_buy_and_sell_updates_holdings_correctly(
@@ -208,13 +216,17 @@ def test_buy_and_sell_updates_holdings_correctly(
     # Start: $100,000
     # Buy: -$15,000 (100 * $150)
     # Sell: +$4,500 (30 * $150)
-    # End: $89,500
+    # Cash: $89,500
+    # Holdings: 70 * $150 = $10,500
+    # Total: $100,000
     balance_response = client.get(
         f"/api/v1/portfolios/{portfolio_id}/balance",
         headers=auth_headers,
     )
     balance_data = balance_response.json()
-    assert balance_data["amount"] == "89500.00"
+    assert balance_data["cash_balance"] == "89500.00"
+    assert balance_data["holdings_value"] == "10500.00"
+    assert balance_data["total_value"] == "100000.00"
 
 
 def test_get_portfolios_returns_only_user_portfolios(
@@ -309,7 +321,8 @@ def test_deposit_and_withdraw_cash(
         f"/api/v1/portfolios/{portfolio_id}/balance",
         headers=auth_headers,
     )
-    assert balance_response.json()["amount"] == "15000.00"
+    assert balance_response.json()["cash_balance"] == "15000.00"
+    assert balance_response.json()["total_value"] == "15000.00"
 
     # Withdraw $3,000
     withdraw_response = client.post(
@@ -324,7 +337,8 @@ def test_deposit_and_withdraw_cash(
         f"/api/v1/portfolios/{portfolio_id}/balance",
         headers=auth_headers,
     )
-    assert balance_response.json()["amount"] == "12000.00"
+    assert balance_response.json()["cash_balance"] == "12000.00"
+    assert balance_response.json()["total_value"] == "12000.00"
 
 
 def test_multiple_portfolios_for_same_user(
