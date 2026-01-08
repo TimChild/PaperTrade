@@ -22,6 +22,7 @@ export function TradeForm({
   const [ticker, setTicker] = useState('')
   const [quantity, setQuantity] = useState('')
   const [price, setPrice] = useState('')
+  const [isPriceManuallySet, setIsPriceManuallySet] = useState(false)
   const [backtestMode, setBacktestMode] = useState(false)
   const [backtestDate, setBacktestDate] = useState('')
 
@@ -36,12 +37,25 @@ export function TradeForm({
   } = usePriceQuery(debouncedTicker)
 
   // Auto-populate price field when price data is fetched
-  // Only auto-populate if not in backtest mode
+  // Only auto-populate if not in backtest mode and price hasn't been manually set
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (priceData && !backtestMode && debouncedTicker) {
+    if (priceData && !backtestMode && debouncedTicker && !isPriceManuallySet) {
       setPrice(priceData.price.amount.toString())
     }
-  }, [priceData, backtestMode, debouncedTicker])
+  }, [priceData, backtestMode, debouncedTicker, isPriceManuallySet])
+
+  // Reset manual price flag when ticker changes
+  useEffect(() => {
+    setIsPriceManuallySet(false)
+  }, [debouncedTicker])
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Handle manual price changes
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPrice(e.target.value)
+    setIsPriceManuallySet(true)
+  }
 
   // Handle quick sell data using a microtask to batch state updates
   useEffect(() => {
@@ -89,6 +103,7 @@ export function TradeForm({
     setTicker('')
     setQuantity('')
     setPrice('')
+    setIsPriceManuallySet(false)
   }
 
   const isValid =
@@ -231,7 +246,7 @@ export function TradeForm({
               min="0.01"
               step="0.01"
               value={price}
-              onChange={(e) => setPrice(e.target.value)}
+              onChange={handlePriceChange}
               placeholder="150.00"
               className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-400"
               disabled={isSubmitting}
@@ -265,25 +280,28 @@ export function TradeForm({
               </div>
             )}
             {/* Success checkmark */}
-            {priceData && !isPriceLoading && debouncedTicker && !backtestMode && (
-              <div
-                className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"
-                data-testid="trade-form-price-success"
-              >
-                <svg
-                  className="h-5 w-5 text-green-500"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
+            {priceData &&
+              !isPriceLoading &&
+              debouncedTicker &&
+              !backtestMode && (
+                <div
+                  className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"
+                  data-testid="trade-form-price-success"
                 >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-            )}
+                  <svg
+                    className="h-5 w-5 text-green-500"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+              )}
           </div>
           {/* Error message for invalid ticker */}
           {priceError && debouncedTicker && !backtestMode && (

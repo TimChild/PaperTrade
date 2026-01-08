@@ -1,15 +1,15 @@
 /**
  * React hook for debouncing values
- * 
+ *
  * Delays updating the returned value until the specified delay has passed
  * without the value changing. Useful for debouncing user input to avoid
  * excessive API calls.
- * 
+ *
  * @example
  * ```tsx
  * const [searchTerm, setSearchTerm] = useState('')
  * const debouncedSearch = useDebounce(searchTerm, 500)
- * 
+ *
  * useEffect(() => {
  *   // This only runs 500ms after user stops typing
  *   if (debouncedSearch) {
@@ -22,7 +22,7 @@ import { useEffect, useState } from 'react'
 
 /**
  * Hook to debounce a value
- * 
+ *
  * @param value - The value to debounce
  * @param delay - Delay in milliseconds before updating the debounced value
  * @returns The debounced value

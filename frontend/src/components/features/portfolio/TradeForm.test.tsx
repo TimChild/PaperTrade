@@ -95,7 +95,9 @@ describe('TradeForm', () => {
   describe('SELL action', () => {
     it('should switch to SELL action when sell button clicked', async () => {
       const user = userEvent.setup()
-      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />)
+      renderWithProviders(
+        <TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />
+      )
 
       const sellButton = screen.getByTestId('trade-form-action-sell')
       await user.click(sellButton)
@@ -105,7 +107,9 @@ describe('TradeForm', () => {
 
     it('should display owned quantity when SELL action and ticker selected', async () => {
       const user = userEvent.setup()
-      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />)
+      renderWithProviders(
+        <TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />
+      )
 
       // Switch to SELL
       await user.click(screen.getByTestId('trade-form-action-sell'))
@@ -126,7 +130,9 @@ describe('TradeForm', () => {
 
     it('should show error when trying to sell stock not owned', async () => {
       const user = userEvent.setup()
-      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />)
+      renderWithProviders(
+        <TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />
+      )
 
       // Switch to SELL
       await user.click(screen.getByTestId('trade-form-action-sell'))
@@ -145,7 +151,9 @@ describe('TradeForm', () => {
 
     it('should disable submit button when selling stock not owned', async () => {
       const user = userEvent.setup()
-      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />)
+      renderWithProviders(
+        <TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />
+      )
 
       // Switch to SELL
       await user.click(screen.getByTestId('trade-form-action-sell'))
@@ -160,7 +168,9 @@ describe('TradeForm', () => {
 
     it('should submit SELL order with correct data', async () => {
       const user = userEvent.setup()
-      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />)
+      renderWithProviders(
+        <TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />
+      )
 
       // Switch to SELL
       await user.click(screen.getByTestId('trade-form-action-sell'))
@@ -183,7 +193,9 @@ describe('TradeForm', () => {
 
     it('should be case-insensitive when matching holdings', async () => {
       const user = userEvent.setup()
-      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />)
+      renderWithProviders(
+        <TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />
+      )
 
       // Switch to SELL
       await user.click(screen.getByTestId('trade-form-action-sell'))
@@ -294,7 +306,9 @@ describe('TradeForm', () => {
 
     it('should clear form after successful submission', async () => {
       const user = userEvent.setup()
-      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />)
+      renderWithProviders(
+        <TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />
+      )
 
       await user.type(screen.getByTestId('trade-form-ticker-input'), 'IBM')
       await user.type(screen.getByTestId('trade-form-quantity-input'), '10')
@@ -327,7 +341,9 @@ describe('TradeForm', () => {
 
     it('should show correct action in preview text', async () => {
       const user = userEvent.setup()
-      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />)
+      renderWithProviders(
+        <TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />
+      )
 
       // BUY preview
       await user.type(screen.getByTestId('trade-form-ticker-input'), 'IBM')
@@ -346,7 +362,9 @@ describe('TradeForm', () => {
     })
 
     it('should show processing state when submitting', () => {
-      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} isSubmitting={true} />)
+      renderWithProviders(
+        <TradeForm onSubmit={mockOnSubmit} isSubmitting={true} />
+      )
 
       const buyButton = screen.getByTestId('trade-form-buy-button')
       expect(buyButton).toHaveTextContent('Processing...')
@@ -406,7 +424,9 @@ describe('TradeForm', () => {
       // Wait for price to load
       await waitFor(
         () => {
-          expect(screen.getByTestId('trade-form-price-success')).toBeInTheDocument()
+          expect(
+            screen.getByTestId('trade-form-price-success')
+          ).toBeInTheDocument()
         },
         { timeout: 2000 }
       )
@@ -423,7 +443,9 @@ describe('TradeForm', () => {
       // Wait for debounce + API call + error
       await waitFor(
         () => {
-          expect(screen.getByTestId('trade-form-price-error')).toBeInTheDocument()
+          expect(
+            screen.getByTestId('trade-form-price-error')
+          ).toBeInTheDocument()
         },
         { timeout: 2000 }
       )
@@ -453,8 +475,12 @@ describe('TradeForm', () => {
       expect(priceInput).toHaveValue(null)
 
       // No loading or success indicators should appear
-      expect(screen.queryByTestId('trade-form-price-loading')).not.toBeInTheDocument()
-      expect(screen.queryByTestId('trade-form-price-success')).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId('trade-form-price-loading')
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId('trade-form-price-success')
+      ).not.toBeInTheDocument()
     })
 
     it('should allow manual price override', async () => {
@@ -492,14 +518,18 @@ describe('TradeForm', () => {
       // Wait for price to auto-populate
       await waitFor(
         () => {
-          expect(screen.getByTestId('trade-form-price-input')).toHaveValue(192.53)
+          expect(screen.getByTestId('trade-form-price-input')).toHaveValue(
+            192.53
+          )
         },
         { timeout: 2000 }
       )
 
       // Should show estimated total (10 * 192.53 = 1925.30)
       await waitFor(() => {
-        expect(screen.getByText(/Estimated Total: \$1,?925\.30/)).toBeInTheDocument()
+        expect(
+          screen.getByText(/Estimated Total: \$1,?925\.30/)
+        ).toBeInTheDocument()
       })
     })
 
@@ -521,7 +551,9 @@ describe('TradeForm', () => {
       // Wait for debounce + API call
       await waitFor(
         () => {
-          expect(screen.getByTestId('trade-form-price-input')).toHaveValue(192.53)
+          expect(screen.getByTestId('trade-form-price-input')).toHaveValue(
+            192.53
+          )
         },
         { timeout: 2000 }
       )
