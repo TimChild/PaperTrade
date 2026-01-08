@@ -84,7 +84,21 @@ export interface HoldingsResponse {
   holdings: HoldingDTO[]
 }
 
-// Error response
+// Error response - supports both string and structured errors
 export interface ErrorResponse {
-  detail: string
+  detail: string | StructuredErrorDetail
+}
+
+// Structured error details for specific error types
+export interface StructuredErrorDetail {
+  type: string
+  message: string
+  // Fields for insufficient_funds
+  available?: number
+  required?: number
+  shortfall?: number
+  // Fields for insufficient_shares and invalid_ticker
+  ticker?: string
+  // Fields for market_data_unavailable
+  reason?: string
 }

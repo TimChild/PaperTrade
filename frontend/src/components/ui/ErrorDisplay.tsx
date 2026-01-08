@@ -3,6 +3,7 @@
  */
 import { AxiosError } from 'axios'
 import type { ErrorResponse } from '@/services/api/types'
+import { formatTradeError } from '@/utils/errorFormatters'
 
 interface ErrorDisplayProps {
   error: Error | AxiosError<ErrorResponse> | null
@@ -12,18 +13,8 @@ interface ErrorDisplayProps {
 export function ErrorDisplay({ error, className = '' }: ErrorDisplayProps) {
   if (!error) return null
 
-  // Extract error message
-  let message = 'An unexpected error occurred'
-
-  if (error instanceof Error) {
-    // Check if it's an Axios error
-    if ('response' in error && error.response?.data) {
-      const axiosError = error as AxiosError<ErrorResponse>
-      message = axiosError.response?.data?.detail || error.message
-    } else {
-      message = error.message
-    }
-  }
+  // Use formatTradeError to handle both structured and simple errors
+  const message = formatTradeError(error)
 
   return (
     <div
