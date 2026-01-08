@@ -405,6 +405,32 @@ tasks:
       - echo "✓ Fast checks passed. Run 'task ci' for full suite."
 
   # =========================================================================
+  # Quality Checks (combined format + lint + test)
+  # =========================================================================
+  quality:backend:
+    desc: "Run all backend quality checks (format, lint, test)"
+    cmds:
+      - task: format:backend
+      - task: lint:backend
+      - task: test:backend
+      - echo "✓ All backend quality checks passed"
+
+  quality:frontend:
+    desc: "Run all frontend quality checks (format, lint, test)"
+    cmds:
+      - task: format:frontend
+      - task: lint:frontend
+      - task: test:frontend
+      - echo "✓ All frontend quality checks passed"
+
+  quality:
+    desc: "Run all quality checks (backend and frontend)"
+    cmds:
+      - task: quality:backend
+      - task: quality:frontend
+      - echo "✓ All quality checks passed"
+
+  # =========================================================================
   # Quick Status & Health Checks
   # =========================================================================
   health:
