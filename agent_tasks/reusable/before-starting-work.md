@@ -30,6 +30,7 @@ If architecture docs exist for this feature:
 
 ## 4. Understand Current Code State
 
+E.g.
 ```bash
 find . -name "*portfolio*" -type f
 grep -r "class Portfolio" --include="*.py"
@@ -40,8 +41,8 @@ Understand existing patterns, tests, and code organization.
 ## 5. Review Project Context
 
 Familiarize yourself with:
-- `project_plan.md` - Development roadmap
-- `project_strategy.md` - Technical strategy
+- `docs/planning/project_plan.md` - Development roadmap
+- `docs/planning/project_strategy.md` - Technical strategy
 - `PROGRESS.md` - Current status
 - `.github/copilot-instructions.md` - General guidelines
 
