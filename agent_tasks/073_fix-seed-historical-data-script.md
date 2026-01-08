@@ -1,8 +1,8 @@
 # Task 073: Fix Historical Data Seeding Script
 
-**Agent**: backend-swe  
-**Priority**: High  
-**Estimated Effort**: 2-3 hours  
+**Agent**: backend-swe
+**Priority**: High
+**Estimated Effort**: 2-3 hours
 
 ## Objective
 
@@ -101,7 +101,7 @@ load_dotenv()  # Load from repository root .env
    from papertrade.infrastructure.database import async_session_maker
    from sqlalchemy import select
    from papertrade.adapters.outbound.repositories.models import PriceHistoryModel
-   
+
    async with async_session_maker() as session:
        result = await session.execute(
            select(PriceHistoryModel).limit(10)
