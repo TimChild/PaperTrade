@@ -19,6 +19,7 @@ import {
   adaptHolding,
   adaptTransaction,
 } from '@/utils/adapters'
+import { formatTradeError } from '@/utils/errorFormatters'
 import type { TradeRequest } from '@/services/api/types'
 
 export function PortfolioDetail(): React.JSX.Element {
@@ -67,9 +68,8 @@ export function PortfolioDetail(): React.JSX.Element {
       },
       onError: (error) => {
         console.error(`[TradeSubmit Error] Portfolio ID: ${portfolioId}`, error)
-        alert(
-          `Failed to execute trade: ${error instanceof Error ? error.message : 'Unknown error'}`
-        )
+        const errorMessage = formatTradeError(error)
+        alert(`Failed to execute trade: ${errorMessage}`)
       },
     })
   }
