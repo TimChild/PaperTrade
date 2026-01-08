@@ -170,7 +170,6 @@ async def main() -> None:
 
         # Clean up
         await http_client.aclose()
-        await redis_client.aclose()  # type: ignore[attr-defined]
 
     # Dispose database engine to prevent hanging
     await engine.dispose()
