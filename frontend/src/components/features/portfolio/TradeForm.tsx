@@ -1,39 +1,81 @@
 import { useState, useMemo, useEffect } from 'react'
 import type { TradeRequest } from '@/services/api/types'
 import type { Holding } from '@/types/portfolio'
+import { useDebounce } from '@/hooks/useDebounce'
+import { usePriceQuery } from '@/hooks/usePriceQuery'
 
 interface TradeFormProps {
   onSubmit: (trade: TradeRequest) => void
   isSubmitting?: boolean
   holdings?: Holding[]
   portfolioId?: string // Reserved for future use (e.g., analytics)
-  quickSellData?: { ticker: string; quantity: number } | null
+  initialAction?: 'BUY' | 'SELL'
+  initialTicker?: string
+  initialQuantity?: string
 }
 
 export function TradeForm({
   onSubmit,
   isSubmitting = false,
   holdings = [],
-  quickSellData,
+  initialAction = 'BUY',
+  initialTicker = '',
+  initialQuantity = '',
 }: TradeFormProps): React.JSX.Element {
-  const [action, setAction] = useState<'BUY' | 'SELL'>('BUY')
-  const [ticker, setTicker] = useState('')
-  const [quantity, setQuantity] = useState('')
+  const [action, setAction] = useState<'BUY' | 'SELL'>(initialAction)
+  const [ticker, setTicker] = useState(initialTicker)
+  const [quantity, setQuantity] = useState(initialQuantity)
   const [price, setPrice] = useState('')
+  const [isPriceManuallySet, setIsPriceManuallySet] = useState(false)
   const [backtestMode, setBacktestMode] = useState(false)
   const [backtestDate, setBacktestDate] = useState('')
 
-  // Handle quick sell data using a microtask to batch state updates
+  // Update state when initial props change (for Quick Sell functionality)
+  // This is acceptable because we're responding to parent-driven data, not syncing props to state
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (quickSellData) {
-      // Use a microtask to batch the updates
-      Promise.resolve().then(() => {
-        setAction('SELL')
-        setTicker(quickSellData.ticker)
-        setQuantity(quickSellData.quantity.toString())
-      })
+    if (initialAction) setAction(initialAction)
+  }, [initialAction])
+
+  useEffect(() => {
+    if (initialTicker) setTicker(initialTicker)
+  }, [initialTicker])
+
+  useEffect(() => {
+    if (initialQuantity) setQuantity(initialQuantity)
+  }, [initialQuantity])
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Debounce ticker input to avoid excessive API calls
+  const debouncedTicker = useDebounce(ticker.trim().toUpperCase(), 500)
+
+  // Fetch current price for the debounced ticker (only when not in backtest mode)
+  const {
+    data: priceData,
+    isLoading: isPriceLoading,
+    error: priceError,
+  } = usePriceQuery(debouncedTicker)
+
+  // Auto-populate price field when price data is fetched
+  // Only auto-populate if not in backtest mode and price hasn't been manually set
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (priceData && !backtestMode && debouncedTicker && !isPriceManuallySet) {
+      setPrice(priceData.price.amount.toString())
     }
-  }, [quickSellData])
+  }, [priceData, backtestMode, debouncedTicker, isPriceManuallySet])
+
+  // Reset manual price flag when ticker changes
+  useEffect(() => {
+    setIsPriceManuallySet(false)
+  }, [debouncedTicker])
+  /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Handle manual price changes
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPrice(e.target.value)
+    setIsPriceManuallySet(true)
+  }
 
   // Find holding for the current ticker when SELL is selected
   const currentHolding = useMemo(() => {
@@ -69,6 +111,7 @@ export function TradeForm({
     setTicker('')
     setQuantity('')
     setPrice('')
+    setIsPriceManuallySet(false)
   }
 
   const isValid =
@@ -203,23 +246,92 @@ export function TradeForm({
             Price Per Share ($){' '}
             <span className="text-gray-500">(Optional - for estimation)</span>
           </label>
-          <input
-            id="price"
-            data-testid="trade-form-price-input"
-            type="number"
-            min="0.01"
-            step="0.01"
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            placeholder="150.00"
-            className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-400"
-            disabled={isSubmitting}
-          />
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            {backtestMode && backtestDate
-              ? 'Trade will execute with historical price from selected date'
-              : 'Actual trade will execute at current market price'}
-          </p>
+          <div className="relative">
+            <input
+              id="price"
+              data-testid="trade-form-price-input"
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={price}
+              onChange={handlePriceChange}
+              placeholder="150.00"
+              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-400"
+              disabled={isSubmitting}
+            />
+            {/* Loading spinner */}
+            {isPriceLoading && debouncedTicker && !backtestMode && (
+              <div
+                className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"
+                data-testid="trade-form-price-loading"
+              >
+                <svg
+                  className="h-5 w-5 animate-spin text-blue-500"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+              </div>
+            )}
+            {/* Success checkmark */}
+            {priceData &&
+              !isPriceLoading &&
+              debouncedTicker &&
+              !backtestMode && (
+                <div
+                  className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"
+                  data-testid="trade-form-price-success"
+                >
+                  <svg
+                    className="h-5 w-5 text-green-500"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+              )}
+          </div>
+          {/* Error message for invalid ticker */}
+          {priceError && debouncedTicker && !backtestMode && (
+            <p
+              className="mt-1 text-xs text-red-600 dark:text-red-400"
+              data-testid="trade-form-price-error"
+            >
+              Unable to fetch price for {debouncedTicker}
+            </p>
+          )}
+          {/* Info message */}
+          {!priceError && (
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {backtestMode && backtestDate
+                ? 'Trade will execute with historical price from selected date'
+                : debouncedTicker && isPriceLoading
+                  ? 'Fetching current price...'
+                  : debouncedTicker && priceData
+                    ? `Current price auto-populated (as of ${new Date(priceData.timestamp).toLocaleTimeString()})`
+                    : 'Actual trade will execute at current market price'}
+            </p>
+          )}
         </div>
 
         {/* Backtest Mode Section */}

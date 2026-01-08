@@ -341,10 +341,9 @@ test.describe('Trading Flow', () => {
     await quickSellButton.click()
 
     // 3. Verify form is pre-filled
-    await page.waitForTimeout(500) // Wait for form to update
-
-    // Should switch to SELL action
+    // Wait for sell button to be visible (component remounts with new key)
     const sellActionButton = page.getByTestId('trade-form-action-sell')
+    await expect(sellActionButton).toBeVisible({ timeout: 5000 })
     await expect(sellActionButton).toHaveClass(/bg-negative/)
 
     // Should pre-fill ticker and quantity

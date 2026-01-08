@@ -76,7 +76,24 @@ Minor improvements, tech debt, and enhancements that don't block main developmen
 
 ### Code Quality & Linting (LOW PRIORITY)
 
-1. **Fix remaining ruff linting warnings** - ~10 minutes
+1. **React Patterns Audit & Refactoring** - ~2-3 days (phased)
+   - **Problem**: After fixing PR #90, identified potential useEffect anti-patterns and ESLint suppressions in codebase
+   - **Goal**: Systematically audit and refactor to idiomatic React patterns
+   - **Scope**:
+     - Audit all ESLint suppressions (especially `react-hooks/*`)
+     - Identify setState-in-effect anti-patterns
+     - Refactor to use key prop pattern, controlled components, derived state
+     - Improve test reliability and reduce race conditions
+   - **Phases**:
+     1. Discovery & assessment (create findings document)
+     2. High-priority refactoring (ESLint suppressions, performance issues)
+     3. Medium-priority improvements (form libraries, error boundaries, code splitting)
+     4. Documentation & prevention (style guide, examples)
+   - **Benefits**: Better code quality, more reliable tests, easier maintenance, prevent future anti-patterns
+   - **Detailed Plan**: `docs/planning/react-patterns-audit.md`
+   - **Note**: Low priority tech debt - schedule during slower periods or allocate 10-20% sprint capacity
+
+2. **Fix remaining ruff linting warnings** - ~10 minutes
    - 3 warnings: `B904` (exception chaining), `B007` (unused loop var), `E501` (long line)
    - Run `uv run ruff check --fix --unsafe-fixes`
 
