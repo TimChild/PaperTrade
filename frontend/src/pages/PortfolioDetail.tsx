@@ -25,7 +25,6 @@ export function PortfolioDetail(): React.JSX.Element {
   const { id } = useParams<{ id: string }>()
   const portfolioId = id || ''
   const tradeFormRef = useRef<HTMLElement>(null)
-  const [tradeFormKey, setTradeFormKey] = useState(0)
   const [quickSellState, setQuickSellState] = useState<{
     action: 'BUY' | 'SELL'
     ticker: string
@@ -63,8 +62,7 @@ export function PortfolioDetail(): React.JSX.Element {
         alert(
           `${trade.action === 'BUY' ? 'Buy' : 'Sell'} order executed successfully!`
         )
-        // Reset trade form by incrementing key
-        setTradeFormKey((prev) => prev + 1)
+        // Reset quick sell state
         setQuickSellState({ action: 'BUY', ticker: '', quantity: '' })
       },
       onError: (error) => {
@@ -77,13 +75,12 @@ export function PortfolioDetail(): React.JSX.Element {
   }
 
   const handleQuickSell = (ticker: string, quantity: number) => {
-    // Set quick sell state and increment key to reset TradeForm
+    // Set quick sell state
     setQuickSellState({
       action: 'SELL',
       ticker,
       quantity: quantity.toString(),
     })
-    setTradeFormKey((prev) => prev + 1)
 
     // Scroll to trade form with smooth behavior
     setTimeout(() => {
@@ -220,7 +217,6 @@ export function PortfolioDetail(): React.JSX.Element {
           {/* Trade Form */}
           <section ref={tradeFormRef}>
             <TradeForm
-              key={tradeFormKey}
               onSubmit={handleTradeSubmit}
               isSubmitting={executeTrade.isPending}
               holdings={holdings}

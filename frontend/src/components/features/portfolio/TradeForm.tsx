@@ -30,6 +30,22 @@ export function TradeForm({
   const [backtestMode, setBacktestMode] = useState(false)
   const [backtestDate, setBacktestDate] = useState('')
 
+  // Update state when initial props change (for Quick Sell functionality)
+  // This is acceptable because we're responding to parent-driven data, not syncing props to state
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (initialAction) setAction(initialAction)
+  }, [initialAction])
+
+  useEffect(() => {
+    if (initialTicker) setTicker(initialTicker)
+  }, [initialTicker])
+
+  useEffect(() => {
+    if (initialQuantity) setQuantity(initialQuantity)
+  }, [initialQuantity])
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   // Debounce ticker input to avoid excessive API calls
   const debouncedTicker = useDebounce(ticker.trim().toUpperCase(), 500)
 
