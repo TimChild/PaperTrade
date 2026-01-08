@@ -6,6 +6,7 @@ __pycache__/
 # Temporary files and logs
 temp/
 *.log
+.tmp*
 
 # C extensions
 *.so
