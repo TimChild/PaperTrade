@@ -210,6 +210,80 @@ describe('PortfolioCard', () => {
 });
 ```
 
+## React Patterns & Anti-Patterns
+
+### ✅ DO: Use the `key` prop to reset component state
+```tsx
+// Good: Component remounts with fresh state when key changes
+function ParentComponent() {
+  const [formKey, setFormKey] = useState(0);
+  const [initialData, setInitialData] = useState({ name: '', value: '' });
+
+  const handleQuickFill = (data: FormData) => {
+    setInitialData(data);
+    setFormKey(prev => prev + 1); // Force remount
+  };
+
+  return (
+    <FormComponent
+      key={formKey}
+      initialName={initialData.name}
+      initialValue={initialData.value}
+    />
+  );
+}
+
+function FormComponent({
+  initialName,
+  initialValue,
+}: FormComponentProps) {
+  // Initialize from props - no useEffect needed
+  const [name, setName] = useState(initialName);
+  const [value, setValue] = useState(initialValue);
+  // ...
+}
+```
+
+### ❌ DON'T: Use useEffect to sync props to state
+```tsx
+// Bad: Anti-pattern that requires ESLint suppression
+function FormComponent({ quickFillData }: FormComponentProps) {
+  const [name, setName] = useState('');
+  const [value, setValue] = useState('');
+
+  // Anti-pattern: setState in effect causes cascading renders
+  useEffect(() => {
+    if (quickFillData) {
+      setName(quickFillData.name);
+      setValue(quickFillData.value);
+    }
+  }, [quickFillData]);
+  // ...
+}
+```
+
+**Why the key pattern is better:**
+- No useEffect needed
+- No ESLint suppressions
+- No cascading renders or performance issues
+- Component state is truly "fresh" on each mount
+- No race conditions in tests
+- More predictable and easier to reason about
+
+**When to use each pattern:**
+- **Key prop**: When you want to "reset" a component (forms, modals, wizards)
+- **Controlled components**: When parent needs to control state continuously
+- **Derived state**: Use `useMemo` instead of storing in state
+- **Side effects**: Use `useEffect` ONLY for external system synchronization (subscriptions, DOM manipulation, analytics)
+
+### ESLint Rules Are Your Friend
+If you're suppressing `react-hooks/exhaustive-deps` or `react-hooks/set-state-in-effect`, stop and reconsider:
+- Is there a pattern that doesn't require suppression?
+- Am I fighting React instead of working with it?
+- Will this cause performance or testing issues?
+
+**Never suppress linting rules just to make tests pass.** Fix the code properly.
+
 ## Financial UI Patterns
 
 ### Number Formatting
