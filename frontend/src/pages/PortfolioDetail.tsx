@@ -25,10 +25,12 @@ export function PortfolioDetail(): React.JSX.Element {
   const { id } = useParams<{ id: string }>()
   const portfolioId = id || ''
   const tradeFormRef = useRef<HTMLElement>(null)
-  const [quickSellData, setQuickSellData] = useState<{
+  const [tradeFormKey, setTradeFormKey] = useState(0)
+  const [quickSellState, setQuickSellState] = useState<{
+    action: 'BUY' | 'SELL'
     ticker: string
-    quantity: number
-  } | null>(null)
+    quantity: string
+  }>({ action: 'BUY', ticker: '', quantity: '' })
 
   const {
     data: portfolioDTO,
@@ -61,8 +63,9 @@ export function PortfolioDetail(): React.JSX.Element {
         alert(
           `${trade.action === 'BUY' ? 'Buy' : 'Sell'} order executed successfully!`
         )
-        // Clear quick sell data after successful trade
-        setQuickSellData(null)
+        // Reset trade form by incrementing key
+        setTradeFormKey((prev) => prev + 1)
+        setQuickSellState({ action: 'BUY', ticker: '', quantity: '' })
       },
       onError: (error) => {
         console.error(`[TradeSubmit Error] Portfolio ID: ${portfolioId}`, error)
@@ -74,8 +77,13 @@ export function PortfolioDetail(): React.JSX.Element {
   }
 
   const handleQuickSell = (ticker: string, quantity: number) => {
-    // Set quick sell data and scroll to trade form
-    setQuickSellData({ ticker, quantity })
+    // Set quick sell state and increment key to reset TradeForm
+    setQuickSellState({
+      action: 'SELL',
+      ticker,
+      quantity: quantity.toString(),
+    })
+    setTradeFormKey((prev) => prev + 1)
 
     // Scroll to trade form with smooth behavior
     setTimeout(() => {
@@ -212,10 +220,13 @@ export function PortfolioDetail(): React.JSX.Element {
           {/* Trade Form */}
           <section ref={tradeFormRef}>
             <TradeForm
+              key={tradeFormKey}
               onSubmit={handleTradeSubmit}
               isSubmitting={executeTrade.isPending}
               holdings={holdings}
-              quickSellData={quickSellData}
+              initialAction={quickSellState.action}
+              initialTicker={quickSellState.ticker}
+              initialQuantity={quickSellState.quantity}
             />
           </section>
         </div>

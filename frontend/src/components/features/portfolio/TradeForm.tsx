@@ -9,18 +9,22 @@ interface TradeFormProps {
   isSubmitting?: boolean
   holdings?: Holding[]
   portfolioId?: string // Reserved for future use (e.g., analytics)
-  quickSellData?: { ticker: string; quantity: number } | null
+  initialAction?: 'BUY' | 'SELL'
+  initialTicker?: string
+  initialQuantity?: string
 }
 
 export function TradeForm({
   onSubmit,
   isSubmitting = false,
   holdings = [],
-  quickSellData,
+  initialAction = 'BUY',
+  initialTicker = '',
+  initialQuantity = '',
 }: TradeFormProps): React.JSX.Element {
-  const [action, setAction] = useState<'BUY' | 'SELL'>('BUY')
-  const [ticker, setTicker] = useState('')
-  const [quantity, setQuantity] = useState('')
+  const [action, setAction] = useState<'BUY' | 'SELL'>(initialAction)
+  const [ticker, setTicker] = useState(initialTicker)
+  const [quantity, setQuantity] = useState(initialQuantity)
   const [price, setPrice] = useState('')
   const [isPriceManuallySet, setIsPriceManuallySet] = useState(false)
   const [backtestMode, setBacktestMode] = useState(false)
@@ -56,20 +60,6 @@ export function TradeForm({
     setPrice(e.target.value)
     setIsPriceManuallySet(true)
   }
-
-  // Handle quick sell data
-  // Note: We intentionally call setState synchronously here (vs using Promise.resolve)
-  // because the microtask delay was causing race conditions in E2E tests.
-  // The quick sell feature sets multiple related form fields that should update together.
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    if (quickSellData) {
-      setAction('SELL')
-      setTicker(quickSellData.ticker)
-      setQuantity(quickSellData.quantity.toString())
-    }
-  }, [quickSellData])
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Find holding for the current ticker when SELL is selected
   const currentHolding = useMemo(() => {

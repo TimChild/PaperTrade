@@ -212,21 +212,20 @@ describe('TradeForm', () => {
   })
 
   describe('Quick Sell functionality', () => {
-    it('should pre-fill form when quickSellData provided', async () => {
-      const quickSellData = { ticker: 'AAPL', quantity: 100 }
+    it('should pre-fill form when initial values provided', () => {
       renderWithProviders(
         <TradeForm
           onSubmit={mockOnSubmit}
           holdings={mockHoldings}
-          quickSellData={quickSellData}
+          initialAction="SELL"
+          initialTicker="AAPL"
+          initialQuantity="100"
         />
       )
 
-      // Should switch to SELL
-      await waitFor(() => {
-        const sellButton = screen.getByTestId('trade-form-action-sell')
-        expect(sellButton).toHaveClass('bg-negative')
-      })
+      // Should be in SELL mode
+      const sellButton = screen.getByTestId('trade-form-action-sell')
+      expect(sellButton).toHaveClass('bg-negative')
 
       // Should pre-fill ticker and quantity
       const tickerInput = screen.getByTestId(
@@ -240,14 +239,17 @@ describe('TradeForm', () => {
       expect(quantityInput.value).toBe('100')
     })
 
-    it('should update form when quickSellData changes', async () => {
+    it('should reset form when key changes', () => {
       const queryClient = createTestQueryClient()
       const { rerender } = render(
         <QueryClientProvider client={queryClient}>
           <TradeForm
+            key="trade-1"
             onSubmit={mockOnSubmit}
             holdings={mockHoldings}
-            quickSellData={null}
+            initialAction="BUY"
+            initialTicker=""
+            initialQuantity=""
           />
         </QueryClientProvider>
       )
@@ -257,32 +259,33 @@ describe('TradeForm', () => {
         'bg-blue-600'
       )
 
-      // Update with quick sell data
-      const quickSellData = { ticker: 'MSFT', quantity: 50 }
+      // Remount with new key and quick sell initial values
       rerender(
         <QueryClientProvider client={queryClient}>
           <TradeForm
+            key="trade-2"
             onSubmit={mockOnSubmit}
             holdings={mockHoldings}
-            quickSellData={quickSellData}
+            initialAction="SELL"
+            initialTicker="MSFT"
+            initialQuantity="50"
           />
         </QueryClientProvider>
       )
 
-      await waitFor(() => {
-        const tickerInput = screen.getByTestId(
-          'trade-form-ticker-input'
-        ) as HTMLInputElement
-        const quantityInput = screen.getByTestId(
-          'trade-form-quantity-input'
-        ) as HTMLInputElement
+      // Should immediately have new values (no async wait needed)
+      const tickerInput = screen.getByTestId(
+        'trade-form-ticker-input'
+      ) as HTMLInputElement
+      const quantityInput = screen.getByTestId(
+        'trade-form-quantity-input'
+      ) as HTMLInputElement
 
-        expect(tickerInput.value).toBe('MSFT')
-        expect(quantityInput.value).toBe('50')
-        expect(screen.getByTestId('trade-form-action-sell')).toHaveClass(
-          'bg-negative'
-        )
-      })
+      expect(tickerInput.value).toBe('MSFT')
+      expect(quantityInput.value).toBe('50')
+      expect(screen.getByTestId('trade-form-action-sell')).toHaveClass(
+        'bg-negative'
+      )
     })
   })
 
