@@ -8,10 +8,11 @@ from datetime import date
 from threading import Lock
 from uuid import UUID
 
+from papertrade.application.ports.snapshot_repository import SnapshotRepository
 from papertrade.domain.entities.portfolio_snapshot import PortfolioSnapshot
 
 
-class InMemorySnapshotRepository:
+class InMemorySnapshotRepository(SnapshotRepository):
     """In-memory implementation of SnapshotRepository protocol.
 
     Uses Python dictionaries for O(1) access. Thread-safe with locks.

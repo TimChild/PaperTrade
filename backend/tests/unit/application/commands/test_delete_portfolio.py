@@ -1,5 +1,6 @@
 """Tests for DeletePortfolio command."""
 
+from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
 
@@ -22,6 +23,7 @@ from papertrade.application.ports.in_memory_snapshot_repository import (
 from papertrade.application.ports.in_memory_transaction_repository import (
     InMemoryTransactionRepository,
 )
+from papertrade.domain.entities.portfolio import Portfolio
 from papertrade.domain.exceptions import PortfolioNotFoundError
 
 
@@ -173,9 +175,6 @@ class TestDeletePortfolio:
     ):
         """Test deleting a portfolio that somehow has no transactions."""
         # Arrange - Create portfolio directly without transactions
-        from datetime import UTC, datetime
-        from papertrade.domain.entities.portfolio import Portfolio
-
         user_id = uuid4()
         portfolio_id = uuid4()
         portfolio = Portfolio(
