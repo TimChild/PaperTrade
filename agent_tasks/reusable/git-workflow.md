@@ -2,6 +2,18 @@
 
 **All agents MUST use git and the GitHub CLI (`gh`) appropriately.**
 
+## Environment-Specific Workflows
+
+**GitHub Copilot Agents** (running in `copilot-setup-steps.yml` environment):
+- Use GitHub MCP server for all GitHub interactions
+- Git operations use standard git commands
+- Check `COPILOT_AGENT_ENVIRONMENT=true` env var to detect this environment
+
+**Local VSCode Agents:**
+- Use git CLI for version control
+- Use `gh` CLI for GitHub interactions (PRs, issues)
+- **Always** prefix `gh` commands with `GH_PAGER=""` to prevent hangs
+
 ## Branch Management
 
 ```bash

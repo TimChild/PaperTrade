@@ -72,45 +72,39 @@ The reusable chunk covers:
 - Ensure all CI checks pass
 - Self-review before requesting review
 
-## Git & GitHub CLI Workflow (REQUIRED)
+## Git & GitHub Workflows
 
 > 📖 **See**: [agent_tasks/reusable/git-workflow.md](../agent_tasks/reusable/git-workflow.md)
 
-**All agents MUST use git and the GitHub CLI (`gh`) appropriately.**
+**Environment-Specific Workflows:**
 
-The reusable chunk covers:
-- Branch management (checking status, creating feature branches)
-- Committing changes (conventional commit format)
-- Pull request creation via GitHub CLI
-- GitHub CLI best practices (using `GH_PAGER=""` to prevent hangs)
-- Keeping branches up to date
+**GitHub Copilot Agents** (running in `copilot-setup-steps.yml` environment):
+- Use GitHub MCP server for all GitHub interactions
+- Git operations use standard git commands
+- Check `COPILOT_AGENT_ENVIRONMENT=true` env var to detect this environment
 
-### Environment Setup for Copilot Agents
+**Local VSCode Agents:**
+- Use git CLI for version control
+- Use `gh` CLI for GitHub interactions (PRs, issues)
+- **Always** prefix `gh` commands with `GH_PAGER=""` to prevent hangs
+- See git-workflow.md for details on branch management, commits, PR creation
 
-If you need to set up or verify your development environment, you can use:
+## Environment Setup
 
-- **Shell script** (recommended for local setup): `./.github/copilot-setup.sh`
-- **Task command**: `task setup` (uses Taskfile)
-- **GitHub Actions workflow**: `.github/workflows/copilot-setup-steps.yml` (for Copilot agents)
+**Local development**: `task setup` installs all dependencies and starts Docker services.
 
-The setup process installs:
-- Python 3.12+ and uv (package manager)
-- Node.js 20 and npm
-- Task (task runner)
-- pre-commit hooks
-- Docker services (PostgreSQL, Redis)
+**GitHub Copilot agents**: Environment is configured via `.github/workflows/copilot-setup-steps.yml` automatically.
 
-### Required Repository Secrets
+## Repository Secrets & Variables
 
-The following secrets should be configured in the repository for CI/CD and Copilot agents:
+Configured secrets for CI/CD and Copilot agents:
 
-- **`ALPHA_VANTAGE_API_KEY`**: API key for market data integration (Phase 2+)
-  - Get a free key at: https://www.alphavantage.co/support/#api-key
-  - Free tier: 5 API calls/min, 500 calls/day
-  - Required for: Market data tests, integration tests with real APIs
-  - Configure at: Repository Settings → Secrets and variables → Actions → New repository secret
-
-**Note**: For local development, copy `.env.example` to `.env` and add your own API key. For production deployments, use `.env.production.example` as a template and configure appropriate secrets management (AWS Secrets Manager, etc.).
+| Secret/Variable | Type | Purpose |
+|-----------------|------|----------|
+| `ALPHA_VANTAGE_API_KEY` | Secret | Market data API (free tier: 5/min, 500/day) |
+| `CLERK_SECRET_KEY` | Secret | Clerk authentication (backend) |
+| `CLERK_PUBLISHABLE_KEY` | Secret | Clerk authentication (frontend) |
+| `E2E_CLERK_USER_EMAIL` | Variable | E2E test user email |
 
 ## Available Agents
 
@@ -131,18 +125,22 @@ Configuration: `.vscode/mcp.json` | Full reference: `docs/mcp-tools.md`
 Pylance may default to global Python. At session start:
 ```
 pylancePythonEnvironments(workspaceRoot: "file:///Users/timchild/github/PaperTrade")
-# If not using project venv, switch:
-pylanceUpdatePythonEnvironment(workspaceRoot: ..., pythonEnvironment: "backend/.venv/bin/python")
-```
+# ICommon Development Tasks
 
-### Key Tools
+For detailed quality checks, Docker management, and pre-completion checklists:
 
-| Task | MCP Tool | Benefit |
-|------|----------|---------|
-| Run Python code | `pylanceRunCodeSnippet` | Avoids shell escaping |
-| Check imports | `pylanceImports` | Find unresolved imports |
-| Container health | `inspect_container` | Structured data |
-| Container logs | `logs_for_container` | Clean output |
+> 📖 **See**: [agent_tasks/reusable/quality-and-tooling.md](../agent_tasks/reusable/quality-and-tooling.md)
+
+**Quick reference**:
+- `task quality:backend` - Format + lint + test backend
+- `task quality:frontend` - Format + lint + test frontend
+- `task ci` - Run all CI checks locally
+- `task docker:up` - Start PostgreSQL, Redis
+- All tasks: `task --list`
+
+## MCP Tools (Model Context Protocol)
+
+Configuration: `.vscode/mcp.json` | Full reference: `docs/mcp-tools.mdContainer logs | `logs_for_container` | Clean output |
 | PR details | `activePullRequest` | Full PR context |
 
 ### When to Use Terminal Instead

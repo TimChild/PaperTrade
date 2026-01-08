@@ -36,6 +36,10 @@ jobs:
     # Maximum timeout for setup (GitHub allows max 59 minutes)
     timeout-minutes: 30
 
+    # Environment variable to identify Copilot agent environment
+    env:
+      COPILOT_AGENT_ENVIRONMENT: "true"
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -101,30 +105,30 @@ jobs:
           POSTGRES_DB=papertrade_dev
           POSTGRES_USER=papertrade
           POSTGRES_PASSWORD=papertrade_dev_password
-          
-          # Redis Configuration  
+
+          # Redis Configuration
           REDIS_HOST=localhost
           REDIS_PORT=6379
           REDIS_DB=0
-          
+
           # Database URL
           DATABASE_URL=postgresql+asyncpg://papertrade:papertrade_dev_password@localhost:5432/papertrade_dev
-          
+
           # Application Configuration
           APP_ENV=development
           APP_DEBUG=true
-          
+
           # API Configuration
           ALPHA_VANTAGE_API_KEY=demo
-          
+
           # Clerk Authentication
           CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }}
           VITE_CLERK_PUBLISHABLE_KEY=${{ secrets.CLERK_PUBLISHABLE_KEY }}
           CLERK_PUBLISHABLE_KEY=${{ secrets.CLERK_PUBLISHABLE_KEY }}
-          
+
           # E2E Testing
           E2E_CLERK_USER_EMAIL=${{ vars.E2E_CLERK_USER_EMAIL }}
-          
+
           # Frontend Configuration
           VITE_API_BASE_URL=http://localhost:8000/api/v1
           EOF

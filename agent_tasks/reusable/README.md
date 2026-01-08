@@ -119,29 +119,7 @@ Create an agent task that references the template:
 gh agent-task create --custom-agent qa -F agent_tasks/reusable/e2e_qa_validation.md
 ```
 
-### Option 2: Create Customized Task
-Copy and customize the template for specific context:
-
-```bash
-cat > agent_tasks/042_qa-post-pr-merges.md << 'EOF'
-# QA Validation - Post PR Merges
-
-**Agent**: qa
-**Context**: After merging PRs #47, #48, #49
-
-Follow standard QA procedure: agent_tasks/reusable/e2e_qa_validation.md
-
-**Additional Focus**:
-- Verify Docker integration
-- Test price fallback behavior
-- Check database migration
-
-EOF
-
-gh agent-task create --custom-agent qa -F agent_tasks/042_qa-post-pr-merges.md
-```
-
-### Option 3: Reference in Orchestrator Procedures
+### Option 2: Reference in Orchestrator Procedures
 Orchestrator procedures (in `orchestrator_procedures/`) can reference these templates as part of larger workflows.
 
 ## Adding New Reusable Tasks
