@@ -527,3 +527,251 @@ def test_trade_with_future_as_of_rejected(
     assert trade_response.status_code == 422  # Unprocessable Entity (validation error)
     error_data = trade_response.json()
     assert "detail" in error_data
+
+
+def test_delete_portfolio_success(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    default_user_id: UUID,
+) -> None:
+    """Test successful deletion of a portfolio."""
+    # Create a portfolio
+    response = client.post(
+        "/api/v1/portfolios",
+        headers=auth_headers,
+        json={
+            "name": "Portfolio to Delete",
+            "initial_deposit": "10000.00",
+            "currency": "USD",
+        },
+    )
+    assert response.status_code == 201
+    portfolio_id = response.json()["portfolio_id"]
+
+    # Verify portfolio exists
+    get_response = client.get(
+        f"/api/v1/portfolios/{portfolio_id}",
+        headers=auth_headers,
+    )
+    assert get_response.status_code == 200
+
+    # Delete the portfolio
+    delete_response = client.delete(
+        f"/api/v1/portfolios/{portfolio_id}",
+        headers=auth_headers,
+    )
+    assert delete_response.status_code == 204
+
+    # Verify portfolio is gone
+    get_after_delete = client.get(
+        f"/api/v1/portfolios/{portfolio_id}",
+        headers=auth_headers,
+    )
+    assert get_after_delete.status_code == 404
+
+
+def test_delete_portfolio_removes_transactions(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    default_user_id: UUID,
+) -> None:
+    """Test that deleting a portfolio also deletes its transactions."""
+    # Create a portfolio
+    response = client.post(
+        "/api/v1/portfolios",
+        headers=auth_headers,
+        json={
+            "name": "Portfolio with Transactions",
+            "initial_deposit": "10000.00",
+            "currency": "USD",
+        },
+    )
+    portfolio_id = response.json()["portfolio_id"]
+
+    # Add a deposit transaction
+    deposit_response = client.post(
+        f"/api/v1/portfolios/{portfolio_id}/deposit",
+        headers=auth_headers,
+        json={"amount": "5000.00", "currency": "USD"},
+    )
+    assert deposit_response.status_code == 201
+
+    # Verify transactions exist
+    transactions_response = client.get(
+        f"/api/v1/portfolios/{portfolio_id}/transactions",
+        headers=auth_headers,
+    )
+    assert transactions_response.status_code == 200
+    transactions = transactions_response.json()["transactions"]
+    assert len(transactions) >= 2  # Initial deposit + manual deposit
+
+    # Delete the portfolio
+    delete_response = client.delete(
+        f"/api/v1/portfolios/{portfolio_id}",
+        headers=auth_headers,
+    )
+    assert delete_response.status_code == 204
+
+    # Verify transactions endpoint returns 404 (portfolio doesn't exist)
+    transactions_after = client.get(
+        f"/api/v1/portfolios/{portfolio_id}/transactions",
+        headers=auth_headers,
+    )
+    assert transactions_after.status_code == 404
+
+
+def test_delete_nonexistent_portfolio_returns_404(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    """Test that deleting a non-existent portfolio returns 404."""
+    from uuid import uuid4
+
+    nonexistent_id = uuid4()
+
+    delete_response = client.delete(
+        f"/api/v1/portfolios/{nonexistent_id}",
+        headers=auth_headers,
+    )
+    assert delete_response.status_code == 404
+
+
+def test_delete_other_users_portfolio_returns_403(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    default_user_id: UUID,
+) -> None:
+    """Test that users cannot delete portfolios owned by other users."""
+    from papertrade.adapters.auth.in_memory_adapter import InMemoryAuthAdapter
+    from papertrade.adapters.inbound.api.dependencies import get_auth_port
+    from papertrade.application.ports.auth_port import AuthenticatedUser
+
+    # Get the app's auth adapter and register a second user
+    app = client.app
+    auth_factory = app.dependency_overrides[get_auth_port]
+    auth_adapter = auth_factory()
+    assert isinstance(auth_adapter, InMemoryAuthAdapter)
+
+    user_2 = AuthenticatedUser(id="test-user-2", email="user2@test.com")
+    auth_adapter.add_user(user_2, "test-token-user-2")
+    user_2_headers = {"Authorization": "Bearer test-token-user-2"}
+
+    # User 1 creates a portfolio
+    response = client.post(
+        "/api/v1/portfolios",
+        headers=auth_headers,
+        json={
+            "name": "User 1 Portfolio",
+            "initial_deposit": "10000.00",
+            "currency": "USD",
+        },
+    )
+    portfolio_id = response.json()["portfolio_id"]
+
+    # User 2 tries to delete User 1's portfolio
+    delete_response = client.delete(
+        f"/api/v1/portfolios/{portfolio_id}",
+        headers=user_2_headers,
+    )
+    assert delete_response.status_code == 403
+
+    # Verify portfolio still exists for User 1
+    get_response = client.get(
+        f"/api/v1/portfolios/{portfolio_id}",
+        headers=auth_headers,
+    )
+    assert get_response.status_code == 200
+
+
+def test_delete_portfolio_does_not_affect_other_portfolios(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    default_user_id: UUID,
+) -> None:
+    """Test that deleting one portfolio doesn't affect other portfolios."""
+    # Create two portfolios
+    response1 = client.post(
+        "/api/v1/portfolios",
+        headers=auth_headers,
+        json={
+            "name": "Portfolio 1",
+            "initial_deposit": "10000.00",
+            "currency": "USD",
+        },
+    )
+    portfolio1_id = response1.json()["portfolio_id"]
+
+    response2 = client.post(
+        "/api/v1/portfolios",
+        headers=auth_headers,
+        json={
+            "name": "Portfolio 2",
+            "initial_deposit": "20000.00",
+            "currency": "USD",
+        },
+    )
+    portfolio2_id = response2.json()["portfolio_id"]
+
+    # Delete first portfolio
+    delete_response = client.delete(
+        f"/api/v1/portfolios/{portfolio1_id}",
+        headers=auth_headers,
+    )
+    assert delete_response.status_code == 204
+
+    # Verify first portfolio is gone
+    get_response1 = client.get(
+        f"/api/v1/portfolios/{portfolio1_id}",
+        headers=auth_headers,
+    )
+    assert get_response1.status_code == 404
+
+    # Verify second portfolio still exists
+    get_response2 = client.get(
+        f"/api/v1/portfolios/{portfolio2_id}",
+        headers=auth_headers,
+    )
+    assert get_response2.status_code == 200
+    assert get_response2.json()["name"] == "Portfolio 2"
+
+
+def test_delete_portfolio_removes_from_list(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    default_user_id: UUID,
+) -> None:
+    """Test that deleted portfolio is removed from the portfolio list."""
+    # Create a portfolio
+    response = client.post(
+        "/api/v1/portfolios",
+        headers=auth_headers,
+        json={
+            "name": "Portfolio to Remove",
+            "initial_deposit": "10000.00",
+            "currency": "USD",
+        },
+    )
+    portfolio_id = response.json()["portfolio_id"]
+
+    # Verify it appears in the list
+    list_before = client.get(
+        "/api/v1/portfolios",
+        headers=auth_headers,
+    )
+    assert list_before.status_code == 200
+    assert len(list_before.json()) == 1
+
+    # Delete the portfolio
+    delete_response = client.delete(
+        f"/api/v1/portfolios/{portfolio_id}",
+        headers=auth_headers,
+    )
+    assert delete_response.status_code == 204
+
+    # Verify it's removed from the list
+    list_after = client.get(
+        "/api/v1/portfolios",
+        headers=auth_headers,
+    )
+    assert list_after.status_code == 200
+    assert len(list_after.json()) == 0
