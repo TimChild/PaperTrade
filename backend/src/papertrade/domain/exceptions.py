@@ -82,15 +82,95 @@ class BusinessRuleViolationError(DomainException):
 
 
 class InsufficientFundsError(BusinessRuleViolationError):
-    """Raised when attempting to withdraw more cash than available."""
+    """Raised when attempting to withdraw more cash than available.
 
-    pass
+    Attributes:
+        available: Amount of cash currently available
+        required: Amount of cash needed for the operation
+        message: Human-readable error message
+    """
+
+    def __init__(
+        self,
+        available: "Money",  # type: ignore  # Forward reference to avoid circular import  # noqa: F821
+        required: "Money",  # type: ignore  # noqa: F821
+        message: str | None = None,
+    ) -> None:
+        """Initialize InsufficientFundsError with amount details.
+
+        Args:
+            available: Amount currently available
+            required: Amount needed
+            message: Optional custom message (auto-generated if not provided)
+        """
+        from papertrade.domain.value_objects.money import Money
+
+        if not isinstance(available, Money):
+            raise TypeError(f"available must be Money, got {type(available)}")
+        if not isinstance(required, Money):
+            raise TypeError(f"required must be Money, got {type(required)}")
+        if available.currency != required.currency:
+            raise ValueError("available and required must have same currency")
+
+        self.available = available
+        self.required = required
+
+        if message is None:
+            shortfall = required.subtract(available)
+            message = (
+                f"Insufficient funds. You have {available} but need {required} "
+                f"for this trade (shortfall: {shortfall})"
+            )
+
+        self.message = message
+        super().__init__(message)
 
 
 class InsufficientSharesError(BusinessRuleViolationError):
-    """Raised when attempting to sell more shares than owned."""
+    """Raised when attempting to sell more shares than owned.
 
-    pass
+    Attributes:
+        ticker: Stock ticker symbol
+        available: Number of shares currently owned
+        required: Number of shares needed for the sale
+        message: Human-readable error message
+    """
+
+    def __init__(
+        self,
+        ticker: str,
+        available: "Quantity",  # type: ignore  # Forward reference  # noqa: F821
+        required: "Quantity",  # type: ignore  # noqa: F821
+        message: str | None = None,
+    ) -> None:
+        """Initialize InsufficientSharesError with share details.
+
+        Args:
+            ticker: Stock ticker symbol
+            available: Shares currently owned
+            required: Shares needed for sale
+            message: Optional custom message (auto-generated if not provided)
+        """
+        from papertrade.domain.value_objects.quantity import Quantity
+
+        if not isinstance(available, Quantity):
+            raise TypeError(f"available must be Quantity, got {type(available)}")
+        if not isinstance(required, Quantity):
+            raise TypeError(f"required must be Quantity, got {type(required)}")
+
+        self.ticker = ticker
+        self.available = available
+        self.required = required
+
+        if message is None:
+            shortfall = required.shares - available.shares
+            message = (
+                f"Insufficient shares of {ticker}. You have {available.shares} shares "
+                f"but need {required.shares} shares (shortfall: {shortfall})"
+            )
+
+        self.message = message
+        super().__init__(message)
 
 
 # Authentication Exceptions

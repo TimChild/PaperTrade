@@ -107,8 +107,10 @@ class TestWithdrawCash:
         with pytest.raises(InsufficientFundsError) as exc_info:
             await handler.execute(command)
 
-        assert "Cannot withdraw" in str(exc_info.value)
+        # New structured error message format
+        assert "Insufficient funds" in str(exc_info.value)
         assert "$1,001.00" in str(exc_info.value)  # Money formats with comma
+        assert "$1,000.00" in str(exc_info.value)  # Available balance
 
     async def test_zero_withdrawal_raises_error(self, handler, portfolio_with_cash):
         """Test that zero withdrawal raises error."""

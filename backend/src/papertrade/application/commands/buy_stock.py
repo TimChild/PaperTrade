@@ -114,8 +114,8 @@ class BuyStockHandler:
         # Validate sufficient funds
         if current_balance < total_cost:
             raise InsufficientFundsError(
-                f"Cannot buy {quantity.shares} shares of {ticker.symbol} "
-                f"for {total_cost} - current balance is {current_balance}"
+                available=current_balance,
+                required=total_cost,
             )
 
         # Generate transaction ID

@@ -116,10 +116,11 @@ class SellStockHandler:
 
         # Validate sufficient shares
         if holding is None or holding.quantity < quantity:
-            owned_quantity = holding.quantity.shares if holding else Decimal("0")
+            owned_quantity = holding.quantity if holding else Quantity(Decimal("0"))
             raise InsufficientSharesError(
-                f"Cannot sell {quantity.shares} shares of {ticker.symbol} "
-                f"- only {owned_quantity} shares owned"
+                ticker=ticker.symbol,
+                available=owned_quantity,
+                required=quantity,
             )
 
         # Generate transaction ID

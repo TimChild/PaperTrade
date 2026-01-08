@@ -95,8 +95,8 @@ class WithdrawCashHandler:
         # Validate sufficient funds
         if current_balance < withdrawal_amount:
             raise InsufficientFundsError(
-                f"Cannot withdraw {withdrawal_amount} - "
-                f"current balance is {current_balance}"
+                available=current_balance,
+                required=withdrawal_amount,
             )
 
         # Generate transaction ID
