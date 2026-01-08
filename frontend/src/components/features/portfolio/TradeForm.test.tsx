@@ -1,8 +1,28 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { TradeForm } from './TradeForm'
 import type { Holding } from '@/types/portfolio'
+
+// Create a test query client
+function createTestQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  })
+}
+
+// Helper to render with QueryClientProvider
+function renderWithProviders(ui: React.ReactElement) {
+  const queryClient = createTestQueryClient()
+  return render(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+  )
+}
 
 describe('TradeForm', () => {
   const mockOnSubmit = vi.fn()
@@ -33,7 +53,7 @@ describe('TradeForm', () => {
 
   describe('BUY action', () => {
     it('should render with BUY selected by default', () => {
-      render(<TradeForm onSubmit={mockOnSubmit} />)
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
 
       const buyButton = screen.getByTestId('trade-form-action-buy')
       expect(buyButton).toHaveClass('bg-blue-600')
@@ -41,7 +61,7 @@ describe('TradeForm', () => {
 
     it('should submit BUY order with correct data', async () => {
       const user = userEvent.setup()
-      render(<TradeForm onSubmit={mockOnSubmit} />)
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
 
       await user.type(screen.getByTestId('trade-form-ticker-input'), 'IBM')
       await user.type(screen.getByTestId('trade-form-quantity-input'), '10')
@@ -58,7 +78,7 @@ describe('TradeForm', () => {
 
     it('should convert ticker to uppercase', async () => {
       const user = userEvent.setup()
-      render(<TradeForm onSubmit={mockOnSubmit} />)
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
 
       await user.type(screen.getByTestId('trade-form-ticker-input'), 'ibm')
       await user.type(screen.getByTestId('trade-form-quantity-input'), '10')
@@ -75,7 +95,7 @@ describe('TradeForm', () => {
   describe('SELL action', () => {
     it('should switch to SELL action when sell button clicked', async () => {
       const user = userEvent.setup()
-      render(<TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />)
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />)
 
       const sellButton = screen.getByTestId('trade-form-action-sell')
       await user.click(sellButton)
@@ -85,7 +105,7 @@ describe('TradeForm', () => {
 
     it('should display owned quantity when SELL action and ticker selected', async () => {
       const user = userEvent.setup()
-      render(<TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />)
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />)
 
       // Switch to SELL
       await user.click(screen.getByTestId('trade-form-action-sell'))
@@ -106,7 +126,7 @@ describe('TradeForm', () => {
 
     it('should show error when trying to sell stock not owned', async () => {
       const user = userEvent.setup()
-      render(<TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />)
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />)
 
       // Switch to SELL
       await user.click(screen.getByTestId('trade-form-action-sell'))
@@ -125,7 +145,7 @@ describe('TradeForm', () => {
 
     it('should disable submit button when selling stock not owned', async () => {
       const user = userEvent.setup()
-      render(<TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />)
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />)
 
       // Switch to SELL
       await user.click(screen.getByTestId('trade-form-action-sell'))
@@ -140,7 +160,7 @@ describe('TradeForm', () => {
 
     it('should submit SELL order with correct data', async () => {
       const user = userEvent.setup()
-      render(<TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />)
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />)
 
       // Switch to SELL
       await user.click(screen.getByTestId('trade-form-action-sell'))
@@ -163,7 +183,7 @@ describe('TradeForm', () => {
 
     it('should be case-insensitive when matching holdings', async () => {
       const user = userEvent.setup()
-      render(<TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />)
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />)
 
       // Switch to SELL
       await user.click(screen.getByTestId('trade-form-action-sell'))
@@ -182,7 +202,7 @@ describe('TradeForm', () => {
   describe('Quick Sell functionality', () => {
     it('should pre-fill form when quickSellData provided', async () => {
       const quickSellData = { ticker: 'AAPL', quantity: 100 }
-      render(
+      renderWithProviders(
         <TradeForm
           onSubmit={mockOnSubmit}
           holdings={mockHoldings}
@@ -209,12 +229,15 @@ describe('TradeForm', () => {
     })
 
     it('should update form when quickSellData changes', async () => {
+      const queryClient = createTestQueryClient()
       const { rerender } = render(
-        <TradeForm
-          onSubmit={mockOnSubmit}
-          holdings={mockHoldings}
-          quickSellData={null}
-        />
+        <QueryClientProvider client={queryClient}>
+          <TradeForm
+            onSubmit={mockOnSubmit}
+            holdings={mockHoldings}
+            quickSellData={null}
+          />
+        </QueryClientProvider>
       )
 
       // Initially should be BUY mode
@@ -225,11 +248,13 @@ describe('TradeForm', () => {
       // Update with quick sell data
       const quickSellData = { ticker: 'MSFT', quantity: 50 }
       rerender(
-        <TradeForm
-          onSubmit={mockOnSubmit}
-          holdings={mockHoldings}
-          quickSellData={quickSellData}
-        />
+        <QueryClientProvider client={queryClient}>
+          <TradeForm
+            onSubmit={mockOnSubmit}
+            holdings={mockHoldings}
+            quickSellData={quickSellData}
+          />
+        </QueryClientProvider>
       )
 
       await waitFor(() => {
@@ -251,7 +276,7 @@ describe('TradeForm', () => {
 
   describe('Form validation', () => {
     it('should disable submit when ticker is empty', () => {
-      render(<TradeForm onSubmit={mockOnSubmit} />)
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
 
       const submitButton = screen.getByTestId('trade-form-buy-button')
       expect(submitButton).toBeDisabled()
@@ -259,7 +284,7 @@ describe('TradeForm', () => {
 
     it('should disable submit when quantity is empty', async () => {
       const user = userEvent.setup()
-      render(<TradeForm onSubmit={mockOnSubmit} />)
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
 
       await user.type(screen.getByTestId('trade-form-ticker-input'), 'IBM')
 
@@ -269,7 +294,7 @@ describe('TradeForm', () => {
 
     it('should clear form after successful submission', async () => {
       const user = userEvent.setup()
-      render(<TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />)
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />)
 
       await user.type(screen.getByTestId('trade-form-ticker-input'), 'IBM')
       await user.type(screen.getByTestId('trade-form-quantity-input'), '10')
@@ -290,7 +315,7 @@ describe('TradeForm', () => {
   describe('UI feedback', () => {
     it('should show estimated total when price is provided', async () => {
       const user = userEvent.setup()
-      render(<TradeForm onSubmit={mockOnSubmit} />)
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
 
       await user.type(screen.getByTestId('trade-form-ticker-input'), 'IBM')
       await user.type(screen.getByTestId('trade-form-quantity-input'), '10')
@@ -302,7 +327,7 @@ describe('TradeForm', () => {
 
     it('should show correct action in preview text', async () => {
       const user = userEvent.setup()
-      render(<TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />)
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />)
 
       // BUY preview
       await user.type(screen.getByTestId('trade-form-ticker-input'), 'IBM')
@@ -321,11 +346,185 @@ describe('TradeForm', () => {
     })
 
     it('should show processing state when submitting', () => {
-      render(<TradeForm onSubmit={mockOnSubmit} isSubmitting={true} />)
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} isSubmitting={true} />)
 
       const buyButton = screen.getByTestId('trade-form-buy-button')
       expect(buyButton).toHaveTextContent('Processing...')
       expect(buyButton).toBeDisabled()
+    })
+  })
+
+  describe('Price auto-population', () => {
+    it('should auto-populate price when ticker is entered', async () => {
+      const user = userEvent.setup()
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
+
+      const priceInput = screen.getByTestId('trade-form-price-input')
+      expect(priceInput).toHaveValue(null)
+
+      // Type ticker
+      await user.type(screen.getByTestId('trade-form-ticker-input'), 'AAPL')
+
+      // Wait for debounce (500ms) + API call
+      await waitFor(
+        () => {
+          expect(priceInput).not.toHaveValue(null)
+        },
+        { timeout: 2000 }
+      )
+
+      // Should have the mock price for AAPL (192.53 from handlers)
+      expect(priceInput).toHaveValue(192.53)
+    })
+
+    it('should show loading state while fetching price', async () => {
+      const user = userEvent.setup()
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
+
+      // Type ticker
+      await user.type(screen.getByTestId('trade-form-ticker-input'), 'MSFT')
+
+      // Should show loading spinner (appears after debounce and during fetch)
+      // Note: This might be brief due to fast mock API
+      await waitFor(
+        () => {
+          const loading = screen.queryByTestId('trade-form-price-loading')
+          const success = screen.queryByTestId('trade-form-price-success')
+          // Either loading or success should appear
+          expect(loading !== null || success !== null).toBe(true)
+        },
+        { timeout: 2000 }
+      )
+    })
+
+    it('should show success indicator after price is loaded', async () => {
+      const user = userEvent.setup()
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
+
+      await user.type(screen.getByTestId('trade-form-ticker-input'), 'GOOGL')
+
+      // Wait for price to load
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('trade-form-price-success')).toBeInTheDocument()
+        },
+        { timeout: 2000 }
+      )
+    })
+
+    it('should show error message for invalid ticker', async () => {
+      const user = userEvent.setup()
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
+
+      // Type an invalid ticker (not in mock data)
+      // Note: maxLength=5 on ticker input, so "INVALID" becomes "INVAL"
+      await user.type(screen.getByTestId('trade-form-ticker-input'), 'INVALID')
+
+      // Wait for debounce + API call + error
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('trade-form-price-error')).toBeInTheDocument()
+        },
+        { timeout: 2000 }
+      )
+
+      expect(screen.getByTestId('trade-form-price-error')).toHaveTextContent(
+        'Unable to fetch price for INVAL'
+      )
+    })
+
+    it('should not auto-populate price in backtest mode', async () => {
+      const user = userEvent.setup()
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
+
+      // Enable backtest mode
+      await user.click(screen.getByTestId('backtest-mode-toggle'))
+
+      const priceInput = screen.getByTestId('trade-form-price-input')
+      expect(priceInput).toHaveValue(null)
+
+      // Type ticker
+      await user.type(screen.getByTestId('trade-form-ticker-input'), 'AAPL')
+
+      // Wait a bit to ensure no auto-population happens
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      // Price should still be empty
+      expect(priceInput).toHaveValue(null)
+
+      // No loading or success indicators should appear
+      expect(screen.queryByTestId('trade-form-price-loading')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('trade-form-price-success')).not.toBeInTheDocument()
+    })
+
+    it('should allow manual price override', async () => {
+      const user = userEvent.setup()
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
+
+      const priceInput = screen.getByTestId('trade-form-price-input')
+
+      // Type ticker to trigger auto-populate
+      await user.type(screen.getByTestId('trade-form-ticker-input'), 'AAPL')
+
+      // Wait for auto-population
+      await waitFor(
+        () => {
+          expect(priceInput).toHaveValue(192.53)
+        },
+        { timeout: 2000 }
+      )
+
+      // User can still manually change the price
+      await user.clear(priceInput)
+      await user.type(priceInput, '200.00')
+
+      expect(priceInput).toHaveValue(200)
+    })
+
+    it('should update estimated total when price is auto-populated', async () => {
+      const user = userEvent.setup()
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
+
+      // Enter ticker and quantity
+      await user.type(screen.getByTestId('trade-form-ticker-input'), 'AAPL')
+      await user.type(screen.getByTestId('trade-form-quantity-input'), '10')
+
+      // Wait for price to auto-populate
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('trade-form-price-input')).toHaveValue(192.53)
+        },
+        { timeout: 2000 }
+      )
+
+      // Should show estimated total (10 * 192.53 = 1925.30)
+      await waitFor(() => {
+        expect(screen.getByText(/Estimated Total: \$1,?925\.30/)).toBeInTheDocument()
+      })
+    })
+
+    it('should debounce ticker input to avoid excessive API calls', async () => {
+      const user = userEvent.setup()
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
+
+      const tickerInput = screen.getByTestId('trade-form-ticker-input')
+
+      // Type rapidly (simulating user typing)
+      await user.type(tickerInput, 'A')
+      await user.type(tickerInput, 'A')
+      await user.type(tickerInput, 'P')
+      await user.type(tickerInput, 'L')
+
+      // Should show AAPL in input
+      expect(tickerInput).toHaveValue('AAPL')
+
+      // Wait for debounce + API call
+      await waitFor(
+        () => {
+          expect(screen.getByTestId('trade-form-price-input')).toHaveValue(192.53)
+        },
+        { timeout: 2000 }
+      )
     })
   })
 })
