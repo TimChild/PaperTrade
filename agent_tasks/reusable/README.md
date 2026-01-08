@@ -32,13 +32,13 @@ Execute all critical user workflows to validate application quality. Produces de
 
 These small, focused documents can be referenced from agent instruction files to reduce duplication:
 
-#### [pre-completion-checklist.md](pre-completion-checklist.md)
+#### [quality-and-tooling.md](quality-and-tooling.md)
 **For**: All coding agents
-**Purpose**: Final validation steps before marking work complete
+**Purpose**: Consolidated reference for quality checks, Docker, and pre-completion validation
 
-Critical commands to run before completing work (formatting, linting, testing). Prevents CI failures.
+**Covers**: Backend/frontend quality tasks, Docker commands, pre-completion checklist, common fixes.
 
-**Referenced by**: All agent files, orchestration procedures
+**Referenced by**: `.github/copilot-instructions.md`, all agent files
 
 ---
 
@@ -46,7 +46,7 @@ Critical commands to run before completing work (formatting, linting, testing). 
 **For**: All agents
 **Purpose**: Standard Git and GitHub CLI workflow
 
-Branch management, committing, PR creation, and GitHub CLI best practices.
+Branch management, committing, PR creation, and GitHub CLI best practices (environment-specific for Copilot agents vs local VSCode).
 
 **Referenced by**: `.github/copilot-instructions.md`, `AGENT_ORCHESTRATION.md`
 
@@ -59,36 +59,6 @@ Branch management, committing, PR creation, and GitHub CLI best practices.
 Core principles, layer diagram, dependency rules, and testing philosophy.
 
 **Referenced by**: `architect.md`, `backend-swe.md`, `frontend-swe.md`, `refactorer.md`
-
----
-
-#### [backend-quality-checks.md](backend-quality-checks.md)
-**For**: backend-swe, refactorer, quality-infra
-**Purpose**: Backend code quality validation
-
-Commands for formatting, linting, type checking, and testing Python code.
-
-**Referenced by**: `backend-swe.md`, `quality-infra.md`
-
----
-
-#### [frontend-quality-checks.md](frontend-quality-checks.md)
-**For**: frontend-swe, refactorer, quality-infra
-**Purpose**: Frontend code quality validation
-
-Commands for formatting, linting, type checking, and testing TypeScript code.
-
-**Referenced by**: `frontend-swe.md`, `quality-infra.md`
-
----
-
-#### [docker-commands.md](docker-commands.md)
-**For**: All agents
-**Purpose**: Common Docker and Docker Compose operations
-
-Starting/stopping services, viewing logs, troubleshooting containers.
-
-**Referenced by**: `quality-infra.md`, `AGENT_ORCHESTRATION.md`, `qa.md`
 
 ---
 
