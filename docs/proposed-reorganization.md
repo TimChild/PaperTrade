@@ -1,7 +1,7 @@
 # Documentation Reorganization Proposal
 
-**Date**: January 7, 2026  
-**Task**: #068  
+**Date**: January 7, 2026
+**Task**: #068
 **Status**: PARTIALLY IMPLEMENTED
 
 ---
@@ -22,7 +22,7 @@
 ### 📋 Deferred (Lower Priority)
 
 - Archiving completed tasks in `agent_tasks/` by phase
-- Archiving `agent_progress_docs/` by month  
+- Archiving `agent_progress_docs/` by month
 - Moving `orchestrator_procedures/` to `docs/ai-agents/procedures/`
 - Creating AI agents documentation hub at `docs/ai-agents/`
 
@@ -498,7 +498,7 @@ These files need updates **after** reorganization (separate task):
 
 1. **`.github/copilot-setup.sh`** (159 lines)
    - **Reason**: Fully superseded by `.github/workflows/copilot-setup-steps.yml`
-   - **Evidence**: 
+   - **Evidence**:
      - `copilot-setup-steps.yml` is the active file for GitHub Copilot agents
      - Both do the same thing (setup environment)
      - The YAML workflow is more maintainable and used by CI
@@ -560,7 +560,7 @@ These files need updates **after** reorganization (separate task):
 
 ### For Human Developers
 
-**Before**: 
+**Before**:
 - 8 root-level markdown files (which to read first?)
 - `docs/` has 14 files in flat structure
 - Planning docs scattered (root + docs)
@@ -627,7 +627,7 @@ These files need updates **after** reorganization (separate task):
 
 ### Navigation Improvement
 - **Before**: Flat structure, unclear purpose
-- **After**: 
+- **After**:
   - 3 levels deep max
   - Clear README at each level
   - Logical grouping by purpose
