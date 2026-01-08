@@ -3,7 +3,6 @@
 Maps domain exceptions to HTTP status codes with consistent error responses.
 """
 
-
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel

@@ -150,7 +150,9 @@ class TestInsufficientSharesError:
 
         with pytest.raises(TypeError, match="available must be Quantity"):
             InsufficientSharesError(
-                ticker="AAPL", available="not quantity", required=required  # type: ignore
+                ticker="AAPL",
+                available="not quantity",
+                required=required,  # type: ignore
             )
 
     def test_rejects_non_quantity_required(self) -> None:
@@ -159,5 +161,7 @@ class TestInsufficientSharesError:
 
         with pytest.raises(TypeError, match="required must be Quantity"):
             InsufficientSharesError(
-                ticker="AAPL", available=available, required="not quantity"  # type: ignore
+                ticker="AAPL",
+                available=available,
+                required="not quantity",  # type: ignore
             )

@@ -160,7 +160,6 @@ class InsufficientSharesError(BusinessRuleViolationError):
         super().__init__(message)
 
 
-
 # Authentication Exceptions
 
 
