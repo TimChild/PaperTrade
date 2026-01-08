@@ -50,6 +50,11 @@ class InMemoryPortfolioRepository:
         with self._lock:
             return sorted(self._portfolios.values(), key=lambda p: p.created_at)
 
+    async def delete(self, portfolio_id: UUID) -> None:
+        """Delete a portfolio by ID."""
+        with self._lock:
+            self._portfolios.pop(portfolio_id, None)
+
     def clear(self) -> None:
         """Clear all portfolios (for testing)."""
         with self._lock:

@@ -20,12 +20,17 @@ from papertrade.adapters.inbound.api.dependencies import (
     CurrentUserDep,
     MarketDataDep,
     PortfolioRepositoryDep,
+    SnapshotRepositoryDep,
     TransactionRepositoryDep,
 )
 from papertrade.application.commands.buy_stock import BuyStockCommand, BuyStockHandler
 from papertrade.application.commands.create_portfolio import (
     CreatePortfolioCommand,
     CreatePortfolioHandler,
+)
+from papertrade.application.commands.delete_portfolio import (
+    DeletePortfolioCommand,
+    DeletePortfolioHandler,
 )
 from papertrade.application.commands.deposit_cash import (
     DepositCashCommand,
@@ -55,7 +60,7 @@ from papertrade.application.queries.get_portfolio_holdings import (
     GetPortfolioHoldingsHandler,
     GetPortfolioHoldingsQuery,
 )
-from papertrade.domain.exceptions import InvalidPortfolioError
+from papertrade.domain.exceptions import InvalidPortfolioError, PortfolioNotFoundError
 from papertrade.domain.value_objects.ticker import Ticker
 
 router = APIRouter(prefix="/portfolios", tags=["portfolios"])
@@ -240,6 +245,47 @@ async def get_portfolio(
         name=portfolio_dto.name,
         created_at=portfolio_dto.created_at.isoformat(),
     )
+
+
+@router.delete("/{portfolio_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_portfolio(
+    portfolio_id: UUID,
+    current_user: CurrentUserDep,
+    portfolio_repo: PortfolioRepositoryDep,
+    transaction_repo: TransactionRepositoryDep,
+    snapshot_repo: SnapshotRepositoryDep,
+) -> None:
+    """Delete a portfolio and all related data.
+
+    Deletes the portfolio along with all its transactions and snapshots.
+    This action cannot be undone.
+
+    Raises:
+        HTTPException: 404 if portfolio not found, 403 if user doesn't own it
+    """
+    command = DeletePortfolioCommand(
+        portfolio_id=portfolio_id,
+        user_id=current_user,
+    )
+
+    handler = DeletePortfolioHandler(
+        portfolio_repo,
+        transaction_repo,
+        snapshot_repo,
+    )
+
+    try:
+        await handler.execute(command)
+    except PortfolioNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Portfolio not found: {portfolio_id}",
+        ) from None
+    except PermissionError:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to delete this portfolio",
+        ) from None
 
 
 @router.post(

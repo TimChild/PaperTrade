@@ -53,6 +53,19 @@ class InvalidPortfolioError(InvalidEntityError):
     pass
 
 
+class PortfolioNotFoundError(InvalidEntityError):
+    """Raised when a portfolio cannot be found by ID."""
+
+    def __init__(self, portfolio_id: str) -> None:
+        """Initialize PortfolioNotFoundError.
+
+        Args:
+            portfolio_id: ID of the portfolio that was not found
+        """
+        self.portfolio_id = portfolio_id
+        super().__init__(f"Portfolio not found: {portfolio_id}")
+
+
 class InvalidTransactionError(InvalidEntityError):
     """Raised when Transaction entity invariants are violated."""
 
