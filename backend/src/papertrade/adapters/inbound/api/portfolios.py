@@ -347,15 +347,23 @@ async def execute_trade(
         else:
             # Normal mode - get current price
             price_point = await market_data.get_current_price(ticker)
-    except TickerNotFoundError:
+    except TickerNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Ticker not found: {request.ticker}",
+            detail={
+                "type": "ticker_not_found",
+                "message": f"Invalid ticker symbol: {e.ticker}",
+                "ticker": e.ticker,
+            },
         ) from None
     except MarketDataUnavailableError as e:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Market data unavailable: {str(e)}",
+            detail={
+                "type": "market_data_unavailable",
+                "message": "Unable to fetch market data. Please try again later.",
+                "reason": e.reason,
+            },
         ) from None
 
     if request.action == "BUY":

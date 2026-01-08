@@ -62,8 +62,8 @@ class TestExceptionHierarchy:
         with pytest.raises(InvalidValueObjectError):
             raise InvalidTickerError("Test error")
 
-        with pytest.raises(BusinessRuleViolationError):
-            raise InsufficientFundsError("Test error")
+        # InsufficientFundsError now requires Money objects, not just a message
+        # Test in test_enhanced_exceptions.py instead
 
     def test_exception_messages_are_descriptive(self) -> None:
         """Exceptions should carry descriptive messages."""
@@ -71,6 +71,5 @@ class TestExceptionHierarchy:
         exc = InvalidMoneyError(msg)
         assert str(exc) == msg
 
-        msg2 = "Insufficient funds for withdrawal"
-        exc2 = InsufficientFundsError(msg2)
-        assert str(exc2) == msg2
+        # InsufficientFundsError now requires Money objects, not just a message
+        # Test in test_enhanced_exceptions.py instead

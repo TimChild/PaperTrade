@@ -58,7 +58,7 @@ def test_buy_with_insufficient_funds_fails(
     auth_headers: dict[str, str],
     default_user_id: UUID,
 ) -> None:
-    """Test buying stocks with insufficient cash returns error."""
+    """Test buying stocks with insufficient cash returns structured error."""
     # Create portfolio with only $1000
     response = client.post(
         "/api/v1/portfolios",
@@ -79,9 +79,24 @@ def test_buy_with_insufficient_funds_fails(
     )
 
     assert trade_response.status_code == 400
-    # Error message should mention insufficient funds
-    error_text = str(trade_response.json()).lower()
-    assert "insufficient" in error_text
+
+    # Verify structured error response
+    error_data = trade_response.json()
+    assert "detail" in error_data
+    detail = error_data["detail"]
+
+    # Should be a structured error with type and amounts
+    assert isinstance(detail, dict)
+    assert detail["type"] == "insufficient_funds"
+    assert "message" in detail
+    assert "available" in detail
+    assert "required" in detail
+    assert "shortfall" in detail
+
+    # Verify amounts are correct
+    assert detail["available"] == 1000.00
+    assert detail["required"] == 15000.00
+    assert detail["shortfall"] == 14000.00
 
 
 def test_sell_stock_not_owned_fails(
@@ -89,7 +104,7 @@ def test_sell_stock_not_owned_fails(
     auth_headers: dict[str, str],
     default_user_id: UUID,
 ) -> None:
-    """Test selling stock that's not in holdings returns error."""
+    """Test selling stock that's not in holdings returns structured error."""
     # Create portfolio
     response = client.post(
         "/api/v1/portfolios",
@@ -110,9 +125,16 @@ def test_sell_stock_not_owned_fails(
     )
 
     assert trade_response.status_code == 400
-    # Error message should mention not found or insufficient
-    error_text = str(trade_response.json()).lower()
-    assert "not found" in error_text or "insufficient" in error_text
+
+    # Verify structured error response
+    error_data = trade_response.json()
+    detail = error_data["detail"]
+    assert isinstance(detail, dict)
+    assert detail["type"] == "insufficient_shares"
+    assert detail["ticker"] == "AAPL"
+    assert detail["available"] == 0.0
+    assert detail["required"] == 10.0
+    assert detail["shortfall"] == 10.0
 
 
 def test_sell_more_shares_than_owned_fails(
@@ -120,7 +142,7 @@ def test_sell_more_shares_than_owned_fails(
     auth_headers: dict[str, str],
     default_user_id: UUID,
 ) -> None:
-    """Test selling more shares than owned returns error."""
+    """Test selling more shares than owned returns structured error."""
     # Create portfolio and buy 10 shares
     response = client.post(
         "/api/v1/portfolios",
@@ -148,8 +170,16 @@ def test_sell_more_shares_than_owned_fails(
     )
 
     assert trade_response.status_code == 400
-    error_text = str(trade_response.json()).lower()
-    assert "insufficient" in error_text
+
+    # Verify structured error response
+    error_data = trade_response.json()
+    detail = error_data["detail"]
+    assert isinstance(detail, dict)
+    assert detail["type"] == "insufficient_shares"
+    assert detail["ticker"] == "AAPL"
+    assert detail["available"] == 10.0
+    assert detail["required"] == 20.0
+    assert detail["shortfall"] == 10.0
 
 
 def test_withdraw_more_than_balance_fails(
@@ -157,7 +187,7 @@ def test_withdraw_more_than_balance_fails(
     auth_headers: dict[str, str],
     default_user_id: UUID,
 ) -> None:
-    """Test withdrawing more cash than available returns error."""
+    """Test withdrawing more cash than available returns structured error."""
     # Create portfolio with $1000
     response = client.post(
         "/api/v1/portfolios",
@@ -178,8 +208,15 @@ def test_withdraw_more_than_balance_fails(
     )
 
     assert withdraw_response.status_code == 400
-    error_text = str(withdraw_response.json()).lower()
-    assert "insufficient" in error_text
+
+    # Verify structured error response
+    error_data = withdraw_response.json()
+    detail = error_data["detail"]
+    assert isinstance(detail, dict)
+    assert detail["type"] == "insufficient_funds"
+    assert detail["available"] == 1000.00
+    assert detail["required"] == 2000.00
+    assert detail["shortfall"] == 1000.00
 
 
 def test_access_other_users_portfolio_returns_403(
@@ -300,7 +337,7 @@ def test_trade_with_invalid_ticker_fails(
     auth_headers: dict[str, str],
     default_user_id: UUID,
 ) -> None:
-    """Test that trading with an unknown ticker fails appropriately."""
+    """Test that trading with an unknown ticker returns structured error."""
     # Create portfolio
     response = client.post(
         "/api/v1/portfolios",
@@ -323,4 +360,12 @@ def test_trade_with_invalid_ticker_fails(
 
     # Should fail because ticker is not found in market data
     assert trade_response.status_code == 404
-    assert "not found" in trade_response.json()["detail"].lower()
+
+    # Verify structured error response
+    error_data = trade_response.json()
+    detail = error_data["detail"]
+    assert isinstance(detail, dict)
+    assert detail["type"] == "ticker_not_found"
+    assert "message" in detail
+    assert "ZZZZ" in detail["message"]
+    assert detail["ticker"] == "ZZZZ"
