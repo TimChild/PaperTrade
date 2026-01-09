@@ -42,11 +42,7 @@ describe('ErrorState', () => {
     const onAction = vi.fn()
 
     render(
-      <ErrorState
-        message="Error"
-        onAction={onAction}
-        actionLabel="Go Back"
-      />
+      <ErrorState message="Error" onAction={onAction} actionLabel="Go Back" />
     )
 
     expect(screen.getByTestId('error-state-action')).toBeInTheDocument()
@@ -58,11 +54,7 @@ describe('ErrorState', () => {
     const onAction = vi.fn()
 
     render(
-      <ErrorState
-        message="Error"
-        onAction={onAction}
-        actionLabel="Go Back"
-      />
+      <ErrorState message="Error" onAction={onAction} actionLabel="Go Back" />
     )
 
     await user.click(screen.getByTestId('error-state-action'))
