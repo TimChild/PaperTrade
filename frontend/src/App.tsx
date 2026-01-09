@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { SignedIn, SignedOut, SignIn, UserButton } from '@clerk/clerk-react'
+import { Toaster } from 'react-hot-toast'
 import { Dashboard } from '@/pages/Dashboard'
 import { PortfolioDetail } from '@/pages/PortfolioDetail'
 import { PortfolioAnalytics } from '@/pages/PortfolioAnalytics'
@@ -8,6 +9,26 @@ import { Debug } from '@/pages/Debug'
 function App() {
   return (
     <BrowserRouter>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 5000,
+          success: {
+            duration: 5000,
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            duration: 7000,
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
       <Routes>
         {/* Debug route - accessible without authentication */}
         <Route path="/debug" element={<Debug />} />

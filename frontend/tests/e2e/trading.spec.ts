@@ -56,14 +56,10 @@ test.describe('Trading Flow', () => {
     const buyButton = page.getByTestId('trade-form-buy-button')
     await expect(buyButton).toBeEnabled()
 
-    // Set up dialog handler before clicking to catch success alert
-    page.once('dialog', async (dialog) => {
-      expect(dialog.type()).toBe('alert')
-      expect(dialog.message()).toMatch(/buy order executed successfully/i)
-      await dialog.accept()
-    })
-
     await buyButton.click()
+
+    // Wait for success toast to appear
+    await expect(page.getByText(/bought 2 shares of IBM/i)).toBeVisible({ timeout: 5000 })
 
     // Wait for trade to process and page to update
     await page.waitForTimeout(3000)
@@ -109,15 +105,11 @@ test.describe('Trading Flow', () => {
     const buyButton = page.getByTestId('trade-form-buy-button')
     await expect(buyButton).toBeEnabled()
 
-    // Set up dialog handler to catch error message
-    page.once('dialog', async (dialog) => {
-      expect(dialog.type()).toBe('alert')
-      // Should show failed error (backend returns 400 for insufficient funds)
-      expect(dialog.message()).toMatch(/failed|400/i)
-      await dialog.accept()
-    })
-
     await buyButton.click()
+
+    // Wait for error toast to appear
+    await expect(page.getByText(/insufficient funds/i)).toBeVisible({ timeout: 5000 })
+
     await page.waitForTimeout(2000)
   })
 
@@ -156,13 +148,10 @@ test.describe('Trading Flow', () => {
     const buyButton = page.getByTestId('trade-form-buy-button')
     await expect(buyButton).toBeEnabled()
 
-    // Set up dialog handler for success
-    page.once('dialog', async (dialog) => {
-      expect(dialog.message()).toMatch(/buy order executed successfully/i)
-      await dialog.accept()
-    })
-
     await buyButton.click()
+
+    // Wait for success toast to appear
+    await expect(page.getByText(/bought 5 shares of IBM/i)).toBeVisible({ timeout: 5000 })
 
     // Wait for trade to complete and page to refresh
     await page.waitForTimeout(3000)
@@ -209,13 +198,10 @@ test.describe('Trading Flow', () => {
     const buyButton = page.getByTestId('trade-form-buy-button')
     await expect(buyButton).toBeEnabled()
 
-    // Set up dialog handler for buy success
-    page.once('dialog', async (dialog) => {
-      expect(dialog.message()).toMatch(/buy order executed successfully/i)
-      await dialog.accept()
-    })
-
     await buyButton.click()
+
+    // Wait for success toast to appear
+    await expect(page.getByText(/bought 10 shares of IBM/i)).toBeVisible({ timeout: 5000 })
 
     // Wait for trade to complete
     await page.waitForTimeout(3000)
@@ -240,13 +226,10 @@ test.describe('Trading Flow', () => {
     const sellButton = page.getByTestId('trade-form-sell-button')
     await expect(sellButton).toBeEnabled()
 
-    // Set up dialog handler for sell success
-    page.once('dialog', async (dialog) => {
-      expect(dialog.message()).toMatch(/sell order executed successfully/i)
-      await dialog.accept()
-    })
-
     await sellButton.click()
+
+    // Wait for success toast to appear
+    await expect(page.getByText(/sold 5 shares of IBM/i)).toBeVisible({ timeout: 5000 })
 
     // Wait for trade to complete
     await page.waitForTimeout(3000)
@@ -327,11 +310,11 @@ test.describe('Trading Flow', () => {
 
     const buyButton = page.getByTestId('trade-form-buy-button')
 
-    page.once('dialog', async (dialog) => {
-      await dialog.accept()
-    })
-
     await buyButton.click()
+
+    // Wait for success toast to appear
+    await expect(page.getByText(/bought 20 shares of MSFT/i)).toBeVisible({ timeout: 5000 })
+
     await page.waitForTimeout(3000)
     await page.waitForLoadState('networkidle')
 
