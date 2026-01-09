@@ -99,10 +99,15 @@ def test_get_portfolio_balance_after_creation(
     assert "total_value" in balance_data
     assert "currency" in balance_data
     assert "as_of" in balance_data
+    assert "daily_change" in balance_data
+    assert "daily_change_percent" in balance_data
     assert balance_data["cash_balance"] == "10000.00"
     assert balance_data["holdings_value"] == "0.00"
     assert balance_data["total_value"] == "10000.00"
     assert balance_data["currency"] == "USD"
+    # With no holdings, daily change should be 0
+    assert balance_data["daily_change"] == "0.00"
+    assert balance_data["daily_change_percent"] == "0.00"
 
 
 def test_execute_buy_trade_and_verify_holdings(
