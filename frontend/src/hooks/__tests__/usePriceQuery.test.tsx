@@ -1,11 +1,10 @@
 /**
  * Unit tests for usePriceQuery hooks
+ * Uses global MSW server configured in tests/setup.ts
  */
-import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { http, HttpResponse } from 'msw'
-import { setupServer } from 'msw/node'
 import {
   usePriceQuery,
   useBatchPricesQuery,
@@ -13,42 +12,6 @@ import {
 } from '../usePriceQuery'
 import type { PricePoint } from '@/types/price'
 import React from 'react'
-
-const API_BASE_URL = 'http://localhost:8000/api/v1'
-
-// Mock server setup
-const server = setupServer(
-  // Get current price for a ticker
-  http.get(`${API_BASE_URL}/prices/:ticker`, ({ params }) => {
-    const { ticker } = params
-
-    const mockPrices: Record<string, number> = {
-      AAPL: 192.53,
-      GOOGL: 140.93,
-      MSFT: 374.58,
-    }
-
-    const price = mockPrices[ticker as string]
-    if (!price) {
-      return HttpResponse.json(
-        { detail: `Ticker ${ticker} not found` },
-        { status: 404 }
-      )
-    }
-
-    return HttpResponse.json({
-      ticker: { symbol: ticker },
-      price: { amount: price, currency: 'USD' },
-      timestamp: new Date().toISOString(),
-      source: 'database',
-      interval: 'real-time',
-    })
-  })
-)
-
-beforeAll(() => server.listen())
-afterEach(() => server.resetHandlers())
-afterAll(() => server.close())
 
 function createWrapper() {
   const queryClient = new QueryClient({
