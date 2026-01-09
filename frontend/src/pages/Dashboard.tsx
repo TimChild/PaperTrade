@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePortfolios, usePortfolioBalance } from '@/hooks/usePortfolio'
 import { PortfolioCard } from '@/components/features/portfolio/PortfolioCard'
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { PortfolioListSkeleton } from '@/components/features/portfolio/PortfolioListSkeleton'
 import { ErrorDisplay } from '@/components/ui/ErrorDisplay'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Dialog } from '@/components/ui/Dialog'
@@ -42,15 +42,6 @@ export function Dashboard(): React.JSX.Element {
     )
   }
 
-  // Show loading spinner while initial data loads
-  if (portfoliosLoading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <LoadingSpinner size="lg" className="py-12" />
-      </div>
-    )
-  }
-
   return (
     <div className="container mx-auto px-4 py-8">
       <header className="mb-8 flex items-center justify-between">
@@ -74,7 +65,9 @@ export function Dashboard(): React.JSX.Element {
       <div className="space-y-8">
         {/* Portfolio Grid */}
         <section>
-          {!portfolios || portfolios.length === 0 ? (
+          {portfoliosLoading ? (
+            <PortfolioListSkeleton />
+          ) : !portfolios || portfolios.length === 0 ? (
             <EmptyState
               message="No portfolios found. Create your first portfolio to get started!"
               action={
