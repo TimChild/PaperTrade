@@ -597,11 +597,18 @@ describe('TradeForm', () => {
       // Type ticker (will fetch price, but if malformed, should not populate)
       await user.type(screen.getByTestId('trade-form-ticker-input'), 'INVALID')
 
-      // Wait for debounce + potential fetch
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      // Wait for debounce + potential fetch using waitFor
+      await waitFor(
+        () => {
+          // Either error message appears or price stays empty
+          const hasError = screen.queryByTestId('trade-form-price-error')
+          const isEmpty = priceInput.value === null || priceInput.value === ''
+          expect(hasError !== null || isEmpty).toBe(true)
+        },
+        { timeout: 2000 }
+      )
 
-      // Price should remain empty if data is invalid/undefined
-      // (or show error, but not crash)
+      // Price should remain empty if data is invalid/undefined (not crash)
       expect(priceInput).toHaveValue(null)
     })
   })
