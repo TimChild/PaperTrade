@@ -212,6 +212,7 @@ export function PortfolioDetail(): React.JSX.Element {
             <TransactionList
               transactions={transactions}
               isLoading={transactionsLoading}
+              showSearch={true}
             />
           </section>
         </div>
