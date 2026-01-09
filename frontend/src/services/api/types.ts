@@ -72,6 +72,8 @@ export interface BalanceResponse {
   total_value: string // Decimal as string
   currency: string
   as_of: string // ISO 8601 timestamp
+  daily_change: string // Decimal as string - NEW
+  daily_change_percent: string // Decimal as string - NEW
 }
 
 // Holdings types

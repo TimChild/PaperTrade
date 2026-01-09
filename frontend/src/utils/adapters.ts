@@ -23,8 +23,11 @@ export function adaptPortfolio(
     userId: dto.user_id,
     cashBalance: balance ? parseFloat(balance.cash_balance) : 0,
     totalValue: balance ? parseFloat(balance.total_value) : 0,
-    dailyChange: 0, // TODO: Calculate from historical data when available
-    dailyChangePercent: 0, // TODO: Calculate from historical data when available
+    dailyChange: balance ? parseFloat(balance.daily_change) : 0,
+    // Convert from percentage (2.14) to decimal (0.0214) for formatPercent
+    dailyChangePercent: balance
+      ? parseFloat(balance.daily_change_percent) / 100
+      : 0,
     createdAt: dto.created_at,
   }
 }
