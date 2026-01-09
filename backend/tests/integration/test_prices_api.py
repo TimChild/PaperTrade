@@ -373,4 +373,3 @@ def test_get_batch_prices_includes_metadata(
     assert aapl_price["ticker"] == "AAPL"
     assert aapl_price["currency"] == "USD"
     assert aapl_price["source"] == "database"
-

@@ -126,8 +126,7 @@ async def get_batch_prices(
         str,
         Query(
             description=(
-                "Comma-separated list of ticker symbols "
-                "(e.g., 'AAPL,MSFT,GOOGL')"
+                "Comma-separated list of ticker symbols (e.g., 'AAPL,MSFT,GOOGL')"
             )
         ),
     ],
