@@ -1,8 +1,8 @@
 # Task 084: Fix Price Chart "Invalid Price Data" Error
 
-**Priority**: HIGH  
-**Complexity**: Medium  
-**Estimated Effort**: 1-2 hours  
+**Priority**: HIGH
+**Complexity**: Medium
+**Estimated Effort**: 1-2 hours
 **Agent**: frontend-swe
 
 ## Problem
@@ -174,27 +174,27 @@ async function verifyPriceChart(page) {
   // 1. Navigate to portfolio detail page
   await page.goto('http://localhost:5173/portfolio/<portfolio-id>');
   await page.waitForLoadState('networkidle');
-  
+
   // 2. Check that price chart is visible (not error state)
   const bodyText = await page.locator('body').textContent();
   const hasInvalidError = bodyText?.includes('Invalid price data');
-  
+
   if (hasInvalidError) {
     throw new Error('FAIL: Price chart still showing "Invalid price data" error');
   }
-  
+
   // 3. Verify chart elements exist
   const hasChart = await page.locator('svg').count() > 0;  // Recharts renders SVG
   const hasTimeButtons = bodyText?.includes('1D') && bodyText?.includes('1M');
-  
+
   if (!hasChart || !hasTimeButtons) {
     throw new Error('FAIL: Price chart elements not found');
   }
-  
+
   // 4. Test time range selector
   await page.getByRole('button', { name: '1W' }).click();
   await page.waitForTimeout(1000);
-  
+
   // 5. Verify no errors in console
   const errors = await page.evaluate(() => {
     const logs = [];
@@ -205,11 +205,11 @@ async function verifyPriceChart(page) {
     };
     return logs;
   });
-  
+
   if (errors.length > 0) {
     throw new Error(`FAIL: Console errors: ${errors.join(', ')}`);
   }
-  
+
   console.log('✅ PASS: Price chart working correctly');
 }
 ```
