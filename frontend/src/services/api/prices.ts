@@ -14,21 +14,46 @@ export async function getCurrentPrice(ticker: string): Promise<PricePoint> {
 
 /**
  * Batch fetch prices for multiple tickers
- * Uses Promise.allSettled to handle individual failures gracefully
+ * Uses the /prices/batch endpoint for efficient single-request fetching
  */
 export async function getBatchPrices(
   tickers: string[]
 ): Promise<Map<string, PricePoint>> {
-  const results = await Promise.allSettled(
-    tickers.map((ticker) => getCurrentPrice(ticker))
-  )
+  // Return empty map if no tickers provided
+  if (tickers.length === 0) {
+    return new Map()
+  }
 
-  const priceMap = new Map<string, PricePoint>()
-  results.forEach((result, index) => {
-    if (result.status === 'fulfilled') {
-      priceMap.set(tickers[index], result.value)
-    }
+  // Call batch endpoint with comma-separated tickers
+  const response = await apiClient.get<{
+    prices: Record<string, {
+      ticker: string
+      price: string
+      currency: string
+      timestamp: string
+      source: string
+      is_stale: boolean
+    }>
+    requested: number
+    returned: number
+  }>('/prices/batch', {
+    params: { tickers: tickers.join(',') },
   })
+
+  // Convert backend response format to Map<string, PricePoint>
+  const priceMap = new Map<string, PricePoint>()
+  for (const [ticker, priceData] of Object.entries(response.data.prices)) {
+    priceMap.set(ticker, {
+      ticker: { symbol: priceData.ticker },
+      price: {
+        amount: parseFloat(priceData.price),
+        currency: priceData.currency,
+      },
+      timestamp: priceData.timestamp,
+      source: priceData.source as 'alpha_vantage' | 'cache' | 'database',
+      interval: 'real-time',
+    })
+  }
 
   return priceMap
 }

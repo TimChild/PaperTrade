@@ -106,6 +106,65 @@ export const handlers = [
     })
   }),
 
+  // Get batch prices (must come BEFORE /prices/:ticker to match correctly)
+  http.get(`${API_BASE_URL}/prices/batch`, ({ request }) => {
+    const url = new URL(request.url)
+    const tickersParam = url.searchParams.get('tickers')
+
+    if (!tickersParam) {
+      return HttpResponse.json(
+        { detail: 'At least one ticker symbol is required' },
+        { status: 400 }
+      )
+    }
+
+    const tickers = tickersParam.split(',').map((t) => t.trim().toUpperCase())
+    
+    // Mock prices for common stocks
+    const mockPrices: Record<string, number> = {
+      AAPL: 192.53,
+      GOOGL: 140.93,
+      MSFT: 374.58,
+      TSLA: 248.48,
+      AMZN: 178.25,
+      NVDA: 495.22,
+      META: 338.54,
+      BRK: 348.45,
+      V: 272.31,
+      JPM: 153.72,
+    }
+
+    const prices: Record<string, {
+      ticker: string
+      price: string
+      currency: string
+      timestamp: string
+      source: string
+      is_stale: boolean
+    }> = {}
+
+    // Build response with available tickers only
+    for (const ticker of tickers) {
+      const price = mockPrices[ticker]
+      if (price) {
+        prices[ticker] = {
+          ticker,
+          price: price.toString(),
+          currency: 'USD',
+          timestamp: new Date().toISOString(),
+          source: 'database',
+          is_stale: false,
+        }
+      }
+    }
+
+    return HttpResponse.json({
+      prices,
+      requested: tickers.length,
+      returned: Object.keys(prices).length,
+    })
+  }),
+
   // Get current price for a ticker
   http.get(`${API_BASE_URL}/prices/:ticker`, ({ params }) => {
     const { ticker } = params
