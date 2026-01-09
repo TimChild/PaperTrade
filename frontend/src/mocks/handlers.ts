@@ -106,7 +106,9 @@ export const handlers = [
     })
   }),
 
-  // Get batch prices (must come BEFORE /prices/:ticker to match correctly)
+  // Get batch prices
+  // IMPORTANT: This handler MUST come before /prices/:ticker because MSW matches routes
+  // in the order they are defined, and the :ticker wildcard would match /prices/batch
   http.get(`${API_BASE_URL}/prices/batch`, ({ request }) => {
     const url = new URL(request.url)
     const tickersParam = url.searchParams.get('tickers')

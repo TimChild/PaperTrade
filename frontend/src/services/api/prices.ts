@@ -46,6 +46,18 @@ export async function getBatchPrices(
   // Convert backend response format to Map<string, PricePoint>
   const priceMap = new Map<string, PricePoint>()
   for (const [ticker, priceData] of Object.entries(response.data.prices)) {
+    // Validate source value or default to 'database'
+    const validSources: Array<'alpha_vantage' | 'cache' | 'database'> = [
+      'alpha_vantage',
+      'cache',
+      'database',
+    ]
+    const source = validSources.includes(
+      priceData.source as 'alpha_vantage' | 'cache' | 'database'
+    )
+      ? (priceData.source as 'alpha_vantage' | 'cache' | 'database')
+      : 'database'
+
     priceMap.set(ticker, {
       ticker: { symbol: priceData.ticker },
       price: {
@@ -53,7 +65,7 @@ export async function getBatchPrices(
         currency: priceData.currency,
       },
       timestamp: priceData.timestamp,
-      source: priceData.source as 'alpha_vantage' | 'cache' | 'database',
+      source,
       interval: 'real-time',
     })
   }
