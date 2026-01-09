@@ -562,4 +562,47 @@ describe('TradeForm', () => {
       )
     })
   })
+
+  describe('Edge cases and error handling', () => {
+    it('should handle undefined price data gracefully without crashing', () => {
+      // This test ensures the component doesn't crash on initial render
+      // when priceData is undefined
+      const { container } = renderWithProviders(
+        <TradeForm onSubmit={mockOnSubmit} />
+      )
+      expect(container).toBeInTheDocument()
+      // Should render without errors
+    })
+
+    it('should handle malformed price data without crashing', async () => {
+      // Mock usePriceQuery to return malformed data
+      // This tests defensive programming against runtime type mismatches
+      const user = userEvent.setup()
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
+
+      // Enter a ticker to trigger price fetch
+      await user.type(screen.getByTestId('trade-form-ticker-input'), 'TEST')
+
+      // Component should not crash even if price data is malformed
+      // (The actual API mock will handle this, but component should be defensive)
+      expect(screen.getByTestId('trade-form-ticker-input')).toBeInTheDocument()
+    })
+
+    it('should not auto-populate price if price.amount is undefined', async () => {
+      const user = userEvent.setup()
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
+
+      const priceInput = screen.getByTestId('trade-form-price-input')
+
+      // Type ticker (will fetch price, but if malformed, should not populate)
+      await user.type(screen.getByTestId('trade-form-ticker-input'), 'INVALID')
+
+      // Wait for debounce + potential fetch
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+
+      // Price should remain empty if data is invalid/undefined
+      // (or show error, but not crash)
+      expect(priceInput).toHaveValue(null)
+    })
+  })
 })

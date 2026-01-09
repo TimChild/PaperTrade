@@ -60,7 +60,12 @@ export function TradeForm({
   // Only auto-populate if not in backtest mode and price hasn't been manually set
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (priceData && !backtestMode && debouncedTicker && !isPriceManuallySet) {
+    if (
+      priceData?.price?.amount !== undefined &&
+      !backtestMode &&
+      debouncedTicker &&
+      !isPriceManuallySet
+    ) {
       setPrice(priceData.price.amount.toString())
     }
   }, [priceData, backtestMode, debouncedTicker, isPriceManuallySet])
