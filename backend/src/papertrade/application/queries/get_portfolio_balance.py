@@ -43,7 +43,10 @@ def _get_previous_trading_day(reference_date: datetime | None = None) -> datetim
     # If Sunday (6), go back 2 days to Friday
     elif day_of_week == 6:
         previous_date = current_date - timedelta(days=2)
-    # Otherwise, go back 1 day
+    # If Saturday (5), go back 1 day to Friday
+    elif day_of_week == 5:
+        previous_date = current_date - timedelta(days=1)
+    # Otherwise (Tuesday-Friday), go back 1 day
     else:
         previous_date = current_date - timedelta(days=1)
 
