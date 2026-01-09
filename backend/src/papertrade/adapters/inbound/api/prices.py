@@ -116,58 +116,6 @@ class FetchHistoricalDataResponse(BaseModel):
 
 
 @router.get(
-    "/{ticker}",
-    response_model=CurrentPriceResponse,
-    summary="Get current price for a ticker",
-    description="Fetches the most recent available price for a stock ticker",
-)
-async def get_current_price(
-    ticker: str,
-    market_data: MarketDataDep,
-) -> CurrentPriceResponse:
-    """Get current price for a ticker.
-
-    Args:
-        ticker: Stock ticker symbol (e.g., "AAPL")
-        market_data: Market data port implementation (injected)
-
-    Returns:
-        CurrentPriceResponse with current price data
-
-    Raises:
-        HTTPException: 404 if ticker not found, 503 if market data unavailable
-    """
-    try:
-        # Parse ticker
-        ticker_obj = Ticker(ticker.upper())
-
-        # Get current price
-        price_point = await market_data.get_current_price(ticker_obj)
-
-        # Convert to response model
-        return CurrentPriceResponse(
-            ticker=price_point.ticker.symbol,
-            price=str(price_point.price.amount),
-            currency=price_point.price.currency,
-            timestamp=price_point.timestamp,
-            source=price_point.source,
-            is_stale=price_point.is_stale(max_age=timedelta(hours=1)),
-        )
-
-    except TickerNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Ticker not found: {ticker}",
-        ) from e
-
-    except MarketDataUnavailableError as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=str(e),
-        ) from e
-
-
-@router.get(
     "/batch",
     response_model=BatchPriceResponse,
     summary="Get current prices for multiple tickers",
@@ -178,7 +126,8 @@ async def get_batch_prices(
         str,
         Query(
             description=(
-                "Comma-separated list of ticker symbols (e.g., 'AAPL,MSFT,GOOGL')"
+                "Comma-separated list of ticker symbols "
+                "(e.g., 'AAPL,MSFT,GOOGL')"
             )
         ),
     ],
@@ -233,6 +182,58 @@ async def get_batch_prices(
         requested=len(ticker_list),
         returned=len(prices_response),
     )
+
+
+@router.get(
+    "/{ticker}",
+    response_model=CurrentPriceResponse,
+    summary="Get current price for a ticker",
+    description="Fetches the most recent available price for a stock ticker",
+)
+async def get_current_price(
+    ticker: str,
+    market_data: MarketDataDep,
+) -> CurrentPriceResponse:
+    """Get current price for a ticker.
+
+    Args:
+        ticker: Stock ticker symbol (e.g., "AAPL")
+        market_data: Market data port implementation (injected)
+
+    Returns:
+        CurrentPriceResponse with current price data
+
+    Raises:
+        HTTPException: 404 if ticker not found, 503 if market data unavailable
+    """
+    try:
+        # Parse ticker
+        ticker_obj = Ticker(ticker.upper())
+
+        # Get current price
+        price_point = await market_data.get_current_price(ticker_obj)
+
+        # Convert to response model
+        return CurrentPriceResponse(
+            ticker=price_point.ticker.symbol,
+            price=str(price_point.price.amount),
+            currency=price_point.price.currency,
+            timestamp=price_point.timestamp,
+            source=price_point.source,
+            is_stale=price_point.is_stale(max_age=timedelta(hours=1)),
+        )
+
+    except TickerNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Ticker not found: {ticker}",
+        ) from e
+
+    except MarketDataUnavailableError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(e),
+        ) from e
 
 
 @router.get(

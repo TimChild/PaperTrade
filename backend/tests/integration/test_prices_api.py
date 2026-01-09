@@ -246,3 +246,131 @@ def test_fetch_historical_data_invalid_date_range(
     assert response.status_code == 400
     data = response.json()
     assert "detail" in data
+
+
+def test_get_batch_prices_all_available(
+    client: TestClient,
+) -> None:
+    """Test batch prices endpoint returns all requested tickers when available."""
+    response = client.get("/api/v1/prices/batch?tickers=AAPL,GOOGL,MSFT")
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # Verify response structure
+    assert "prices" in data
+    assert "requested" in data
+    assert "returned" in data
+
+    # All three tickers should be available
+    assert data["requested"] == 3
+    assert data["returned"] == 3
+    assert "AAPL" in data["prices"]
+    assert "GOOGL" in data["prices"]
+    assert "MSFT" in data["prices"]
+
+    # Verify price values (from conftest seeded data)
+    assert data["prices"]["AAPL"]["price"] == "150.00"
+    assert data["prices"]["GOOGL"]["price"] == "2800.00"
+    assert data["prices"]["MSFT"]["price"] == "380.00"
+
+
+def test_get_batch_prices_partial_results(
+    client: TestClient,
+) -> None:
+    """Test batch prices endpoint returns only available tickers."""
+    # Request AAPL (available) and XXXXX (not available)
+    response = client.get("/api/v1/prices/batch?tickers=AAPL,XXXXX")
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # Should return only AAPL
+    assert data["requested"] == 2
+    assert data["returned"] == 1
+    assert "AAPL" in data["prices"]
+    assert "XXXXX" not in data["prices"]
+
+
+def test_get_batch_prices_empty_tickers(
+    client: TestClient,
+) -> None:
+    """Test batch prices endpoint returns 400 for empty ticker list."""
+    response = client.get("/api/v1/prices/batch?tickers=")
+
+    assert response.status_code == 400
+    data = response.json()
+    assert "detail" in data
+    assert "At least one ticker symbol is required" in data["detail"]
+
+
+def test_get_batch_prices_single_ticker(
+    client: TestClient,
+) -> None:
+    """Test batch prices endpoint works with single ticker."""
+    response = client.get("/api/v1/prices/batch?tickers=AAPL")
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert data["requested"] == 1
+    assert data["returned"] == 1
+    assert "AAPL" in data["prices"]
+    assert data["prices"]["AAPL"]["price"] == "150.00"
+
+
+def test_get_batch_prices_whitespace_handling(
+    client: TestClient,
+) -> None:
+    """Test batch prices endpoint handles whitespace in ticker list."""
+    # Add extra spaces around tickers
+    response = client.get("/api/v1/prices/batch?tickers= AAPL , GOOGL , MSFT ")
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # Should still parse correctly
+    assert data["requested"] == 3
+    assert data["returned"] == 3
+
+
+def test_get_batch_prices_case_insensitive(
+    client: TestClient,
+) -> None:
+    """Test batch prices endpoint handles lowercase tickers."""
+    response = client.get("/api/v1/prices/batch?tickers=aapl,googl")
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # Should normalize to uppercase
+    assert data["requested"] == 2
+    assert data["returned"] == 2
+    assert "AAPL" in data["prices"]
+    assert "GOOGL" in data["prices"]
+
+
+def test_get_batch_prices_includes_metadata(
+    client: TestClient,
+) -> None:
+    """Test batch prices endpoint includes all required metadata."""
+    response = client.get("/api/v1/prices/batch?tickers=AAPL")
+
+    assert response.status_code == 200
+    data = response.json()
+
+    aapl_price = data["prices"]["AAPL"]
+
+    # Check all expected fields
+    assert "ticker" in aapl_price
+    assert "price" in aapl_price
+    assert "currency" in aapl_price
+    assert "timestamp" in aapl_price
+    assert "source" in aapl_price
+    assert "is_stale" in aapl_price
+
+    # Verify values
+    assert aapl_price["ticker"] == "AAPL"
+    assert aapl_price["currency"] == "USD"
+    assert aapl_price["source"] == "database"
+
