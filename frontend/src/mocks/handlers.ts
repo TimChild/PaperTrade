@@ -119,7 +119,7 @@ export const handlers = [
     }
 
     const tickers = tickersParam.split(',').map((t) => t.trim().toUpperCase())
-    
+
     // Mock prices for common stocks
     const mockPrices: Record<string, number> = {
       AAPL: 192.53,
@@ -134,14 +134,17 @@ export const handlers = [
       JPM: 153.72,
     }
 
-    const prices: Record<string, {
-      ticker: string
-      price: string
-      currency: string
-      timestamp: string
-      source: string
-      is_stale: boolean
-    }> = {}
+    const prices: Record<
+      string,
+      {
+        ticker: string
+        price: string
+        currency: string
+        timestamp: string
+        source: string
+        is_stale: boolean
+      }
+    > = {}
 
     // Build response with available tickers only
     for (const ticker of tickers) {

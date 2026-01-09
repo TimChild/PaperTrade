@@ -26,14 +26,17 @@ export async function getBatchPrices(
 
   // Call batch endpoint with comma-separated tickers
   const response = await apiClient.get<{
-    prices: Record<string, {
-      ticker: string
-      price: string
-      currency: string
-      timestamp: string
-      source: string
-      is_stale: boolean
-    }>
+    prices: Record<
+      string,
+      {
+        ticker: string
+        price: string
+        currency: string
+        timestamp: string
+        source: string
+        is_stale: boolean
+      }
+    >
     requested: number
     returned: number
   }>('/prices/batch', {
