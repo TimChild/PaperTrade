@@ -189,6 +189,119 @@ class AlphaVantageAdapter:
             # No fallback available, re-raise the error
             raise
 
+    async def get_batch_prices(self, tickers: list[Ticker]) -> dict[Ticker, PricePoint]:
+        """Get current prices for multiple tickers in a single batch request.
+
+        This method optimizes price fetching by:
+        1. Checking cache for all tickers first
+        2. Only fetching uncached tickers from API (one by one)
+        3. Returning partial results if some tickers fail
+
+        Note: Alpha Vantage free tier doesn't have a true batch API, so we fetch
+        uncached tickers sequentially. However, we still get the benefit of:
+        - Batch cache checking (fast)
+        - Only fetching what's needed
+        - Graceful handling of partial failures
+
+        Args:
+            tickers: List of stock ticker symbols to get prices for
+
+        Returns:
+            Dictionary mapping tickers to their price points.
+            Only includes tickers for which prices were successfully fetched.
+
+        Example:
+            >>> tickers = [Ticker("AAPL"), Ticker("GOOGL")]
+            >>> prices = await adapter.get_batch_prices(tickers)
+            >>> print(f"Got prices for {len(prices)} tickers")
+        """
+        import logging
+
+        logger = logging.getLogger(__name__)
+        result: dict[Ticker, PricePoint] = {}
+
+        # Empty list, return early
+        if not tickers:
+            return result
+
+        # Step 1: Check cache for all tickers
+        uncached_tickers: list[Ticker] = []
+        for ticker in tickers:
+            cached = await self.price_cache.get(ticker)
+            if cached and not cached.is_stale(max_age=timedelta(hours=1)):
+                # Fresh cached data
+                result[ticker] = cached.with_source("cache")
+            else:
+                uncached_tickers.append(ticker)
+
+        # Step 2: Check database for uncached tickers
+        if self.price_repository and uncached_tickers:
+            db_uncached: list[Ticker] = []
+            for ticker in uncached_tickers:
+                db_price = await self.price_repository.get_latest_price(
+                    ticker, max_age=timedelta(hours=4)
+                )
+                if db_price and not db_price.is_stale(max_age=timedelta(hours=4)):
+                    # Warm the cache
+                    await self.price_cache.set(db_price, ttl=3600)
+                    result[ticker] = db_price.with_source("database")
+                else:
+                    db_uncached.append(ticker)
+            uncached_tickers = db_uncached
+
+        # Step 3: Fetch remaining uncached tickers from API
+        # Note: We fetch sequentially to respect rate limits
+        # Alpha Vantage free tier: 5 calls/minute
+        if uncached_tickers:
+            for ticker in uncached_tickers:
+                try:
+                    # Check rate limit before each API call
+                    if not await self.rate_limiter.can_make_request():
+                        logger.warning(
+                            f"Rate limit reached, skipping API fetch for "
+                            f"{ticker.symbol}"
+                        )
+                        # Try to serve stale cached data
+                        cached = await self.price_cache.get(ticker)
+                        if cached:
+                            result[ticker] = cached.with_source("cache")
+                        continue
+
+                    # Consume rate limit token
+                    consumed = await self.rate_limiter.consume_token()
+                    if not consumed:
+                        logger.warning(
+                            f"Failed to consume rate limit token for {ticker.symbol}"
+                        )
+                        # Try to serve stale cached data
+                        cached = await self.price_cache.get(ticker)
+                        if cached:
+                            result[ticker] = cached.with_source("cache")
+                        continue
+
+                    # Fetch from API
+                    price = await self._fetch_from_api(ticker)
+
+                    # Store in cache and database
+                    await self.price_cache.set(price, ttl=3600)
+                    if self.price_repository:
+                        await self.price_repository.upsert_price(price)
+
+                    result[ticker] = price
+
+                except Exception as e:
+                    # Log but don't fail - just exclude this ticker from results
+                    logger.warning(
+                        f"Failed to fetch price for {ticker.symbol}: {e}",
+                        exc_info=True,
+                    )
+                    # Try to serve stale cached data as last resort
+                    cached = await self.price_cache.get(ticker)
+                    if cached:
+                        result[ticker] = cached.with_source("cache")
+
+        return result
+
     async def _fetch_from_api(self, ticker: Ticker) -> PricePoint:
         """Fetch price from Alpha Vantage API.
 

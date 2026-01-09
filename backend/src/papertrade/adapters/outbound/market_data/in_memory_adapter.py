@@ -73,6 +73,30 @@ class InMemoryMarketDataAdapter:
         # Return most recent price (list is sorted by timestamp)
         return self._prices[ticker_symbol][-1]
 
+    async def get_batch_prices(self, tickers: list[Ticker]) -> dict[Ticker, PricePoint]:
+        """Get current prices for multiple tickers.
+
+        Args:
+            tickers: List of stock ticker symbols
+
+        Returns:
+            Dictionary mapping tickers to their most recent price points.
+            Only includes tickers that exist in storage.
+
+        Example:
+            >>> tickers = [Ticker("AAPL"), Ticker("GOOGL")]
+            >>> prices = await adapter.get_batch_prices(tickers)
+        """
+        result: dict[Ticker, PricePoint] = {}
+        for ticker in tickers:
+            try:
+                price = await self.get_current_price(ticker)
+                result[ticker] = price
+            except TickerNotFoundError:
+                # Skip tickers without data
+                continue
+        return result
+
     async def get_price_at(self, ticker: Ticker, timestamp: datetime) -> PricePoint:
         """Get price closest to specified timestamp.
 

@@ -152,6 +152,24 @@ class HoldingResponse(BaseModel):
     quantity: str
     cost_basis: str
     average_cost_per_share: str | None
+    current_price: str | None = Field(
+        None, description="Current market price per share (None if unavailable)"
+    )
+    market_value: str | None = Field(
+        None, description="Total market value (quantity * current_price)"
+    )
+    unrealized_gain_loss: str | None = Field(
+        None, description="Unrealized gain/loss (market_value - cost_basis)"
+    )
+    unrealized_gain_loss_percent: str | None = Field(
+        None, description="Unrealized gain/loss as percentage"
+    )
+    price_timestamp: str | None = Field(
+        None, description="When price was observed (ISO 8601)"
+    )
+    price_source: str | None = Field(
+        None, description="Data source for price (alpha_vantage, cache, database)"
+    )
 
 
 class HoldingsResponse(BaseModel):
@@ -485,6 +503,22 @@ async def get_holdings(
             average_cost_per_share=f"{h.average_cost_per_share_amount:.2f}"
             if h.average_cost_per_share_amount is not None
             else None,
+            current_price=f"{h.current_price_amount:.2f}"
+            if h.current_price_amount is not None
+            else None,
+            market_value=f"{h.market_value_amount:.2f}"
+            if h.market_value_amount is not None
+            else None,
+            unrealized_gain_loss=f"{h.unrealized_gain_loss_amount:.2f}"
+            if h.unrealized_gain_loss_amount is not None
+            else None,
+            unrealized_gain_loss_percent=f"{h.unrealized_gain_loss_percent:.2f}"
+            if h.unrealized_gain_loss_percent is not None
+            else None,
+            price_timestamp=h.price_timestamp.isoformat()
+            if h.price_timestamp is not None
+            else None,
+            price_source=h.price_source,
         )
         for h in result.holdings
     ]

@@ -7,10 +7,6 @@ from decimal import Decimal
 from uuid import UUID
 
 from papertrade.application.dtos.holding_dto import HoldingDTO
-from papertrade.application.exceptions import (
-    MarketDataUnavailableError,
-    TickerNotFoundError,
-)
 from papertrade.application.ports.market_data_port import MarketDataPort
 from papertrade.application.ports.portfolio_repository import PortfolioRepository
 from papertrade.application.ports.transaction_repository import TransactionRepository
@@ -96,69 +92,105 @@ class GetPortfolioHoldingsHandler:
         # Calculate holdings
         holdings = PortfolioCalculator.calculate_holdings(transactions)
 
-        # Enrich with market data
+        # Enrich with market data using batch fetch
         enriched_holdings: list[HoldingDTO] = []
-        for holding in holdings:
-            try:
-                # Fetch current price
-                price_point = await self._market_data.get_current_price(holding.ticker)
 
-                # Calculate metrics
-                quantity_decimal = Decimal(str(holding.quantity.shares))
-                market_value_amount = price_point.price.amount * quantity_decimal
-                cost_basis_amount = holding.cost_basis.amount
-                unrealized_gain_loss_amount = market_value_amount - cost_basis_amount
-                gain_loss_percent = (
-                    (unrealized_gain_loss_amount / cost_basis_amount) * 100
-                    if cost_basis_amount > 0
-                    else Decimal("0")
-                )
+        if holdings:
+            # Extract unique tickers from holdings
+            tickers = [holding.ticker for holding in holdings]
 
-                # Create enriched DTO
+            # Batch fetch all prices
+            prices = await self._market_data.get_batch_prices(tickers)
+
+            # Enrich each holding with price data
+            for holding in holdings:
                 avg_cost = holding.average_cost_per_share
-                enriched_holdings.append(
-                    HoldingDTO(
-                        ticker_symbol=holding.ticker.symbol,
-                        quantity_shares=holding.quantity.shares,
-                        cost_basis_amount=holding.cost_basis.amount,
-                        cost_basis_currency=holding.cost_basis.currency,
-                        average_cost_per_share_amount=avg_cost.amount
-                        if avg_cost is not None
-                        else None,
-                        average_cost_per_share_currency=avg_cost.currency
-                        if avg_cost is not None
-                        else None,
-                        current_price_amount=price_point.price.amount,
-                        current_price_currency=price_point.price.currency,
-                        market_value_amount=market_value_amount,
-                        market_value_currency=price_point.price.currency,
-                        unrealized_gain_loss_amount=unrealized_gain_loss_amount,
-                        unrealized_gain_loss_currency=price_point.price.currency,
-                        unrealized_gain_loss_percent=gain_loss_percent,
-                        price_timestamp=price_point.timestamp,
-                        price_source=price_point.source,
-                    )
-                )
+                price_point = prices.get(holding.ticker)
 
-            except (TickerNotFoundError, MarketDataUnavailableError) as e:
-                # Price unavailable - return holding without market data
-                logger.warning(f"Price unavailable for {holding.ticker.symbol}: {e}")
-                avg_cost = holding.average_cost_per_share
-                enriched_holdings.append(
-                    HoldingDTO(
-                        ticker_symbol=holding.ticker.symbol,
-                        quantity_shares=holding.quantity.shares,
-                        cost_basis_amount=holding.cost_basis.amount,
-                        cost_basis_currency=holding.cost_basis.currency,
-                        average_cost_per_share_amount=avg_cost.amount
-                        if avg_cost is not None
-                        else None,
-                        average_cost_per_share_currency=avg_cost.currency
-                        if avg_cost is not None
-                        else None,
-                        # Market data fields = None (indicates unavailable)
+                if price_point is not None:
+                    # Price available - calculate market data
+                    try:
+                        # Calculate metrics
+                        quantity_decimal = Decimal(str(holding.quantity.shares))
+                        market_value_amount = (
+                            price_point.price.amount * quantity_decimal
+                        )
+                        cost_basis_amount = holding.cost_basis.amount
+                        unrealized_gain_loss_amount = (
+                            market_value_amount - cost_basis_amount
+                        )
+                        gain_loss_percent = (
+                            (unrealized_gain_loss_amount / cost_basis_amount) * 100
+                            if cost_basis_amount > 0
+                            else Decimal("0")
+                        )
+
+                        # Create enriched DTO with market data
+                        enriched_holdings.append(
+                            HoldingDTO(
+                                ticker_symbol=holding.ticker.symbol,
+                                quantity_shares=holding.quantity.shares,
+                                cost_basis_amount=holding.cost_basis.amount,
+                                cost_basis_currency=holding.cost_basis.currency,
+                                average_cost_per_share_amount=avg_cost.amount
+                                if avg_cost is not None
+                                else None,
+                                average_cost_per_share_currency=avg_cost.currency
+                                if avg_cost is not None
+                                else None,
+                                current_price_amount=price_point.price.amount,
+                                current_price_currency=price_point.price.currency,
+                                market_value_amount=market_value_amount,
+                                market_value_currency=price_point.price.currency,
+                                unrealized_gain_loss_amount=unrealized_gain_loss_amount,
+                                unrealized_gain_loss_currency=price_point.price.currency,
+                                unrealized_gain_loss_percent=gain_loss_percent,
+                                price_timestamp=price_point.timestamp,
+                                price_source=price_point.source,
+                            )
+                        )
+                    except Exception as e:
+                        # Calculation error - log and fall back to no market data
+                        logger.warning(
+                            f"Error calculating market data for "
+                            f"{holding.ticker.symbol}: {e}"
+                        )
+                        enriched_holdings.append(
+                            HoldingDTO(
+                                ticker_symbol=holding.ticker.symbol,
+                                quantity_shares=holding.quantity.shares,
+                                cost_basis_amount=holding.cost_basis.amount,
+                                cost_basis_currency=holding.cost_basis.currency,
+                                average_cost_per_share_amount=avg_cost.amount
+                                if avg_cost is not None
+                                else None,
+                                average_cost_per_share_currency=avg_cost.currency
+                                if avg_cost is not None
+                                else None,
+                                # Market data fields = None (indicates unavailable)
+                            )
+                        )
+                else:
+                    # Price unavailable - return holding without market data
+                    logger.warning(
+                        f"Price unavailable for {holding.ticker.symbol} "
+                        f"(not in batch result)"
                     )
-                )
+                    enriched_holdings.append(
+                        HoldingDTO(
+                            ticker_symbol=holding.ticker.symbol,
+                            quantity_shares=holding.quantity.shares,
+                            cost_basis_amount=holding.cost_basis.amount,
+                            cost_basis_currency=holding.cost_basis.currency,
+                            average_cost_per_share_amount=avg_cost.amount
+                            if avg_cost is not None
+                            else None,
+                            average_cost_per_share_currency=avg_cost.currency
+                            if avg_cost is not None
+                            else None,
+                            # Market data fields = None (indicates unavailable)
+                        )
+                    )
 
         return GetPortfolioHoldingsResult(
             portfolio_id=query.portfolio_id,

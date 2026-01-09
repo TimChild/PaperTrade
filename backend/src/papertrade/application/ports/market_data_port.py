@@ -71,6 +71,40 @@ class MarketDataPort(Protocol):
         """
         ...
 
+    async def get_batch_prices(self, tickers: list[Ticker]) -> dict[Ticker, PricePoint]:
+        """Get current prices for multiple tickers in a single batch request.
+
+        This method optimizes price fetching for multiple tickers by:
+        - Checking cache for all tickers first
+        - Only fetching uncached tickers from API
+        - Returning partial results if some tickers fail
+
+        The method never raises exceptions. Instead, failed tickers are simply
+        excluded from the result dict. Callers should check which tickers are
+        in the result.
+
+        Args:
+            tickers: List of stock ticker symbols to get prices for
+
+        Returns:
+            Dictionary mapping tickers to their price points.
+            Only includes tickers for which prices were successfully fetched.
+            Missing tickers indicate failures (ticker not found, API unavailable, etc).
+
+        Performance Target:
+            <200ms for all cache hits
+            <5s for mixed cache/API calls
+
+        Example:
+            >>> tickers = [Ticker("AAPL"), Ticker("GOOGL"), Ticker("MSFT")]
+            >>> prices = await market_data.get_batch_prices(tickers)
+            >>> if Ticker("AAPL") in prices:
+            ...     print(f"AAPL: {prices[Ticker('AAPL')].price}")
+            >>> else:
+            ...     print("AAPL price unavailable")
+        """
+        ...
+
     async def get_price_at(self, ticker: Ticker, timestamp: datetime) -> PricePoint:
         """Get the price for a ticker at a specific point in time.
 
