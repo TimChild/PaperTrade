@@ -67,7 +67,9 @@ export interface TradeRequest {
 
 // Balance types
 export interface BalanceResponse {
-  amount: string // Decimal as string
+  cash_balance: string // Decimal as string
+  holdings_value: string // Decimal as string
+  total_value: string // Decimal as string
   currency: string
   as_of: string // ISO 8601 timestamp
 }

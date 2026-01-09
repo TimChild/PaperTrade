@@ -11,7 +11,7 @@ import type {
 
 /**
  * Convert backend PortfolioDTO to frontend Portfolio type
- * Note: This requires additional data (balance, holdings) to calculate totalValue and dailyChange
+ * Note: This requires additional data (balance) to populate cash and total value
  */
 export function adaptPortfolio(
   dto: PortfolioDTO,
@@ -21,8 +21,8 @@ export function adaptPortfolio(
     id: dto.id,
     name: dto.name,
     userId: dto.user_id,
-    cashBalance: balance ? parseFloat(balance.amount) : 0,
-    totalValue: balance ? parseFloat(balance.amount) : 0, // Will be updated when holdings are included
+    cashBalance: balance ? parseFloat(balance.cash_balance) : 0,
+    totalValue: balance ? parseFloat(balance.total_value) : 0,
     dailyChange: 0, // TODO: Calculate from historical data when available
     dailyChangePercent: 0, // TODO: Calculate from historical data when available
     createdAt: dto.created_at,
