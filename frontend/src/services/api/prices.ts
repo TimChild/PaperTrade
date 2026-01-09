@@ -75,8 +75,7 @@ export async function getBatchPrices(
 
 /**
  * Fetch price history for a ticker within a date range
- * This will call the backend API endpoint once Task 031 is completed
- * For now, returns mock data to enable frontend development
+ * Backend returns prices as strings, we parse them to numbers
  */
 export async function getPriceHistory(
   ticker: string,
@@ -84,15 +83,46 @@ export async function getPriceHistory(
   endDate: string
 ): Promise<PriceHistory> {
   try {
-    const response = await apiClient.get<PriceHistory>(
-      `/prices/${ticker}/history`,
-      {
-        params: { start: startDate, end: endDate },
-      }
-    )
-    return response.data
+    // Backend returns prices as strings, need to parse to numbers
+    const response = await apiClient.get<{
+      ticker: string
+      prices: Array<{
+        ticker: string
+        price: string // Backend sends string
+        currency: string
+        timestamp: string
+        source: string
+        interval: string
+      }>
+    }>(`/prices/${ticker}/history`, {
+      params: { start: startDate, end: endDate },
+    })
+
+    // Convert backend response to PriceHistory with number prices
+    const priceHistory: PriceHistory = {
+      ticker: response.data.ticker,
+      prices: response.data.prices.map((point) => ({
+        ticker: { symbol: point.ticker },
+        price: {
+          amount: parseFloat(point.price), // Parse string to number
+          currency: point.currency,
+        },
+        timestamp: point.timestamp,
+        source: point.source as 'alpha_vantage' | 'cache' | 'database',
+        interval: point.interval as
+          | '1day'
+          | 'real-time'
+          | '1hour'
+          | '5min'
+          | '1min',
+      })),
+      source: response.data.prices[0]?.source || 'unknown',
+      cached: response.data.prices[0]?.source === 'cache',
+    }
+
+    return priceHistory
   } catch {
-    // Backend endpoint doesn't exist yet (Task 031 pending)
+    // Backend endpoint doesn't exist yet or failed
     // Return mock data for development
     console.warn(
       `Price history API not available, using mock data for ${ticker}`
