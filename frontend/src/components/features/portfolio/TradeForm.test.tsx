@@ -592,7 +592,9 @@ describe('TradeForm', () => {
       const user = userEvent.setup()
       renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
 
-      const priceInput = screen.getByTestId('trade-form-price-input')
+      const priceInput = screen.getByTestId(
+        'trade-form-price-input'
+      ) as HTMLInputElement
 
       // Type ticker (will fetch price, but if malformed, should not populate)
       await user.type(screen.getByTestId('trade-form-ticker-input'), 'INVALID')
