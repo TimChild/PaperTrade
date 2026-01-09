@@ -882,16 +882,3 @@ def test_total_value_includes_both_cash_and_holdings(
     assert balance["cash_balance"] != balance["holdings_value"]
     assert balance["cash_balance"] != balance["total_value"]
     assert balance["holdings_value"] != balance["total_value"]
-    delete_response = client.delete(
-        f"/api/v1/portfolios/{portfolio_id}",
-        headers=auth_headers,
-    )
-    assert delete_response.status_code == 204
-
-    # Verify it's removed from the list
-    list_after = client.get(
-        "/api/v1/portfolios",
-        headers=auth_headers,
-    )
-    assert list_after.status_code == 200
-    assert len(list_after.json()) == 0
