@@ -58,6 +58,27 @@ class CurrentPriceResponse(BaseModel):
     is_stale: bool = Field(..., description="Whether price data is stale")
 
 
+class BatchPriceItem(BaseModel):
+    """Single price item in batch response."""
+
+    ticker: str = Field(..., description="Stock ticker symbol")
+    price: str = Field(..., description="Current price in decimal format")
+    currency: str = Field(..., description="ISO 4217 currency code")
+    timestamp: datetime = Field(..., description="When price was observed (UTC)")
+    source: str = Field(..., description="Data source (alpha_vantage, cache, database)")
+    is_stale: bool = Field(..., description="Whether price data is stale")
+
+
+class BatchPriceResponse(BaseModel):
+    """Response model for batch price query."""
+
+    prices: dict[str, BatchPriceItem] = Field(
+        ..., description="Mapping of ticker symbols to price data"
+    )
+    requested: int = Field(..., description="Number of tickers requested")
+    returned: int = Field(..., description="Number of prices returned")
+
+
 class SupportedTickersResponse(BaseModel):
     """Response model for supported tickers query."""
 
@@ -144,6 +165,74 @@ async def get_current_price(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(e),
         ) from e
+
+
+@router.get(
+    "/batch",
+    response_model=BatchPriceResponse,
+    summary="Get current prices for multiple tickers",
+    description="Fetches current prices for multiple tickers in a single batch request",
+)
+async def get_batch_prices(
+    tickers: Annotated[
+        str,
+        Query(
+            description=(
+                "Comma-separated list of ticker symbols (e.g., 'AAPL,MSFT,GOOGL')"
+            )
+        ),
+    ],
+    market_data: MarketDataDep,
+) -> BatchPriceResponse:
+    """Get current prices for multiple tickers in batch.
+
+    This endpoint optimizes price fetching by:
+    - Checking cache for all tickers first
+    - Only fetching uncached tickers from API
+    - Returning partial results if some tickers fail
+
+    Args:
+        tickers: Comma-separated ticker symbols (e.g., "AAPL,MSFT,GOOGL")
+        market_data: Market data port implementation (injected)
+
+    Returns:
+        BatchPriceResponse with prices for available tickers
+
+    Example:
+        GET /api/v1/prices/batch?tickers=AAPL,MSFT,GOOGL
+    """
+    # Parse comma-separated tickers
+    ticker_list = [t.strip().upper() for t in tickers.split(",") if t.strip()]
+
+    if not ticker_list:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one ticker symbol is required",
+        )
+
+    # Convert to Ticker objects
+    ticker_objs = [Ticker(t) for t in ticker_list]
+
+    # Fetch batch prices
+    prices_dict = await market_data.get_batch_prices(ticker_objs)
+
+    # Convert to response format
+    prices_response: dict[str, BatchPriceItem] = {}
+    for ticker_obj, price_point in prices_dict.items():
+        prices_response[ticker_obj.symbol] = BatchPriceItem(
+            ticker=price_point.ticker.symbol,
+            price=str(price_point.price.amount),
+            currency=price_point.price.currency,
+            timestamp=price_point.timestamp,
+            source=price_point.source,
+            is_stale=price_point.is_stale(max_age=timedelta(hours=1)),
+        )
+
+    return BatchPriceResponse(
+        prices=prices_response,
+        requested=len(ticker_list),
+        returned=len(prices_response),
+    )
 
 
 @router.get(
