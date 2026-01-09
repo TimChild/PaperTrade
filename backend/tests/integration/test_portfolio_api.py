@@ -797,9 +797,10 @@ def test_total_value_includes_both_cash_and_holdings(
     default_user_id: UUID,
 ) -> None:
     """Test that total_value correctly sums cash_balance and holdings_value.
-    
+
     This test specifically addresses Task 077: Fix Total Value Calculation.
-    Ensures that total_value is not just cash_balance, but includes holdings market value.
+    Ensures that total_value is not just cash_balance, but includes holdings
+    market value.
     """
     # Create portfolio with $5,000
     response = client.post(
@@ -812,7 +813,7 @@ def test_total_value_includes_both_cash_and_holdings(
         },
     )
     portfolio_id = response.json()["portfolio_id"]
-    
+
     # Initial balance: all cash, no holdings
     balance_response = client.get(
         f"/api/v1/portfolios/{portfolio_id}/balance",
@@ -822,7 +823,7 @@ def test_total_value_includes_both_cash_and_holdings(
     assert balance["cash_balance"] == "5000.00"
     assert balance["holdings_value"] == "0.00"
     assert balance["total_value"] == "5000.00"
-    
+
     # Buy 1 AAPL @ $150
     client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",
@@ -833,24 +834,24 @@ def test_total_value_includes_both_cash_and_holdings(
             "quantity": "1",
         },
     )
-    
+
     # After purchase: cash reduced, holdings increased, total unchanged
     balance_response = client.get(
         f"/api/v1/portfolios/{portfolio_id}/balance",
         headers=auth_headers,
     )
     balance = balance_response.json()
-    
+
     # Cash should be: $5000 - (1 * $150) = $4,850
     assert balance["cash_balance"] == "4850.00"
-    
+
     # Holdings should be: 1 * $150 = $150
     assert balance["holdings_value"] == "150.00"
-    
+
     # Total should STILL be $5,000 (cash + holdings)
     # This was the bug - total_value was showing only cash_balance
     assert balance["total_value"] == "5000.00"
-    
+
     # Buy 2 MSFT @ $380
     client.post(
         f"/api/v1/portfolios/{portfolio_id}/trades",
@@ -861,23 +862,23 @@ def test_total_value_includes_both_cash_and_holdings(
             "quantity": "2",
         },
     )
-    
+
     # After second purchase
     balance_response = client.get(
         f"/api/v1/portfolios/{portfolio_id}/balance",
         headers=auth_headers,
     )
     balance = balance_response.json()
-    
+
     # Cash: $5000 - $150 - $760 = $4,090
     assert balance["cash_balance"] == "4090.00"
-    
+
     # Holdings: (1 * $150) + (2 * $380) = $910
     assert balance["holdings_value"] == "910.00"
-    
+
     # Total: $4,090 + $910 = $5,000
     assert balance["total_value"] == "5000.00"
-    
+
     # Verify all three values are distinct and correct
     assert balance["cash_balance"] != balance["holdings_value"]
     assert balance["cash_balance"] != balance["total_value"]
