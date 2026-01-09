@@ -145,6 +145,8 @@ class BalanceResponse(BaseModel):
     total_value: str
     currency: str
     as_of: str  # ISO 8601 timestamp
+    daily_change: str  # NEW - e.g., "45.32" or "-23.10"
+    daily_change_percent: str  # NEW - e.g., "2.14" or "-1.05"
 
 
 class HoldingResponse(BaseModel):
@@ -480,6 +482,8 @@ async def get_balance(
         total_value=f"{result.total_value.amount:.2f}",
         currency=result.cash_balance.currency,
         as_of=result.as_of.isoformat(),
+        daily_change=f"{result.daily_change.amount:.2f}",
+        daily_change_percent=f"{result.daily_change_percent:.2f}",
     )
 
 

@@ -179,3 +179,45 @@ class PortfolioCalculator:
             Total portfolio value
         """
         return cash_balance.add(holdings_value)
+
+    @staticmethod
+    def calculate_daily_change(
+        holdings: list[Holding],
+        current_prices: dict[Ticker, Money],
+        previous_prices: dict[Ticker, Money],
+    ) -> tuple[Money, Decimal]:
+        """Calculate daily change in holdings value.
+
+        Calculates the change in portfolio value between previous close and current
+        prices. Only holdings value changes; cash balance remains constant.
+
+        Args:
+            holdings: List of current holdings
+            current_prices: Current market prices by ticker
+            previous_prices: Previous day close prices by ticker
+
+        Returns:
+            Tuple of (change_amount, change_percent)
+            Example: (Money(Decimal("45.32"), "USD"), Decimal("2.14"))
+        """
+        # Calculate current and previous holdings values
+        current_value = PortfolioCalculator.calculate_portfolio_value(
+            holdings, current_prices
+        )
+        previous_value = PortfolioCalculator.calculate_portfolio_value(
+            holdings, previous_prices
+        )
+
+        # Calculate change amount
+        change_amount = current_value.subtract(previous_value)
+
+        # Calculate change percent (avoid division by zero)
+        if previous_value.amount == Decimal("0"):
+            change_percent = Decimal("0.00")
+        else:
+            # (change / previous) * 100, rounded to 2 decimal places
+            change_percent = (
+                (change_amount.amount / previous_value.amount) * Decimal("100")
+            ).quantize(Decimal("0.01"))
+
+        return change_amount, change_percent
