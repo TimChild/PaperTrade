@@ -93,4 +93,45 @@ describe('PriceChart', () => {
       expect(screen.getByText('No price data available')).toBeInTheDocument()
     })
   })
+
+  it('handles string prices from backend correctly', async () => {
+    // Simulate backend response where prices are strings (not numbers)
+    // getPriceHistory should parse these to numbers
+    const mockHistory = {
+      ticker: 'AAPL',
+      prices: [
+        {
+          ticker: { symbol: 'AAPL' },
+          price: { amount: 271.01, currency: 'USD' }, // Already parsed by getPriceHistory
+          timestamp: '2026-01-05T14:10:30.343797Z',
+          source: 'alpha_vantage' as const,
+          interval: '1day' as const,
+        },
+        {
+          ticker: { symbol: 'AAPL' },
+          price: { amount: 275.5, currency: 'USD' }, // Already parsed by getPriceHistory
+          timestamp: '2026-01-06T14:10:30.343797Z',
+          source: 'alpha_vantage' as const,
+          interval: '1day' as const,
+        },
+      ],
+      source: 'alpha_vantage',
+      cached: false,
+    }
+
+    vi.spyOn(pricesApi, 'getPriceHistory').mockResolvedValue(mockHistory)
+
+    const Wrapper = createWrapper()
+    render(<PriceChart ticker="AAPL" />, { wrapper: Wrapper })
+
+    // Should render chart without "Invalid price data" error
+    await waitFor(() => {
+      expect(screen.queryByText('Invalid price data')).not.toBeInTheDocument()
+    })
+
+    // Should show the last price
+    await waitFor(() => {
+      expect(screen.getByText('$275.50')).toBeInTheDocument()
+    })
+  })
 })
