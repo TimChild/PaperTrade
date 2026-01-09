@@ -118,3 +118,17 @@ export function useExecuteTrade(portfolioId: string) {
     },
   })
 }
+
+/**
+ * Hook to delete a portfolio
+ */
+export function useDeletePortfolio() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (portfolioId: string) => portfoliosApi.delete(portfolioId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['portfolios'] })
+    },
+  })
+}

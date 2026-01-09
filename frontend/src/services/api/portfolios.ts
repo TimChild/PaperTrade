@@ -107,4 +107,11 @@ export const portfoliosApi = {
     )
     return response.data
   },
+
+  /**
+   * Delete a portfolio and all related data
+   */
+  delete: async (portfolioId: string): Promise<void> => {
+    await apiClient.delete(`/portfolios/${portfolioId}`)
+  },
 }
