@@ -405,7 +405,7 @@ describe('TradeForm', () => {
 
       // Should have the formatted mock price for AAPL (192.53 from handlers)
       expect(priceInput.value).toBe('192.53')
-      
+
       // Verify field is read-only
       expect(priceInput).toHaveAttribute('readOnly')
     })

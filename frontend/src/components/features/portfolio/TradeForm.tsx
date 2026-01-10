@@ -374,7 +374,9 @@ export function TradeForm({
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {action === 'BUY' ? 'Buying' : 'Selling'} {quantity} shares of{' '}
               {ticker.toUpperCase()}
-              {priceData?.price?.amount ? ` at ~$${priceData.price.amount.toFixed(2)}` : ''}
+              {priceData?.price?.amount
+                ? ` at ~$${priceData.price.amount.toFixed(2)}`
+                : ''}
               {backtestMode && backtestDate && (
                 <span className="ml-2 text-amber-600 dark:text-amber-400">
                   (Backtest: {new Date(backtestDate).toLocaleDateString()})
