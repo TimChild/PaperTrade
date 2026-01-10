@@ -7,10 +7,12 @@ import { PortfolioAnalytics } from '@/pages/PortfolioAnalytics'
 import { Debug } from '@/pages/Debug'
 import { DashboardVariantA } from '@/pages/__prototypes__/DashboardVariantA'
 import { DashboardVariantB } from '@/pages/__prototypes__/DashboardVariantB'
+import { ThemeProvider } from '@/contexts/ThemeContext'
 
 function App() {
   return (
-    <BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
       <Toaster
         position="top-right"
         toastOptions={{
@@ -39,6 +41,7 @@ function App() {
         <Route path="*" element={<AuthenticatedApp />} />
       </Routes>
     </BrowserRouter>
+    </ThemeProvider>
   )
 }
 

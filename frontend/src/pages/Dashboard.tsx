@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Dialog } from '@/components/ui/Dialog'
 import { Button } from '@/components/ui/button'
 import { CreatePortfolioForm } from '@/components/features/portfolio/CreatePortfolioForm'
+import { ThemeToggle } from '@/components/ui/theme-toggle'
 import { adaptPortfolio } from '@/utils/adapters'
 import type { PortfolioDTO } from '@/services/api/types'
 
@@ -55,12 +56,15 @@ export function Dashboard(): React.JSX.Element {
               Track your investments and performance
             </p>
           </div>
-          <Button
-            onClick={() => setShowCreateModal(true)}
-            data-testid="create-portfolio-header-btn"
-          >
-            Create Portfolio
-          </Button>
+          <div className="flex items-center gap-4">
+            <ThemeToggle />
+            <Button
+              onClick={() => setShowCreateModal(true)}
+              data-testid="create-portfolio-header-btn"
+            >
+              Create Portfolio
+            </Button>
+          </div>
         </header>
 
         <div className="space-y-8">

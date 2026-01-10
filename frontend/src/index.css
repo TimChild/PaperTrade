@@ -42,35 +42,36 @@
   }
 
   .dark {
-    --background: 222 47% 11%; /* gray-900 */
-    --foreground: 210 40% 98%; /* gray-50 */
+    /* Background hierarchy - Data Dense inspired */
+    --background: 222 16% 8%; /* Deep charcoal #13151a */
+    --foreground: 210 20% 98%; /* Off-white text */
 
-    --primary: 217 91% 60%; /* blue-500 */
-    --primary-foreground: 222 47% 11%;
+    --primary: 212 100% 48%; /* Bright blue #0078f2 */
+    --primary-foreground: 0 0% 100%;
 
-    --positive: 142 76% 36%; /* green-700 */
-    --negative: 0 72% 51%; /* red-600 */
+    --positive: 142 71% 45%; /* Green for gains */
+    --negative: 0 84% 60%; /* Red for losses */
 
-    --muted: 217 33% 17%; /* gray-800 */
-    --muted-foreground: 215 20% 65%; /* gray-400 */
+    --muted: 222 16% 12%; /* Slightly lighter bg */
+    --muted-foreground: 215 16% 65%; /* Muted text */
 
-    --accent: 217 33% 17%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 222 16% 16%; /* Hover backgrounds */
+    --accent-foreground: 210 20% 98%;
 
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
+    --border: 222 16% 20%; /* Subtle borders */
+    --input: 222 16% 16%;
 
-    --card: 224 71% 4%; /* gray-950 */
-    --card-foreground: 210 40% 98%;
+    --card: 222 16% 10%; /* Card backgrounds */
+    --card-foreground: 210 20% 98%;
 
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%; /* Error/destructive actions */
+    --destructive-foreground: 0 0% 100%;
 
-    --ring: 217 91% 60%;
+    --ring: 212 100% 48%;
 
     /* Legacy RGB values */
-    --color-background-primary: 15 23 42; /* slate-900 */
-    --color-background-secondary: 30 41 59; /* slate-800 */
+    --color-background-primary: 19 21 26; /* Deep charcoal */
+    --color-background-secondary: 25 27 33; /* Card bg */
     --color-text-primary: 243 244 246; /* gray-100 */
     --color-text-secondary: 156 163 175; /* gray-400 */
     --color-text-tertiary: 107 114 128; /* gray-500 */
@@ -79,5 +80,17 @@
   body {
     @apply bg-background text-foreground;
     @apply min-h-screen font-sans antialiased;
+  }
+
+  /* Smooth theme transitions */
+  * {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+
+  /* Disable transitions for theme toggle to prevent flash */
+  .theme-transition-disable * {
+    transition: none !important;
   }
 }
