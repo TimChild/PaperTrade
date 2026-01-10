@@ -1,6 +1,8 @@
 # Resume From Here - January 9, 2026
 
-⚠️ **UPDATE (18:18 UTC)**: TradeForm crash FIXED directly in main (commit `0f87f41`). Bug was NOT intermittent - happened every time when typing ticker symbols. Root cause: missing null check for `priceData?.price?.amount`. PR #102 can be closed/superseded.
+⚠️ **UPDATE (18:18 UTC)**: TradeForm crash FIXED directly in main (commit `0f87f41`). Bug was NOT intermittent - happened every time when typing ticker symbols. Root cause: missing null check for `priceData?.price?.amount`. PR #102 closed as superseded.
+
+⚠️ **UPDATE (18:30 UTC)**: Discovered DESIGN ISSUE - price field should be read-only, not editable. Created Task 088 and started agent (PR #107). Price field will become display-only, removing manual override logic entirely.
 
 ## Current Status Summary
 
@@ -24,13 +26,8 @@ PaperTrade Phase 3c (Analytics) is complete and all features are working end-to-
 - Verified fixes locally before merging PRs
 - Network inspection confirmed batch endpoint usage
 
-## Active Work
-
-**Running Agent Tasks** (started ~15 minutes ago):
-- **PR #102**: Task 085 - Fix TradeForm crash (frontend-swe)
-  - ⚠️ **SUPERSEDED** - Fix already committed to main (0f87f41)
-  - Session: https://github.com/TimChild/PaperTrade/pull/102/agent-sessions/4357cb4d-a6a4-4448-8223-a35c0c74221b
-  - Action: Close PR when agent completes
+## Active Work:
+- **PR #102**: ✅ **CLOSED** - Superseded by fix in main (0f87f41)
 
 - **PR #103**: Task 086 - Implement daily change calculation (backend-swe)
   - Session: https://github.com/TimChild/PaperTrade/pull/103/agent-sessions/7369fb37-ab92-45c4-8cfd-298e8fb7bb97
@@ -42,6 +39,14 @@ PaperTrade Phase 3c (Analytics) is complete and all features are working end-to-
   - Session: https://github.com/TimChild/PaperTrade/pull/104/agent-sessions/c5d6787d-9239-4191-86d9-3a1c454ce389
   - Features: Portfolio deletion, skeleton loading, transaction search, error states
   - Priority: HIGH - prevents user frustration
+
+- **PR #107**: Task 088 - Make price field read-only (frontend-swe) - **JUST STARTED**
+  - Session: https://github.com/TimChild/PaperTrade/pull/107/agent-sessions/0086ab30-1902-4031-875f-c21bd0971def
+  - Remove manual price override, make field display-only
+  - Simplify state management, align with real trading UX
+  - Priority: HIGH - current UX is confusing (field says "optional" but trade uses real price)
+
+**No Blockers**: Allnts user frustration
 
 **No Blockers**: Remaining tasks are independent and can run in parallel.
 
