@@ -7,38 +7,41 @@ import { PortfolioAnalytics } from '@/pages/PortfolioAnalytics'
 import { Debug } from '@/pages/Debug'
 import { DashboardVariantA } from '@/pages/__prototypes__/DashboardVariantA'
 import { DashboardVariantB } from '@/pages/__prototypes__/DashboardVariantB'
+import { ThemeProvider } from '@/contexts/ThemeContext'
 
 function App() {
   return (
-    <BrowserRouter>
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 5000,
-          success: {
+    <ThemeProvider>
+      <BrowserRouter>
+        <Toaster
+          position="top-right"
+          toastOptions={{
             duration: 5000,
-            iconTheme: {
-              primary: '#10b981',
-              secondary: '#fff',
+            success: {
+              duration: 5000,
+              iconTheme: {
+                primary: '#10b981',
+                secondary: '#fff',
+              },
             },
-          },
-          error: {
-            duration: 7000,
-            iconTheme: {
-              primary: '#ef4444',
-              secondary: '#fff',
+            error: {
+              duration: 7000,
+              iconTheme: {
+                primary: '#ef4444',
+                secondary: '#fff',
+              },
             },
-          },
-        }}
-      />
-      <Routes>
-        {/* Debug route - accessible without authentication */}
-        <Route path="/debug" element={<Debug />} />
+          }}
+        />
+        <Routes>
+          {/* Debug route - accessible without authentication */}
+          <Route path="/debug" element={<Debug />} />
 
-        {/* All other routes */}
-        <Route path="*" element={<AuthenticatedApp />} />
-      </Routes>
-    </BrowserRouter>
+          {/* All other routes */}
+          <Route path="*" element={<AuthenticatedApp />} />
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
   )
 }
 
