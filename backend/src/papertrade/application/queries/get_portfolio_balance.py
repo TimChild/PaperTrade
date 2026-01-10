@@ -2,7 +2,7 @@
 
 import logging
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID
 
@@ -16,8 +16,50 @@ from papertrade.application.ports.transaction_repository import TransactionRepos
 from papertrade.domain.exceptions import InvalidPortfolioError
 from papertrade.domain.services.portfolio_calculator import PortfolioCalculator
 from papertrade.domain.value_objects.money import Money
+from papertrade.domain.value_objects.ticker import Ticker
 
 logger = logging.getLogger(__name__)
+
+
+def _get_previous_trading_day(reference_date: datetime | None = None) -> datetime:
+    """Get previous trading day (skip weekends).
+
+    Args:
+        reference_date: Reference date to calculate from (defaults to now)
+
+    Returns:
+        Datetime representing previous trading day at market close (21:00 UTC)
+    """
+    if reference_date is None:
+        reference_date = datetime.now(UTC)
+
+    # Get just the date part
+    current_date = reference_date.date()
+    day_of_week = current_date.weekday()
+
+    # If Monday (0), go back 3 days to Friday
+    if day_of_week == 0:
+        previous_date = current_date - timedelta(days=3)
+    # If Sunday (6), go back 2 days to Friday
+    elif day_of_week == 6:
+        previous_date = current_date - timedelta(days=2)
+    # If Saturday (5), go back 1 day to Friday
+    elif day_of_week == 5:
+        previous_date = current_date - timedelta(days=1)
+    # Otherwise (Tuesday-Friday), go back 1 day
+    else:
+        previous_date = current_date - timedelta(days=1)
+
+    # Return datetime at market close (4 PM ET = 21:00 UTC)
+    return datetime(
+        previous_date.year,
+        previous_date.month,
+        previous_date.day,
+        hour=21,
+        minute=0,
+        second=0,
+        tzinfo=UTC,
+    )
 
 
 @dataclass(frozen=True)
@@ -42,6 +84,8 @@ class GetPortfolioBalanceResult:
         total_value: Sum of cash_balance and holdings_value
         currency: Currency of the balance
         as_of: Timestamp when balance was calculated
+        daily_change: Daily change amount (current - previous close)
+        daily_change_percent: Daily change as percentage
     """
 
     portfolio_id: UUID
@@ -50,6 +94,8 @@ class GetPortfolioBalanceResult:
     total_value: Money
     currency: str
     as_of: datetime
+    daily_change: Money
+    daily_change_percent: Decimal
 
 
 class GetPortfolioBalanceHandler:
@@ -84,7 +130,8 @@ class GetPortfolioBalanceHandler:
             query: Query with portfolio_id
 
         Returns:
-            Result containing cash balance, holdings value, and total value
+            Result containing cash balance, holdings value, total value,
+            and daily change
 
         Raises:
             InvalidPortfolioError: If portfolio doesn't exist
@@ -105,40 +152,64 @@ class GetPortfolioBalanceHandler:
         # Calculate holdings
         holdings = PortfolioCalculator.calculate_holdings(transactions)
 
-        # Calculate holdings value with real prices
-        holdings_value = Money(Decimal("0"), cash_balance.currency)
+        # If no holdings, return zero values immediately
+        if not holdings:
+            return GetPortfolioBalanceResult(
+                portfolio_id=query.portfolio_id,
+                cash_balance=cash_balance,
+                holdings_value=Money(Decimal("0.00"), cash_balance.currency),
+                total_value=cash_balance,
+                currency=cash_balance.currency,
+                as_of=datetime.now(UTC),
+                daily_change=Money(Decimal("0.00"), cash_balance.currency),
+                daily_change_percent=Decimal("0.00"),
+            )
 
-        for holding in holdings:
+        # Collect all unique tickers
+        tickers = [holding.ticker for holding in holdings]
+
+        # Fetch current prices
+        current_prices_dict: dict[Ticker, Money] = {}
+        for ticker in tickers:
             try:
-                # Fetch current price from market data
-                price_point = await self._market_data.get_current_price(holding.ticker)
-                holding_value = Money(
-                    price_point.price.amount * Decimal(str(holding.quantity.shares)),
-                    price_point.price.currency,
-                )
-                holdings_value = Money(
-                    holdings_value.amount + holding_value.amount,
-                    holdings_value.currency,
-                )
-
-            except TickerNotFoundError:
-                # Ticker not found - skip this holding (value = 0)
+                price_point = await self._market_data.get_current_price(ticker)
+                current_prices_dict[ticker] = price_point.price
+            except (TickerNotFoundError, MarketDataUnavailableError) as e:
                 logger.warning(
-                    f"Ticker {holding.ticker.symbol} not found in market data"
+                    f"Failed to fetch current price for {ticker.symbol}: {e}"
                 )
+                # Skip ticker if price unavailable
                 continue
 
-            except MarketDataUnavailableError as e:
-                # API down or rate limited - skip but log
-                logger.error(
-                    f"Market data unavailable for {holding.ticker.symbol}: {e}"
+        # Fetch previous close prices
+        previous_date = _get_previous_trading_day()
+        previous_prices_dict: dict[Ticker, Money] = {}
+        for ticker in tickers:
+            try:
+                price_point = await self._market_data.get_price_at(
+                    ticker, previous_date
                 )
+                previous_prices_dict[ticker] = price_point.price
+            except (TickerNotFoundError, MarketDataUnavailableError) as e:
+                logger.warning(
+                    f"Failed to fetch previous close price for {ticker.symbol}: {e}"
+                )
+                # Skip ticker if price unavailable
                 continue
+
+        # Calculate holdings value using PortfolioCalculator
+        holdings_value = PortfolioCalculator.calculate_portfolio_value(
+            holdings, current_prices_dict
+        )
 
         # Calculate total value
-        total_value = Money(
-            cash_balance.amount + holdings_value.amount,
-            cash_balance.currency,
+        total_value = PortfolioCalculator.calculate_total_value(
+            cash_balance, holdings_value
+        )
+
+        # Calculate daily change
+        daily_change, daily_change_percent = PortfolioCalculator.calculate_daily_change(
+            holdings, current_prices_dict, previous_prices_dict
         )
 
         return GetPortfolioBalanceResult(
@@ -148,4 +219,6 @@ class GetPortfolioBalanceHandler:
             total_value=total_value,
             currency=cash_balance.currency,
             as_of=datetime.now(UTC),
+            daily_change=daily_change,
+            daily_change_percent=daily_change_percent,
         )

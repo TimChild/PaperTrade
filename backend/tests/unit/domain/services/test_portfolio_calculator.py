@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
 
+from papertrade.domain.entities.holding import Holding
 from papertrade.domain.entities.transaction import Transaction, TransactionType
 from papertrade.domain.services.portfolio_calculator import PortfolioCalculator
 from papertrade.domain.value_objects.money import Money
@@ -507,3 +508,124 @@ class TestCalculateTotalValue:
 
         total = PortfolioCalculator.calculate_total_value(cash, holdings_value)
         assert total.amount == Decimal("20000.00")
+
+
+class TestCalculateDailyChange:
+    """Tests for calculate_daily_change method."""
+
+    def test_positive_daily_change(self) -> None:
+        """Should calculate positive daily change."""
+        holdings = [
+            Holding(
+                ticker=Ticker("AAPL"),
+                quantity=Quantity(Decimal("10")),
+                cost_basis=Money(Decimal("1450.00")),
+            ),
+        ]
+
+        current_prices = {Ticker("AAPL"): Money(Decimal("150.00"))}
+        previous_prices = {Ticker("AAPL"): Money(Decimal("145.00"))}
+
+        change, change_pct = PortfolioCalculator.calculate_daily_change(
+            holdings, current_prices, previous_prices
+        )
+
+        # 10 shares * ($150 - $145) = $50 gain
+        assert change.amount == Decimal("50.00")
+        # ($50 / $1450) * 100 = 3.45%
+        assert change_pct == Decimal("3.45")
+
+    def test_negative_daily_change(self) -> None:
+        """Should calculate negative daily change."""
+        holdings = [
+            Holding(
+                ticker=Ticker("AAPL"),
+                quantity=Quantity(Decimal("10")),
+                cost_basis=Money(Decimal("1500.00")),
+            ),
+        ]
+
+        current_prices = {Ticker("AAPL"): Money(Decimal("145.00"))}
+        previous_prices = {Ticker("AAPL"): Money(Decimal("150.00"))}
+
+        change, change_pct = PortfolioCalculator.calculate_daily_change(
+            holdings, current_prices, previous_prices
+        )
+
+        # 10 shares * ($145 - $150) = -$50 loss
+        assert change.amount == Decimal("-50.00")
+        # (-$50 / $1500) * 100 = -3.33%
+        assert change_pct == Decimal("-3.33")
+
+    def test_zero_previous_value(self) -> None:
+        """Should handle zero previous value (avoid division by zero)."""
+        holdings = [
+            Holding(
+                ticker=Ticker("AAPL"),
+                quantity=Quantity(Decimal("10")),
+                cost_basis=Money(Decimal("1500.00")),
+            ),
+        ]
+
+        # Current price exists but previous price is missing (simulated as empty dict)
+        current_prices = {Ticker("AAPL"): Money(Decimal("150.00"))}
+        previous_prices: dict = {}  # No previous prices
+
+        change, change_pct = PortfolioCalculator.calculate_daily_change(
+            holdings, current_prices, previous_prices
+        )
+
+        # Previous value = 0, so change = current value
+        assert change.amount == Decimal("1500.00")
+        # Percent change is 0 when previous value is 0 (avoid division by zero)
+        assert change_pct == Decimal("0.00")
+
+    def test_multiple_holdings_positive_change(self) -> None:
+        """Should calculate daily change for multiple holdings."""
+        holdings = [
+            Holding(
+                ticker=Ticker("AAPL"),
+                quantity=Quantity(Decimal("10")),
+                cost_basis=Money(Decimal("1500.00")),
+            ),
+            Holding(
+                ticker=Ticker("MSFT"),
+                quantity=Quantity(Decimal("5")),
+                cost_basis=Money(Decimal("1600.00")),
+            ),
+        ]
+
+        current_prices = {
+            Ticker("AAPL"): Money(Decimal("155.00")),
+            Ticker("MSFT"): Money(Decimal("330.00")),
+        }
+        previous_prices = {
+            Ticker("AAPL"): Money(Decimal("150.00")),
+            Ticker("MSFT"): Money(Decimal("320.00")),
+        }
+
+        change, change_pct = PortfolioCalculator.calculate_daily_change(
+            holdings, current_prices, previous_prices
+        )
+
+        # AAPL: 10 * ($155 - $150) = $50
+        # MSFT: 5 * ($330 - $320) = $50
+        # Total change = $100
+        assert change.amount == Decimal("100.00")
+
+        # Previous total: 10*150 + 5*320 = 1500 + 1600 = 3100
+        # Change percent: (100 / 3100) * 100 = 3.23%
+        assert change_pct == Decimal("3.23")
+
+    def test_no_holdings(self) -> None:
+        """Should return zero change for portfolio with no holdings."""
+        holdings: list = []
+        current_prices: dict = {}
+        previous_prices: dict = {}
+
+        change, change_pct = PortfolioCalculator.calculate_daily_change(
+            holdings, current_prices, previous_prices
+        )
+
+        assert change.amount == Decimal("0.00")
+        assert change_pct == Decimal("0.00")
