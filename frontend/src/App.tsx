@@ -5,6 +5,8 @@ import { Dashboard } from '@/pages/Dashboard'
 import { PortfolioDetail } from '@/pages/PortfolioDetail'
 import { PortfolioAnalytics } from '@/pages/PortfolioAnalytics'
 import { Debug } from '@/pages/Debug'
+import { DashboardVariantA } from '@/pages/__prototypes__/DashboardVariantA'
+import { DashboardVariantB } from '@/pages/__prototypes__/DashboardVariantB'
 
 function App() {
   return (
@@ -92,6 +94,19 @@ function AuthenticatedApp() {
                 path="/portfolio/:id/analytics"
                 element={<PortfolioAnalytics />}
               />
+              {/* Prototype routes (dev only) */}
+              {import.meta.env.DEV && (
+                <>
+                  <Route
+                    path="/prototypes/dashboard-a"
+                    element={<DashboardVariantA />}
+                  />
+                  <Route
+                    path="/prototypes/dashboard-b"
+                    element={<DashboardVariantB />}
+                  />
+                </>
+              )}
             </Routes>
           </main>
         </div>
