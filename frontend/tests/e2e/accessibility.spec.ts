@@ -95,11 +95,7 @@ test.describe('Accessibility (WCAG 2.1 AA)', () => {
     await page.keyboard.press('Tab')
     await page.keyboard.press('Tab')
 
-    // Eventually should reach the create portfolio form
-    const formInput = page.getByTestId('create-portfolio-name-input')
-    const createButton = page.getByTestId('create-portfolio-header-btn').or(page.getByTestId('create-first-portfolio-btn'))
-
-    // One of these should be in the tab order
+    // One of these should be in the tab order (eventually reach create portfolio form)
     const hasFormInTabOrder = await page.evaluate(() => {
       const focused = document.activeElement
       const testId = focused?.getAttribute('data-testid')
@@ -158,11 +154,8 @@ test.describe('Accessibility (WCAG 2.1 AA)', () => {
       await createButton.click()
     }
 
-    // Check that form inputs have labels or aria-label
+    // Verify name input has accessible name via labels or aria attributes
     const nameInput = page.getByTestId('create-portfolio-name-input')
-    const depositInput = page.getByTestId('create-portfolio-deposit-input')
-
-    // Verify inputs have accessible names via labels or aria attributes
     const nameInputAccessible = await nameInput.evaluate((el) => {
       const input = el as HTMLInputElement
       const hasLabel = !!document.querySelector(`label[for="${input.id}"]`)
