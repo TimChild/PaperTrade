@@ -330,16 +330,23 @@ describe('TradeForm', () => {
   })
 
   describe('UI feedback', () => {
-    it('should show estimated total when price is provided', async () => {
+    it('should show estimated total when price is auto-populated', async () => {
       const user = userEvent.setup()
       renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
 
-      await user.type(screen.getByTestId('trade-form-ticker-input'), 'IBM')
+      await user.type(screen.getByTestId('trade-form-ticker-input'), 'AAPL')
       await user.type(screen.getByTestId('trade-form-quantity-input'), '10')
-      await user.type(screen.getByTestId('trade-form-price-input'), '150.50')
 
-      expect(screen.getByText(/Estimated Total:/)).toBeInTheDocument()
-      expect(screen.getByText(/\$1505\.00/)).toBeInTheDocument()
+      // Wait for price to load
+      await waitFor(
+        () => {
+          expect(screen.getByText(/Estimated Total:/)).toBeInTheDocument()
+        },
+        { timeout: 2000 }
+      )
+
+      // Should show estimated total (10 * 192.53 = 1925.30)
+      expect(screen.getByText(/\$1,?925\.30/)).toBeInTheDocument()
     })
 
     it('should show correct action in preview text', async () => {
@@ -375,13 +382,15 @@ describe('TradeForm', () => {
     })
   })
 
-  describe('Price auto-population', () => {
-    it('should auto-populate price when ticker is entered', async () => {
+  describe('Price display (read-only)', () => {
+    it('should display fetched price in read-only field', async () => {
       const user = userEvent.setup()
       renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
 
-      const priceInput = screen.getByTestId('trade-form-price-input')
-      expect(priceInput).toHaveValue(null)
+      const priceInput = screen.getByTestId(
+        'trade-form-price-input'
+      ) as HTMLInputElement
+      expect(priceInput.value).toBe('--')
 
       // Type ticker
       await user.type(screen.getByTestId('trade-form-ticker-input'), 'AAPL')
@@ -389,13 +398,16 @@ describe('TradeForm', () => {
       // Wait for debounce (500ms) + API call
       await waitFor(
         () => {
-          expect(priceInput).not.toHaveValue(null)
+          expect(priceInput.value).not.toBe('--')
         },
         { timeout: 2000 }
       )
 
-      // Should have the mock price for AAPL (192.53 from handlers)
-      expect(priceInput).toHaveValue(192.53)
+      // Should have the formatted mock price for AAPL (192.53 from handlers)
+      expect(priceInput.value).toBe('192.53')
+      
+      // Verify field is read-only
+      expect(priceInput).toHaveAttribute('readOnly')
     })
 
     it('should show loading state while fetching price', async () => {
@@ -458,15 +470,17 @@ describe('TradeForm', () => {
       )
     })
 
-    it('should not auto-populate price in backtest mode', async () => {
+    it('should show placeholder in backtest mode', async () => {
       const user = userEvent.setup()
       renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
 
       // Enable backtest mode
       await user.click(screen.getByTestId('backtest-mode-toggle'))
 
-      const priceInput = screen.getByTestId('trade-form-price-input')
-      expect(priceInput).toHaveValue(null)
+      const priceInput = screen.getByTestId(
+        'trade-form-price-input'
+      ) as HTMLInputElement
+      expect(priceInput.value).toBe('--')
 
       // Type ticker
       await user.type(screen.getByTestId('trade-form-ticker-input'), 'AAPL')
@@ -474,8 +488,8 @@ describe('TradeForm', () => {
       // Wait a bit to ensure no auto-population happens
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
-      // Price should still be empty
-      expect(priceInput).toHaveValue(null)
+      // Price should still show placeholder
+      expect(priceInput.value).toBe('--')
 
       // No loading or success indicators should appear
       expect(
@@ -486,11 +500,13 @@ describe('TradeForm', () => {
       ).not.toBeInTheDocument()
     })
 
-    it('should allow manual price override', async () => {
+    it('should not allow manual editing of price field', async () => {
       const user = userEvent.setup()
       renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
 
-      const priceInput = screen.getByTestId('trade-form-price-input')
+      const priceInput = screen.getByTestId(
+        'trade-form-price-input'
+      ) as HTMLInputElement
 
       // Type ticker to trigger auto-populate
       await user.type(screen.getByTestId('trade-form-ticker-input'), 'AAPL')
@@ -498,19 +514,20 @@ describe('TradeForm', () => {
       // Wait for auto-population
       await waitFor(
         () => {
-          expect(priceInput).toHaveValue(192.53)
+          expect(priceInput.value).toBe('192.53')
         },
         { timeout: 2000 }
       )
 
-      // User can still manually change the price
-      await user.clear(priceInput)
+      // Try to manually change the price - should not work
+      await user.click(priceInput)
       await user.type(priceInput, '200.00')
 
-      expect(priceInput).toHaveValue(200)
+      // Value should remain unchanged
+      expect(priceInput.value).toBe('192.53')
     })
 
-    it('should update estimated total when price is auto-populated', async () => {
+    it('should calculate estimated total from priceData', async () => {
       const user = userEvent.setup()
       renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
 
@@ -518,12 +535,13 @@ describe('TradeForm', () => {
       await user.type(screen.getByTestId('trade-form-ticker-input'), 'AAPL')
       await user.type(screen.getByTestId('trade-form-quantity-input'), '10')
 
-      // Wait for price to auto-populate
+      // Wait for price to display
       await waitFor(
         () => {
-          expect(screen.getByTestId('trade-form-price-input')).toHaveValue(
-            192.53
-          )
+          const priceInput = screen.getByTestId(
+            'trade-form-price-input'
+          ) as HTMLInputElement
+          expect(priceInput.value).toBe('192.53')
         },
         { timeout: 2000 }
       )
@@ -554,12 +572,53 @@ describe('TradeForm', () => {
       // Wait for debounce + API call
       await waitFor(
         () => {
-          expect(screen.getByTestId('trade-form-price-input')).toHaveValue(
-            192.53
-          )
+          const priceInput = screen.getByTestId(
+            'trade-form-price-input'
+          ) as HTMLInputElement
+          expect(priceInput.value).toBe('192.53')
         },
         { timeout: 2000 }
       )
+    })
+
+    it('should update price when ticker changes', async () => {
+      const user = userEvent.setup()
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
+
+      const tickerInput = screen.getByTestId('trade-form-ticker-input')
+      const priceInput = screen.getByTestId(
+        'trade-form-price-input'
+      ) as HTMLInputElement
+
+      // Type first ticker
+      await user.type(tickerInput, 'AAPL')
+      await waitFor(
+        () => {
+          expect(priceInput.value).toBe('192.53')
+        },
+        { timeout: 2000 }
+      )
+
+      // Change ticker
+      await user.clear(tickerInput)
+      await user.type(tickerInput, 'GOOGL')
+
+      // Price should update (GOOGL is mocked at 140.93)
+      await waitFor(
+        () => {
+          expect(priceInput.value).toBe('140.93')
+        },
+        { timeout: 2000 }
+      )
+    })
+
+    it('should show placeholder when no ticker entered', () => {
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
+
+      const priceInput = screen.getByTestId(
+        'trade-form-price-input'
+      ) as HTMLInputElement
+      expect(priceInput.value).toBe('--')
     })
   })
 })

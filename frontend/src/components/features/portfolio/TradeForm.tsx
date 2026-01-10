@@ -25,8 +25,6 @@ export function TradeForm({
   const [action, setAction] = useState<'BUY' | 'SELL'>(initialAction)
   const [ticker, setTicker] = useState(initialTicker)
   const [quantity, setQuantity] = useState(initialQuantity)
-  const [price, setPrice] = useState('')
-  const [isPriceManuallySet, setIsPriceManuallySet] = useState(false)
   const [backtestMode, setBacktestMode] = useState(false)
   const [backtestDate, setBacktestDate] = useState('')
 
@@ -54,33 +52,10 @@ export function TradeForm({
     data: priceData,
     isLoading: isPriceLoading,
     error: priceError,
-  } = usePriceQuery(debouncedTicker)
+  } = usePriceQuery(backtestMode ? '' : debouncedTicker)
 
-  // Auto-populate price field when price data is fetched
-  // Only auto-populate if not in backtest mode and price hasn't been manually set
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    if (
-      priceData?.price?.amount !== undefined &&
-      !backtestMode &&
-      debouncedTicker &&
-      !isPriceManuallySet
-    ) {
-      setPrice(priceData.price.amount.toString())
-    }
-  }, [priceData, backtestMode, debouncedTicker, isPriceManuallySet])
-
-  // Reset manual price flag when ticker changes
-  useEffect(() => {
-    setIsPriceManuallySet(false)
-  }, [debouncedTicker])
-  /* eslint-enable react-hooks/set-state-in-effect */
-
-  // Handle manual price changes
-  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPrice(e.target.value)
-    setIsPriceManuallySet(true)
-  }
+  // Derive display price directly from priceData
+  const displayPrice = priceData?.price?.amount?.toFixed(2) ?? '--'
 
   // Find holding for the current ticker when SELL is selected
   const currentHolding = useMemo(() => {
@@ -115,8 +90,7 @@ export function TradeForm({
     // Reset form (keep backtest mode settings)
     setTicker('')
     setQuantity('')
-    setPrice('')
-    setIsPriceManuallySet(false)
+    // Price derives from priceData - no state to reset
   }
 
   const isValid =
@@ -127,8 +101,8 @@ export function TradeForm({
     (action === 'BUY' || currentHolding !== undefined)
 
   const estimatedTotal =
-    isValid && price !== '' && parseFloat(price) > 0
-      ? parseFloat(quantity) * parseFloat(price)
+    isValid && priceData?.price?.amount
+      ? parseFloat(quantity) * priceData.price.amount
       : 0
 
   return (
@@ -242,27 +216,22 @@ export function TradeForm({
           )}
         </div>
 
-        {/* Price Per Share Input (Optional - For Estimation Only) */}
+        {/* Price Display (Read-Only) */}
         <div>
           <label
             htmlFor="price"
             className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
           >
-            Price Per Share ($){' '}
-            <span className="text-gray-500">(Optional - for estimation)</span>
+            Estimated Execution Price
           </label>
           <div className="relative">
             <input
               id="price"
               data-testid="trade-form-price-input"
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={price}
-              onChange={handlePriceChange}
-              placeholder="150.00"
-              className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:focus:border-blue-400 dark:focus:ring-blue-400"
-              disabled={isSubmitting}
+              type="text"
+              value={displayPrice}
+              readOnly
+              className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2 text-gray-900 dark:border-gray-600 dark:bg-gray-900 dark:text-white cursor-not-allowed"
             />
             {/* Loading spinner */}
             {isPriceLoading && debouncedTicker && !backtestMode && (
@@ -333,8 +302,8 @@ export function TradeForm({
                 : debouncedTicker && isPriceLoading
                   ? 'Fetching current price...'
                   : debouncedTicker && priceData
-                    ? `Current price auto-populated (as of ${new Date(priceData.timestamp).toLocaleTimeString()})`
-                    : 'Actual trade will execute at current market price'}
+                    ? `Live market price (as of ${new Date(priceData.timestamp).toLocaleTimeString()})`
+                    : 'Enter a ticker symbol to see current price'}
             </p>
           )}
         </div>
@@ -405,7 +374,7 @@ export function TradeForm({
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {action === 'BUY' ? 'Buying' : 'Selling'} {quantity} shares of{' '}
               {ticker.toUpperCase()}
-              {price !== '' && parseFloat(price) > 0 ? ` at ~$${price}` : ''}
+              {priceData?.price?.amount ? ` at ~$${priceData.price.amount.toFixed(2)}` : ''}
               {backtestMode && backtestDate && (
                 <span className="ml-2 text-amber-600 dark:text-amber-400">
                   (Backtest: {new Date(backtestDate).toLocaleDateString()})
