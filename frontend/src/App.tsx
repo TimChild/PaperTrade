@@ -5,6 +5,7 @@ import { Dashboard } from '@/pages/Dashboard'
 import { PortfolioDetail } from '@/pages/PortfolioDetail'
 import { PortfolioAnalytics } from '@/pages/PortfolioAnalytics'
 import { Debug } from '@/pages/Debug'
+import { NotFound } from '@/pages/NotFound'
 import { DashboardVariantA } from '@/pages/__prototypes__/DashboardVariantA'
 import { DashboardVariantB } from '@/pages/__prototypes__/DashboardVariantB'
 import { ThemeProvider } from '@/contexts/ThemeContext'
@@ -110,6 +111,8 @@ function AuthenticatedApp() {
                   />
                 </>
               )}
+              {/* 404 Not Found route - must be last */}
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </main>
         </div>

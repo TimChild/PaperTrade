@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint'
 
 export default [
   {
-    ignores: ['dist', 'playwright-report', 'test-results'],
+    ignores: ['dist', 'playwright-report', 'test-results', '.lighthouserc.js'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
