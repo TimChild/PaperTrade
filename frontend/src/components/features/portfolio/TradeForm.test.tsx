@@ -56,7 +56,7 @@ describe('TradeForm', () => {
       renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
 
       const buyButton = screen.getByTestId('trade-form-action-buy')
-      expect(buyButton).toHaveClass('bg-blue-600')
+      expect(buyButton).toHaveClass('bg-primary')
     })
 
     it('should submit BUY order with correct data', async () => {
@@ -256,7 +256,7 @@ describe('TradeForm', () => {
 
       // Initially should be BUY mode
       expect(screen.getByTestId('trade-form-action-buy')).toHaveClass(
-        'bg-blue-600'
+        'bg-primary'
       )
 
       // Remount with new key and quick sell initial values

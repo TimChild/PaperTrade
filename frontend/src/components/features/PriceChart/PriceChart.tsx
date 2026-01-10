@@ -18,6 +18,7 @@ import { PriceStats } from './PriceStats'
 import { ChartSkeleton } from './ChartSkeleton'
 import { ChartError } from './ChartError'
 import type { TimeRange } from '@/types/price'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 
 interface PriceChartProps {
   ticker: string
@@ -40,49 +41,47 @@ export function PriceChart({
   // Loading state
   if (isLoading) {
     return (
-      <div className="price-chart">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {ticker}
-          </h3>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-heading-md">{ticker}</CardTitle>
           <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
-        </div>
-        <ChartSkeleton />
-      </div>
+        </CardHeader>
+        <CardContent>
+          <ChartSkeleton />
+        </CardContent>
+      </Card>
     )
   }
 
   // Error state
   if (error) {
     return (
-      <div className="price-chart">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {ticker}
-          </h3>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-heading-md">{ticker}</CardTitle>
           <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
-        </div>
-        <ChartError onRetry={() => refetch()} />
-      </div>
+        </CardHeader>
+        <CardContent>
+          <ChartError onRetry={() => refetch()} />
+        </CardContent>
+      </Card>
     )
   }
 
   // No data state
   if (!data || data.prices.length === 0) {
     return (
-      <div className="price-chart">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {ticker}
-          </h3>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-heading-md">{ticker}</CardTitle>
           <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
-        </div>
-        <div className="flex h-64 items-center justify-center rounded-lg border border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
-          <p className="text-gray-600 dark:text-gray-400">
-            No price data available
-          </p>
-        </div>
-      </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex h-64 items-center justify-center">
+            <p className="text-foreground-secondary">No price data available</p>
+          </div>
+        </CardContent>
+      </Card>
     )
   }
 
@@ -101,17 +100,17 @@ export function PriceChart({
   // Validate prices are numbers
   if (!Number.isFinite(firstPrice) || !Number.isFinite(lastPrice)) {
     return (
-      <div className="price-chart">
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {ticker}
-          </h3>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-heading-md">{ticker}</CardTitle>
           <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
-        </div>
-        <div className="flex h-64 items-center justify-center rounded-lg border border-gray-300 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
-          <p className="text-gray-600 dark:text-gray-400">Invalid price data</p>
-        </div>
-      </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex h-64 items-center justify-center">
+            <p className="text-foreground-secondary">Invalid price data</p>
+          </div>
+        </CardContent>
+      </Card>
     )
   }
 
@@ -120,60 +119,69 @@ export function PriceChart({
   const isPositive = change >= 0
 
   return (
-    <div className="price-chart">
+    <Card>
       {/* Header */}
-      <div className="mb-4 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          {ticker}
-        </h3>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-heading-md">{ticker}</CardTitle>
         <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
-      </div>
+      </CardHeader>
 
-      {/* Price Statistics */}
-      <PriceStats
-        currentPrice={lastPrice}
-        change={change}
-        changePercent={changePercent}
-      />
+      <CardContent>
+        {/* Price Statistics */}
+        <PriceStats
+          currentPrice={lastPrice}
+          change={change}
+          changePercent={changePercent}
+        />
 
-      {/* Chart */}
-      <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-          <XAxis dataKey="time" stroke="#6b7280" style={{ fontSize: '12px' }} />
-          <YAxis
-            domain={['dataMin - 5', 'dataMax + 5']}
-            stroke="#6b7280"
-            style={{ fontSize: '12px' }}
-            tickFormatter={(value) => `$${value.toFixed(0)}`}
-          />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: '#1f2937',
-              border: 'none',
-              borderRadius: '8px',
-              color: '#fff',
-            }}
-            formatter={(value: number | undefined) =>
-              value !== undefined
-                ? [`$${value.toFixed(2)}`, 'Price']
-                : ['N/A', 'Price']
-            }
-            labelFormatter={(label, payload) =>
-              payload?.[0]?.payload.fullDate || label
-            }
-          />
-          <Line
-            type="monotone"
-            dataKey="price"
-            stroke={isPositive ? '#10b981' : '#ef4444'}
-            strokeWidth={2}
-            dot={false}
-            activeDot={{ r: 6 }}
-          />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
+        {/* Chart */}
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={chartData}>
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="hsl(var(--foreground) / 0.1)"
+            />
+            <XAxis
+              dataKey="time"
+              stroke="hsl(var(--foreground) / 0.5)"
+              style={{ fontSize: '12px' }}
+            />
+            <YAxis
+              domain={['dataMin - 5', 'dataMax + 5']}
+              stroke="hsl(var(--foreground) / 0.5)"
+              style={{ fontSize: '12px' }}
+              tickFormatter={(value) => `$${value.toFixed(0)}`}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: 'hsl(var(--background))',
+                border: '1px solid hsl(var(--foreground) / 0.2)',
+                borderRadius: '8px',
+                color: 'hsl(var(--foreground))',
+              }}
+              formatter={(value: number | undefined) =>
+                value !== undefined
+                  ? [`$${value.toFixed(2)}`, 'Price']
+                  : ['N/A', 'Price']
+              }
+              labelFormatter={(label, payload) =>
+                payload?.[0]?.payload.fullDate || label
+              }
+            />
+            <Line
+              type="monotone"
+              dataKey="price"
+              stroke={
+                isPositive ? 'hsl(var(--positive))' : 'hsl(var(--negative))'
+              }
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 6 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
   )
 }
 

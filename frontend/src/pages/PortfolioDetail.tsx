@@ -97,139 +97,144 @@ export function PortfolioDetail(): React.JSX.Element {
 
   if (isError) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <ErrorDisplay error={error} />
-        <Link
-          to="/dashboard"
-          className="mt-4 inline-block text-blue-600 hover:underline dark:text-blue-400"
-        >
-          ← Back to Dashboard
-        </Link>
+      <div className="min-h-screen bg-background-primary px-container-padding-x py-container-padding-y">
+        <div className="max-w-screen-2xl mx-auto">
+          <ErrorDisplay error={error} />
+          <Link
+            to="/dashboard"
+            className="mt-4 inline-block text-primary hover:underline"
+          >
+            ← Back to Dashboard
+          </Link>
+        </div>
       </div>
     )
   }
 
   if (portfolioLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <PortfolioDetailSkeleton />
+      <div className="min-h-screen bg-background-primary px-container-padding-x py-container-padding-y">
+        <div className="max-w-screen-2xl mx-auto">
+          <PortfolioDetailSkeleton />
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header with navigation */}
-      <div className="mb-6">
-        <Link
-          to="/dashboard"
-          data-testid="portfolio-detail-back-link"
-          className="mb-4 inline-flex items-center text-blue-600 hover:underline dark:text-blue-400"
-        >
-          ← Back to Dashboard
-        </Link>
-        <div className="flex items-center justify-between">
-          <h1
-            className="text-4xl font-bold text-gray-900 dark:text-white"
-            data-testid="portfolio-detail-name"
-          >
-            {portfolio?.name || 'Portfolio Details'}
-          </h1>
+    <div className="min-h-screen bg-background-primary px-container-padding-x py-container-padding-y">
+      <div className="max-w-screen-2xl mx-auto">
+        {/* Header with navigation */}
+        <div className="mb-8">
           <Link
-            to={`/portfolio/${portfolioId}/analytics`}
-            data-testid="analytics-tab"
-            className="rounded-lg bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+            to="/dashboard"
+            data-testid="portfolio-detail-back-link"
+            className="mb-4 inline-flex items-center text-primary hover:underline"
           >
-            View Analytics
+            ← Back to Dashboard
           </Link>
+          <div className="flex items-center justify-between">
+            <h1
+              className="text-heading-xl text-foreground-primary"
+              data-testid="portfolio-detail-name"
+            >
+              {portfolio?.name || 'Portfolio Details'}
+            </h1>
+            <Link
+              to={`/portfolio/${portfolioId}/analytics`}
+              data-testid="analytics-tab"
+              className="inline-flex items-center justify-center rounded-button bg-primary text-white px-4 py-2 hover:bg-primary-hover shadow-card transition-colors"
+            >
+              View Analytics
+            </Link>
+          </div>
         </div>
-      </div>
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        {/* Main Content */}
-        <div className="space-y-8 lg:col-span-2">
-          {/* Portfolio Summary */}
-          <section>
-            {balanceLoading || !portfolio ? (
-              <PortfolioSummaryCard
-                portfolio={{
-                  id: '',
-                  name: 'Loading...',
-                  userId: '',
-                  cashBalance: 0,
-                  totalValue: 0,
-                  dailyChange: 0,
-                  dailyChangePercent: 0,
-                  createdAt: '',
-                }}
-                isLoading={true}
-              />
-            ) : (
-              <PortfolioSummaryCard
-                portfolio={portfolio}
-                holdingsDTO={holdingsData?.holdings}
-              />
-            )}
-          </section>
-
-          {/* Performance Chart - Show charts for each holding */}
-          {holdings.length > 0 && (
+        <div className="grid gap-card-gap lg:grid-cols-3">
+          {/* Main Content */}
+          <div className="space-y-card-gap lg:col-span-2">
+            {/* Portfolio Summary */}
             <section>
-              <h2 className="mb-4 text-2xl font-semibold text-gray-900 dark:text-white">
-                Performance
-              </h2>
-              <div className="space-y-6">
-                {holdings.map((holding) => (
-                  <div
-                    key={holding.ticker}
-                    className="rounded-lg border border-gray-300 bg-white p-6 dark:border-gray-700 dark:bg-gray-800"
-                  >
-                    <PriceChart ticker={holding.ticker} initialTimeRange="1M" />
-                  </div>
-                ))}
-              </div>
+              {balanceLoading || !portfolio ? (
+                <PortfolioSummaryCard
+                  portfolio={{
+                    id: '',
+                    name: 'Loading...',
+                    userId: '',
+                    cashBalance: 0,
+                    totalValue: 0,
+                    dailyChange: 0,
+                    dailyChangePercent: 0,
+                    createdAt: '',
+                  }}
+                  isLoading={true}
+                />
+              ) : (
+                <PortfolioSummaryCard
+                  portfolio={portfolio}
+                  holdingsDTO={holdingsData?.holdings}
+                />
+              )}
             </section>
-          )}
 
-          {/* Holdings */}
-          <section>
-            <h2 className="mb-4 text-2xl font-semibold text-gray-900 dark:text-white">
-              Holdings
-            </h2>
-            <HoldingsTable
-              holdings={holdings}
-              holdingsDTO={holdingsData?.holdings}
-              isLoading={holdingsLoading}
-              onQuickSell={handleQuickSell}
-            />
-          </section>
+            {/* Performance Chart - Show charts for each holding */}
+            {holdings.length > 0 && (
+              <section>
+                <h2 className="mb-4 text-heading-lg text-foreground-primary">
+                  Performance
+                </h2>
+                <div className="space-y-card-gap">
+                  {holdings.map((holding) => (
+                    <PriceChart
+                      key={holding.ticker}
+                      ticker={holding.ticker}
+                      initialTimeRange="1M"
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
 
-          {/* Transaction History */}
-          <section>
-            <h2 className="mb-4 text-2xl font-semibold text-gray-900 dark:text-white">
-              Transaction History
-            </h2>
-            <TransactionList
-              transactions={transactions}
-              isLoading={transactionsLoading}
-              showSearch={true}
-            />
-          </section>
-        </div>
+            {/* Holdings */}
+            <section>
+              <h2 className="mb-4 text-heading-lg text-foreground-primary">
+                Holdings
+              </h2>
+              <HoldingsTable
+                holdings={holdings}
+                holdingsDTO={holdingsData?.holdings}
+                isLoading={holdingsLoading}
+                onQuickSell={handleQuickSell}
+              />
+            </section>
 
-        {/* Sidebar */}
-        <div className="space-y-8 lg:col-span-1">
-          {/* Trade Form */}
-          <section ref={tradeFormRef}>
-            <TradeForm
-              onSubmit={handleTradeSubmit}
-              isSubmitting={executeTrade.isPending}
-              holdings={holdings}
-              initialAction={quickSellState.action}
-              initialTicker={quickSellState.ticker}
-              initialQuantity={quickSellState.quantity}
-            />
-          </section>
+            {/* Transaction History */}
+            <section>
+              <h2 className="mb-4 text-heading-lg text-foreground-primary">
+                Transaction History
+              </h2>
+              <TransactionList
+                transactions={transactions}
+                isLoading={transactionsLoading}
+                showSearch={true}
+              />
+            </section>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-card-gap lg:col-span-1">
+            {/* Trade Form */}
+            <section ref={tradeFormRef}>
+              <TradeForm
+                onSubmit={handleTradeSubmit}
+                isSubmitting={executeTrade.isPending}
+                holdings={holdings}
+                initialAction={quickSellState.action}
+                initialTicker={quickSellState.ticker}
+                initialQuantity={quickSellState.quantity}
+              />
+            </section>
+          </div>
         </div>
       </div>
     </div>

@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import type { Transaction, TransactionType } from '@/types/portfolio'
 import { formatCurrency, formatDate } from '@/utils/formatters'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface TransactionListProps {
   transactions: Transaction[]
@@ -38,13 +42,13 @@ function getTransactionLabel(type: TransactionType): string {
 function getTransactionColorClass(type: TransactionType): string {
   switch (type) {
     case 'deposit':
-      return 'text-positive dark:text-positive-light'
+      return 'text-positive'
     case 'withdrawal':
-      return 'text-gray-700 dark:text-gray-300'
+      return 'text-foreground-secondary'
     case 'buy':
-      return 'text-blue-600 dark:text-blue-400'
+      return 'text-primary'
     case 'sell':
-      return 'text-negative dark:text-negative-light'
+      return 'text-negative'
   }
 }
 
@@ -58,16 +62,13 @@ export function TransactionList({
 
   if (isLoading) {
     return (
-      <div className="rounded-lg border border-gray-300 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-        <div className="animate-pulse space-y-3">
+      <Card>
+        <CardContent className="space-y-3 pt-6">
           {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-16 rounded bg-gray-300 dark:bg-gray-700"
-            ></div>
+            <Skeleton key={i} className="h-16" />
           ))}
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     )
   }
 
@@ -91,11 +92,13 @@ export function TransactionList({
 
   if (transactions.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-300 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-        <p className="text-center text-gray-600 dark:text-gray-400">
-          No transactions yet
-        </p>
-      </div>
+      <Card>
+        <CardContent className="pt-6">
+          <p className="text-center text-foreground-secondary">
+            No transactions yet
+          </p>
+        </CardContent>
+      </Card>
     )
   }
 
@@ -106,7 +109,7 @@ export function TransactionList({
         <div className="relative">
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
             <svg
-              className="h-5 w-5 text-gray-400"
+              className="h-5 w-5 text-foreground-tertiary"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -119,12 +122,12 @@ export function TransactionList({
               />
             </svg>
           </div>
-          <input
+          <Input
             type="text"
             placeholder="Search by ticker, type, or date..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full rounded-md border border-gray-300 bg-white py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400"
+            className="pl-10"
             data-testid="transaction-search-input"
           />
         </div>
@@ -132,85 +135,90 @@ export function TransactionList({
 
       {/* Transaction List */}
       {displayTransactions.length === 0 ? (
-        <div className="rounded-lg border border-gray-300 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-          <p
-            className="text-center text-gray-600 dark:text-gray-400"
-            data-testid="no-search-results"
-          >
-            No transactions found for &quot;{searchTerm}&quot;
-          </p>
-        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <p
+              className="text-center text-foreground-secondary"
+              data-testid="no-search-results"
+            >
+              No transactions found for &quot;{searchTerm}&quot;
+            </p>
+          </CardContent>
+        </Card>
       ) : (
-        <div className="rounded-lg border border-gray-300 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
-          <div
-            className="divide-y divide-gray-200 dark:divide-gray-700"
-            data-testid="transaction-history-table"
-          >
-            {displayTransactions.map((transaction, idx) => {
-              const colorClass = getTransactionColorClass(transaction.type)
-              const isPositive = transaction.amount > 0
+        <Card>
+          <CardContent className="p-0">
+            <div
+              className="divide-y divide-gray-200 dark:divide-gray-700"
+              data-testid="transaction-history-table"
+            >
+              {displayTransactions.map((transaction, idx) => {
+                const colorClass = getTransactionColorClass(transaction.type)
+                const isPositive = transaction.amount > 0
 
-              return (
-                <div
-                  key={transaction.id}
-                  data-testid={`transaction-row-${idx}`}
-                  className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                >
-                  <div className="flex items-start gap-3">
-                    <span
-                      className="text-2xl"
-                      role="img"
-                      aria-label={transaction.type}
-                    >
-                      {getTransactionIcon(transaction.type)}
-                    </span>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p
-                          className="font-medium text-gray-900 dark:text-white"
-                          data-testid={`transaction-type-${idx}`}
-                        >
-                          {getTransactionLabel(transaction.type)}
-                        </p>
-                        {transaction.ticker && (
-                          <span
-                            className="rounded bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-300"
-                            data-testid={`transaction-symbol-${idx}`}
+                return (
+                  <div
+                    key={transaction.id}
+                    data-testid={`transaction-row-${idx}`}
+                    className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span
+                        className="text-2xl"
+                        role="img"
+                        aria-label={transaction.type}
+                      >
+                        {getTransactionIcon(transaction.type)}
+                      </span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p
+                            className="font-medium text-foreground-primary"
+                            data-testid={`transaction-type-${idx}`}
                           >
-                            {transaction.ticker}
-                          </span>
+                            {getTransactionLabel(transaction.type)}
+                          </p>
+                          {transaction.ticker && (
+                            <Badge
+                              variant="secondary"
+                              data-testid={`transaction-symbol-${idx}`}
+                            >
+                              {transaction.ticker}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="mt-1 text-sm text-foreground-secondary">
+                          <span>{formatDate(transaction.timestamp)}</span>
+                          {transaction.quantity &&
+                            transaction.pricePerShare && (
+                              <span className="ml-2">
+                                {transaction.quantity} shares @{' '}
+                                {formatCurrency(transaction.pricePerShare)}
+                              </span>
+                            )}
+                        </div>
+                        {transaction.notes && (
+                          <p className="mt-1 text-xs text-foreground-tertiary">
+                            {transaction.notes}
+                          </p>
                         )}
                       </div>
-                      <div className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                        <span>{formatDate(transaction.timestamp)}</span>
-                        {transaction.quantity && transaction.pricePerShare && (
-                          <span className="ml-2">
-                            {transaction.quantity} shares @{' '}
-                            {formatCurrency(transaction.pricePerShare)}
-                          </span>
-                        )}
-                      </div>
-                      {transaction.notes && (
-                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-500">
-                          {transaction.notes}
-                        </p>
-                      )}
+                    </div>
+                    <div className={`text-right ${colorClass}`}>
+                      <p
+                        className="text-lg font-semibold"
+                        data-testid={`transaction-amount-${idx}`}
+                      >
+                        {isPositive ? '+' : ''}
+                        {formatCurrency(Math.abs(transaction.amount))}
+                      </p>
                     </div>
                   </div>
-                  <div className={`text-right ${colorClass}`}>
-                    <p
-                      className="text-lg font-semibold"
-                      data-testid={`transaction-amount-${idx}`}
-                    >
-                      {isPositive ? '+' : ''}
-                      {formatCurrency(Math.abs(transaction.amount))}
-                    </p>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   )

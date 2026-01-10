@@ -3,6 +3,8 @@ import type { Portfolio } from '@/types/portfolio'
 import type { HoldingDTO } from '@/services/api/types'
 import { formatCurrency, formatPercent } from '@/utils/formatters'
 import { useBatchPricesQuery, usePriceStaleness } from '@/hooks/usePriceQuery'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface PortfolioSummaryCardProps {
   portfolio: Portfolio
@@ -58,54 +60,46 @@ export function PortfolioSummaryCard({
 
   if (isLoading || pricesLoading) {
     return (
-      <div className="rounded-lg border border-gray-300 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-        <div className="animate-pulse space-y-4">
-          <div className="h-6 w-48 rounded bg-gray-300 dark:bg-gray-700"></div>
-          <div className="h-10 w-64 rounded bg-gray-300 dark:bg-gray-700"></div>
-          <div className="h-6 w-32 rounded bg-gray-300 dark:bg-gray-700"></div>
-        </div>
-      </div>
+      <Card>
+        <CardContent className="space-y-4 pt-6">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-6 w-32" />
+        </CardContent>
+      </Card>
     )
   }
 
   const isPositiveChange = portfolio.dailyChange >= 0
-  const changeColorClass = isPositiveChange
-    ? 'text-positive dark:text-positive-light'
-    : 'text-negative dark:text-negative-light'
+  const changeColorClass = isPositiveChange ? 'text-positive' : 'text-negative'
 
   return (
-    <div className="rounded-lg border border-gray-300 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-      <div className="mb-4">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-          {portfolio.name}
-        </h2>
-      </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-heading-md">{portfolio.name}</CardTitle>
+      </CardHeader>
 
-      <div className="space-y-4">
+      <CardContent className="space-y-4">
         <div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Total Value
-          </p>
+          <p className="text-sm text-foreground-secondary">Total Value</p>
           <p
-            className="text-3xl font-bold text-gray-900 dark:text-white"
+            className="text-value-primary text-foreground-primary"
             data-testid="portfolio-total-value"
           >
             {formatCurrency(totalValue)}
           </p>
           {staleness && (
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-foreground-tertiary">
               Updated {staleness}
             </p>
           )}
         </div>
 
         <div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Daily Change
-          </p>
+          <p className="text-sm text-foreground-secondary">Daily Change</p>
           <div className="flex items-baseline gap-2">
             <p
-              className={`text-xl font-semibold ${changeColorClass}`}
+              className={`text-value-secondary ${changeColorClass}`}
               data-testid="portfolio-daily-change"
             >
               {isPositiveChange ? '+' : ''}
@@ -122,11 +116,9 @@ export function PortfolioSummaryCard({
 
         <div className="border-t border-gray-200 pt-4 dark:border-gray-700">
           <div className="flex justify-between">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              Cash Balance
-            </p>
+            <p className="text-sm text-foreground-secondary">Cash Balance</p>
             <p
-              className="text-sm font-medium text-gray-900 dark:text-white"
+              className="text-sm font-medium text-foreground-primary"
               data-testid="portfolio-cash-balance"
             >
               {formatCurrency(portfolio.cashBalance)}
@@ -134,16 +126,16 @@ export function PortfolioSummaryCard({
           </div>
           {holdingsValue > 0 && (
             <div className="mt-2 flex justify-between">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-foreground-secondary">
                 Holdings Value
               </p>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
+              <p className="text-sm font-medium text-foreground-primary">
                 {formatCurrency(holdingsValue)}
               </p>
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 }
