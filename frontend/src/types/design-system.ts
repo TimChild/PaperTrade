@@ -12,24 +12,24 @@ export type ThemeColor =
   | 'positive-dark'
   | 'negative'
   | 'negative-light'
-  | 'negative-dark';
+  | 'negative-dark'
 
 export type TypographyScale =
   | 'heading-xl'
   | 'heading-lg'
   | 'heading-md'
   | 'value-primary'
-  | 'value-secondary';
+  | 'value-secondary'
 
 export type SpacingToken =
   | 'container-padding-x'
   | 'container-padding-y'
   | 'card-padding'
-  | 'card-gap';
+  | 'card-gap'
 
-export type ShadowToken = 'card' | 'card-hover';
+export type ShadowToken = 'card' | 'card-hover'
 
-export type RadiusToken = 'card' | 'button' | 'input';
+export type RadiusToken = 'card' | 'button' | 'input'
 
 /**
  * Example usage in components:
