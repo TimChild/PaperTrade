@@ -13,7 +13,7 @@ import { HoldingsTable } from '@/components/features/portfolio/HoldingsTable'
 import { TransactionList } from '@/components/features/portfolio/TransactionList'
 import { TradeForm } from '@/components/features/portfolio/TradeForm'
 import { PriceChart } from '@/components/features/PriceChart'
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { PortfolioDetailSkeleton } from '@/components/features/portfolio/PortfolioDetailSkeleton'
 import { ErrorDisplay } from '@/components/ui/ErrorDisplay'
 import {
   adaptPortfolio,
@@ -112,7 +112,7 @@ export function PortfolioDetail(): React.JSX.Element {
   if (portfolioLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <LoadingSpinner size="lg" className="py-12" />
+        <PortfolioDetailSkeleton />
       </div>
     )
   }
@@ -212,6 +212,7 @@ export function PortfolioDetail(): React.JSX.Element {
             <TransactionList
               transactions={transactions}
               isLoading={transactionsLoading}
+              showSearch={true}
             />
           </section>
         </div>
