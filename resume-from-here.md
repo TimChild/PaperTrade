@@ -1,25 +1,35 @@
 # Resume From Here - January 9, 2026
 
-⚠️ **UPDATE (18:18 UTC)**: TradeForm crash FIXED directly in main (commit `0f87f41`). Bug was NOT intermittent - happened every time when typing ticker symbols. Root cause: missing null check for `priceData?.price?.amount`. PR #102 closed as superseded.
+# Resume From Here - January 9, 2026
 
-⚠️ **UPDATE (18:30 UTC)**: Discovered DESIGN ISSUE - price field should be read-only, not editable. Created Task 088 and started agent (PR #107). Price field will become display-only, removing manual override logic entirely.
+✅ **UPDATE (18:45 UTC)**: All pre-deployment polish PRs MERGED! TradeForm crash fixed, daily change implemented, UX improvements complete, price field now read-only. Ready for Proxmox deployment testing.
 
 ## Current Status Summary
 
-PaperTrade Phase 3c (Analytics) is complete and all features are working end-to-end. This session focused on UX polish and deployment planning. We discovered and fixed two critical bugs via PRs #100 (batch prices) and #101 (price charts) through comprehensive Playwright MCP testing. A two-stage deployment strategy was documented (Proxmox local → AWS production), and three pre-deployment polish tasks are now running in parallel as background agents (PRs #102-104).
+PaperTrade Phase 3c (Analytics) is complete and all pre-deployment polish work is DONE. Three parallel agent tasks successfully completed and merged:
+- PR #103: Daily change calculation (backend + frontend) ✅
+- PR #104: Portfolio deletion, skeleton loaders, transaction search, error states ✅
+- PR #107: Read-only price field (removes confusing manual override) ✅
+
+The app is now polished and ready for the first deployment on Proxmox for validation with real users before moving to AWS production.
 
 ## Session Accomplishments
 
 **Merged PRs**:
-- **PR #100**: Fixed batch prices implementation - frontend now uses `/api/v1/prices/batch` endpoint instead of individual API calls
-- **PR #101**: Fixed price chart "Invalid price data" error - added string-to-number parsing for backend price responses
+- **PR #100**: Fixed batch prices implementation - frontend now uses `/api/v1/prices/batch` endpoint
+- **PR #101**: Fixed price chart "Invalid price data" error - string-to-number parsing
+- **PR #103**: Daily change calculation - portfolios now show ±$X.XX (±Y.YY%) since previous close
+- **PR #104**: UX improvements - portfolio deletion, skeleton loaders, transaction search, error states
+- **PR #107**: Read-only price field - removed confusing manual override, simplified state management
 
 **Documentation Created**:
 - `docs/planning/deployment_strategy.md` - Two-stage deployment plan (Proxmox → AWS)
-- `agent_tasks/085_fix-tradeform-crash.md` - Fix intermittent TradeForm crash on initial load
-- `agent_tasks/086_implement-daily-change.md` - Implement daily change calculation (backend + frontend)
-- `agent_tasks/087_high-priority-ux-improvements.md` - Portfolio deletion, skeletons, search, error states
+- `agent_tasks/085_fix-tradeform-crash.md` - Fixed TradeForm null check crash (PR #102 superseded)
+- `agent_tasks/086_implement-daily-change.md` - Daily change calculation (PR #103)
+- `agent_tasks/087_high-priority-ux-improvements.md` - UX polish work (PR #104)
+- `agent_tasks/088_make-price-readonly.md` - Read-only price field (PR #107)
 - Updated `PROGRESS.md` with Jan 8-9 session work
+- Updated `resume-from-here.md` with session handoff
 
 **Testing Methodology**:
 - Used Playwright MCP (`mcp_microsoft_pla_browser_run_code`) for end-to-end verification
@@ -71,28 +81,57 @@ PaperTrade Phase 3c (Analytics) is complete and all features are working end-to-
 
 ## Next Steps (Prioritized)
 
-### 1. Immediate (Next 1-2 hours)
-- Monitor agent progress: `GH_PAGER="" gh agent-task list`
-- Watch for PR updates (should complete within 1-2 hours)
+### 1. Immediate - Proxmox Deployment Preparation (1-2 days)
 
-### 2. Short-term (Same day)
-Once PRs are ready:
-1. ~~Review PR #102 (TradeForm fix)~~ - **COMPLETED** (fixed in main)
+**Ready to deploy!** All polish work complete. Time to validate on Proxmox before AWS costs.
 
-2. Review PR #103 (Daily change)
-   - Backend: Check domain layer, use case, adapter implementation
-   - Frontend: Verify display with color coding
-   - Test historical price fetching works (Alpha Vantage API)
+**Deployment tasks** (from `docs/planning/deployment_strategy.md`):
+1. Create Proxmox VM (Ubuntu 22.04 LTS, 2 vCPU, 4GB RAM)
+2. Install Docker + Docker Compose
+3. Configure environment variables:
+   ```bash
+   ALPHA_VANTAGE_API_KEY=<key>
+   CLERK_SECRET_KEY=<key>
+   CLERK_PUBLISHABLE_KEY=<key>
+   DATABASE_URL=postgresql://...
+   REDIS_URL=redis://...
+   ```
+4. Set up PostgreSQL + Redis containers
+5. Deploy backend + frontend via Docker Compose
+6. Configure local DNS/proxy for LAN access
+7. Test with real users on local network
 
-3. Review PR #104 (UX improvements)
-   - Verify skeleton components implemented
-   - Test portfolio deletion with confirmation
-   - Test transaction search filtering
+**Testing checklist**:
+- [ ] User authentication (Clerk)
+- [ ] Create portfolio
+- [ ] Execute BUY trade
+- [ ] Execute SELL trade
+- [ ] View price charts (real Alpha Vantage data)
+- [ ] View daily change (green/red color coding)
+- [ ] Delete portfolio (with confirmation)
+- [ ] Search transaction history
+- [ ] Verify skeleton loaders on slow connections
+- [ ] Check error states (invalid ticker, API rate limits)
 
-4. Close/merge PRs after CI passes and local verification
-5. Run full quality checks: `task quality:backend && task quality:frontend && task test:e2e`
+### 2. Short-term - Monitor Proxmox Deployment (2-3 days)
 
-### 3. After Polish Complete (1-2 days)
+Once deployed, observe real usage:
+- Monitor Alpha Vantage API usage (5 req/min, 500 req/day limits)
+- Check Redis cache hit rates
+- Watch for unexpected errors in logs
+- Gather user feedback on UX
+
+### 3. Medium-term - AWS Production Deployment (3-5 days)
+
+After Proxmox validation succeeds, migrate to AWS:
+1. Set up AWS infrastructure (ECS Fargate, RDS, ElastiCache)
+2. Configure domain + SSL certificates
+3. Deploy via AWS CDK
+4. Run smoke tests
+5. Enable monitoring (CloudWatch)
+6. Go live publicly
+
+**Estimated AWS costs**: ~$87/month (see deployment_strategy.md)
 **Prepare for Proxmox Deployment**:
 - Create `docker-compose.proxmox.yml` based on template in deployment_strategy.md
 - Set up `.env.proxmox` with production secrets (not committed)
