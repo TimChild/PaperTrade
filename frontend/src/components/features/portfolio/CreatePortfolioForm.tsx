@@ -4,6 +4,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCreatePortfolio } from '@/hooks/usePortfolio'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 interface CreatePortfolioFormProps {
   onSuccess?: (portfolioId: string) => void
@@ -67,13 +70,10 @@ export function CreatePortfolioForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Portfolio Name */}
       <div>
-        <label
-          htmlFor="portfolio-name"
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-        >
-          Portfolio Name <span className="text-red-500">*</span>
-        </label>
-        <input
+        <Label htmlFor="portfolio-name">
+          Portfolio Name <span className="text-negative">*</span>
+        </Label>
+        <Input
           id="portfolio-name"
           data-testid="create-portfolio-name-input"
           type="text"
@@ -82,12 +82,11 @@ export function CreatePortfolioForm({
           required
           maxLength={100}
           placeholder="My Investment Portfolio"
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
           aria-describedby="portfolio-name-help"
         />
         <p
           id="portfolio-name-help"
-          className="mt-1 text-xs text-gray-500 dark:text-gray-400"
+          className="mt-1 text-xs text-foreground-tertiary"
         >
           Give your portfolio a descriptive name (1-100 characters)
         </p>
@@ -95,15 +94,10 @@ export function CreatePortfolioForm({
 
       {/* Initial Deposit */}
       <div>
-        <label
-          htmlFor="initial-deposit"
-          className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-        >
-          Initial Deposit (USD)
-        </label>
+        <Label htmlFor="initial-deposit">Initial Deposit (USD)</Label>
         <div className="mt-1 flex items-center">
-          <span className="mr-2 text-gray-600 dark:text-gray-400">$</span>
-          <input
+          <span className="mr-2 text-foreground-secondary">$</span>
+          <Input
             id="initial-deposit"
             data-testid="create-portfolio-deposit-input"
             type="number"
@@ -111,13 +105,12 @@ export function CreatePortfolioForm({
             value={initialDeposit}
             onChange={(e) => setInitialDeposit(e.target.value)}
             placeholder="0.00"
-            className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             aria-describedby="initial-deposit-help"
           />
         </div>
         <p
           id="initial-deposit-help"
-          className="mt-1 text-xs text-gray-500 dark:text-gray-400"
+          className="mt-1 text-xs text-foreground-tertiary"
         >
           Start with an initial cash balance (must be greater than $0.00)
         </p>
@@ -148,23 +141,24 @@ export function CreatePortfolioForm({
       {/* Action Buttons */}
       <div className="flex gap-3 pt-2">
         {onCancel && (
-          <button
+          <Button
             type="button"
+            variant="outline"
             data-testid="create-portfolio-cancel-button"
             onClick={onCancel}
-            className="flex-1 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+            className="flex-1"
           >
             Cancel
-          </button>
+          </Button>
         )}
-        <button
+        <Button
           type="submit"
           data-testid="submit-portfolio-form-btn"
           disabled={createPortfolio.isPending}
-          className="flex-1 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex-1"
         >
           {createPortfolio.isPending ? 'Creating...' : 'Create Portfolio'}
-        </button>
+        </Button>
       </div>
     </form>
   )

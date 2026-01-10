@@ -5,6 +5,9 @@ import type { Portfolio } from '@/types/portfolio'
 import { formatCurrency } from '@/utils/formatters'
 import { useDeletePortfolio } from '@/hooks/usePortfolio'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 
 interface PortfolioCardProps {
   portfolio: Portfolio
@@ -22,12 +25,27 @@ export function PortfolioCard({
 
   if (isLoading) {
     return (
-      <div className="rounded-lg border border-gray-300 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-        <div className="animate-pulse space-y-4">
-          <div className="h-6 w-48 rounded bg-gray-300 dark:bg-gray-700"></div>
-          <div className="h-8 w-32 rounded bg-gray-300 dark:bg-gray-700"></div>
-        </div>
-      </div>
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-6 w-48" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Skeleton className="h-4 w-24 mb-2" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Skeleton className="h-3 w-20 mb-2" />
+              <Skeleton className="h-5 w-16" />
+            </div>
+            <div>
+              <Skeleton className="h-3 w-20 mb-2" />
+              <Skeleton className="h-5 w-16" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     )
   }
 
@@ -51,56 +69,57 @@ export function PortfolioCard({
 
   const isPositiveChange = portfolio.dailyChange >= 0
   const changeColorClass = isPositiveChange
-    ? 'text-positive dark:text-positive-light'
-    : 'text-negative dark:text-negative-light'
+    ? 'text-positive'
+    : 'text-negative'
 
   return (
     <>
       <div className="relative">
-        <Link
-          to={`/portfolio/${portfolio.id}`}
-          data-testid={`portfolio-card-${portfolio.id}`}
-          className="block rounded-lg border border-gray-300 bg-white p-6 shadow-sm transition-all hover:shadow-md hover:border-blue-400 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-500"
-        >
-          <div className="mb-4">
-            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-              {portfolio.name}
-            </h3>
-          </div>
+        <Link to={`/portfolio/${portfolio.id}`} className="block">
+          <Card
+            variant="interactive"
+            data-testid={`portfolio-card-${portfolio.id}`}
+          >
+            <CardHeader>
+              <CardTitle>{portfolio.name}</CardTitle>
+            </CardHeader>
 
-          <div className="space-y-3">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Total Value
-              </p>
-              <p
-                className="text-2xl font-bold text-gray-900 dark:text-white"
-                data-testid={`portfolio-card-value-${portfolio.id}`}
-              >
-                {formatCurrency(portfolio.totalValue)}
-              </p>
-            </div>
-
-            <div className="flex items-center justify-between border-t border-gray-200 pt-3 dark:border-gray-700">
+            <CardContent className="space-y-4">
+              {/* Total Value */}
               <div>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Cash Balance
+                <p className="text-sm text-foreground-tertiary mb-1">
+                  Total Value
                 </p>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">
-                  {formatCurrency(portfolio.cashBalance)}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Daily Change
-                </p>
-                <p className={`text-sm font-medium ${changeColorClass}`}>
-                  {isPositiveChange ? '+' : ''}
-                  {formatCurrency(portfolio.dailyChange)}
+                <p
+                  className="text-value-primary text-foreground-primary"
+                  data-testid={`portfolio-card-value-${portfolio.id}`}
+                >
+                  {formatCurrency(portfolio.totalValue)}
                 </p>
               </div>
-            </div>
-          </div>
+
+              {/* Cash Balance & Daily Change */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-foreground-tertiary mb-1">
+                    Cash Balance
+                  </p>
+                  <p className="text-value-secondary text-foreground-primary">
+                    {formatCurrency(portfolio.cashBalance)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-foreground-tertiary mb-1">
+                    Daily Change
+                  </p>
+                  <p className={cn('text-value-secondary', changeColorClass)}>
+                    {isPositiveChange ? '+' : ''}
+                    {formatCurrency(portfolio.dailyChange)}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </Link>
 
         {/* Delete button - positioned absolutely in top-right corner */}
