@@ -31,7 +31,7 @@ describe('ThemeContext', () => {
     localStorage.clear()
     // Clear document classes
     document.documentElement.classList.remove('light', 'dark')
-    
+
     // Reset matchMedia mock to default (light mode)
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
@@ -106,20 +106,20 @@ describe('ThemeContext', () => {
         <TestComponent />
       </ThemeProvider>
     )
-    
+
     // Start with system
     expect(screen.getByTestId('theme')).toHaveTextContent('system')
-    
+
     // Switch to dark
     fireEvent.click(screen.getByTestId('set-dark'))
     expect(screen.getByTestId('theme')).toHaveTextContent('dark')
     expect(screen.getByTestId('effective-theme')).toHaveTextContent('dark')
-    
+
     // Switch to light
     fireEvent.click(screen.getByTestId('set-light'))
     expect(screen.getByTestId('theme')).toHaveTextContent('light')
     expect(screen.getByTestId('effective-theme')).toHaveTextContent('light')
-    
+
     // Switch back to system
     fireEvent.click(screen.getByTestId('set-system'))
     expect(screen.getByTestId('theme')).toHaveTextContent('system')
@@ -143,7 +143,7 @@ describe('ThemeContext', () => {
         <TestComponent />
       </ThemeProvider>
     )
-    
+
     // Should default to system
     expect(screen.getByTestId('theme')).toHaveTextContent('system')
     // Should resolve to dark based on media query
@@ -153,18 +153,18 @@ describe('ThemeContext', () => {
   it('throws error when useTheme is used outside ThemeProvider', () => {
     // Suppress console.error for this test
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
-    
+
     expect(() => {
       render(<TestComponent />)
     }).toThrow('useTheme must be used within ThemeProvider')
-    
+
     consoleError.mockRestore()
   })
 
   it('registers listener for system preference changes', () => {
     // Create a mock to capture addEventListener calls
     const addEventListenerMock = vi.fn()
-    
+
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
       value: vi.fn().mockImplementation((query) => ({
@@ -181,11 +181,11 @@ describe('ThemeContext', () => {
         <TestComponent />
       </ThemeProvider>
     )
-    
+
     // Should start with system/light
     expect(screen.getByTestId('theme')).toHaveTextContent('system')
     expect(screen.getByTestId('effective-theme')).toHaveTextContent('light')
-    
+
     // Verify that we registered a listener for media query changes
     expect(addEventListenerMock).toHaveBeenCalledWith(
       'change',

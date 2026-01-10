@@ -13,34 +13,34 @@ function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 5000,
-          success: {
+        <Toaster
+          position="top-right"
+          toastOptions={{
             duration: 5000,
-            iconTheme: {
-              primary: '#10b981',
-              secondary: '#fff',
+            success: {
+              duration: 5000,
+              iconTheme: {
+                primary: '#10b981',
+                secondary: '#fff',
+              },
             },
-          },
-          error: {
-            duration: 7000,
-            iconTheme: {
-              primary: '#ef4444',
-              secondary: '#fff',
+            error: {
+              duration: 7000,
+              iconTheme: {
+                primary: '#ef4444',
+                secondary: '#fff',
+              },
             },
-          },
-        }}
-      />
-      <Routes>
-        {/* Debug route - accessible without authentication */}
-        <Route path="/debug" element={<Debug />} />
+          }}
+        />
+        <Routes>
+          {/* Debug route - accessible without authentication */}
+          <Route path="/debug" element={<Debug />} />
 
-        {/* All other routes */}
-        <Route path="*" element={<AuthenticatedApp />} />
-      </Routes>
-    </BrowserRouter>
+          {/* All other routes */}
+          <Route path="*" element={<AuthenticatedApp />} />
+        </Routes>
+      </BrowserRouter>
     </ThemeProvider>
   )
 }
