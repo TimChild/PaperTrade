@@ -68,9 +68,7 @@ export function PortfolioCard({
   }
 
   const isPositiveChange = portfolio.dailyChange >= 0
-  const changeColorClass = isPositiveChange
-    ? 'text-positive'
-    : 'text-negative'
+  const changeColorClass = isPositiveChange ? 'text-positive' : 'text-negative'
 
   return (
     <>
