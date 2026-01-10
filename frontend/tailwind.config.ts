@@ -6,35 +6,50 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Primary brand color
-        primary: {
-          DEFAULT: '#2563eb', // blue-600
-          hover: '#1d4ed8',   // blue-700
-          light: '#3b82f6',   // blue-500
-          dark: '#1e40af',    // blue-800
+        // shadcn/ui color system (HSL-based)
+        background: 'hsl(var(--background) / <alpha-value>)',
+        foreground: 'hsl(var(--foreground) / <alpha-value>)',
+        card: {
+          DEFAULT: 'hsl(var(--card) / <alpha-value>)',
+          foreground: 'hsl(var(--card-foreground) / <alpha-value>)',
         },
-        // Semantic colors for financial data
+        // Primary brand color (also HSL-based)
+        primary: {
+          DEFAULT: 'hsl(var(--primary) / <alpha-value>)',
+          foreground: 'hsl(var(--primary-foreground) / <alpha-value>)',
+          hover: '#1d4ed8',   // blue-700 (fallback)
+          light: '#3b82f6',   // blue-500 (fallback)
+          dark: '#1e40af',    // blue-800 (fallback)
+        },
+        // Semantic colors for financial data (HSL-based)
         positive: {
-          DEFAULT: '#16a34a', // green-600
-          light: '#22c55e',   // green-500
-          dark: '#15803d',    // green-700
+          DEFAULT: 'hsl(var(--positive) / <alpha-value>)',
         },
         negative: {
-          DEFAULT: '#dc2626', // red-600
-          light: '#ef4444',   // red-500
-          dark: '#b91c1c',    // red-700
+          DEFAULT: 'hsl(var(--negative) / <alpha-value>)',
         },
-        // Background colors (using CSS variables)
-        background: {
-          primary: 'rgb(var(--color-background-primary) / <alpha-value>)',
-          secondary: 'rgb(var(--color-background-secondary) / <alpha-value>)',
+        muted: {
+          DEFAULT: 'hsl(var(--muted) / <alpha-value>)',
+          foreground: 'hsl(var(--muted-foreground) / <alpha-value>)',
         },
-        // Text colors (using CSS variables)
-        foreground: {
-          primary: 'rgb(var(--color-text-primary) / <alpha-value>)',
-          secondary: 'rgb(var(--color-text-secondary) / <alpha-value>)',
-          tertiary: 'rgb(var(--color-text-tertiary) / <alpha-value>)',
+        accent: {
+          DEFAULT: 'hsl(var(--accent) / <alpha-value>)',
+          foreground: 'hsl(var(--accent-foreground) / <alpha-value>)',
         },
+        destructive: {
+          DEFAULT: 'hsl(var(--destructive) / <alpha-value>)',
+          foreground: 'hsl(var(--destructive-foreground) / <alpha-value>)',
+        },
+        border: 'hsl(var(--border) / <alpha-value>)',
+        input: 'hsl(var(--input) / <alpha-value>)',
+        ring: 'hsl(var(--ring) / <alpha-value>)',
+        // Legacy background colors (using CSS variables for compatibility)
+        'background-primary': 'rgb(var(--color-background-primary) / <alpha-value>)',
+        'background-secondary': 'rgb(var(--color-background-secondary) / <alpha-value>)',
+        // Legacy text colors (using CSS variables for compatibility)
+        'foreground-primary': 'rgb(var(--color-text-primary) / <alpha-value>)',
+        'foreground-secondary': 'rgb(var(--color-text-secondary) / <alpha-value>)',
+        'foreground-tertiary': 'rgb(var(--color-text-tertiary) / <alpha-value>)',
       },
       fontSize: {
         // Custom typography scale from design tokens
