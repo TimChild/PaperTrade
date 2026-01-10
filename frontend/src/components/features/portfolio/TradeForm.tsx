@@ -231,7 +231,6 @@ export function TradeForm({
               type="text"
               value={displayPrice}
               readOnly
-              disabled={!priceData || isPriceLoading}
               className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2 text-gray-900 dark:border-gray-600 dark:bg-gray-900 dark:text-white cursor-not-allowed"
             />
             {/* Loading spinner */}
