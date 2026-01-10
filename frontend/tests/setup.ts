@@ -4,6 +4,13 @@ import '@testing-library/jest-dom/vitest'
 import { setupServer } from 'msw/node'
 import { handlers } from '../src/mocks/handlers'
 
+// Verify jsdom environment is available
+beforeAll(() => {
+  if (typeof document === 'undefined') {
+    throw new Error('jsdom not initialized - check vitest config')
+  }
+})
+
 // Mock HTMLDialogElement methods not available in jsdom
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = vi.fn()
