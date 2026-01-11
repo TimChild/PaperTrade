@@ -1,8 +1,8 @@
 # PaperTrade Proxmox Deployment Guide
 
-**Date**: January 10, 2026  
-**Container ID**: 106  
-**Container IP**: 192.168.4.104  
+**Date**: January 10, 2026
+**Container ID**: 106
+**Container IP**: 192.168.4.104
 **Hostname**: papertrade
 
 ## Container Specifications
@@ -85,7 +85,7 @@ The following containers are running inside LXC 106:
 
 ## Access Information
 
-**Application URL**: http://192.168.4.104  
+**Application URL**: http://192.168.4.104
 **API Docs**: http://192.168.4.104:8000/docs (if backend port is exposed)
 
 **SSH Access**:
@@ -331,6 +331,6 @@ pct exec 106 -- apt-get update && apt-get upgrade -y
 
 ## Support & Maintenance
 
-**Documentation**: See [/Users/timchild/github/PaperTrade/docs/](/Users/timchild/github/PaperTrade/docs/)  
-**Repository**: https://github.com/TimChild/PaperTrade  
+**Documentation**: See [/Users/timchild/github/PaperTrade/docs/](/Users/timchild/github/PaperTrade/docs/)
+**Repository**: https://github.com/TimChild/PaperTrade
 **Deployment Strategy**: [docs/planning/deployment_strategy.md](/Users/timchild/github/PaperTrade/docs/planning/deployment_strategy.md)

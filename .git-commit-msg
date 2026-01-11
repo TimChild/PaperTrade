@@ -1,0 +1,26 @@
+feat(proxmox): add automated deployment scripts and Taskfile tasks
+
+- Add shell scripts for Proxmox LXC container management:
+  - create-container.sh: Creates privileged LXC with Docker
+  - deploy.sh: Full deployment pipeline with safety checks
+  - status.sh: View deployment status and access URLs
+  - logs.sh: Stream application logs
+
+- Add Taskfile tasks:
+  - proxmox:create-container: Create new LXC container
+  - proxmox:deploy: Deploy/update application
+  - proxmox:status: Show status
+  - proxmox:logs: View logs
+  - proxmox:update: Alias for deploy
+
+- Scripts include safety features:
+  - Check for existing containers before creating
+  - Validate Proxmox connection
+  - Error handling with clear messages
+  - Auto-generate secure credentials
+
+- Add comprehensive documentation in scripts/proxmox/README.md
+- Update docs/deployment/proxmox-deployment.md with manual steps
+
+This implements repeatable, automated Proxmox deployment workflow to avoid
+manual SSH commands and provide safer container management.
