@@ -14,16 +14,22 @@ export default defineConfig({
   testDir: './tests/e2e',
   /* Global setup for Clerk testing */
   globalSetup: path.resolve(__dirname, './tests/e2e/global-setup.ts'),
-  /* Run tests serially - Clerk auth for same user doesn't work well in parallel */
-  fullyParallel: false,
+  /* Enable parallel execution for faster tests */
+  fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Run tests serially for Clerk auth compatibility */
-  workers: 1,
+  /* Use 3 workers for parallel execution (2 in CI to reduce resource usage) */
+  workers: process.env.CI ? 2 : 3,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
+
+  /* Set reasonable timeouts */
+  timeout: 30000, // 30 seconds per test
+  expect: {
+    timeout: 10000, // 10 seconds for assertions
+  },
 
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
@@ -35,18 +41,21 @@ export default defineConfig({
   },
 
   /* Configure projects for major browsers */
+  /* Primary browser: chromium (covers Chrome, Edge, Brave, Opera - most users) */
+  /* Multi-browser testing can be enabled for pre-release testing by uncommenting firefox/webkit */
   projects: [
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
+    // Uncomment to run multi-browser tests (increases test time significantly):
+    // {
+    //   name: 'firefox',
+    //   use: { ...devices['Desktop Firefox'] },
+    // },
+    // {
+    //   name: 'webkit',
+    //   use: { ...devices['Desktop Safari'] },
+    // },
   ],
 })
