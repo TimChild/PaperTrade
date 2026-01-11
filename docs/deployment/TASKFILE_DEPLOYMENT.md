@@ -214,7 +214,7 @@ task deploy:proxmox:shell
 The deployment automatically generates a `.env` file in `/opt/papertrade/` with:
 
 - **POSTGRES_PASSWORD**: Auto-generated (32-byte random)
-- **SECRET_KEY**: Auto-generated (32-byte random)  
+- **SECRET_KEY**: Auto-generated (32-byte random)
 - **ALPHA_VANTAGE_API_KEY**: Copied from your local `.env` file
 - **APP_ENV**: production
 - **APP_DEBUG**: false
