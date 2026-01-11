@@ -137,18 +137,18 @@ Create in `scripts/proxmox-vm/` directory:
   - Configure VM parameters
   - Post-creation hardening (passwords, SSH keys)
   - Network configuration
-  
+
 - **deploy.sh**: Application deployment
   - Transfer code to VM (efficient method - tarball, rsync, or git)
   - Build Docker images
   - Deploy with docker-compose.prod.yml
   - Verify deployment success (health checks with timeout)
-  
+
 - **lifecycle.sh**: Service management
   - Start/stop/restart operations
   - Status checking
   - Log viewing
-  
+
 - **destroy.sh**: VM destruction
   - Confirmation prompt (unless forced)
   - Clean removal of VM
@@ -160,25 +160,25 @@ Add to `Taskfile.yml` under `proxmox-vm:` namespace:
 ```yaml
 proxmox-vm:create:
   desc: "Create Docker VM on Proxmox"
-  
+
 proxmox-vm:deploy:
   desc: "Deploy PaperTrade to Proxmox VM"
-  
+
 proxmox-vm:status:
   desc: "Check deployment status"
-  
+
 proxmox-vm:logs:
   desc: "View application logs"
-  
+
 proxmox-vm:start:
   desc: "Start services"
-  
+
 proxmox-vm:stop:
   desc: "Stop services"
-  
+
 proxmox-vm:restart:
   desc: "Restart services"
-  
+
 proxmox-vm:destroy:
   desc: "Destroy VM (WARNING: destructive)"
 ```
