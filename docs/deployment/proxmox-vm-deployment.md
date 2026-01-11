@@ -207,13 +207,19 @@ The script will:
 - **VM ID** → 200 (or your configured value)
 - **Machine Type** → i440fx (default)
 - **Disk Size** → 50G (or your configured value)
+- **Disk Cache** → None (default)
 - **Hostname** → papertrade-vm
+- **CPU Model** → KVM64 (default)
 - **CPU Cores** → 4
 - **RAM Size** → 8192
 - **Bridge** → vmbr0
-- **Static IP** → Configure via cloud-init prompts (optional)
+- **MAC Address** → (auto-generated, accept default)
+- **VLAN** → Default (leave blank)
+- **Interface MTU Size** → Default (leave blank)
 - **Start VM** → YES
-- **Storage** → Select your preferred storage pool
+- **Storage** → Select your preferred storage pool (e.g., local-lvm)
+
+**Note**: The script may take 5-10 minutes to complete. The virt-resize step (expanding disk) can take a minute or two - **do not interrupt it**.
 
 **What the community script does**:
 1. Downloads Debian 12 cloud image (~500MB)

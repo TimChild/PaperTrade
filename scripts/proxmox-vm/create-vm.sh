@@ -49,15 +49,28 @@ main() {
 
     log_step "Recommended settings for interactive prompts:"
     echo ""
-    echo "  VM ID:            $PROXMOX_VM_ID"
-    echo "  Hostname:         $PROXMOX_VM_HOSTNAME"
-    echo "  CPU Cores:        4"
-    echo "  RAM:              8192 MB"
-    echo "  Disk Size:        50 GB"
-    echo "  Static IP:        $PROXMOX_VM_IP/$PROXMOX_VM_CIDR"
-    echo "  Gateway:          $PROXMOX_VM_GATEWAY"
-    echo "  Bridge:           $PROXMOX_VM_BRIDGE"
-    echo "  Storage:          Choose from available options"
+    echo "  Use Default Settings:  NO (select Advanced)"
+    echo "  VM ID:                 $PROXMOX_VM_ID"
+    echo "  Machine Type:          i440fx (default)"
+    echo "  Disk Size:             ${PROXMOX_VM_DISK_SIZE:-50}G"
+    echo "  Disk Cache:            None (default)"
+    echo "  Hostname:              $PROXMOX_VM_HOSTNAME"
+    echo "  CPU Model:             KVM64 (default)"
+    echo "  CPU Cores:             ${PROXMOX_VM_CORES:-4}"
+    echo "  RAM:                   ${PROXMOX_VM_MEMORY:-8192} MB"
+    echo "  Bridge:                ${PROXMOX_VM_BRIDGE:-vmbr0}"
+    echo "  MAC Address:           (accept auto-generated default)"
+    echo "  VLAN:                  Default (leave blank)"
+    echo "  Interface MTU:         Default (leave blank)"
+    echo "  Start VM:              YES"
+    echo "  Storage:               Choose from available (e.g., local-lvm)"
+    if [ "${PROXMOX_VM_IP:-}" != "" ]; then
+        echo ""
+        echo "  Optional static IP:    $PROXMOX_VM_IP/${PROXMOX_VM_CIDR:-24}"
+        echo "  Gateway:               ${PROXMOX_VM_GATEWAY:-192.168.4.1}"
+    fi
+    echo ""
+    log_warning "IMPORTANT: Do not interrupt the virt-resize step (expanding disk) - it takes 1-2 minutes"
     echo ""
     log_step "SSH to Proxmox and run the community script:"
     echo ""
@@ -119,7 +132,7 @@ main() {
     else
         log_success "VM IP address: $vm_ip"
 
-        if [ "$PROXMOX_VM_IP" != "$vm_ip" ]; then
+        if [ "${PROXMOX_VM_IP:-}" != "" ] && [ "$PROXMOX_VM_IP" != "$vm_ip" ]; then
             log_warning "Expected IP: $PROXMOX_VM_IP, Got: $vm_ip"
             log_info "Update .env.proxmox-vm with the actual IP if needed"
         fi
