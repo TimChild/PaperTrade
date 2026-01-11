@@ -621,4 +621,15 @@ describe('TradeForm', () => {
       expect(priceInput.value).toBe('--')
     })
   })
+
+  describe('Accessibility', () => {
+    it('should have no accessibility violations', async () => {
+      const { axe } = await import('jest-axe')
+      const { container } = renderWithProviders(
+        <TradeForm onSubmit={mockOnSubmit} holdings={mockHoldings} />
+      )
+      const results = await axe(container)
+      expect(results).toHaveNoViolations()
+    })
+  })
 })
