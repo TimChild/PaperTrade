@@ -65,7 +65,7 @@ export default async function globalSetup() {
       console.error('Status:', error.response?.status)
       console.error('Data:', JSON.stringify(error.response?.data, null, 2))
       console.error('Headers:', error.response?.headers)
-      
+
       // Check for rate limiting
       if (error.response?.status === 429) {
         console.error('⚠️  RATE LIMIT DETECTED - Clerk API rate limit exceeded')
