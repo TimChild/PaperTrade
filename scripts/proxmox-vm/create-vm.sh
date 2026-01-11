@@ -60,113 +60,78 @@ main() {
     
     log_step "Executing VM creation on Proxmox..."
     log_info "This may take several minutes..."
+    echo ""
     
-    # Execute the script on Proxmox with expect to handle the interactive prompts
-    # We'll create a small expect script to automate the interaction
-    cat > "/tmp/create-vm-expect-$$.exp" << 'EOF'
-#!/usr/bin/expect -f
-set timeout 600
+    # Provide instructions for manual VM creation
+    log_warning "The community script is interactive and requires manual input."
+    log_info "Please follow these steps on your Proxmox host:"
+    echo ""
+    echo "1. SSH to Proxmox:"
+    echo "   ssh $PROXMOX_HOST"
+    echo ""
+    echo "2. Run the community Docker VM script:"
+    echo "   bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/docker-vm.sh)\""
+    echo ""
+    echo "3. When prompted, use these settings:"
+    echo "   - Use Default Settings? NO (select Advanced)"
+    echo "   - VM ID: $PROXMOX_VM_ID"
+    echo "   - Machine Type: i440fx (default)"
+    echo "   - Disk Size: ${PROXMOX_VM_DISK_SIZE}G"
+    echo "   - Disk Cache: None (default)"
+    echo "   - Hostname: $PROXMOX_VM_HOSTNAME"
+    echo "   - CPU Model: KVM64 (default)"
+    echo "   - CPU Cores: $PROXMOX_VM_CORES"
+    echo "   - RAM Size: $PROXMOX_VM_MEMORY"
+    echo "   - Bridge: $PROXMOX_VM_BRIDGE"
+    echo "   - MAC Address: (accept default)"
+    echo "   - VLAN: (leave blank)"
+    echo "   - MTU Size: (leave blank)"
+    echo "   - Start VM: YES"
+    echo "   - Storage: (select your preferred storage)"
+    echo ""
+    
+    # Alternative: try automated creation if running directly on Proxmox
+    if ssh "$PROXMOX_HOST" "test -f /tmp/docker-vm-create.sh" 2>/dev/null; then
+        log_step "Attempting automated VM creation..."
+        
+        # Run the script and try to pipe answers (this may or may not work)
+        if ssh "$PROXMOX_HOST" "bash /tmp/docker-vm-create.sh" << ANSWERS 2>/dev/null; then
+y
+n
+$PROXMOX_VM_ID
 
-set vmid [lindex $argv 0]
-set hostname [lindex $argv 1]
-set cores [lindex $argv 2]
-set memory [lindex $argv 3]
-set disk [lindex $argv 4]
-set bridge [lindex $argv 5]
 
-spawn bash /tmp/docker-vm-create.sh
+$PROXMOX_VM_DISK_SIZE
 
-# Initial confirmation
-expect "Proceed?" { send "y\r" }
+$PROXMOX_VM_HOSTNAME
 
-# Use default or advanced settings
-expect "Use Default Settings?" { send "n\r" }
+$PROXMOX_VM_CORES
+$PROXMOX_VM_MEMORY
+$PROXMOX_VM_BRIDGE
 
-# VM ID
-expect "Set Virtual Machine ID" { send "$vmid\r" }
 
-# Machine Type
-expect "Choose Type" { send "\r" }
 
-# Disk Size
-expect "Set Disk Size" { send "$disk\r" }
 
-# Disk Cache
-expect "Choose" { send "\r" }
+y
+y
 
-# Hostname
-expect "Set Hostname" { send "$hostname\r" }
-
-# CPU Model
-expect "Choose" { send "\r" }
-
-# CPU Cores
-expect "Allocate CPU Cores" { send "$cores\r" }
-
-# RAM Size
-expect "Allocate RAM in MiB" { send "$memory\r" }
-
-# Bridge
-expect "Set a Bridge" { send "$bridge\r" }
-
-# MAC Address (accept default)
-expect "Set a MAC Address" { send "\r" }
-
-# VLAN (leave blank)
-expect "Set a Vlan" { send "\r" }
-
-# MTU (leave blank)
-expect "Set Interface MTU Size" { send "\r" }
-
-# Start VM when completed
-expect "Start VM when completed?" { send "y\r" }
-
-# Ready to create
-expect "Ready to create a Docker VM?" { send "y\r" }
-
-# Storage selection (select first option)
-expect "Which storage pool" { send "\r" }
-
-# Wait for completion
-expect {
-    "Completed successfully!" {
-        puts "\nVM created successfully!"
-        exit 0
-    }
-    timeout {
-        puts "\nTimeout waiting for VM creation"
-        exit 1
-    }
-    eof {
-        puts "\nScript ended unexpectedly"
-        exit 1
-    }
-}
-EOF
-
-    # Transfer expect script to Proxmox
-    if ! scp "/tmp/create-vm-expect-$$.exp" "$PROXMOX_HOST:/tmp/create-vm-expect.exp"; then
-        rm -f "/tmp/create-vm-expect-$$.exp"
-        error_exit "Failed to transfer expect script to Proxmox host"
+ANSWERS
+            log_success "VM created successfully!"
+        else
+            log_warning "Automated creation failed - please create manually using instructions above"
+            echo ""
+            log_info "After creating the VM manually, return here and run:"
+            log_info "  task proxmox-vm:deploy"
+            exit 0
+        fi
+    else
+        log_info "Please create the VM manually using the instructions above"
+        echo ""
+        log_info "After creating the VM, return here and run:"
+        log_info "  task proxmox-vm:deploy"
+        echo ""
+        read -p "Press Enter when you have created the VM..." -r
     fi
-    
-    rm -f "/tmp/create-vm-expect-$$.exp"
-    
-    # Execute the expect script on Proxmox
-    if ! ssh "$PROXMOX_HOST" "expect /tmp/create-vm-expect.exp \
-        $PROXMOX_VM_ID \
-        $PROXMOX_VM_HOSTNAME \
-        $PROXMOX_VM_CORES \
-        $PROXMOX_VM_MEMORY \
-        $PROXMOX_VM_DISK_SIZE \
-        $PROXMOX_VM_BRIDGE"; then
-        error_exit "VM creation failed"
-    fi
-    
-    # Cleanup
-    ssh "$PROXMOX_HOST" "rm -f /tmp/docker-vm-create.sh /tmp/create-vm-expect.exp" || true
-    
-    log_success "VM created successfully!"
     
     # Wait for VM to get an IP
     log_step "Waiting for VM to obtain IP address..."
