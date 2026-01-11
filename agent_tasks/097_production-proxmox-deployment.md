@@ -1,4 +1,4 @@
-# Task 074: Production-Ready Proxmox Deployment via Docker VM
+# Task 097: Production-Ready Proxmox Deployment via Docker VM
 
 **Date**: 2026-01-11
 **Agent**: quality-infra
