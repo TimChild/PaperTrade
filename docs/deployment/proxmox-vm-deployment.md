@@ -2,7 +2,22 @@
 
 **Last Updated**: January 11, 2026  
 **Agent**: quality-infra  
-**Deployment Method**: VM-based Docker using community scripts
+**Deployment Method**: VM-based Docker using community script
+
+---
+
+## Overview
+
+This guide covers deploying PaperTrade to a Proxmox VM using the [community Docker VM script](https://github.com/community-scripts/ProxmoxVE). The community script uses `virt-customize` to pre-install Docker into the VM image before first boot, providing a production-ready Docker environment immediately.
+
+**Why use the community script?**  
+See [proxmox-vm-approach-comparison.md](./proxmox-vm-approach-comparison.md) for a detailed analysis. Key benefits:
+- Docker installed before first boot (no cloud-init wait)
+- Avoids dpkg lock issues during initial setup
+- Battle-tested by thousands of Proxmox users
+- Handles storage selection, EFI, cleanup automatically
+
+The script runs interactively with a terminal UI, which is acceptable since VM creation is infrequent (<10 times/year typical). All other operations (deploy, status, logs) are fully automated.
 
 ---
 
@@ -22,18 +37,19 @@
 
 ## Quick Start
 
-Get PaperTrade running on Proxmox in 5 minutes:
+Get PaperTrade running on Proxmox in 10-15 minutes:
 
 ```bash
 # 1. Configure Proxmox connection
 export PROXMOX_HOST=root@proxmox
 
-# 2. Create and configure secrets
-cp .env.production.example .env
-# Edit .env with your secrets (POSTGRES_PASSWORD, SECRET_KEY, etc.)
+# 2. Configure VM settings (optional - defaults are sensible)
+export PROXMOX_VM_ID=200
+export PROXMOX_VM_HOSTNAME=papertrade-vm
 
-# 3. Create VM
+# 3. Create VM using community script (interactive)
 task proxmox-vm:create
+# Follow the interactive prompts using the recommended settings displayed
 
 # 4. Deploy application
 task proxmox-vm:deploy
@@ -42,7 +58,9 @@ task proxmox-vm:deploy
 task proxmox-vm:status
 ```
 
-Your application will be accessible at the VM's IP address.
+Your application will be accessible at the VM's IP address (displayed after creation).
+
+**Note**: Step 3 is interactive and requires answering prompts in a terminal UI. The script will display recommended values from your configuration. This typically happens <10 times/year, so the interactivity is acceptable.
 
 ---
 
@@ -172,21 +190,42 @@ cp .env.production.example .env
 # Edit .env with your secrets
 ```
 
-### Step 2: Create VM
+### Step 2: Create VM (Interactive)
 
 ```bash
 task proxmox-vm:create
 ```
 
-This will:
-- Download the community Docker VM script
-- Create a Debian 12 VM with Docker pre-installed
-- Configure VM with specified resources
-- Start the VM
-- Attempt to change the default password (requires `sshpass`)
-- Display VM IP address
+The script will:
+1. Display recommended configuration values from your environment
+2. Guide you to SSH into Proxmox
+3. Run the community Docker VM script interactively
+4. Verify the VM was created successfully
 
-**Duration**: 5-10 minutes (downloads Debian image)
+**Interactive Prompts** (recommended values will be displayed):
+- **Use Default Settings?** → NO (select Advanced for custom configuration)
+- **VM ID** → 200 (or your configured value)
+- **Machine Type** → i440fx (default)
+- **Disk Size** → 50G (or your configured value)
+- **Hostname** → papertrade-vm
+- **CPU Cores** → 4
+- **RAM Size** → 8192
+- **Bridge** → vmbr0
+- **Static IP** → Configure via cloud-init prompts (optional)
+- **Start VM** → YES
+- **Storage** → Select your preferred storage pool
+
+**What the community script does**:
+1. Downloads Debian 12 cloud image (~500MB)
+2. Uses `virt-customize` to inject Docker, qemu-guest-agent into the image offline
+3. Configures hostname and enables Docker service
+4. Resizes disk to requested size
+5. Creates VM with cloud-init configuration for SSH and networking
+6. Starts VM with Docker pre-installed and ready
+
+**Duration**: 5-10 minutes (includes image download and offline customization)
+
+**Technical Details**: The script uses `libguestfs-tools` to modify the cloud image before first boot. This installs Docker packages and configures services without needing to wait for cloud-init or deal with dpkg locks during first boot.
 
 ### Step 3: Deploy Application
 
