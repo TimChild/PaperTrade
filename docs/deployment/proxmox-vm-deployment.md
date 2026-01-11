@@ -1,7 +1,7 @@
 # Proxmox VM Deployment Guide
 
-**Last Updated**: January 11, 2026  
-**Agent**: quality-infra  
+**Last Updated**: January 11, 2026
+**Agent**: quality-infra
 **Deployment Method**: VM-based Docker using community script
 
 ---
@@ -10,7 +10,7 @@
 
 This guide covers deploying PaperTrade to a Proxmox VM using the [community Docker VM script](https://github.com/community-scripts/ProxmoxVE). The community script uses `virt-customize` to pre-install Docker into the VM image before first boot, providing a production-ready Docker environment immediately.
 
-**Why use the community script?**  
+**Why use the community script?**
 See [proxmox-vm-approach-comparison.md](./proxmox-vm-approach-comparison.md) for a detailed analysis. Key benefits:
 - Docker installed before first boot (no cloud-init wait)
 - Avoids dpkg lock issues during initial setup
@@ -523,31 +523,31 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Install Task
         run: |
           sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b ~/.local/bin
-      
+
       - name: Setup SSH
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.PROXMOX_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.PROXMOX_HOST }} >> ~/.ssh/known_hosts
-      
+
       - name: Configure environment
         run: |
           echo "POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}" >> .env
           echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
           echo "ALPHA_VANTAGE_API_KEY=${{ secrets.ALPHA_VANTAGE_API_KEY }}" >> .env
-      
+
       - name: Deploy to Proxmox
         env:
           PROXMOX_HOST: ${{ secrets.PROXMOX_HOST }}
           PROXMOX_VM_ID: ${{ secrets.PROXMOX_VM_ID }}
         run: |
           task proxmox-vm:deploy
-      
+
       - name: Verify deployment
         run: |
           task proxmox-vm:status

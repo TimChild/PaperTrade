@@ -307,9 +307,9 @@ If you later want full automation without reimplementing the script:
 source "proxmox" "debian-docker" {
   proxmox_url = "https://proxmox:8006/api2/json"
   node        = "proxmox"
-  
+
   iso_file    = "debian-12-generic-amd64.qcow2"
-  
+
   # Use virt-customize via shell provisioner
   ssh_username = "root"
 }

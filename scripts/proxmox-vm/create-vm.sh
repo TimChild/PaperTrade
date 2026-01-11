@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Guide for creating Docker VM on Proxmox using community script
-# 
+#
 # This script helps you use the battle-tested community Docker VM script
 # which uses virt-customize to pre-install Docker before first boot.
 #
@@ -23,21 +23,21 @@ main() {
     echo "║     Proxmox Docker VM Creation Guide                          ║"
     echo "╚════════════════════════════════════════════════════════════════╝"
     echo ""
-    
+
     # Display configuration
     display_config
     echo ""
-    
+
     # Check Proxmox connection
     if ! check_proxmox_connection; then
         error_exit "Cannot connect to Proxmox host"
     fi
-    
+
     # Check if VM already exists
     if vm_exists "$PROXMOX_VM_ID"; then
         error_exit "VM $PROXMOX_VM_ID already exists. Use 'task proxmox-vm:destroy' to remove it first."
     fi
-    
+
     log_step "VM will be created using the community Docker VM script"
     echo ""
     echo "The script will:"
@@ -46,7 +46,7 @@ main() {
     echo "  ✓ Configure VM with qemu-guest-agent"
     echo "  ✓ Set up cloud-init for SSH and networking"
     echo ""
-    
+
     log_step "Recommended settings for interactive prompts:"
     echo ""
     echo "  VM ID:            $PROXMOX_VM_ID"
@@ -66,49 +66,49 @@ main() {
     echo "  bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/docker-vm.sh)\""
     echo ""
     echo ""
-    
+
     log_step "Press Enter when ready to run the script..."
     read -r -p ""
-    
+
     # Open SSH connection in a way that allows interaction
     log_step "Opening interactive SSH session to Proxmox..."
     echo ""
     echo "The community script will now run interactively."
     echo "After it completes, the script will verify the VM was created."
     echo ""
-    
+
     # Run the community script interactively via SSH
     ssh -t "$PROXMOX_HOST" "bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/docker-vm.sh)\""
-    
+
     local ssh_exit_code=$?
     echo ""
-    
+
     if [ $ssh_exit_code -ne 0 ]; then
         log_warning "SSH session exited with code $ssh_exit_code"
         log_info "If you chose not to create the VM, you can run this script again later."
         exit $ssh_exit_code
     fi
-    
+
     # Verify VM was created
     log_step "Verifying VM creation..."
-    
+
     if ! vm_exists "$PROXMOX_VM_ID"; then
         log_warning "VM $PROXMOX_VM_ID was not found"
         log_info "If you used a different VM ID, update .env.proxmox-vm and try again."
         exit 1
     fi
-    
+
     log_success "VM $PROXMOX_VM_ID created successfully!"
 
-    
+
     log_success "VM $PROXMOX_VM_ID created successfully!"
     echo ""
-    
+
     # Wait for VM to get an IP
     log_step "Waiting for VM to obtain IP address..."
     local vm_ip
     vm_ip=$(get_vm_ip "$PROXMOX_VM_ID")
-    
+
     if [ -z "$vm_ip" ]; then
         log_warning "Could not automatically determine VM IP address"
         echo ""
@@ -118,13 +118,13 @@ main() {
         log_info "Once you have the IP, update .env.proxmox-vm if using static IP mode"
     else
         log_success "VM IP address: $vm_ip"
-        
+
         if [ "$PROXMOX_VM_IP" != "$vm_ip" ]; then
             log_warning "Expected IP: $PROXMOX_VM_IP, Got: $vm_ip"
             log_info "Update .env.proxmox-vm with the actual IP if needed"
         fi
     fi
-    
+
     echo ""
     log_success "VM creation complete!"
     echo ""
