@@ -149,7 +149,7 @@ get_vm_ip() {
     local max_attempts="${2:-30}"
     local attempt=1
 
-    log_step "Retrieving VM IP address..."
+    log_step "Retrieving VM IP address..." >&2
 
     while [ $attempt -le $max_attempts ]; do
         local vm_ip
@@ -164,13 +164,13 @@ get_vm_ip() {
             return 0
         fi
 
-        echo -n "."
+        echo -n "." >&2
         sleep 2
         attempt=$((attempt + 1))
     done
 
-    echo ""
-    log_error "Could not retrieve VM IP address"
+    echo "" >&2
+    log_error "Could not retrieve VM IP address" >&2
     return 1
 }
 
