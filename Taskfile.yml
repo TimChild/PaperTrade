@@ -475,3 +475,51 @@ tasks:
     dir: "{{.BACKEND_DIR}}"
     cmds:
       - uv run python scripts/seed_historical_data.py {{.CLI_ARGS}}
+
+  # =============================================================================
+  # Proxmox Deployment Tasks
+  # =============================================================================
+
+  proxmox:create-container:
+    desc: "Create a new Proxmox LXC container for PaperTrade (set PROXMOX_CONTAINER_ID to customize)"
+    cmds:
+      - bash scripts/proxmox/create-container.sh
+    env:
+      PROXMOX_HOST: "{{.PROXMOX_HOST | default \"root@proxmox\"}}"
+      PROXMOX_CONTAINER_ID: "{{.PROXMOX_CONTAINER_ID | default \"107\"}}"
+      PROXMOX_CONTAINER_HOSTNAME: "{{.PROXMOX_CONTAINER_HOSTNAME | default \"papertrade\"}}"
+      PROXMOX_CONTAINER_MEMORY: "{{.PROXMOX_CONTAINER_MEMORY | default \"4096\"}}"
+      PROXMOX_CONTAINER_CORES: "{{.PROXMOX_CONTAINER_CORES | default \"2\"}}"
+      PROXMOX_CONTAINER_DISK: "{{.PROXMOX_CONTAINER_DISK | default \"20\"}}"
+
+  proxmox:deploy:
+    desc: "Deploy PaperTrade to existing Proxmox container"
+    cmds:
+      - bash scripts/proxmox/deploy.sh
+    env:
+      PROXMOX_HOST: "{{.PROXMOX_HOST | default \"root@proxmox\"}}"
+      PROXMOX_CONTAINER_ID: "{{.PROXMOX_CONTAINER_ID | default \"107\"}}"
+
+  proxmox:status:
+    desc: "Show Proxmox deployment status"
+    cmds:
+      - bash scripts/proxmox/status.sh
+    env:
+      PROXMOX_HOST: "{{.PROXMOX_HOST | default \"root@proxmox\"}}"
+      PROXMOX_CONTAINER_ID: "{{.PROXMOX_CONTAINER_ID | default \"107\"}}"
+
+  proxmox:logs:
+    desc: "View application logs (usage: task proxmox:logs [SERVICE=backend|frontend|db|redis])"
+    cmds:
+      - bash scripts/proxmox/logs.sh {{.SERVICE}}
+    env:
+      PROXMOX_HOST: "{{.PROXMOX_HOST | default \"root@proxmox\"}}"
+      PROXMOX_CONTAINER_ID: "{{.PROXMOX_CONTAINER_ID | default \"107\"}}"
+
+  proxmox:update:
+    desc: "Update application in existing container (redeploys with latest code)"
+    cmds:
+      - task: proxmox:deploy
+    env:
+      PROXMOX_HOST: "{{.PROXMOX_HOST | default \"root@proxmox\"}}"
+      PROXMOX_CONTAINER_ID: "{{.PROXMOX_CONTAINER_ID | default \"107\"}}"
