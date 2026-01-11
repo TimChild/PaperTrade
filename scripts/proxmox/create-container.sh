@@ -10,6 +10,8 @@ CONTAINER_HOSTNAME="${PROXMOX_CONTAINER_HOSTNAME:-papertrade}"
 CONTAINER_MEMORY="${PROXMOX_CONTAINER_MEMORY:-4096}"
 CONTAINER_CORES="${PROXMOX_CONTAINER_CORES:-2}"
 CONTAINER_DISK="${PROXMOX_CONTAINER_DISK:-20}"
+CONTAINER_IP="${PROXMOX_CONTAINER_IP:-dhcp}"  # Can be "dhcp" or "192.168.1.100/24"
+CONTAINER_GATEWAY="${PROXMOX_CONTAINER_GATEWAY:-}"  # Required if static IP
 
 # Colors for output
 RED='\033[0;31m'
@@ -58,12 +60,18 @@ download_template() {
 # Create container
 create_container() {
     log_info "Creating privileged LXC container ${CONTAINER_ID}..."
+    
+    # Build network configuration
+    local net_config="name=eth0,bridge=vmbr0,ip=${CONTAINER_IP}"
+    if [[ "${CONTAINER_IP}" != "dhcp" ]] && [[ -n "${CONTAINER_GATEWAY}" ]]; then
+        net_config="${net_config},gw=${CONTAINER_GATEWAY}"
+    fi
 
     ssh "${PROXMOX_HOST}" "pct create ${CONTAINER_ID} local:vztmpl/ubuntu-24.04-standard_24.04-2_amd64.tar.zst \
         --hostname ${CONTAINER_HOSTNAME} \
         --memory ${CONTAINER_MEMORY} \
         --cores ${CONTAINER_CORES} \
-        --net0 name=eth0,bridge=vmbr0,ip=dhcp \
+        --net0 ${net_config} \
         --storage local-lvm \
         --rootfs local-lvm:${CONTAINER_DISK} \
         --unprivileged 0 \
