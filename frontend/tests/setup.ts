@@ -3,6 +3,10 @@ import { cleanup } from '@testing-library/react'
 import '@testing-library/jest-dom/vitest'
 import { setupServer } from 'msw/node'
 import { handlers } from '../src/mocks/handlers'
+import { toHaveNoViolations } from 'jest-axe'
+
+// Extend expect with jest-axe matchers
+expect.extend(toHaveNoViolations)
 
 // Mock HTMLDialogElement methods not available in jsdom
 beforeAll(() => {

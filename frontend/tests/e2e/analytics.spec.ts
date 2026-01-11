@@ -39,13 +39,28 @@ test.describe('Portfolio Analytics', () => {
     await page.getByTestId('submit-portfolio-form-btn').click()
 
     // Wait for navigation to portfolio detail
-    await page.waitForURL('**/portfolio/*', { timeout: 10000 })
+    console.log('Waiting for navigation to portfolio detail page...')
+    try {
+      await page.waitForURL('**/portfolio/*', { timeout: 10000 })
+      console.log('✓ Navigated to portfolio detail:', page.url())
+    } catch (error) {
+      console.error('✗ Failed to navigate to portfolio detail')
+      console.error('Current URL:', page.url())
+      console.error('Page title:', await page.title())
+      // Take screenshot for debugging
+      await page.screenshot({ path: 'test-results/portfolio-creation-timeout.png' })
+      throw error
+    }
 
     // Extract portfolio ID from URL
     const url = page.url()
     const match = url.match(/\/portfolio\/([^/]+)/)
     if (match) {
       portfolioId = match[1]
+      console.log('✓ Portfolio ID extracted:', portfolioId)
+    } else {
+      console.error('✗ Failed to extract portfolio ID from URL:', url)
+      throw new Error(`Failed to extract portfolio ID from URL: ${url}`)
     }
   })
 
