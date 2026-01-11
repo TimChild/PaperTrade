@@ -491,6 +491,8 @@ tasks:
       PROXMOX_CONTAINER_MEMORY: "{{.PROXMOX_CONTAINER_MEMORY | default \"4096\"}}"
       PROXMOX_CONTAINER_CORES: "{{.PROXMOX_CONTAINER_CORES | default \"2\"}}"
       PROXMOX_CONTAINER_DISK: "{{.PROXMOX_CONTAINER_DISK | default \"20\"}}"
+      PROXMOX_CONTAINER_IP: "{{.PROXMOX_CONTAINER_IP | default \"dhcp\"}}"
+      PROXMOX_CONTAINER_GATEWAY: "{{.PROXMOX_CONTAINER_GATEWAY | default \"\"}}"
 
   proxmox:deploy:
     desc: "Deploy PaperTrade to existing Proxmox container"
@@ -520,6 +522,47 @@ tasks:
     desc: "Update application in existing container (redeploys with latest code)"
     cmds:
       - task: proxmox:deploy
+    env:
+      PROXMOX_HOST: "{{.PROXMOX_HOST | default \"root@proxmox\"}}"
+      PROXMOX_CONTAINER_ID: "{{.PROXMOX_CONTAINER_ID | default \"107\"}}"
+
+  proxmox:stop:
+    desc: "Stop PaperTrade containers (preserves data)"
+    cmds:
+      - ssh {{.PROXMOX_HOST}} "pct exec {{.PROXMOX_CONTAINER_ID}} -- docker compose -f /opt/papertrade/docker-compose.prod.yml down"
+    env:
+      PROXMOX_HOST: "{{.PROXMOX_HOST | default \"root@proxmox\"}}"
+      PROXMOX_CONTAINER_ID: "{{.PROXMOX_CONTAINER_ID | default \"107\"}}"
+
+  proxmox:start:
+    desc: "Start PaperTrade containers (if already deployed)"
+    cmds:
+      - ssh {{.PROXMOX_HOST}} "pct exec {{.PROXMOX_CONTAINER_ID}} -- docker compose -f /opt/papertrade/docker-compose.prod.yml up -d"
+    env:
+      PROXMOX_HOST: "{{.PROXMOX_HOST | default \"root@proxmox\"}}"
+      PROXMOX_CONTAINER_ID: "{{.PROXMOX_CONTAINER_ID | default \"107\"}}"
+
+  proxmox:restart:
+    desc: "Restart PaperTrade containers"
+    cmds:
+      - ssh {{.PROXMOX_HOST}} "pct exec {{.PROXMOX_CONTAINER_ID}} -- docker compose -f /opt/papertrade/docker-compose.prod.yml restart"
+    env:
+      PROXMOX_HOST: "{{.PROXMOX_HOST | default \"root@proxmox\"}}"
+      PROXMOX_CONTAINER_ID: "{{.PROXMOX_CONTAINER_ID | default \"107\"}}"
+
+  proxmox:destroy:
+    desc: "DESTRUCTIVE: Stop and remove container (all data will be lost)"
+    prompt: "This will permanently delete container {{.PROXMOX_CONTAINER_ID}} and all its data. Continue?"
+    cmds:
+      - ssh {{.PROXMOX_HOST}} "pct stop {{.PROXMOX_CONTAINER_ID}} && pct destroy {{.PROXMOX_CONTAINER_ID}}"
+    env:
+      PROXMOX_HOST: "{{.PROXMOX_HOST | default \"root@proxmox\"}}"
+      PROXMOX_CONTAINER_ID: "{{.PROXMOX_CONTAINER_ID | default \"107\"}}"
+
+  proxmox:backup:
+    desc: "Create Proxmox backup of container"
+    cmds:
+      - ssh {{.PROXMOX_HOST}} "vzdump {{.PROXMOX_CONTAINER_ID}} --storage local --mode snapshot --compress zstd"
     env:
       PROXMOX_HOST: "{{.PROXMOX_HOST | default \"root@proxmox\"}}"
       PROXMOX_CONTAINER_ID: "{{.PROXMOX_CONTAINER_ID | default \"107\"}}"
