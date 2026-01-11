@@ -1,5 +1,6 @@
 """FastAPI application entry point."""
 
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -58,10 +59,15 @@ app = FastAPI(
 # Register exception handlers
 register_exception_handlers(app)
 
-# CORS configuration - will be made configurable later
+# CORS configuration
+# In production, allow all origins (should be restricted to specific domains)
+# In development, only allow localhost
+allowed_origins = os.getenv(
+    "CORS_ORIGINS", "http://localhost:3000,http://localhost:5173"
+).split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_origins=(allowed_origins if os.getenv("APP_ENV") != "production" else ["*"]),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
