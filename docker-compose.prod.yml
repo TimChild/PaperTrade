@@ -51,6 +51,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:-papertrade}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       # Redis configuration
+      REDIS_URL: redis://redis:6379/0
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_DB: 0
