@@ -185,6 +185,37 @@ from papertrade.domain.ports.portfolio_repository import PortfolioRepository
 - **No mocking internal logic**: Only mock at architectural boundaries
 - **Fast feedback**: Tests should run in <1 minute
 
+### Test Pyramid
+
+PaperTrade follows the standard testing pyramid:
+
+```
+        /\
+       /  \   E2E (~20 tests) - Critical user journeys
+      /    \  - 5-8 min runtime
+     /------\  Integration (~50 tests) - Component interactions
+    /--------\ - 1-2 min runtime
+   /----------\ Unit (~200+ tests) - Pure logic, components
+  /------------\ - <10s runtime
+```
+
+**Key Principle**: Write tests at the lowest level possible. E2E tests are expensive; prefer component and unit tests.
+
+### When to Write E2E Tests
+
+✅ **DO write E2E tests for**:
+- Critical user journeys (signup, trading, portfolio creation)
+- Third-party integrations (Clerk auth, payment gateways)
+- Multi-step workflows spanning multiple pages
+
+❌ **DON'T write E2E tests for**:
+- CSS/styling (use Tailwind + visual regression tools)
+- Accessibility (use `jest-axe` in component tests)
+- Form validation (use component tests)
+- Simple routes (use React Router tests)
+
+See [docs/E2E_TESTING_STANDARDS.md](docs/E2E_TESTING_STANDARDS.md) for complete E2E testing guidelines.
+
 ### Test Structure
 
 ```python

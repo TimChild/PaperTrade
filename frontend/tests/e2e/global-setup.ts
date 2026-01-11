@@ -61,11 +61,25 @@ export default async function globalSetup() {
     console.log('Frontend API:', frontendApi)
   } catch (error) {
     console.error('✗ Failed to create Clerk testing token:')
-    if (error.response) {
-      console.error('Status:', error.response.status)
-      console.error('Data:', error.response.data)
-    } else {
+    if (axios.isAxiosError(error)) {
+      console.error('Status:', error.response?.status)
+      console.error('Data:', JSON.stringify(error.response?.data, null, 2))
+      console.error('Headers:', error.response?.headers)
+
+      // Check for rate limiting
+      if (error.response?.status === 429) {
+        console.error('⚠️  RATE LIMIT DETECTED - Clerk API rate limit exceeded')
+        console.error('This typically happens when creating too many testing tokens in a short period.')
+        console.error('Solutions:')
+        console.error('  1. Wait a few minutes before retrying')
+        console.error('  2. Use fewer parallel workers in Playwright config')
+        console.error('  3. Implement token caching if possible')
+      }
+    } else if (error instanceof Error) {
       console.error('Error:', error.message)
+      console.error('Stack:', error.stack)
+    } else {
+      console.error('Unknown error:', error)
     }
     throw error
   }
