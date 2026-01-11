@@ -9,9 +9,12 @@ const viewports = {
 
 for (const [deviceName, deviceConfig] of Object.entries(viewports)) {
   test.describe(`Responsive Design - ${deviceName}`, () => {
-    test.use(deviceConfig)
-
     test.beforeEach(async ({ page }) => {
+      // Set viewport size before navigation
+      if ('viewport' in deviceConfig) {
+        await page.setViewportSize(deviceConfig.viewport)
+      }
+
       const email = process.env.E2E_CLERK_USER_EMAIL || 'test-e2e@papertrade.dev'
 
       // Navigate to app and authenticate
