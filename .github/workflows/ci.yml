@@ -162,21 +162,16 @@ jobs:
         working-directory: ./frontend
         run: npx playwright install --with-deps
 
-      - name: Start Docker services and wait for health
-        run: |
-          task docker:up
-          task health:wait
-        env:
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
-
-      - name: Start backend and frontend servers
+      - name: Start all services
         run: task docker:up:all
         env:
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
 
-      - name: Validate all services healthy
+      - name: Wait for all services to be healthy
+        run: task health:wait
+
+      - name: Verify all services healthy
         run: task health:all
 
       - name: Run E2E tests

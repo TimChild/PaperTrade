@@ -132,20 +132,18 @@ jobs:
           EOF
           echo "✅ .env file created with Clerk credentials"
 
-      - name: Start Docker services and wait for health
-        run: |
-          task docker:up
-          task health:wait
-      - name: Start Docker services and wait for health
-        run: |
-          task docker:up
-          task health:wait
+      - name: Start Docker services
+        run: task docker:up
         env:
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
 
-      - name: Verify all services healthy
-        run: task health:all
+      - name: Wait for Docker services to be healthy
+        run: |
+          echo "⏳ Waiting for PostgreSQL and Redis..."
+          timeout 30 bash -c 'until docker compose exec -T db pg_isready -U papertrade 2>/dev/null; do sleep 1; done'
+          timeout 30 bash -c 'until docker compose exec -T redis redis-cli ping 2>/dev/null | grep -q PONG; do sleep 1; done'
+          echo "✅ Docker services ready"
 
       - name: Verify backend imports
         working-directory: backend
