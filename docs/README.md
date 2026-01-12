@@ -11,12 +11,22 @@
 ## Project Documentation
 
 | Document | Purpose |
-|----------|---------||
+|----------|---------|
 | [planning/project_plan.md](planning/project_plan.md) | Development phases and roadmap |
 | [planning/project_strategy.md](planning/project_strategy.md) | Architecture and tech decisions |
 | [../PROGRESS.md](../PROGRESS.md) | Current status and recent work |
 | [../BACKLOG.md](../BACKLOG.md) | Minor improvements and tech debt |
 | [../AGENT_ORCHESTRATION.md](../AGENT_ORCHESTRATION.md) | AI agent workflow guide |
+
+## Deployment Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [deployment/proxmox-vm-deployment.md](deployment/proxmox-vm-deployment.md) | Complete Proxmox VM deployment guide |
+| [deployment/domain-and-ssl-setup.md](deployment/domain-and-ssl-setup.md) | Domain setup with NPMplus and SSL/HTTPS |
+| [deployment/production-checklist.md](deployment/production-checklist.md) | Production readiness verification |
+| [deployment/proxmox-vm-approach-comparison.md](deployment/proxmox-vm-approach-comparison.md) | VM vs LXC comparison |
+| [deployment/proxmox-learnings.md](deployment/proxmox-learnings.md) | Lessons learned from deployment |
 
 ## Reference Documentation
 

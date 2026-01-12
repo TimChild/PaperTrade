@@ -71,7 +71,7 @@ Your application will be accessible at the VM's IP address (displayed after crea
 - **Task** (go-task) - Task runner for executing deployment commands
 - **SSH access** to Proxmox host (key-based authentication recommended)
 - **curl** - For downloading community scripts
-- **tar** - For packaging application code
+- **git** - For version control and tracking deployments
 
 Optional but recommended:
 - **sshpass** - For automated password changes (improves security)
@@ -85,6 +85,13 @@ Optional but recommended:
   - Recommended: 4 CPU cores, 8GB RAM, 50GB disk
 - **Network access** for VM (bridged networking)
 - **Storage pool** with available space
+
+### On the VM (Installed Automatically)
+
+The community script and deployment process automatically handle:
+- **Docker Engine and Docker Compose** - Pre-installed by community script
+- **Git** - Installed during first deployment for code management
+- **QEMU Guest Agent** - Pre-installed for VM management
 
 ### SSH Setup
 
@@ -286,19 +293,70 @@ task proxmox-vm:stop
 task proxmox-vm:restart
 ```
 
-### Redeployment
+### Updating Deployments (Redeployment)
 
-To deploy code changes:
+The deployment uses **git pull** to update code on subsequent deployments. This means:
+- Only changed files are transferred (efficient)
+- Full git history is available on the VM
+- Easy to rollback to previous commits if needed
+
+**To deploy code changes:**
 
 ```bash
 task proxmox-vm:deploy
 ```
 
 This will:
-- Transfer updated code
-- Rebuild Docker images
-- Restart services
-- **Preserve** existing secrets
+1. Pull latest changes from the current branch via git
+2. Rebuild Docker images (only rebuilds changed layers)
+3. Restart services with zero-downtime strategy
+4. **Preserve** existing secrets (`.env` file not overwritten)
+
+**What happens during redeployment:**
+- If repository exists on VM → `git pull origin <current-branch>`
+- If repository doesn't exist → `git clone` (first deployment only)
+- Shows deployed git version after update
+- Existing `.env` file is preserved (secrets not changed)
+- Only `.env` is backed up to `.env.backup` as a safety measure
+
+**Manual git operations on VM:**
+
+You can also SSH into the VM and perform git operations manually:
+
+```bash
+# SSH into VM
+ssh root@<vm-ip>
+
+# Navigate to app directory
+cd /opt/papertrade
+
+# Check current version
+git log -1 --oneline
+
+# View uncommitted changes (if any)
+git status
+
+# Switch to a different branch
+git checkout main
+git pull origin main
+
+# Rollback to a specific commit
+git checkout <commit-hash>
+
+# Return to latest version
+git checkout main
+git pull origin main
+
+# Rebuild and restart after manual git operations
+docker compose -f docker-compose.prod.yml build
+docker compose -f docker-compose.prod.yml up -d
+```
+
+**Best Practices:**
+- Always deploy from a clean git state (no uncommitted changes locally)
+- Use tagged releases for production deployments
+- Test in staging before deploying to production
+- Keep track of deployed versions with `git describe --always`
 
 ### VM Management
 

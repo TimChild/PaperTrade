@@ -18,6 +18,11 @@ A stock market emulation platform for practicing trading strategies without risk
 - **[Feature Status Matrix](docs/FEATURE_STATUS.md)** - Complete feature implementation status
 - **[Technical Boundaries](docs/TECHNICAL_BOUNDARIES.md)** - Known limitations and edge cases
 
+**Deployment & Operations:**
+- **[Proxmox VM Deployment](docs/deployment/proxmox-vm-deployment.md)** - Production deployment guide
+- **[Domain & SSL Setup](docs/deployment/domain-and-ssl-setup.md)** - Configure custom domain with HTTPS
+- **[Production Checklist](docs/deployment/production-checklist.md)** - Pre-deployment verification
+
 **Project Information:**
 - [Development Progress](PROGRESS.md) - Phase completion tracking
 - [Project Plan](docs/planning/project_plan.md) - Roadmap and architecture
