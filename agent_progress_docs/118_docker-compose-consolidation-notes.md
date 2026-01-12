@@ -1,7 +1,7 @@
 # Infrastructure Consolidation - Docker Compose & Environment Files
 
-**Branch**: `infra/consolidate-docker-env`  
-**Target**: PR #118 (`copilot/production-ready-proxmox-deployment`)  
+**Branch**: `infra/consolidate-docker-env`
+**Target**: PR #118 (`copilot/production-ready-proxmox-deployment`)
 **Date**: 2026-01-12
 
 ## Summary
@@ -172,13 +172,13 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up
 
 All changes tested and validated:
 
-✅ Dev mode config validates: `docker compose config --quiet`  
-✅ Prod mode config validates: `docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet`  
-✅ Container naming correct: `-dev` vs `-prod` suffixes  
-✅ Volumes correct: Mounts in dev, none in prod  
-✅ Dockerfiles correct: `Dockerfile.dev` vs `Dockerfile`  
-✅ Secrets preserved: Backed up to `/tmp` (not committed)  
-✅ Documentation updated: All references point to new file names  
+✅ Dev mode config validates: `docker compose config --quiet`
+✅ Prod mode config validates: `docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet`
+✅ Container naming correct: `-dev` vs `-prod` suffixes
+✅ Volumes correct: Mounts in dev, none in prod
+✅ Dockerfiles correct: `Dockerfile.dev` vs `Dockerfile`
+✅ Secrets preserved: Backed up to `/tmp` (not committed)
+✅ Documentation updated: All references point to new file names
 
 ## Next Steps
 
