@@ -155,6 +155,12 @@ ENV/
 env.bak/
 venv.bak/
 
+# Environment files (only commit .example versions)
+.env.local
+.env.*.local
+.env.production
+.env.proxmox
+
 # Spyder project settings
 .spyderproject
 .spyproject
