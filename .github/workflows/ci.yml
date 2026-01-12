@@ -46,6 +46,11 @@ jobs:
           version: 3.x
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Validate environment
+        run: task validate:env
+        env:
+          CI: true
+
       - name: Install dependencies
         run: task setup:backend
 
@@ -81,6 +86,11 @@ jobs:
         with:
           version: 3.x
           repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate environment
+        run: task validate:env
+        env:
+          CI: true
 
       - name: Install dependencies
         run: task setup:frontend
@@ -152,27 +162,17 @@ jobs:
         working-directory: ./frontend
         run: npx playwright install --with-deps
 
-      - name: Start Docker services
-        run: task docker:up
-        env:
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
-
-      - name: Wait for services to be ready
-        run: |
-          timeout 30 bash -c 'until docker compose exec -T db pg_isready -U papertrade; do sleep 1; done'
-          timeout 30 bash -c 'until docker compose exec -T redis redis-cli ping; do sleep 1; done'
-
-      - name: Start backend and frontend servers
+      - name: Start all services
         run: task docker:up:all
         env:
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
 
-      - name: Wait for backend and frontend to be ready
-        run: |
-          timeout 60 bash -c 'until curl -f http://localhost:8000/health; do sleep 2; done'
-          timeout 60 bash -c 'until curl -f http://localhost:5173; do sleep 2; done'
+      - name: Wait for all services to be healthy
+        run: task health:wait
+
+      - name: Verify all services healthy
+        run: task health:all
 
       - name: Run E2E tests
         run: task test:e2e

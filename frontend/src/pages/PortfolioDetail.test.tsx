@@ -16,7 +16,10 @@ function createTestQueryClient() {
 }
 
 // Helper to render with all required providers
-function renderWithProviders(ui: React.ReactElement, { route = '/portfolio/1' } = {}) {
+function renderWithProviders(
+  ui: React.ReactElement,
+  { route = '/portfolio/1' } = {}
+) {
   const queryClient = createTestQueryClient()
   return render(
     <QueryClientProvider client={queryClient}>

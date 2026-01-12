@@ -27,29 +27,28 @@ if (!CLERK_PUBLISHABLE_KEY) {
     </StrictMode>
   )
 } else {
-
-// Create a client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5000,
-      retry: 1,
-      refetchOnWindowFocus: false,
+  // Create a client
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 5000,
+        retry: 1,
+        refetchOnWindowFocus: false,
+      },
     },
-  },
-})
+  })
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <ErrorBoundary>
-      <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
-        <AuthProvider>
-          <QueryClientProvider client={queryClient}>
-            <App />
-          </QueryClientProvider>
-        </AuthProvider>
-      </ClerkProvider>
-    </ErrorBoundary>
-  </StrictMode>
-)
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <ErrorBoundary>
+        <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
+          <AuthProvider>
+            <QueryClientProvider client={queryClient}>
+              <App />
+            </QueryClientProvider>
+          </AuthProvider>
+        </ClerkProvider>
+      </ErrorBoundary>
+    </StrictMode>
+  )
 }
