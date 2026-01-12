@@ -190,24 +190,27 @@ Web browsers enforce **Cross-Origin Resource Sharing (CORS)** rules. When your f
 
 ### Current CORS Configuration
 
-The backend currently allows all origins in production (see `backend/src/papertrade/main.py`):
+The backend respects the `CORS_ORIGINS` environment variable (see `backend/src/papertrade/main.py`):
 
 ```python
+# CORS configuration
+# Allow specific origins from environment variable
 allowed_origins = os.getenv(
     "CORS_ORIGINS", "http://localhost:3000,http://localhost:5173"
 ).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=(allowed_origins if os.getenv("APP_ENV") != "production" else ["*"]),
-    # ...
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 ```
 
 ### Update Backend CORS for Production
 
-**Option 1: Use Environment Variable (Recommended)**
-
-Update the backend to respect `CORS_ORIGINS` in production:
+Configure allowed origins for your production domain:
 
 1. SSH into your VM:
 ```bash
@@ -222,38 +225,17 @@ CORS_ORIGINS=https://zebutrader.com,https://api.zebutrader.com
 APP_ENV=production
 ```
 
-3. Update `backend/src/papertrade/main.py` (commit this change to your repository):
-
-```python
-# CORS configuration
-# Allow specific origins in production
-allowed_origins = os.getenv(
-    "CORS_ORIGINS", "http://localhost:3000,http://localhost:5173"
-).split(",")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=allowed_origins,  # Use env var in all environments
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-```
-
-4. Commit the code change locally and redeploy:
+3. Restart the backend to apply changes:
 ```bash
-# On your local machine
-git add backend/src/papertrade/main.py
-git commit -m "fix: respect CORS_ORIGINS in production"
-git push
-
-# Then redeploy
-task proxmox-vm:deploy
+cd /opt/papertrade
+docker compose -f docker-compose.prod.yml restart backend
 ```
 
-**Option 2: Wildcard (Less Secure, Quick Test)**
-
-For testing purposes only, you can keep the current `["*"]` configuration. However, this is **not recommended for production** as it allows any website to make requests to your API.
+4. Verify CORS is working:
+```bash
+curl -H "Origin: https://zebutrader.com" -I https://api.zebutrader.com/health
+# Look for: Access-Control-Allow-Origin: https://zebutrader.com
+```
 
 ### Why Subdomain Needs CORS
 
