@@ -125,8 +125,8 @@ main() {
     else
         log_info "Cloning repository for first deployment..."
 
-        # Clone repository
-        ssh "$VM_DEFAULT_USER@$vm_ip" "git clone git@github.com:TimChild/PaperTrade.git $APP_DIR && cd $APP_DIR && git checkout $current_branch"
+        # Clone repository (use HTTPS to avoid SSH key requirements)
+        ssh "$VM_DEFAULT_USER@$vm_ip" "git clone https://github.com/TimChild/PaperTrade.git $APP_DIR && cd $APP_DIR && git checkout $current_branch"
 
         log_success "Repository cloned"
     fi

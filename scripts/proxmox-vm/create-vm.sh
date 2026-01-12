@@ -138,6 +138,63 @@ main() {
         fi
     fi
 
+    # Configure SSH access automatically
+    log_step "Configuring SSH access..."
+    echo ""
+
+    # Check if SSH is installed (community script may not include it)
+    log_info "Checking SSH installation..."
+    local ssh_installed
+    ssh_installed=$(ssh "$PROXMOX_HOST" "qm guest exec $PROXMOX_VM_ID -- bash -c 'dpkg -l openssh-server 2>/dev/null | grep -q ^ii && echo yes || echo no'" 2>/dev/null | grep -o 'yes\|no')
+
+    if [ "$ssh_installed" != "yes" ]; then
+        log_info "Installing OpenSSH server on VM..."
+        ssh "$PROXMOX_HOST" "qm guest exec $PROXMOX_VM_ID -- bash -c 'DEBIAN_FRONTEND=noninteractive apt-get update -qq && apt-get install -y -qq openssh-server >/dev/null 2>&1'" >/dev/null 2>&1
+        log_success "OpenSSH server installed"
+    else
+        log_info "OpenSSH server already installed"
+    fi
+
+    # Set root password to 'docker' (community script default)
+    log_info "Setting root password..."
+    ssh "$PROXMOX_HOST" "qm guest exec $PROXMOX_VM_ID -- bash -c 'echo \"root:docker\" | chpasswd'" >/dev/null 2>&1
+    log_success "Root password set to 'docker'"
+
+    # Copy local SSH public key to VM
+    local ssh_key_path="${SSH_KEY_PATH:-$HOME/.ssh/id_ed25519.pub}"
+    if [ ! -f "$ssh_key_path" ]; then
+        ssh_key_path="$HOME/.ssh/id_rsa.pub"
+    fi
+
+    if [ -f "$ssh_key_path" ]; then
+        log_info "Copying SSH public key to VM..."
+        local ssh_pub_key
+        ssh_pub_key=$(cat "$ssh_key_path")
+
+        ssh "$PROXMOX_HOST" "qm guest exec $PROXMOX_VM_ID -- bash -c 'mkdir -p /root/.ssh && chmod 700 /root/.ssh && echo \"$ssh_pub_key\" > /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys'" >/dev/null 2>&1
+
+        log_success "SSH key authentication configured"
+
+        # Test SSH connection
+        if [ -n "$vm_ip" ]; then
+            log_info "Testing SSH connection..."
+            sleep 2  # Give SSH service a moment to be ready
+
+            if ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -o BatchMode=yes "root@$vm_ip" "echo 'SSH OK'" >/dev/null 2>&1; then
+                log_success "SSH connection verified!"
+            else
+                log_warning "Could not verify SSH connection (may need more time to initialize)"
+                log_info "You can test manually with: ssh root@$vm_ip"
+            fi
+        fi
+    else
+        log_warning "No SSH public key found at $HOME/.ssh/id_ed25519.pub or $HOME/.ssh/id_rsa.pub"
+        log_info "SSH password authentication is enabled (password: docker)"
+        log_info "Consider generating an SSH key with: ssh-keygen -t ed25519"
+    fi
+
+    echo ""
+
     echo ""
     log_success "VM creation complete!"
     echo ""
