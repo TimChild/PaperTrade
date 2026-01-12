@@ -1,20 +1,28 @@
+# ============================================================================
+# PaperTrade - Base Docker Compose Configuration
+# ============================================================================
+# This is the base configuration shared by all environments.
+#
+# Dev mode:  `docker compose up` 
+#            (automatically loads docker-compose.override.yml if present)
+# Prod mode: `docker compose -f docker-compose.yml -f docker-compose.prod.yml up`
+#
+# See: docker-compose.override.yml.example for local development setup
+# See: docker-compose.prod.yml for production configuration
+
 services:
   db:
     image: postgres:16
-    container_name: papertrade-postgres
     environment:
-      POSTGRES_DB: papertrade_dev
-      POSTGRES_USER: papertrade
-      POSTGRES_PASSWORD: papertrade_dev_password
-      # WARNING: `trust` disables password verification and is intended for
-      # local development only. Do NOT use this setting in production.
-      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_DB: ${POSTGRES_DB:-papertrade_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-papertrade}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-papertrade_dev_password}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U papertrade -d papertrade_dev"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-papertrade} -d ${POSTGRES_DB:-papertrade_dev}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,7 +31,6 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: papertrade-redis
     ports:
       - "6379:6379"
     volumes:
@@ -39,18 +46,17 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile.dev
-    container_name: papertrade-backend
+      dockerfile: ${BACKEND_DOCKERFILE:-Dockerfile.dev}
     ports:
       - "8000:8000"
     environment:
       # Database configuration
-      DATABASE_URL: postgresql+asyncpg://papertrade:papertrade_dev_password@db:5432/papertrade_dev
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-papertrade}:${POSTGRES_PASSWORD:-papertrade_dev_password}@db:5432/${POSTGRES_DB:-papertrade_dev}
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
-      POSTGRES_DB: papertrade_dev
-      POSTGRES_USER: papertrade
-      POSTGRES_PASSWORD: papertrade_dev_password
+      POSTGRES_DB: ${POSTGRES_DB:-papertrade_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-papertrade}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-papertrade_dev_password}
       # Redis configuration
       REDIS_URL: redis://redis:6379/0
       REDIS_HOST: redis
@@ -58,23 +64,18 @@ services:
       REDIS_DB: 0
       # API configuration
       ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-demo}
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
       # Authentication configuration
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
       # Application configuration
-      APP_ENV: development
-      APP_DEBUG: "true"
-      PYTHONPATH: /app/src
+      APP_ENV: ${APP_ENV:-development}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      APP_LOG_LEVEL: ${APP_LOG_LEVEL:-INFO}
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
-    volumes:
-      # Mount source code for hot-reload
-      - ./backend/src:/app/src
-      - ./backend/tests:/app/tests
-      - ./backend/migrations:/app/migrations
-      - ./backend/alembic.ini:/app/alembic.ini
     networks:
       - papertrade-network
     healthcheck:
@@ -87,34 +88,19 @@ services:
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile.dev
-    container_name: papertrade-frontend
+      dockerfile: ${FRONTEND_DOCKERFILE:-Dockerfile.dev}
     ports:
-      - "5173:5173"
+      - "${FRONTEND_PORT:-5173}:${FRONTEND_INTERNAL_PORT:-5173}"
     environment:
-      VITE_API_BASE_URL: http://localhost:8000/api/v1
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000/api/v1}
       VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY}
     depends_on:
       backend:
         condition: service_healthy
-    volumes:
-      # Mount source code for hot-reload
-      - ./frontend/src:/app/src
-      - ./frontend/public:/app/public
-      - ./frontend/index.html:/app/index.html
-      - ./frontend/package.json:/app/package.json
-      - ./frontend/vite.config.ts:/app/vite.config.ts
-      - ./frontend/tsconfig.json:/app/tsconfig.json
-      - ./frontend/tsconfig.app.json:/app/tsconfig.app.json
-      - ./frontend/tsconfig.node.json:/app/tsconfig.node.json
-      - ./frontend/tailwind.config.ts:/app/tailwind.config.ts
-      - ./frontend/postcss.config.js:/app/postcss.config.js
-      # Preserve node_modules from the image
-      - frontend_node_modules:/app/node_modules
     networks:
       - papertrade-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:5173/"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:${FRONTEND_INTERNAL_PORT:-5173}/"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -124,8 +110,6 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
-    driver: local
-  frontend_node_modules:
     driver: local
 
 networks:
