@@ -4,8 +4,10 @@
 import axios, { AxiosError } from 'axios'
 import type { ErrorResponse } from './types'
 
+// Use relative URL in production (proxied by nginx), localhost in development
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
+  import.meta.env.VITE_API_BASE_URL ||
+  (import.meta.env.MODE === 'production' ? '/api/v1' : 'http://localhost:8000/api/v1')
 
 // Global token setter for Clerk authentication
 // This will be called from AuthProvider which has access to Clerk's useAuth
