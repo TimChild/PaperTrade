@@ -404,8 +404,85 @@ tasks:
       - echo "✓ All quality checks passed"
 
   # =========================================================================
-  # Quick Status & Health Checks
+  # CI Simulation (run locally to reproduce CI)
   # =========================================================================
+  ci:
+    desc: "Run full CI suite locally (matches GitHub Actions)"
+    cmds:
+      - echo "🔄 Running full CI suite..."
+      - echo ""
+      - task: ci:backend
+      - task: ci:frontend
+      - task: ci:e2e
+      - echo ""
+      - echo "✅ All CI checks passed!"
+
+  ci:backend:
+    desc: "Run backend CI checks (quality checks only)"
+    cmds:
+      - echo "🔄 Running backend CI checks..."
+      - task: quality:backend
+
+  ci:frontend:
+    desc: "Run frontend CI checks (quality checks only)"
+    cmds:
+      - echo "🔄 Running frontend CI checks..."
+      - task: quality:frontend
+
+  ci:e2e:
+    desc: "Run E2E tests (requires Docker services)"
+    deps:
+      - docker:up:all
+    cmds:
+      - echo "🔄 Running E2E tests..."
+      - task: health:wait
+      - task: test:e2e
+
+  # =========================================================================
+  # Validation & Health Checks
+  # =========================================================================
+  validate:env:
+    desc: "Validate development environment setup"
+    cmds:
+      - bash scripts/validate-environment.sh
+
+  validate:secrets:
+    desc: "Check that required secrets/env vars are set"
+    cmds:
+      - |
+        echo "🔐 Checking secrets and environment variables..."
+        echo ""
+        MISSING=false
+
+        # Check .env file exists
+        if [ ! -f .env ]; then
+          echo "  ❌ .env file not found"
+          MISSING=true
+        else
+          echo "  ✅ .env file exists"
+        fi
+
+        # Source .env if it exists
+        if [ -f .env ]; then
+          set -a
+          source .env 2>/dev/null || true
+          set +a
+        fi
+
+        # Check critical secrets for E2E tests
+        [ -n "$CLERK_SECRET_KEY" ] && echo "  ✅ CLERK_SECRET_KEY set" || (echo "  ⚠️  CLERK_SECRET_KEY not set (E2E tests will fail)" && MISSING=true)
+        [ -n "$CLERK_PUBLISHABLE_KEY" ] && echo "  ✅ CLERK_PUBLISHABLE_KEY set" || (echo "  ⚠️  CLERK_PUBLISHABLE_KEY not set (E2E tests will fail)" && MISSING=true)
+        [ -n "$VITE_CLERK_PUBLISHABLE_KEY" ] && echo "  ✅ VITE_CLERK_PUBLISHABLE_KEY set" || (echo "  ⚠️  VITE_CLERK_PUBLISHABLE_KEY not set (E2E tests will fail)" && MISSING=true)
+        [ -n "$E2E_CLERK_USER_EMAIL" ] && echo "  ✅ E2E_CLERK_USER_EMAIL: $E2E_CLERK_USER_EMAIL" || (echo "  ⚠️  E2E_CLERK_USER_EMAIL not set (E2E tests will fail)" && MISSING=true)
+
+        echo ""
+        if [ "$MISSING" = true ]; then
+          echo "⚠️  Some required secrets are missing. E2E tests may fail."
+          echo "Copy .env.example to .env and fill in the values, or set environment variables."
+        else
+          echo "✅ All required secrets are set"
+        fi
+
   health:
     desc: "Check health of all running services"
     cmds:
@@ -415,6 +492,83 @@ tasks:
         curl -f http://localhost:8000/health && echo "  ✅ Backend healthy" || echo "  ❌ Backend down"
         curl -f http://localhost:5173/ > /dev/null 2>&1 && echo "  ✅ Frontend healthy" || echo "  ❌ Frontend down"
         docker compose ps | grep -E "(db.*healthy|redis.*healthy)" > /dev/null 2>&1 && echo "  ✅ Docker services healthy" || echo "  ❌ Docker services down"
+
+  health:all:
+    desc: "Comprehensive health check (Docker + backend + frontend)"
+    cmds:
+      - task: health:docker
+      - task: health:backend
+      - task: health:frontend
+      - echo ""
+      - echo "✅ All services healthy!"
+
+  health:docker:
+    desc: "Check Docker services are running and healthy"
+    cmds:
+      - |
+        echo "🐳 Checking Docker services..."
+        if ! docker compose ps db 2>/dev/null | grep -q "Up"; then
+          echo "  ❌ PostgreSQL not running"
+          exit 1
+        fi
+        echo "  ✅ PostgreSQL running"
+
+        if ! docker compose ps redis 2>/dev/null | grep -q "Up"; then
+          echo "  ❌ Redis not running"
+          exit 1
+        fi
+        echo "  ✅ Redis running"
+
+  health:backend:
+    desc: "Check backend API is responding"
+    cmds:
+      - |
+        echo "🔧 Checking backend API..."
+        if ! curl -f http://localhost:8000/health &> /dev/null; then
+          echo "  ❌ Backend not responding at http://localhost:8000"
+          exit 1
+        fi
+        echo "  ✅ Backend healthy at http://localhost:8000"
+
+  health:frontend:
+    desc: "Check frontend is responding"
+    cmds:
+      - |
+        echo "🎨 Checking frontend..."
+        if ! curl -f http://localhost:5173/ &> /dev/null; then
+          echo "  ❌ Frontend not responding at http://localhost:5173"
+          exit 1
+        fi
+        echo "  ✅ Frontend healthy at http://localhost:5173"
+
+  health:wait:
+    desc: "Wait for all services to be healthy (used in CI and before E2E tests)"
+    cmds:
+      - |
+        echo "⏳ Waiting for services to be ready..."
+
+        # Wait for PostgreSQL
+        echo "  Waiting for PostgreSQL..."
+        timeout 30 bash -c 'until docker compose exec -T db pg_isready -U papertrade 2>/dev/null; do sleep 1; done' || (echo "  ❌ PostgreSQL timeout" && exit 1)
+        echo "  ✅ PostgreSQL ready"
+
+        # Wait for Redis
+        echo "  Waiting for Redis..."
+        timeout 30 bash -c 'until docker compose exec -T redis redis-cli ping 2>/dev/null | grep -q PONG; do sleep 1; done' || (echo "  ❌ Redis timeout" && exit 1)
+        echo "  ✅ Redis ready"
+
+        # Wait for Backend
+        echo "  Waiting for backend..."
+        timeout 60 bash -c 'until curl -f http://localhost:8000/health &>/dev/null; do sleep 2; done' || (echo "  ❌ Backend timeout" && exit 1)
+        echo "  ✅ Backend ready"
+
+        # Wait for Frontend
+        echo "  Waiting for frontend..."
+        timeout 60 bash -c 'until curl -f http://localhost:5173 &>/dev/null; do sleep 2; done' || (echo "  ❌ Frontend timeout" && exit 1)
+        echo "  ✅ Frontend ready"
+
+        echo ""
+        echo "✅ All services ready!"
 
   status:
     desc: "Show development environment status"
