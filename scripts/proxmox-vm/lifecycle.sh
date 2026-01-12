@@ -50,7 +50,7 @@ cmd_start() {
     local vm_ip
     vm_ip=$(get_vm_connection)
 
-    ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && docker compose -f docker-compose.prod.yml up -d"
+    ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d"
 
     log_success "Services started"
     log_info "Check status with: task proxmox-vm:status"
@@ -63,7 +63,7 @@ cmd_stop() {
     local vm_ip
     vm_ip=$(get_vm_connection)
 
-    ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && docker compose -f docker-compose.prod.yml down"
+    ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && docker compose -f docker-compose.yml -f docker-compose.prod.yml down"
 
     log_success "Services stopped"
 }
@@ -75,7 +75,7 @@ cmd_restart() {
     local vm_ip
     vm_ip=$(get_vm_connection)
 
-    ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && docker compose -f docker-compose.prod.yml restart"
+    ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && docker compose -f docker-compose.yml -f docker-compose.prod.yml restart"
 
     log_success "Services restarted"
     log_info "Check status with: task proxmox-vm:status"
@@ -163,7 +163,7 @@ cmd_status() {
 
     # Show Docker services status
     echo "Docker Services:"
-    ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && docker compose -f docker-compose.prod.yml ps"
+    ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && docker compose -f docker-compose.yml -f docker-compose.prod.yml ps"
     echo ""
 
     # Check service health
@@ -213,7 +213,7 @@ cmd_logs() {
     vm_ip=$(get_vm_connection)
 
     # Follow logs from all services
-    ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && docker compose -f docker-compose.prod.yml logs -f"
+    ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f"
 }
 
 # Main function

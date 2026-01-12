@@ -153,14 +153,14 @@ main() {
     log_step "Building Docker images on VM..."
     log_info "This may take 5-10 minutes on first build..."
 
-    ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && docker compose -f docker-compose.prod.yml build"
+    ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && docker compose -f docker-compose.yml -f docker-compose.prod.yml build"
 
     log_success "Docker images built"
 
     # Deploy services
     log_step "Starting services..."
 
-    ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && docker compose -f docker-compose.prod.yml up -d"
+    ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d"
 
     log_success "Services started"
 
