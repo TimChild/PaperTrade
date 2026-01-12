@@ -64,6 +64,33 @@ task docker:logs:backend        # Backend only
 - Container won't start → `task docker:logs`
 - Database issues → `task docker:clean && task docker:up`
 
+## Environment Validation
+
+| Task | Description |
+|------|-------------|
+| `task validate:env` | Validate complete environment setup |
+| `task validate:secrets` | Check required secrets/env vars |
+| `task health:all` | Check all services are healthy |
+| `task health:wait` | Wait for services to be ready |
+
+**When to use**:
+- **First time setup**: Run `task validate:env` to ensure everything is configured
+- **Before E2E tests**: Automatically run by `task test:e2e`
+- **Debugging issues**: Use `task health:all` to check service status
+- **In CI**: Automatically run during setup
+
+**Example output**:
+```bash
+$ task validate:env
+=== Environment Validation ===
+✓ uv: 0.9.24
+✓ npm: 10.8.2
+✓ Python 3.13 (>= 3.12 required)
+✓ Docker services running
+✓ Backend imports working
+✅ All required checks passed!
+```
+
 ## Pre-Completion Checklist
 
 **Run before marking work complete to prevent CI failures:**
