@@ -199,24 +199,28 @@ wait_for_services_healthy() {
 
     log_step "Waiting for all services to become healthy..."
 
-    local services=(
-        "PostgreSQL:http://localhost:8000/health"
-        "Backend:http://localhost:8000/health"
-        "Frontend:http://localhost:80/health"
-    )
-
     while [ $attempt -le $max_attempts ]; do
         local all_healthy=true
 
-        for service in "${services[@]}"; do
-            local service_name="${service%%:*}"
-            local health_url="${service##*:}"
+        # Check PostgreSQL
+        if ! ssh "$VM_DEFAULT_USER@$vm_ip" "docker exec papertrade-postgres-prod pg_isready -U papertrade &>/dev/null"; then
+            all_healthy=false
+        fi
 
-            if ! ssh "$VM_DEFAULT_USER@$vm_ip" "curl -f -s $health_url > /dev/null 2>&1"; then
-                all_healthy=false
-                break
-            fi
-        done
+        # Check Redis
+        if ! ssh "$VM_DEFAULT_USER@$vm_ip" "docker exec papertrade-redis-prod redis-cli ping &>/dev/null"; then
+            all_healthy=false
+        fi
+
+        # Check Backend
+        if ! ssh "$VM_DEFAULT_USER@$vm_ip" "curl -f -s http://localhost:8000/health &>/dev/null"; then
+            all_healthy=false
+        fi
+
+        # Check Frontend
+        if ! ssh "$VM_DEFAULT_USER@$vm_ip" "curl -f -s http://localhost:80/ &>/dev/null"; then
+            all_healthy=false
+        fi
 
         if [ "$all_healthy" = true ]; then
             log_success "All services are healthy!"
