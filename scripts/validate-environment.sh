@@ -80,8 +80,14 @@ check_docker_service() {
         print_success "Docker service '$service': Running"
         return 0
     else
-        print_warning "Docker service '$service': Not running (start with 'task docker:up')"
-        return 1
+        # Don't fail in CI - services might not be started yet
+        if [ "${CI:-false}" = "true" ] || [ "${GITHUB_ACTIONS:-false}" = "true" ]; then
+            print_warning "Docker service '$service': Not running (will be started by CI)"
+            return 0
+        else
+            print_warning "Docker service '$service': Not running (start with 'task docker:up')"
+            return 1
+        fi
     fi
 }
 
@@ -91,8 +97,14 @@ echo ""
 
 # Check required tools
 print_header "Required Tools"
-check_command "uv" true
-check_command "npm" true
+# In CI, uv might only be in backend job, npm only in frontend job
+if [ "${CI:-false}" = "true" ] || [ "${GITHUB_ACTIONS:-false}" = "true" ]; then
+    check_command "uv" false
+    check_command "npm" false
+else
+    check_command "uv" true
+    check_command "npm" true
+fi
 check_command "task" true
 check_command "docker" true
 check_command "python3" true

@@ -46,11 +46,13 @@ jobs:
           version: 3.x
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install dependencies
-        run: task setup:backend
-
       - name: Validate environment
         run: task validate:env
+        env:
+          CI: true
+
+      - name: Install dependencies
+        run: task setup:backend
 
       - name: Run quality checks
         run: task quality:backend
@@ -85,11 +87,13 @@ jobs:
           version: 3.x
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install dependencies
-        run: task setup:frontend
-
       - name: Validate environment
         run: task validate:env
+        env:
+          CI: true
+
+      - name: Install dependencies
+        run: task setup:frontend
 
       - name: Run quality checks
         run: task quality:frontend
