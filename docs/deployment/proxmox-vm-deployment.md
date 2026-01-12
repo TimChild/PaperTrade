@@ -122,7 +122,7 @@ export PROXMOX_VM_HOSTNAME=papertrade
 
 ```bash
 # Create configuration file
-cp .env.example.proxmox .env.proxmox
+cp .env.proxmox.example .env.proxmox
 
 # Edit configuration
 nano .env.proxmox
@@ -139,7 +139,7 @@ PROXMOX_HOST=root@proxmox PROXMOX_VM_ID=201 task proxmox-vm:create
 
 ### Configuration Parameters
 
-See `.env.example.proxmox` for complete reference. Key parameters:
+See `.env.proxmox.example` for complete reference. Key parameters:
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
@@ -650,7 +650,8 @@ PaperTrade/
 │   ├── deploy.sh          # Application deployment
 │   ├── lifecycle.sh       # Service management
 │   └── destroy.sh         # VM destruction
-├── .env.example.proxmox   # Configuration template
+├── .env.proxmox.example   # VM configuration template
+├── .env.production.example # App secrets template
 ├── .env                   # Your secrets (not in git)
 └── docker-compose.prod.yml # Production stack definition
 ```
