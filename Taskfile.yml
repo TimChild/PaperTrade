@@ -475,3 +475,46 @@ tasks:
     dir: "{{.BACKEND_DIR}}"
     cmds:
       - uv run python scripts/seed_historical_data.py {{.CLI_ARGS}}
+
+  # =========================================================================
+  # Proxmox VM Deployment
+  # =========================================================================
+  proxmox-vm:create:
+    desc: "Create Docker VM on Proxmox"
+    cmds:
+      - bash scripts/proxmox-vm/create-vm.sh
+
+  proxmox-vm:deploy:
+    desc: "Deploy PaperTrade to Proxmox VM"
+    cmds:
+      - bash scripts/proxmox-vm/deploy.sh
+
+  proxmox-vm:status:
+    desc: "Check deployment status"
+    cmds:
+      - bash scripts/proxmox-vm/lifecycle.sh status
+
+  proxmox-vm:logs:
+    desc: "View application logs"
+    cmds:
+      - bash scripts/proxmox-vm/lifecycle.sh logs
+
+  proxmox-vm:start:
+    desc: "Start services"
+    cmds:
+      - bash scripts/proxmox-vm/lifecycle.sh start
+
+  proxmox-vm:stop:
+    desc: "Stop services"
+    cmds:
+      - bash scripts/proxmox-vm/lifecycle.sh stop
+
+  proxmox-vm:restart:
+    desc: "Restart services"
+    cmds:
+      - bash scripts/proxmox-vm/lifecycle.sh restart
+
+  proxmox-vm:destroy:
+    desc: "Destroy VM (WARNING: destructive)"
+    cmds:
+      - bash scripts/proxmox-vm/destroy.sh

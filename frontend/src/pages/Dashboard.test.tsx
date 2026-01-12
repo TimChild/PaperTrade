@@ -33,10 +33,10 @@ describe('Dashboard', () => {
     it('should have no accessibility violations', async () => {
       const { axe } = await import('jest-axe')
       const { container } = renderWithProviders(<Dashboard />)
-      
+
       // Wait a bit for any async rendering
       await new Promise((resolve) => setTimeout(resolve, 100))
-      
+
       const results = await axe(container)
       expect(results).toHaveNoViolations()
     })

@@ -20,6 +20,12 @@ RUN npm ci
 # Copy application source
 COPY . .
 
+# Accept build arguments for runtime configuration
+ARG VITE_API_BASE_URL
+ARG VITE_CLERK_PUBLISHABLE_KEY
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+ENV VITE_CLERK_PUBLISHABLE_KEY=${VITE_CLERK_PUBLISHABLE_KEY}
+
 # Build the application for production
 RUN npm run build
 

@@ -26,7 +26,7 @@ ENV UV_SYSTEM_PYTHON=1 \
 WORKDIR /app
 
 # Copy dependency files first for better layer caching
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock README.md ./
 
 # Install dependencies
 # In CI environments with SSL certificate issues, we use pip as a more reliable fallback
