@@ -60,14 +60,15 @@ app = FastAPI(
 register_exception_handlers(app)
 
 # CORS configuration
-# In production, allow all origins (should be restricted to specific domains)
-# In development, only allow localhost
+# Allow specific origins from environment variable
+# Defaults to localhost for development
 allowed_origins = os.getenv(
     "CORS_ORIGINS", "http://localhost:3000,http://localhost:5173"
 ).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=(allowed_origins if os.getenv("APP_ENV") != "production" else ["*"]),
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
