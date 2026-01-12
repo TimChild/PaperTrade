@@ -30,7 +30,7 @@ task proxmox-vm:status
 
 ## Environment Variables
 
-All scripts use environment variables for configuration. See `.env.example.proxmox` for complete reference.
+All scripts use environment variables for configuration. See `.env.proxmox.example` for complete reference.
 
 Key variables:
 - `PROXMOX_HOST` - SSH connection to Proxmox (default: `root@proxmox`)

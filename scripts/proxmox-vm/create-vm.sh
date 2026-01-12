@@ -107,7 +107,7 @@ main() {
 
     if ! vm_exists "$PROXMOX_VM_ID"; then
         log_warning "VM $PROXMOX_VM_ID was not found"
-        log_info "If you used a different VM ID, update .env.proxmox-vm and try again."
+        log_info "If you used a different VM ID, update .env.proxmox and try again."
         exit 1
     fi
 
@@ -128,13 +128,13 @@ main() {
         echo "You can find the IP using:"
         echo "  ssh $PROXMOX_HOST \"qm guest cmd $PROXMOX_VM_ID network-get-interfaces\""
         echo ""
-        log_info "Once you have the IP, update .env.proxmox-vm if using static IP mode"
+        log_info "Once you have the IP, update .env.proxmox if using static IP mode"
     else
         log_success "VM IP address: $vm_ip"
 
         if [ "${PROXMOX_VM_IP:-}" != "" ] && [ "$PROXMOX_VM_IP" != "$vm_ip" ]; then
             log_warning "Expected IP: $PROXMOX_VM_IP, Got: $vm_ip"
-            log_info "Update .env.proxmox-vm with the actual IP if needed"
+            log_info "Update .env.proxmox with the actual IP if needed"
         fi
     fi
 
