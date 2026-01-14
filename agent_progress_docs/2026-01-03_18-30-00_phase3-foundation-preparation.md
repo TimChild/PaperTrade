@@ -10,7 +10,7 @@ Execute comprehensive foundation improvements identified in the foundation evalu
 
 ## Context
 
-Following the comprehensive foundation evaluation (docs/foundation-evaluation-2026-01-03.md), we identified several high and medium priority improvements needed before starting Phase 3. The foundation was rated 8.5/10, with specific areas needing attention:
+Following the comprehensive foundation evaluation (docs/archive/foundation-evaluation-2026-01-03.md), we identified several high and medium priority improvements needed before starting Phase 3. The foundation was rated 8.5/10, with specific areas needing attention:
 
 1. **Type Safety** (HIGH): 25 pyright errors, no pre-commit enforcement
 2. **Developer Experience** (MEDIUM): Missing database management tasks, no CONTRIBUTING.md
@@ -260,7 +260,7 @@ Watch for:
 
 ## Related Documents
 
-- [Foundation Evaluation](../docs/foundation-evaluation-2026-01-03.md) - Comprehensive assessment
+- [Foundation Evaluation](../docs/archive/foundation-evaluation-2026-01-03.md) - Comprehensive assessment
 - [Task #036](../agent_tasks/036_docker-infrastructure-improvements.md) - Docker improvements
 - [Task #037](../agent_tasks/037_fix-backend-type-safety.md) - Type safety enforcement
 - [Task #038](../agent_tasks/038_developer-experience-improvements.md) - Developer experience
