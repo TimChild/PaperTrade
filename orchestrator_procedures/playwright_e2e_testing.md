@@ -376,4 +376,4 @@ Future enhancement: Automated Playwright tests
 - [Playwright MCP Documentation](https://github.com/microsoft/playwright-mcp)
 - [Alpha Vantage API Docs](https://www.alphavantage.co/documentation/)
 - [.vscode/MCP_CONFIGURATION.md](.vscode/MCP_CONFIGURATION.md) - MCP server setup
-- [AGENT_ORCHESTRATION.md](../AGENT_ORCHESTRATION.md) - General orchestration guide
+- [orchestration-guide.md](../docs/ai-agents/orchestration-guide.md) - General orchestration guide

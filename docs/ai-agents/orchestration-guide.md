@@ -79,7 +79,7 @@ gh agent-task create --custom-agent backend-swe -F agent_tasks/007_major-feature
 
 ## MCP Tools
 
-See [docs/mcp-tools.md](docs/mcp-tools.md) for full reference.
+See [mcp-tools.md](mcp-tools.md) for full reference.
 
 **Key tools**:
 - `pylanceRunCodeSnippet` - Run Python without shell escaping
@@ -108,7 +108,7 @@ task lint           # Run linters
 | `agent_tasks/*.md` | Task definitions |
 | `.github/agents/*.md` | Role-specific agent instructions |
 | `Taskfile.yml` | Commands (`task --list`) |
-| `docs/mcp-tools.md` | MCP tools reference |
+| `docs/ai-agents/mcp-tools.md` | MCP tools reference |
 | `orchestrator_procedures/*.md` | Orchestrator testing and validation procedures |
 
 ## Best Practices

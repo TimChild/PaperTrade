@@ -118,7 +118,7 @@ Refer to individual agent files in `.github/agents/` for specific role instructi
 
 ## MCP Tools (Model Context Protocol)
 
-Configuration: `.vscode/mcp.json` | Full reference: `docs/mcp-tools.md`
+Configuration: `.vscode/mcp.json` | Full reference: `docs/ai-agents/mcp-tools.md`
 
 ### Session Setup (Required)
 
@@ -140,7 +140,13 @@ For detailed quality checks, Docker management, and pre-completion checklists:
 
 ## MCP Tools (Model Context Protocol)
 
-Configuration: `.vscode/mcp.json` | Full reference: `docs/mcp-tools.mdContainer logs | `logs_for_container` | Clean output |
+Configuration: `.vscode/mcp.json` | Full reference: `docs/ai-agents/mcp-tools.md`
+
+**Quick reference**:
+
+| Tool | Purpose | Output |
+|------|---------|--------|
+| Container logs | `logs_for_container` | Clean output |
 | PR details | `activePullRequest` | Full PR context |
 
 ### When to Use Terminal Instead

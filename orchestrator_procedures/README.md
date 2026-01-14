@@ -93,7 +93,7 @@ When creating new orchestrator procedures:
 1. **Document clearly**: Include purpose, prerequisites, and step-by-step instructions
 2. **Make it reproducible**: Future orchestrator sessions should be able to follow the same steps
 3. **Update this README**: Add the new procedure to the list above
-4. **Reference in AGENT_ORCHESTRATION.md**: If it's a core procedure that should be run regularly
+4. **Reference in orchestration-guide.md**: If it's a core procedure that should be run regularly
 
 ## Directory Structure
 

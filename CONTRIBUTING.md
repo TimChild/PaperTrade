@@ -320,7 +320,7 @@ Full task list: `task --list`
 - **Documentation**: Start with [README.md](README.md)
 - **Architecture**: See [project_strategy.md](project_strategy.md)
 - **Current Status**: Check [PROGRESS.md](PROGRESS.md)
-- **Agent Orchestration**: See [AGENT_ORCHESTRATION.md](AGENT_ORCHESTRATION.md) for AI agent workflow
+- **Agent Orchestration**: See [docs/ai-agents/orchestration-guide.md](docs/ai-agents/orchestration-guide.md) for AI agent workflow
 - **Issues**: Browse [GitHub Issues](https://github.com/TimChild/PaperTrade/issues)
 - **Discussions**: Use GitHub Discussions for questions
 

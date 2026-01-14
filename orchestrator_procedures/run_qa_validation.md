@@ -396,7 +396,7 @@ Over time, track these QA metrics:
 - [agent_tasks/reusable/e2e_qa_validation.md](../agent_tasks/reusable/e2e_qa_validation.md) - Reusable QA task template
 - [.github/agents/qa.md](../.github/agents/qa.md) - QA Agent definition
 - [orchestrator_procedures/playwright_e2e_testing.md](playwright_e2e_testing.md) - Technical Playwright guide
-- [AGENT_ORCHESTRATION.md](../AGENT_ORCHESTRATION.md) - Agent coordination guide
+- [orchestration-guide.md](../docs/ai-agents/orchestration-guide.md) - Agent coordination guide
 
 ## Checklist
 

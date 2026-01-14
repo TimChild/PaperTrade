@@ -211,5 +211,5 @@ Follow the plan exactly:
 ## Related Documentation
 - See `project_strategy.md` for overall technical strategy
 - See `project_plan.md` for development phases
-- See `docs/external-resources.md` for external references
+- See `docs/reference/external-resources.md` for external references
 - Follow progress documentation requirements in `.github/copilot-instructions.md`
