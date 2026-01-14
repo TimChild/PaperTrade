@@ -250,7 +250,7 @@ await page.getByText('Buy').click() // Breaks if text changes
 await page.locator('.btn-primary').click() // Breaks if CSS changes
 ```
 
-See `docs/TESTING_CONVENTIONS.md` for complete test ID naming guidelines.
+See [testing-conventions.md](./testing-conventions.md) for complete test ID naming guidelines.
 
 ## Current E2E Test Suite
 
