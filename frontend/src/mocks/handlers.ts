@@ -196,12 +196,14 @@ export const handlers = [
       )
     }
 
+    // Return flat structure matching backend CurrentPriceResponse
     return HttpResponse.json({
-      ticker: { symbol: ticker },
-      price: { amount: price, currency: 'USD' },
+      ticker: ticker,
+      price: price.toString(),
+      currency: 'USD',
       timestamp: new Date().toISOString(),
       source: 'database',
-      interval: 'real-time',
+      is_stale: false,
     })
   }),
 

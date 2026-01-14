@@ -8,8 +8,29 @@ import type { PricePoint, PriceHistory } from '@/types/price'
  * Fetch current price for a ticker
  */
 export async function getCurrentPrice(ticker: string): Promise<PricePoint> {
-  const response = await apiClient.get<PricePoint>(`/prices/${ticker}`)
-  return response.data
+  // Backend returns flat structure, need to transform to nested PricePoint
+  const response = await apiClient.get<{
+    ticker: string
+    price: string
+    currency: string
+    timestamp: string
+    source: string
+    is_stale: boolean
+  }>(`/prices/${ticker}`)
+
+  const data = response.data
+
+  // Transform flat API response to nested PricePoint structure
+  return {
+    ticker: { symbol: data.ticker },
+    price: {
+      amount: parseFloat(data.price),
+      currency: data.currency,
+    },
+    timestamp: data.timestamp,
+    source: data.source as 'alpha_vantage' | 'cache' | 'database',
+    interval: 'real-time', // Current price endpoint always returns real-time
+  }
 }
 
 /**
