@@ -100,4 +100,4 @@ For each failure, create task file in `agent_tasks/` and assign to appropriate a
 
 ## References
 - `orchestrator_procedures/playwright_e2e_testing.md` - E2E testing guide
-- `AGENT_ORCHESTRATION.md` - Agent coordination
+- `docs/ai-agents/orchestration-guide.md` - Agent coordination

@@ -215,7 +215,7 @@ Potential future optimizations:
 ## Related Documentation
 
 - Main project README: `../../README.md`
-- Agent orchestration guide: `../../AGENT_ORCHESTRATION.md`
+- Agent orchestration guide: `../../docs/ai-agents/orchestration-guide.md`
 - Copilot instructions: `../.github/copilot-instructions.md`
 - Taskfile reference: `../../Taskfile.yml`
 - Quality & Infrastructure agent: `../agents/quality-infra.md`

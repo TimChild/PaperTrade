@@ -136,7 +136,7 @@ rm resume-from-here.md
 |----------|---------|------------------|
 | `resume-from-here.md` | Session-specific handoff | Per session (temporary) |
 | `PROGRESS.md` | Overall project progress | After milestones |
-| `AGENT_ORCHESTRATION.md` | How to orchestrate agents | Rarely |
+| `docs/ai-agents/orchestration-guide.md` | How to orchestrate agents | Rarely |
 | `agent_tasks/*.md` | Individual task specs | Per task |
 
 The resume doc is **ephemeral** - it captures session state that isn't appropriate for permanent documentation.
