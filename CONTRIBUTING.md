@@ -214,7 +214,7 @@ PaperTrade follows the standard testing pyramid:
 - Form validation (use component tests)
 - Simple routes (use React Router tests)
 
-See [docs/E2E_TESTING_STANDARDS.md](docs/E2E_TESTING_STANDARDS.md) for complete E2E testing guidelines.
+See [docs/reference/e2e-testing-standards.md](docs/reference/e2e-testing-standards.md) for complete E2E testing guidelines.
 
 ### Test Structure
 

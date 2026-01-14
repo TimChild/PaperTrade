@@ -188,3 +188,9 @@ Every PR runs:
 **Solution**: Task 017 added 26 integration + 7 E2E tests, catching field name mismatches and DTO mapping errors.
 
 **Key insight**: Tests passing ≠ System working. Need all pyramid levels.
+
+## Related Documentation
+
+- [E2E Testing Standards](./e2e-testing-standards.md) - When and how to write E2E tests
+- [Testing Conventions](./testing-conventions.md) - Test ID naming patterns for stable E2E tests
+- [QA Accessibility Guide](./qa-accessibility-guide.md) - Accessibility testing and manual QA

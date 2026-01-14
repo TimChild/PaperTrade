@@ -5,19 +5,46 @@
 | Document | Purpose |
 |----------|---------|
 | [../README.md](../README.md) | Project overview and quick start |
+| [USER_GUIDE.md](USER_GUIDE.md) | Step-by-step user guide |
 | [reference/testing.md](reference/testing.md) | Testing quick reference |
 | [ai-agents/mcp-tools.md](ai-agents/mcp-tools.md) | MCP tools for AI assistants |
 
-## Project Documentation
+## Planning Documentation
+
+High-level strategy, roadmaps, and feature tracking:
 
 | Document | Purpose |
 |----------|---------|
-| [planning/project_plan.md](planning/project_plan.md) | Development phases and roadmap |
+| [planning/executive-summary.md](planning/executive-summary.md) | Quick overview of current capabilities |
+| [planning/product-roadmap.md](planning/product-roadmap.md) | Product vision and feature roadmap |
+| [planning/feature-status.md](planning/feature-status.md) | Complete feature implementation matrix |
+| [planning/project_plan.md](planning/project_plan.md) | Development phases and milestones |
 | [planning/project_strategy.md](planning/project_strategy.md) | Architecture and tech decisions |
 | [planning/future-ideas.md](planning/future-ideas.md) | Feature ideas for exploration |
 | [../PROGRESS.md](../PROGRESS.md) | Current status and recent work |
 | [../BACKLOG.md](../BACKLOG.md) | Minor improvements and tech debt |
-| [ai-agents/orchestration-guide.md](ai-agents/orchestration-guide.md) | AI agent workflow guide |
+
+## Architecture Documentation
+
+Technical design and boundaries:
+
+| Document | Purpose |
+|----------|---------|
+| [architecture/technical-boundaries.md](architecture/technical-boundaries.md) | Known limitations and edge cases |
+| [architecture/clerk-implementation-info.md](architecture/clerk-implementation-info.md) | Clerk authentication details |
+| [../architecture_plans/](../architecture_plans/) | Phase-specific designs |
+
+## Reference Documentation
+
+Technical guides and conventions:
+
+| Document | Purpose |
+|----------|---------|
+| [reference/testing.md](reference/testing.md) | Testing philosophy and quick reference |
+| [reference/e2e-testing-standards.md](reference/e2e-testing-standards.md) | When and how to write E2E tests |
+| [reference/testing-conventions.md](reference/testing-conventions.md) | Test ID naming patterns |
+| [reference/qa-accessibility-guide.md](reference/qa-accessibility-guide.md) | QA and accessibility testing |
+| [reference/external-resources.md](reference/external-resources.md) | API docs and framework links |
 
 ## Deployment Documentation
 
@@ -28,19 +55,6 @@
 | [deployment/production-checklist.md](deployment/production-checklist.md) | Production readiness verification |
 | [deployment/proxmox-vm-approach-comparison.md](deployment/proxmox-vm-approach-comparison.md) | VM vs LXC comparison |
 | [deployment/proxmox-learnings.md](deployment/proxmox-learnings.md) | Lessons learned from deployment |
-
-## Reference Documentation
-
-| Document | Purpose |
-|----------|---------|
-| [reference/external-resources.md](reference/external-resources.md) | API docs and framework links |
-| [reference/testing.md](reference/testing.md) | Testing guide and conventions |
-
-## Architecture
-
-| Document | Purpose |
-|----------|---------|
-| [../architecture_plans/](../architecture_plans/) | Phase-specific designs |
 
 ## AI Agent Documentation
 

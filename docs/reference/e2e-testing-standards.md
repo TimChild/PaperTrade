@@ -319,7 +319,9 @@ npx playwright test -g "should execute buy trade"
 
 ## Related Documentation
 
-- [Testing Conventions](./TESTING_CONVENTIONS.md) - Test ID naming patterns
+- [Testing Conventions](./testing-conventions.md) - Test ID naming patterns
+- [Testing Guide](./testing.md) - Quick reference for running tests
+- [QA Accessibility Guide](./qa-accessibility-guide.md) - Accessibility testing
 - [Contributing Guide](../CONTRIBUTING.md) - General testing guidelines
 - [Playwright Docs](https://playwright.dev/) - Playwright API reference
 

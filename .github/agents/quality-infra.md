@@ -99,7 +99,7 @@ tests/
 ### E2E Testing Conventions
 - Use `data-testid` attributes for stable element targeting
 - Follow naming pattern: `{component}-{element}-{variant?}`
-- See `docs/TESTING_CONVENTIONS.md` for complete guidelines
+- See `docs/reference/testing-conventions.md` for complete guidelines
 - Prefer test IDs over fragile text-based or role-based selectors
 - Test IDs make tests reliable, debuggable, and maintainable
 
