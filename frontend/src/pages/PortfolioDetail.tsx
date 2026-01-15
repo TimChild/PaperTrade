@@ -226,6 +226,7 @@ export function PortfolioDetail(): React.JSX.Element {
             {/* Trade Form */}
             <section ref={tradeFormRef}>
               <TradeForm
+                key={`${quickSellState.action}-${quickSellState.ticker}-${quickSellState.quantity}`}
                 onSubmit={handleTradeSubmit}
                 isSubmitting={executeTrade.isPending}
                 holdings={holdings}
