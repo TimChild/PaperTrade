@@ -1,6 +1,6 @@
 # Dashboard Design Prototypes
 
-This directory contains design exploration prototypes for the PaperTrade dashboard redesign.
+This directory contains design exploration prototypes for the Zebu dashboard redesign.
 
 ## Accessing the Prototypes
 

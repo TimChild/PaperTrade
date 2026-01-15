@@ -1,6 +1,6 @@
-# PaperTrade Frontend
+# Zebu Frontend
 
-Modern React frontend for the PaperTrade stock market emulation platform.
+Modern React frontend for the Zebu stock market emulation platform.
 
 ## Tech Stack
 

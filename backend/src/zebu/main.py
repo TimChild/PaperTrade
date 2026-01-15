@@ -48,7 +48,7 @@ async def lifespan(app: FastAPI):  # type: ignore[misc]  # AsyncGenerator return
 
 
 app = FastAPI(
-    title="PaperTrade API",
+    title="Zebu API",
     description="Stock market emulation platform API",
     version="0.1.0",
     docs_url="/docs",
@@ -92,10 +92,10 @@ async def health_check() -> dict[str, str]:
 @app.get("/")
 async def root() -> dict[str, str]:
     """API root endpoint."""
-    return {"message": "Welcome to PaperTrade API v1"}
+    return {"message": "Welcome to Zebu API v1"}
 
 
 @app.get("/api/v1/")
 async def api_v1_root() -> dict[str, str]:
     """API v1 root endpoint."""
-    return {"message": "Welcome to PaperTrade API v1"}
+    return {"message": "Welcome to Zebu API v1"}

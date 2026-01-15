@@ -1,1 +1,1 @@
-"""Tests for PaperTrade backend."""
+"""Tests for Zebu backend."""
