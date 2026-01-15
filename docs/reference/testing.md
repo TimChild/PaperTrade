@@ -1,6 +1,6 @@
 # Testing Guide
 
-This guide covers PaperTrade's testing philosophy, test types, and how to run them.
+This guide covers Zebu's testing philosophy, test types, and how to run them.
 
 ## Quick Reference
 
@@ -57,7 +57,7 @@ uv run pytest tests/unit/
 uv run pytest tests/integration/
 
 # With coverage
-uv run pytest --cov=papertrade --cov-report=html
+uv run pytest --cov=zebu --cov-report=html
 
 # Verbose output
 uv run pytest -v
@@ -98,7 +98,7 @@ docker-compose ps  # Verify healthy
 ```bash
 cd backend
 uv sync --all-extras
-uv run uvicorn papertrade.main:app --reload --host 0.0.0.0 --port 8000
+uv run uvicorn zebu.main:app --reload --host 0.0.0.0 --port 8000
 # API docs: http://localhost:8000/docs
 ```
 

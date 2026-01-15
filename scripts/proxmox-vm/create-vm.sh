@@ -202,7 +202,7 @@ main() {
     echo "  1. Verify Docker is installed and running:"
     echo "     ssh root@$vm_ip 'docker --version && docker ps'"
     echo ""
-    echo "  2. Deploy PaperTrade application:"
+    echo "  2. Deploy Zebu application:"
     echo "     task proxmox-vm:deploy"
     echo ""
     echo "  3. Check deployment status:"

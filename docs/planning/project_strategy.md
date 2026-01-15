@@ -1,8 +1,8 @@
-# PaperTrade Project Strategy
+# Zebu Project Strategy
 
 ## Vision
 
-PaperTrade is a **stock market emulation platform** that treats financial simulations as a scientific playground. Users can practice trading strategies, backtest ideas against historical data, and eventually automate trading rules—all without risking real money.
+Zebu is a **stock market emulation platform** that treats financial simulations as a scientific playground. Users can practice trading strategies, backtest ideas against historical data, and eventually automate trading rules—all without risking real money.
 
 ## Core Philosophy
 

@@ -27,7 +27,7 @@
       "args": [
         "-y",
         "mcp-server-postgres",
-        "postgresql://papertrade:papertrade_dev_password@localhost:5432/papertrade_dev"
+        "postgresql://zebu:zebu_dev_password@localhost:5432/zebu_dev"
       ],
       "disabled": false
     },

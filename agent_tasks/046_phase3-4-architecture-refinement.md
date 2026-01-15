@@ -8,7 +8,7 @@
 
 ## Context
 
-PaperTrade has successfully completed Phase 1 (The Ledger) and Phase 2 (Real Market Data). We now have:
+Zebu has successfully completed Phase 1 (The Ledger) and Phase 2 (Real Market Data). We now have:
 
 - ✅ **Phase 1 Complete**: Portfolio management, transaction ledger, clean architecture foundation
 - ✅ **Phase 2 Complete**: Alpha Vantage integration, price caching, background scheduler
@@ -36,7 +36,7 @@ As we prepare to move into Phases 3-4, we need to:
 2. **Prioritize features** that deliver maximum user value in the short term
 3. **Design for extensibility** to make future features easier to implement
 4. **Balance technical debt** vs. new features vs. user experience improvements
-5. **Consider product-market fit** - what will make PaperTrade compelling to users?
+5. **Consider product-market fit** - what will make Zebu compelling to users?
 
 **Key Questions**:
 - Should we tackle SELL orders first, or user authentication?
@@ -49,7 +49,7 @@ As we prepare to move into Phases 3-4, we need to:
 
 Architect should thoroughly review the current state and create refined architecture plans for Phases 3-4 that:
 
-1. **Prioritize user value** - What will make users actually want to use PaperTrade?
+1. **Prioritize user value** - What will make users actually want to use Zebu?
 2. **Enable future growth** - Design choices that make new features easier later
 3. **Address critical gaps** - SELL orders, auth, analytics - what order makes sense?
 4. **Consider dependencies** - What unlocks what? What blocks what?
@@ -106,7 +106,7 @@ The architect has full autonomy to:
 **Product Vision**:
 - Who is the target user? (beginner investor? experienced trader? student?)
 - What's the compelling use case? (learning? strategy testing? portfolio tracking?)
-- How does PaperTrade differentiate from alternatives?
+- How does Zebu differentiate from alternatives?
 - What features would make users tell others about it?
 
 ### Phase 3: Architecture Refinement (2-3 hours)

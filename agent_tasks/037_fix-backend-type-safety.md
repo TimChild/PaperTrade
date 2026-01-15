@@ -19,10 +19,10 @@ Achieve 100% type safety in the backend codebase by fixing all 25 pyright errors
 
 **Example Errors**:
 ```
-backend/src/papertrade/infrastructure/database.py:27:5
+backend/src/zebu/infrastructure/database.py:27:5
   - error: Argument of type "dict[str, bool]" cannot be assigned to parameter "value" of type "bool"
 
-backend/src/papertrade/infrastructure/scheduler.py:119:27
+backend/src/zebu/infrastructure/scheduler.py:119:27
   - error: Argument missing for parameter "session"
 ```
 
@@ -188,7 +188,7 @@ echo "Errors before: $(grep 'errors,' /tmp/pyright_before.txt)"
 ### 2. Fix and Verify
 ```bash
 # After each fix
-uv run pyright src/papertrade/<changed_file>.py
+uv run pyright src/zebu/<changed_file>.py
 
 # Ensure tests still pass
 uv run pytest tests/
@@ -224,10 +224,10 @@ git commit -m "test: verify pre-commit hooks"
 pre-commit install --hook-type pre-push
 
 # Make a dummy change
-echo "# test" >> backend/src/papertrade/main.py
+echo "# test" >> backend/src/zebu/main.py
 
 # Try to push (locally, don't actually push)
-git add backend/src/papertrade/main.py
+git add backend/src/zebu/main.py
 git commit -m "test: verify type checking"
 git push --dry-run
 # Pyright should run and pass
@@ -251,16 +251,16 @@ git reset HEAD~1
 ## Files to Change
 
 **Code Files** (type fixes):
-1. `backend/src/papertrade/infrastructure/database.py`
-2. `backend/src/papertrade/infrastructure/scheduler.py`
-3. `backend/src/papertrade/adapters/inbound/api/error_handlers.py`
-4. `backend/src/papertrade/adapters/inbound/api/dependencies.py`
-5. `backend/src/papertrade/adapters/outbound/database/models.py`
-6. `backend/src/papertrade/adapters/outbound/models/price_history.py`
-7. `backend/src/papertrade/adapters/outbound/models/ticker_watchlist.py`
-8. `backend/src/papertrade/main.py`
-9. `backend/src/papertrade/infrastructure/cache/price_cache.py`
-10. `backend/src/papertrade/infrastructure/rate_limiter.py`
+1. `backend/src/zebu/infrastructure/database.py`
+2. `backend/src/zebu/infrastructure/scheduler.py`
+3. `backend/src/zebu/adapters/inbound/api/error_handlers.py`
+4. `backend/src/zebu/adapters/inbound/api/dependencies.py`
+5. `backend/src/zebu/adapters/outbound/database/models.py`
+6. `backend/src/zebu/adapters/outbound/models/price_history.py`
+7. `backend/src/zebu/adapters/outbound/models/ticker_watchlist.py`
+8. `backend/src/zebu/main.py`
+9. `backend/src/zebu/infrastructure/cache/price_cache.py`
+10. `backend/src/zebu/infrastructure/rate_limiter.py`
 
 **Configuration Files** (automation):
 11. `.pre-commit-config.yaml` - Add pyright hook

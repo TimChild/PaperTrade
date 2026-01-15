@@ -19,7 +19,7 @@ Extend the market data system to store and query historical price data, enabling
 
 Phase 2a implemented current price fetching and caching. Phase 2b extends this to historical data.
 
-**Architecture Reference**: [architecture_plans/20251228_phase2-market-data/](cci:7://file:///Users/timchild/github/PaperTrade/architecture_plans/20251228_phase2-market-data/:0:0-0:0)
+**Architecture Reference**: [architecture_plans/20251228_phase2-market-data/](cci:7://file:///Users/timchild/github/Zebu/architecture_plans/20251228_phase2-market-data/:0:0-0:0)
 
 ## Requirements
 
@@ -151,11 +151,11 @@ Response:
 
 ## Files to Change
 
-- [ ] `backend/src/papertrade/application/ports/market_data.py` - Port interface
-- [ ] `backend/src/papertrade/adapters/outbound/alpha_vantage.py` - Historical fetch
-- [ ] `backend/src/papertrade/adapters/outbound/price_repository.py` - Storage
-- [ ] `backend/src/papertrade/adapters/outbound/redis_cache.py` - History caching
-- [ ] `backend/src/papertrade/adapters/inbound/api/prices.py` - New endpoint (or create it)
+- [ ] `backend/src/zebu/application/ports/market_data.py` - Port interface
+- [ ] `backend/src/zebu/adapters/outbound/alpha_vantage.py` - Historical fetch
+- [ ] `backend/src/zebu/adapters/outbound/price_repository.py` - Storage
+- [ ] `backend/src/zebu/adapters/outbound/redis_cache.py` - History caching
+- [ ] `backend/src/zebu/adapters/inbound/api/prices.py` - New endpoint (or create it)
 - [ ] Database migration for price_history table
 - [ ] Tests for all above
 
@@ -168,9 +168,9 @@ Response:
 
 ## References
 
-- [ADR 001: Caching Strategy](cci:7://file:///Users/timchild/github/PaperTrade/architecture_plans/20251228_phase2-market-data/adr-001-caching-strategy.md:0:0-0:0)
-- [Database Schema](cci:7://file:///Users/timchild/github/PaperTrade/architecture_plans/20251228_phase2-market-data/database-schema.md:0:0-0:0)
-- [Implementation Guide](cci:7://file:///Users/timchild/github/PaperTrade/architecture_plans/20251228_phase2-market-data/implementation-guide.md:0:0-0:0)
+- [ADR 001: Caching Strategy](cci:7://file:///Users/timchild/github/Zebu/architecture_plans/20251228_phase2-market-data/adr-001-caching-strategy.md:0:0-0:0)
+- [Database Schema](cci:7://file:///Users/timchild/github/Zebu/architecture_plans/20251228_phase2-market-data/database-schema.md:0:0-0:0)
+- [Implementation Guide](cci:7://file:///Users/timchild/github/Zebu/architecture_plans/20251228_phase2-market-data/implementation-guide.md:0:0-0:0)
 
 ---
 

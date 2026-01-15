@@ -1,11 +1,11 @@
-# PaperTrade Product Roadmap
+# Zebu Product Roadmap
 
 **Last Updated**: January 4, 2026
 **Version**: Phase 2 Complete
 
 ## What is this document?
 
-This roadmap shows what features are available now, what's coming soon, and our long-term vision for PaperTrade. We update this quarterly based on user feedback and development progress.
+This roadmap shows what features are available now, what's coming soon, and our long-term vision for Zebu. We update this quarterly based on user feedback and development progress.
 
 ---
 
@@ -210,7 +210,7 @@ We listen to users! Here's how to make your voice heard:
 
 1. **GitHub Issues**: Request features or report bugs
 2. **Discord/Slack**: Join community discussions (coming soon)
-3. **Email**: feedback@papertrade.com (coming soon)
+3. **Email**: feedback@zebu.com (coming soon)
 4. **Surveys**: Quarterly user surveys (coming soon)
 
 **Most Impactful**:
@@ -302,7 +302,7 @@ Based on Phase 1-2 performance:
 
 ## 🤝 Open Source Roadmap
 
-We're considering open-sourcing PaperTrade in 2027. Here's the plan:
+We're considering open-sourcing Zebu in 2027. Here's the plan:
 
 ### 2026 (Closed Source)
 - Build core platform
@@ -334,7 +334,7 @@ We're considering open-sourcing PaperTrade in 2027. Here's the plan:
 
 ### Communication Channels (Coming Soon)
 - 📧 Newsletter (monthly updates)
-- 🐦 Twitter (@PaperTradeSim)
+- 🐦 Twitter (@ZebuSim)
 - 💬 Discord (community chat)
 - 📝 Blog (development insights)
 
@@ -346,7 +346,7 @@ We're considering open-sourcing PaperTrade in 2027. Here's the plan:
 A: Late January 2026 (Phase 3a). This is our highest priority.
 
 **Q: Can I use this for real trading?**
-A: No! PaperTrade is a **simulation** with virtual money. Use it to learn, then trade for real elsewhere.
+A: No! Zebu is a **simulation** with virtual money. Use it to learn, then trade for real elsewhere.
 
 **Q: Will there be a mobile app?**
 A: Not in 2026. The web app works on mobile browsers. Phase 4a will improve mobile experience. Native apps maybe 2027+.
@@ -370,13 +370,13 @@ A: Core features will always be free. We may add premium features (real-time dat
 
 ## 🙏 Thank You
 
-We're building PaperTrade because we believe everyone should have access to investment education. Your feedback shapes this product.
+We're building Zebu because we believe everyone should have access to investment education. Your feedback shapes this product.
 
 **Happy (Paper) Trading!** 📈
 
 ---
 
-**Questions? Suggestions?** Open an issue on GitHub or contact us at [feedback@papertrade.com](mailto:feedback@papertrade.com)
+**Questions? Suggestions?** Open an issue on GitHub or contact us at [feedback@zebu.com](mailto:feedback@zebu.com)
 
 **Last Updated**: January 4, 2026
 **Next Update**: April 2026 (post-Phase 3)

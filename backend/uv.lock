@@ -679,74 +679,6 @@ wheels = [
 ]
 
 [[package]]
-name = "papertrade"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "aiosqlite" },
-    { name = "alembic" },
-    { name = "apscheduler" },
-    { name = "asyncpg" },
-    { name = "clerk-backend-api" },
-    { name = "fastapi" },
-    { name = "greenlet" },
-    { name = "httpx" },
-    { name = "pydantic-settings" },
-    { name = "redis" },
-    { name = "sqlmodel" },
-    { name = "uvicorn", extra = ["standard"] },
-]
-
-[package.optional-dependencies]
-dev = [
-    { name = "fakeredis", extra = ["lua"] },
-    { name = "pyright" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "pytest-recording" },
-    { name = "respx" },
-    { name = "ruff" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "playwright" },
-    { name = "requests" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiosqlite", specifier = ">=0.20.0" },
-    { name = "alembic", specifier = ">=1.13.0" },
-    { name = "apscheduler", specifier = ">=3.10.0" },
-    { name = "asyncpg", specifier = ">=0.30.0" },
-    { name = "clerk-backend-api", specifier = ">=4.2.0" },
-    { name = "fakeredis", extras = ["lua"], marker = "extra == 'dev'", specifier = ">=2.24.0" },
-    { name = "fastapi", specifier = ">=0.115.0" },
-    { name = "greenlet", specifier = ">=3.0.0" },
-    { name = "httpx", specifier = ">=0.27.0" },
-    { name = "pydantic-settings", specifier = ">=2.6.0" },
-    { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1.389" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.0" },
-    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24.0" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6.0.0" },
-    { name = "pytest-recording", marker = "extra == 'dev'", specifier = ">=0.13.0" },
-    { name = "redis", specifier = ">=5.0.0" },
-    { name = "respx", marker = "extra == 'dev'", specifier = ">=0.22.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8.0" },
-    { name = "sqlmodel", specifier = ">=0.0.22" },
-    { name = "uvicorn", extras = ["standard"], specifier = ">=0.32.0" },
-]
-provides-extras = ["dev"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "playwright", specifier = ">=1.57.0" },
-    { name = "requests", specifier = ">=2.32.5" },
-]
-
-[[package]]
 name = "playwright"
 version = "1.57.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1457,4 +1389,72 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/01/3a/07cd60a9d26fe73efead61c7830af975dfdba8537632d410462672e4432b/wrapt-2.0.1-cp314-cp314t-win_amd64.whl", hash = "sha256:61c4956171c7434634401db448371277d07032a81cc21c599c22953374781395", size = 64038, upload-time = "2025-11-07T00:45:00.948Z" },
     { url = "https://files.pythonhosted.org/packages/41/99/8a06b8e17dddbf321325ae4eb12465804120f699cd1b8a355718300c62da/wrapt-2.0.1-cp314-cp314t-win_arm64.whl", hash = "sha256:35cdbd478607036fee40273be8ed54a451f5f23121bd9d4be515158f9498f7ad", size = 60634, upload-time = "2025-11-07T00:45:02.087Z" },
     { url = "https://files.pythonhosted.org/packages/15/d1/b51471c11592ff9c012bd3e2f7334a6ff2f42a7aed2caffcf0bdddc9cb89/wrapt-2.0.1-py3-none-any.whl", hash = "sha256:4d2ce1bf1a48c5277d7969259232b57645aae5686dba1eaeade39442277afbca", size = 44046, upload-time = "2025-11-07T00:45:32.116Z" },
+]
+
+[[package]]
+name = "zebu"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "aiosqlite" },
+    { name = "alembic" },
+    { name = "apscheduler" },
+    { name = "asyncpg" },
+    { name = "clerk-backend-api" },
+    { name = "fastapi" },
+    { name = "greenlet" },
+    { name = "httpx" },
+    { name = "pydantic-settings" },
+    { name = "redis" },
+    { name = "sqlmodel" },
+    { name = "uvicorn", extra = ["standard"] },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "fakeredis", extra = ["lua"] },
+    { name = "pyright" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "pytest-recording" },
+    { name = "respx" },
+    { name = "ruff" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "playwright" },
+    { name = "requests" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiosqlite", specifier = ">=0.20.0" },
+    { name = "alembic", specifier = ">=1.13.0" },
+    { name = "apscheduler", specifier = ">=3.10.0" },
+    { name = "asyncpg", specifier = ">=0.30.0" },
+    { name = "clerk-backend-api", specifier = ">=4.2.0" },
+    { name = "fakeredis", extras = ["lua"], marker = "extra == 'dev'", specifier = ">=2.24.0" },
+    { name = "fastapi", specifier = ">=0.115.0" },
+    { name = "greenlet", specifier = ">=3.0.0" },
+    { name = "httpx", specifier = ">=0.27.0" },
+    { name = "pydantic-settings", specifier = ">=2.6.0" },
+    { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1.389" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.0" },
+    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.24.0" },
+    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6.0.0" },
+    { name = "pytest-recording", marker = "extra == 'dev'", specifier = ">=0.13.0" },
+    { name = "redis", specifier = ">=5.0.0" },
+    { name = "respx", marker = "extra == 'dev'", specifier = ">=0.22.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8.0" },
+    { name = "sqlmodel", specifier = ">=0.0.22" },
+    { name = "uvicorn", extras = ["standard"], specifier = ">=0.32.0" },
+]
+provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "playwright", specifier = ">=1.57.0" },
+    { name = "requests", specifier = ">=2.32.5" },
 ]

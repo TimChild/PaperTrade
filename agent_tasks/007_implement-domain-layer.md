@@ -19,7 +19,7 @@ Read these documents IN ORDER before starting:
 
 ### File Structure to Create
 ```
-backend/src/papertrade/domain/
+backend/src/zebu/domain/
 ├── __init__.py
 ├── exceptions.py
 ├── value_objects/
@@ -123,13 +123,13 @@ Before considering this task complete:
 
 ### Testing
 - [ ] All unit tests pass: `pytest tests/unit/domain -v`
-- [ ] Test coverage > 90%: `pytest --cov=papertrade.domain --cov-report=term-missing`
+- [ ] Test coverage > 90%: `pytest --cov=zebu.domain --cov-report=term-missing`
 - [ ] All test cases from implementation-sequence.md covered
 
 ### Code Quality
-- [ ] Type checking passes: `pyright src/papertrade/domain`
-- [ ] Linting passes: `ruff check src/papertrade/domain`
-- [ ] Formatting correct: `ruff format --check src/papertrade/domain`
+- [ ] Type checking passes: `pyright src/zebu/domain`
+- [ ] Linting passes: `ruff check src/zebu/domain`
+- [ ] Formatting correct: `ruff format --check src/zebu/domain`
 - [ ] NO external dependencies in domain layer (verify imports)
 
 ### Validation

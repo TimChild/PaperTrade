@@ -18,16 +18,16 @@ import pytest
 import respx
 from fakeredis import aioredis as fakeredis
 
-from papertrade.adapters.outbound.market_data.alpha_vantage_adapter import (
+from zebu.adapters.outbound.market_data.alpha_vantage_adapter import (
     AlphaVantageAdapter,
 )
-from papertrade.application.exceptions import (
+from zebu.application.exceptions import (
     MarketDataUnavailableError,
     TickerNotFoundError,
 )
-from papertrade.domain.value_objects.ticker import Ticker
-from papertrade.infrastructure.cache.price_cache import PriceCache
-from papertrade.infrastructure.rate_limiter import RateLimiter
+from zebu.domain.value_objects.ticker import Ticker
+from zebu.infrastructure.cache.price_cache import PriceCache
+from zebu.infrastructure.rate_limiter import RateLimiter
 
 
 @pytest.fixture
@@ -212,8 +212,8 @@ class TestAlphaVantageAdapterCacheHit:
         price_cache: PriceCache,
     ) -> None:
         """Test that stale cache triggers API refresh."""
-        from papertrade.application.dtos.price_point import PricePoint
-        from papertrade.domain.value_objects.money import Money
+        from zebu.application.dtos.price_point import PricePoint
+        from zebu.domain.value_objects.money import Money
 
         # Manually insert stale price (2 hours old)
         stale_price = PricePoint(
@@ -255,8 +255,8 @@ class TestAlphaVantageAdapterRateLimiting:
         rate_limiter: RateLimiter,
     ) -> None:
         """Test that rate limiting serves stale cached data when available."""
-        from papertrade.application.dtos.price_point import PricePoint
-        from papertrade.domain.value_objects.money import Money
+        from zebu.application.dtos.price_point import PricePoint
+        from zebu.domain.value_objects.money import Money
 
         # Manually insert stale price
         stale_price = PricePoint(

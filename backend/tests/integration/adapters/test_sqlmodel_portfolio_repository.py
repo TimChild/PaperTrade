@@ -9,10 +9,10 @@ from uuid import uuid4
 
 import pytest
 
-from papertrade.adapters.outbound.database.portfolio_repository import (
+from zebu.adapters.outbound.database.portfolio_repository import (
     SQLModelPortfolioRepository,
 )
-from papertrade.domain.entities.portfolio import Portfolio
+from zebu.domain.entities.portfolio import Portfolio
 
 
 class TestSQLModelPortfolioRepository:

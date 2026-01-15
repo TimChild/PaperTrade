@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy PaperTrade application to Proxmox VM
+# Deploy Zebu application to Proxmox VM
 # Handles code transfer, Docker build, and service deployment
 
 # Get script directory
@@ -17,7 +17,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Main function
 main() {
-    log_step "Deploying PaperTrade to Proxmox VM"
+    log_step "Deploying Zebu to Proxmox VM"
     echo ""
 
     # Display configuration

@@ -6,26 +6,26 @@ from uuid import uuid4
 
 import pytest
 
-from papertrade.adapters.outbound.market_data.in_memory_adapter import (
+from zebu.adapters.outbound.market_data.in_memory_adapter import (
     InMemoryMarketDataAdapter,
 )
-from papertrade.application.dtos.price_point import PricePoint
-from papertrade.application.ports.in_memory_portfolio_repository import (
+from zebu.application.dtos.price_point import PricePoint
+from zebu.application.ports.in_memory_portfolio_repository import (
     InMemoryPortfolioRepository,
 )
-from papertrade.application.ports.in_memory_transaction_repository import (
+from zebu.application.ports.in_memory_transaction_repository import (
     InMemoryTransactionRepository,
 )
-from papertrade.application.queries.get_portfolio_balance import (
+from zebu.application.queries.get_portfolio_balance import (
     GetPortfolioBalanceHandler,
     GetPortfolioBalanceQuery,
 )
-from papertrade.domain.entities.portfolio import Portfolio
-from papertrade.domain.entities.transaction import Transaction, TransactionType
-from papertrade.domain.exceptions import InvalidPortfolioError
-from papertrade.domain.value_objects.money import Money
-from papertrade.domain.value_objects.quantity import Quantity
-from papertrade.domain.value_objects.ticker import Ticker
+from zebu.domain.entities.portfolio import Portfolio
+from zebu.domain.entities.transaction import Transaction, TransactionType
+from zebu.domain.exceptions import InvalidPortfolioError
+from zebu.domain.value_objects.money import Money
+from zebu.domain.value_objects.quantity import Quantity
+from zebu.domain.value_objects.ticker import Ticker
 
 
 @pytest.fixture

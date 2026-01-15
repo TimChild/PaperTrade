@@ -2,7 +2,7 @@
 
 import pytest
 
-from papertrade.application.exceptions import (
+from zebu.application.exceptions import (
     InvalidPriceDataError,
     MarketDataError,
     MarketDataUnavailableError,

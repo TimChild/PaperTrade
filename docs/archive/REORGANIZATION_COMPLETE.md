@@ -6,7 +6,7 @@
 
 ## Summary
 
-Successfully reorganized the PaperTrade documentation structure, reducing root-level clutter from 9 to 4 essential files and creating a clear, navigable information architecture.
+Successfully reorganized the Zebu documentation structure, reducing root-level clutter from 9 to 4 essential files and creating a clear, navigable information architecture.
 
 ## Changes Made
 

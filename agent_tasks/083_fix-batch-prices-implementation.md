@@ -66,7 +66,7 @@ export async function getBatchPrices(
 
 ## Backend API Reference
 
-From `backend/src/papertrade/adapters/inbound/api/prices.py`:
+From `backend/src/zebu/adapters/inbound/api/prices.py`:
 
 ```python
 @router.get("/batch", response_model=list[PricePointResponse])

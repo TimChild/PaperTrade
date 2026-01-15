@@ -1,5 +1,5 @@
 # ============================================================================
-# PaperTrade - Production Override Configuration
+# Zebu - Production Override Configuration
 # ============================================================================
 # This file contains production-specific overrides for docker-compose.yml
 #
@@ -16,7 +16,7 @@
 
 services:
   db:
-    container_name: papertrade-postgres-prod
+    container_name: zebu-postgres-prod
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-papertrade}
       POSTGRES_USER: ${POSTGRES_USER:-papertrade}
@@ -26,11 +26,11 @@ services:
     restart: unless-stopped
 
   redis:
-    container_name: papertrade-redis-prod
+    container_name: zebu-redis-prod
     restart: unless-stopped
 
   backend:
-    container_name: papertrade-backend-prod
+    container_name: zebu-backend-prod
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -46,7 +46,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    container_name: papertrade-frontend-prod
+    container_name: zebu-frontend-prod
     build:
       context: ./frontend
       dockerfile: Dockerfile

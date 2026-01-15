@@ -27,7 +27,7 @@ Quick reference guides and external resource links.
 - [QA_ACCESSIBILITY_GUIDE.md](../QA_ACCESSIBILITY_GUIDE.md) - QA and accessibility testing guide
 
 ### User Guides
-- [USER_GUIDE.md](../USER_GUIDE.md) - End-user documentation for PaperTrade application
+- [USER_GUIDE.md](../USER_GUIDE.md) - End-user documentation for Zebu application
 
 ## Navigation
 

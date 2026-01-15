@@ -1,11 +1,11 @@
-# PaperTrade User Guide
+# Zebu User Guide
 
 **Version**: 2.0 (Phase 2 Complete)
 **Last Updated**: January 4, 2026
 
 ## Table of Contents
 
-1. [What is PaperTrade?](#what-is-papertrade)
+1. [What is Zebu?](#what-is-zebu)
 2. [Getting Started](#getting-started)
 3. [Creating Your First Portfolio](#creating-your-first-portfolio)
 4. [Making Your First Trade](#making-your-first-trade)
@@ -18,9 +18,9 @@
 
 ---
 
-## What is PaperTrade?
+## What is Zebu?
 
-PaperTrade is a stock market simulator that lets you practice investing with virtual money. You can:
+Zebu is a stock market simulator that lets you practice investing with virtual money. You can:
 
 - Create multiple portfolios with different strategies
 - Buy stocks using real market prices
@@ -455,7 +455,7 @@ You can create as many portfolios as needed:
 
 **Docker Issues**:
 1. Check frontend container: `docker ps`
-2. View logs: `docker logs papertrade-frontend`
+2. View logs: `docker logs zebu-frontend`
 3. If "vite: not found", exec into container and run `npm install`
 4. Restart: `docker compose restart frontend`
 
@@ -463,7 +463,7 @@ You can create as many portfolios as needed:
 
 **Solutions**:
 1. Check backend health: `curl http://localhost:8000/health`
-2. View logs: `docker logs papertrade-backend`
+2. View logs: `docker logs zebu-backend`
 3. Verify PostgreSQL running: `docker ps | grep postgres`
 4. Check Redis: `docker ps | grep redis`
 

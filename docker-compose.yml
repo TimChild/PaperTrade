@@ -1,5 +1,5 @@
 # ============================================================================
-# PaperTrade - Base Docker Compose Configuration
+# Zebu - Base Docker Compose Configuration
 # ============================================================================
 # This is the base configuration shared by all environments.
 #
@@ -27,7 +27,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - papertrade-network
+      - zebu-network
 
   redis:
     image: redis:7-alpine
@@ -41,7 +41,7 @@ services:
       timeout: 3s
       retries: 5
     networks:
-      - papertrade-network
+      - zebu-network
 
   backend:
     build:
@@ -77,7 +77,7 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - papertrade-network
+      - zebu-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
@@ -98,7 +98,7 @@ services:
       backend:
         condition: service_healthy
     networks:
-      - papertrade-network
+      - zebu-network
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:${FRONTEND_INTERNAL_PORT:-5173}/"]
       interval: 10s
@@ -113,5 +113,5 @@ volumes:
     driver: local
 
 networks:
-  papertrade-network:
+  zebu-network:
     driver: bridge

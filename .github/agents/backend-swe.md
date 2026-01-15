@@ -66,7 +66,7 @@ The Backend SWE is responsible for implementing robust, type-safe, and performan
 ```
 backend/
 ├── src/
-│   └── papertrade/
+│   └── zebu/
 │       ├── domain/           # Pure domain logic
 │       │   ├── entities/     # Portfolio, Asset, Order, etc.
 │       │   ├── value_objects/# Money, Ticker, etc.

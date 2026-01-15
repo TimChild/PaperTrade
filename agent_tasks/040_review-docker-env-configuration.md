@@ -35,7 +35,7 @@ The current implementation lists each environment variable individually in the `
 services:
   backend:
     environment:
-      DATABASE_URL: postgresql+asyncpg://papertrade:papertrade_dev_password@db:5432/papertrade_dev
+      DATABASE_URL: postgresql+asyncpg://zebu:zebu_dev_password@db:5432/zebu_dev
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
       # ... 10+ individual env vars listed
@@ -50,7 +50,7 @@ services:
       - .env  # Load all variables from root .env file
     environment:
       # Only override vars that differ in Docker context
-      DATABASE_URL: postgresql+asyncpg://papertrade:papertrade_dev_password@db:5432/papertrade_dev
+      DATABASE_URL: postgresql+asyncpg://zebu:zebu_dev_password@db:5432/zebu_dev
       REDIS_HOST: redis
       POSTGRES_HOST: db
 ```
@@ -71,7 +71,7 @@ dev:backend:
   desc: "Start backend development server"
   dir: "{{.BACKEND_DIR}}"
   cmds:
-    - uv run uvicorn papertrade.main:app --reload --host 0.0.0.0 --port 8000
+    - uv run uvicorn zebu.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 **Enhancement** (if symlink issues persist):
@@ -84,7 +84,7 @@ dev:backend:
   cmds:
     # Auto-create symlink if needed (idempotent)
     - test -L .env || ln -s ../.env .env
-    - uv run uvicorn papertrade.main:app --reload --host 0.0.0.0 --port 8000
+    - uv run uvicorn zebu.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### 3. Create .env.example Template
@@ -94,10 +94,10 @@ Create a template file documenting all environment variables:
 **`.env.example`**:
 ```bash
 # Database Configuration
-POSTGRES_DB=papertrade_dev
-POSTGRES_USER=papertrade
-POSTGRES_PASSWORD=papertrade_dev_password
-DATABASE_URL=postgresql+asyncpg://papertrade:papertrade_dev_password@localhost:5432/papertrade_dev
+POSTGRES_DB=zebu_dev
+POSTGRES_USER=zebu
+POSTGRES_PASSWORD=zebu_dev_password
+DATABASE_URL=postgresql+asyncpg://zebu:zebu_dev_password@localhost:5432/zebu_dev
 
 # Redis Configuration
 REDIS_HOST=localhost
@@ -143,8 +143,8 @@ Update `README.md` with environment setup section:
 # Database Configuration
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
-POSTGRES_DB=papertrade_dev
-POSTGRES_USER=papertrade
+POSTGRES_DB=zebu_dev
+POSTGRES_USER=zebu
 POSTGRES_PASSWORD=your_secure_password_here
 
 # Redis Configuration

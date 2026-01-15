@@ -82,7 +82,7 @@ cd backend && task dev:backend
 
 **Future use**:
 ```bash
-cd /Users/timchild/github/PaperTrade
+cd /Users/timchild/github/Zebu
 uv run --directory backend python orchestrator_procedures/e2e_validation.py
 ```
 

@@ -1,6 +1,6 @@
 # Agent Orchestration Workflow
 
-Guide for orchestrating AI coding agents to develop PaperTrade (a stock market paper trading platform).
+Guide for orchestrating AI coding agents to develop Zebu (a stock market paper trading platform).
 
 ## Starting a New Session
 

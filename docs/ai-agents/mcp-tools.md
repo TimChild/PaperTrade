@@ -25,16 +25,16 @@ Model Context Protocol (MCP) servers provide enhanced AI capabilities. Configura
 
 ```
 # 1. Check current environment
-pylancePythonEnvironments(workspaceRoot: "file:///Users/timchild/github/PaperTrade")
+pylancePythonEnvironments(workspaceRoot: "file:///Users/timchild/github/Zebu")
 
 # 2. Switch to project venv if needed
 pylanceUpdatePythonEnvironment(
-  workspaceRoot: "file:///Users/timchild/github/PaperTrade",
-  pythonEnvironment: "/Users/timchild/github/PaperTrade/backend/.venv/bin/python"
+  workspaceRoot: "file:///Users/timchild/github/Zebu",
+  pythonEnvironment: "/Users/timchild/github/Zebu/backend/.venv/bin/python"
 )
 
 # 3. Verify - should show no unresolved imports
-pylanceImports(workspaceRoot: "file:///Users/timchild/github/PaperTrade")
+pylanceImports(workspaceRoot: "file:///Users/timchild/github/Zebu")
 ```
 
 ### Container MCP (Docker)
@@ -52,7 +52,7 @@ pylanceImports(workspaceRoot: "file:///Users/timchild/github/PaperTrade")
 | `list_volumes` | Show volumes |
 | `run_container` | Create and run new container |
 
-**PaperTrade containers**: `papertrade-postgres` (5432), `papertrade-redis` (6379)
+**Zebu containers**: `zebu-postgres` (5432), `zebu-redis` (6379)
 
 ### GitHub PR MCP
 
@@ -75,7 +75,7 @@ These MCP servers are configured but don't expose tools to the assistant:
 
 | Server | Purpose | Notes |
 |--------|---------|-------|
-| PostgreSQL | Direct DB queries | Credentials: papertrade/papertrade_dev_password |
+| PostgreSQL | Direct DB queries | Credentials: zebu/zebu_dev_password |
 | Playwright | Browser automation | Headless mode |
 | Filesystem | File operations | Overlaps with built-in tools |
 | Memory | Persistent memory | For context between sessions |

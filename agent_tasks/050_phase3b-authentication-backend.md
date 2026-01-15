@@ -9,7 +9,7 @@
 
 ## Objective
 
-Implement complete authentication infrastructure for PaperTrade backend following Clean Architecture principles. This enables secure user registration, login, and JWT-based API authentication required for production deployment.
+Implement complete authentication infrastructure for Zebu backend following Clean Architecture principles. This enables secure user registration, login, and JWT-based API authentication required for production deployment.
 
 ## Context
 
@@ -37,7 +37,7 @@ dependencies = [
 
 Run: `cd backend && uv sync`
 
-#### 2. Domain Layer (`backend/src/papertrade/domain/`)
+#### 2. Domain Layer (`backend/src/zebu/domain/`)
 
 **2.1 User Entity** (`entities/user.py`):
 ```python
@@ -87,14 +87,14 @@ class PasswordService:
         """Verify a password against a hash."""
 ```
 
-#### 3. Application Layer (`backend/src/papertrade/application/`)
+#### 3. Application Layer (`backend/src/zebu/application/`)
 
 **3.1 UserRepository Port** (`ports/user_repository.py`):
 ```python
 from abc import ABC, abstractmethod
 from uuid import UUID
 from typing import Optional
-from papertrade.domain.entities.user import User
+from zebu.domain.entities.user import User
 
 class UserRepository(ABC):
     """Repository interface for User persistence."""
@@ -233,7 +233,7 @@ class GetUserHandler:
 
 ### Week 2: Infrastructure + API Layer
 
-#### 4. Database Layer (`backend/src/papertrade/adapters/outbound/`)
+#### 4. Database Layer (`backend/src/zebu/adapters/outbound/`)
 
 **4.1 UserModel** (`database/models.py` - add to existing):
 ```python
@@ -313,7 +313,7 @@ def downgrade() -> None:
     op.drop_table('users')
 ```
 
-#### 5. API Layer (`backend/src/papertrade/adapters/inbound/api/`)
+#### 5. API Layer (`backend/src/zebu/adapters/inbound/api/`)
 
 **5.1 Auth Router** (`auth.py` - new file):
 ```python
@@ -432,8 +432,8 @@ async def invalid_credentials_handler(request: Request, exc: InvalidCredentialsE
 
 **5.6 Update Main App** (`main.py`):
 ```python
-from papertrade.adapters.inbound.api.auth import router as auth_router
-from papertrade.adapters.inbound.api.users import router as users_router
+from zebu.adapters.inbound.api.auth import router as auth_router
+from zebu.adapters.inbound.api.users import router as users_router
 
 app.include_router(auth_router)
 app.include_router(users_router)

@@ -22,7 +22,7 @@ Proxmox deployment work has evolved from successful prototype to production-focu
 - PR #118 (Agent Session): Clean implementation from scratch
 - Agent: quality-infra
 - Branch: Against `main` (not prototype branch)
-- URL: https://github.com/TimChild/PaperTrade/pull/118/agent-sessions/aebd5684-605e-4ace-8c64-b082d1612605
+- URL: https://github.com/TimChild/Zebu/pull/118/agent-sessions/aebd5684-605e-4ace-8c64-b082d1612605
 
 ## Active Work
 

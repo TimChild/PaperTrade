@@ -10,10 +10,10 @@ from uuid import uuid4
 
 import pytest
 
-from papertrade.adapters.outbound.database.snapshot_repository import (
+from zebu.adapters.outbound.database.snapshot_repository import (
     SQLModelSnapshotRepository,
 )
-from papertrade.domain.entities.portfolio_snapshot import PortfolioSnapshot
+from zebu.domain.entities.portfolio_snapshot import PortfolioSnapshot
 
 
 class TestSQLModelSnapshotRepository:

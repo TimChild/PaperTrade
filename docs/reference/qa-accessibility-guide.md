@@ -1,6 +1,6 @@
 # QA and Accessibility Testing Guide
 
-This document provides comprehensive guidance for quality assurance and accessibility testing for PaperTrade frontend.
+This document provides comprehensive guidance for quality assurance and accessibility testing for Zebu frontend.
 
 ## Automated Testing
 

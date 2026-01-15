@@ -6,12 +6,12 @@ from uuid import uuid4
 import pytest
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from papertrade.adapters.outbound.database.models import TransactionModel
-from papertrade.application.queries.get_active_tickers import (
+from zebu.adapters.outbound.database.models import TransactionModel
+from zebu.application.queries.get_active_tickers import (
     GetActiveTickersHandler,
     GetActiveTickersQuery,
 )
-from papertrade.domain.value_objects.ticker import Ticker
+from zebu.domain.value_objects.ticker import Ticker
 
 
 class TestGetActiveTickers:

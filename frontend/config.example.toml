@@ -1,10 +1,10 @@
-# PaperTrade Frontend Configuration
+# Zebu Frontend Configuration
 # This is an EXAMPLE configuration file. Copy to config.toml and customize.
 
 [app]
 # Application environment
 environment = "development"  # Options: "development", "staging", "production"
-name = "PaperTrade"
+name = "Zebu"
 version = "1.0.0"
 
 [api]

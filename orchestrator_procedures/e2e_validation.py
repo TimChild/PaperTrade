@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-End-to-End Validation Script for PaperTrade
+End-to-End Validation Script for Zebu
 
-This script performs comprehensive E2E testing of the PaperTrade application
+This script performs comprehensive E2E testing of the Zebu application
 using Playwright. It validates all key user workflows and features.
 
 Usage:
@@ -19,7 +19,7 @@ from playwright.sync_api import sync_playwright, Page, expect
 
 
 class E2EValidator:
-    """End-to-end validation for PaperTrade application"""
+    """End-to-end validation for Zebu application"""
 
     def __init__(self, frontend_url: str = "http://localhost:5174", backend_url: str = "http://localhost:8000"):
         self.frontend_url = frontend_url
@@ -304,7 +304,7 @@ class E2EValidator:
     def run_validation(self):
         """Run the complete validation suite"""
         print("=" * 60)
-        print("PaperTrade E2E Validation")
+        print("Zebu E2E Validation")
         print("=" * 60)
 
         # Check backend first

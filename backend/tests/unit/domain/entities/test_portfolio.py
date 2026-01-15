@@ -5,8 +5,8 @@ from uuid import uuid4
 
 import pytest
 
-from papertrade.domain.entities.portfolio import Portfolio
-from papertrade.domain.exceptions import InvalidPortfolioError
+from zebu.domain.entities.portfolio import Portfolio
+from zebu.domain.exceptions import InvalidPortfolioError
 
 
 class TestPortfolioConstruction:

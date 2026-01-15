@@ -49,7 +49,7 @@ tasks:
       - docker:up
     cmds:
       - 'echo "Starting backend server on http://localhost:8000"'
-      - uv run uvicorn papertrade.main:app --reload --host 0.0.0.0 --port 8000
+      - uv run uvicorn zebu.main:app --reload --host 0.0.0.0 --port 8000
 
   dev:frontend:
     desc: "Start frontend development server"
@@ -72,7 +72,7 @@ tasks:
     dir: "{{.BACKEND_DIR}}"
     cmds:
       - echo "Running backend tests..."
-      - uv run pytest --cov=papertrade --cov-report=term --cov-report=html --cov-report=xml
+      - uv run pytest --cov=zebu --cov-report=term --cov-report=html --cov-report=xml
 
   test:frontend:
     desc: "Run frontend unit tests (Vitest only)"
@@ -639,7 +639,7 @@ tasks:
       - bash scripts/proxmox-vm/create-vm.sh
 
   proxmox-vm:deploy:
-    desc: "Deploy PaperTrade to Proxmox VM"
+    desc: "Deploy Zebu to Proxmox VM"
     cmds:
       - bash scripts/proxmox-vm/deploy.sh
 

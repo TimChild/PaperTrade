@@ -70,7 +70,7 @@ Based on the description and typical Proxmox VM creation patterns, the script li
 ### What Our Deployment Scripts Should Handle
 
 Since the community script creates the Docker-ready VM, our scripts should focus on:
-- Transferring the PaperTrade application code
+- Transferring the Zebu application code
 - Building Docker images
 - Deploying the application stack (PostgreSQL, Redis, Backend, Frontend)
 - Configuring secrets and environment variables

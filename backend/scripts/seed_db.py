@@ -14,17 +14,17 @@ from sqlalchemy import delete
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from papertrade.adapters.outbound.database.models import (
+from zebu.adapters.outbound.database.models import (
     PortfolioModel,
     TransactionModel,
 )
-from papertrade.adapters.outbound.models.price_history import PriceHistoryModel
-from papertrade.application.dtos.price_point import PricePoint
-from papertrade.domain.entities.portfolio import Portfolio
-from papertrade.domain.entities.transaction import Transaction, TransactionType
-from papertrade.domain.value_objects.money import Money
-from papertrade.domain.value_objects.ticker import Ticker
-from papertrade.infrastructure.database import async_session_maker, init_db
+from zebu.adapters.outbound.models.price_history import PriceHistoryModel
+from zebu.application.dtos.price_point import PricePoint
+from zebu.domain.entities.portfolio import Portfolio
+from zebu.domain.entities.transaction import Transaction, TransactionType
+from zebu.domain.value_objects.money import Money
+from zebu.domain.value_objects.ticker import Ticker
+from zebu.infrastructure.database import async_session_maker, init_db
 
 
 async def clear_existing_data(session: AsyncSession) -> None:

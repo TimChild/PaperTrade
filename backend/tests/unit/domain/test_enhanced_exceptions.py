@@ -4,9 +4,9 @@ from decimal import Decimal
 
 import pytest
 
-from papertrade.domain.exceptions import InsufficientFundsError, InsufficientSharesError
-from papertrade.domain.value_objects.money import Money
-from papertrade.domain.value_objects.quantity import Quantity
+from zebu.domain.exceptions import InsufficientFundsError, InsufficientSharesError
+from zebu.domain.value_objects.money import Money
+from zebu.domain.value_objects.quantity import Quantity
 
 
 class TestInsufficientFundsError:

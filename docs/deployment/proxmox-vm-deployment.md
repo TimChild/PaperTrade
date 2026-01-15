@@ -8,7 +8,7 @@
 
 ## Overview
 
-This guide covers deploying PaperTrade to a Proxmox VM using the [community Docker VM script](https://github.com/community-scripts/ProxmoxVE). The community script uses `virt-customize` to pre-install Docker into the VM image before first boot, providing a production-ready Docker environment immediately.
+This guide covers deploying Zebu to a Proxmox VM using the [community Docker VM script](https://github.com/community-scripts/ProxmoxVE). The community script uses `virt-customize` to pre-install Docker into the VM image before first boot, providing a production-ready Docker environment immediately.
 
 **Why use the community script?**
 See [proxmox-vm-approach-comparison.md](./proxmox-vm-approach-comparison.md) for a detailed analysis. Key benefits:
@@ -37,7 +37,7 @@ The script runs interactively with a terminal UI, which is acceptable since VM c
 
 ## Quick Start
 
-Get PaperTrade running on Proxmox in 10-15 minutes:
+Get Zebu running on Proxmox in 10-15 minutes:
 
 ```bash
 # 1. Configure Proxmox connection
@@ -45,7 +45,7 @@ export PROXMOX_HOST=root@proxmox
 
 # 2. Configure VM settings (optional - defaults are sensible)
 export PROXMOX_VM_ID=200
-export PROXMOX_VM_HOSTNAME=papertrade-vm
+export PROXMOX_VM_HOSTNAME=zebu-vm
 
 # 3. Create VM using community script (interactive)
 task proxmox-vm:create
@@ -121,7 +121,7 @@ All configuration is managed through environment variables with sensible default
 ```bash
 export PROXMOX_HOST=root@proxmox
 export PROXMOX_VM_ID=200
-export PROXMOX_VM_HOSTNAME=papertrade
+export PROXMOX_VM_HOSTNAME=zebu
 # ... etc
 ```
 
@@ -152,13 +152,13 @@ See `.env.proxmox.example` for complete reference. Key parameters:
 |-----------|---------|-------------|
 | `PROXMOX_HOST` | `root@proxmox` | SSH connection to Proxmox |
 | `PROXMOX_VM_ID` | `200` | Unique VM identifier |
-| `PROXMOX_VM_HOSTNAME` | `papertrade` | VM hostname |
+| `PROXMOX_VM_HOSTNAME` | `zebu` | VM hostname |
 | `PROXMOX_VM_CORES` | `4` | CPU cores |
 | `PROXMOX_VM_MEMORY` | `8192` | RAM in MB |
 | `PROXMOX_VM_DISK_SIZE` | `50` | Disk size in GB |
 | `PROXMOX_VM_BRIDGE` | `vmbr0` | Network bridge |
 | `PROXMOX_VM_IP_MODE` | `dhcp` | IP mode: `dhcp` or `static` |
-| `APP_DIR` | `/opt/papertrade` | App directory in VM |
+| `APP_DIR` | `/opt/zebu` | App directory in VM |
 
 ### Application Secrets
 
@@ -215,7 +215,7 @@ The script will:
 - **Machine Type** → i440fx (default)
 - **Disk Size** → 50G (or your configured value)
 - **Disk Cache** → None (default)
-- **Hostname** → papertrade-vm
+- **Hostname** → zebu-vm
 - **CPU Model** → KVM64 (default)
 - **CPU Cores** → 4
 - **RAM Size** → 8192
@@ -328,7 +328,7 @@ You can also SSH into the VM and perform git operations manually:
 ssh root@<vm-ip>
 
 # Navigate to app directory
-cd /opt/papertrade
+cd /opt/zebu
 
 # Check current version
 git log -1 --oneline
@@ -426,7 +426,7 @@ task proxmox-vm:logs
 
 # SSH into VM and check manually
 ssh root@<vm-ip>
-cd /opt/papertrade
+cd /opt/zebu
 docker compose -f docker-compose.prod.yml ps
 docker compose -f docker-compose.prod.yml logs
 ```
@@ -438,7 +438,7 @@ docker compose -f docker-compose.prod.yml logs
 cat .env | grep -E "POSTGRES_PASSWORD|SECRET_KEY|ALPHA_VANTAGE_API_KEY"
 
 # Check .env on VM
-ssh root@<vm-ip> cat /opt/papertrade/.env
+ssh root@<vm-ip> cat /opt/zebu/.env
 ```
 
 **Problem**: Build failures
@@ -455,7 +455,7 @@ docker ps
 docker images
 
 # Rebuild manually
-cd /opt/papertrade
+cd /opt/zebu
 docker compose -f docker-compose.prod.yml build --no-cache
 ```
 
@@ -560,7 +560,7 @@ docker run -d \
   -p 443:443 \
   -v caddy_data:/data \
   caddy:latest \
-  caddy reverse-proxy --from papertrade.example.com --to localhost:80
+  caddy reverse-proxy --from zebu.example.com --to localhost:80
 
 # Option 2: Nginx + Certbot (more control)
 # See: https://certbot.eff.org/
@@ -692,7 +692,7 @@ We leverage the [community Docker VM script](https://community-scripts.github.io
 - Battle-tested by thousands of deployments
 
 Our scripts wrap and enhance the community script with:
-- PaperTrade-specific configuration
+- Zebu-specific configuration
 - Automated deployment workflow
 - Secrets management
 - Health checking
@@ -701,7 +701,7 @@ Our scripts wrap and enhance the community script with:
 ### File Structure
 
 ```
-PaperTrade/
+Zebu/
 ├── scripts/proxmox-vm/
 │   ├── common.sh          # Shared utilities
 │   ├── create-vm.sh       # VM creation
@@ -721,7 +721,7 @@ PaperTrade/
 - **Community Scripts**: https://community-scripts.github.io/ProxmoxVE/
 - **Proxmox Documentation**: https://pve.proxmox.com/pve-docs/
 - **Docker Documentation**: https://docs.docker.com/
-- **PaperTrade Repository**: https://github.com/TimChild/PaperTrade
+- **Zebu Repository**: https://github.com/TimChild/Zebu
 
 ---
 

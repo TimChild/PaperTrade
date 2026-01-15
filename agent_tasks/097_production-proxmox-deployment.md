@@ -7,7 +7,7 @@
 
 ## Objective
 
-Implement a **production-ready deployment solution** for PaperTrade to Proxmox using a VM-based Docker environment. This is a clean implementation informed by prototype learnings, not an iteration on the prototype.
+Implement a **production-ready deployment solution** for Zebu to Proxmox using a VM-based Docker environment. This is a clean implementation informed by prototype learnings, not an iteration on the prototype.
 
 ## Context
 
@@ -34,7 +34,7 @@ All resources are in the `docs/deployment/` directory:
   - URL: https://community-scripts.github.io/ProxmoxVE/scripts?id=docker-vm
   - Script: https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/vm/docker-vm.sh
   - **Important**: Fetch and examine this script to understand its parameters/configuration
-- Deploy PaperTrade stack (PostgreSQL, Redis, Backend, Frontend) via Docker Compose
+- Deploy Zebu stack (PostgreSQL, Redis, Backend, Frontend) via Docker Compose
 - Support both local development and future CI/CD workflows
 
 ### Core Functionality
@@ -74,7 +74,7 @@ PROXMOX_HOST="${PROXMOX_HOST:-root@proxmox}"
 
 # VM Configuration
 PROXMOX_VM_ID="${PROXMOX_VM_ID:-200}"
-PROXMOX_VM_HOSTNAME="${PROXMOX_VM_HOSTNAME:-papertrade}"
+PROXMOX_VM_HOSTNAME="${PROXMOX_VM_HOSTNAME:-zebu}"
 PROXMOX_VM_CORES="${PROXMOX_VM_CORES:-4}"
 PROXMOX_VM_MEMORY="${PROXMOX_VM_MEMORY:-8192}"  # MB
 PROXMOX_VM_DISK_SIZE="${PROXMOX_VM_DISK_SIZE:-50}"  # GB
@@ -87,7 +87,7 @@ PROXMOX_VM_IP_ADDRESS="${PROXMOX_VM_IP_ADDRESS:-}"  # e.g., "192.168.1.100/24"
 PROXMOX_VM_GATEWAY="${PROXMOX_VM_GATEWAY:-}"  # e.g., "192.168.1.1"
 
 # Application Configuration
-APP_DIR="${APP_DIR:-/opt/papertrade}"
+APP_DIR="${APP_DIR:-/opt/zebu}"
 ```
 
 **Secrets Management**:
@@ -162,7 +162,7 @@ proxmox-vm:create:
   desc: "Create Docker VM on Proxmox"
 
 proxmox-vm:deploy:
-  desc: "Deploy PaperTrade to Proxmox VM"
+  desc: "Deploy Zebu to Proxmox VM"
 
 proxmox-vm:status:
   desc: "Check deployment status"

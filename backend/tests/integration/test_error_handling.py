@@ -226,10 +226,10 @@ def test_access_other_users_portfolio_returns_403(
 ) -> None:
     """Test that users cannot access portfolios they don't own."""
     # Import necessary modules
-    from papertrade.adapters.auth.in_memory_adapter import InMemoryAuthAdapter
-    from papertrade.adapters.inbound.api.dependencies import get_auth_port
-    from papertrade.application.ports.auth_port import AuthenticatedUser
-    from papertrade.main import app
+    from zebu.adapters.auth.in_memory_adapter import InMemoryAuthAdapter
+    from zebu.adapters.inbound.api.dependencies import get_auth_port
+    from zebu.application.ports.auth_port import AuthenticatedUser
+    from zebu.main import app
 
     # Create portfolio as user 1
     response = client.post(

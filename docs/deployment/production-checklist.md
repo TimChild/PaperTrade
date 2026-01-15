@@ -8,7 +8,7 @@
 
 ## Overview
 
-This checklist ensures your PaperTrade deployment is production-ready. Complete all items before deploying to production or exposing to real users.
+This checklist ensures your Zebu deployment is production-ready. Complete all items before deploying to production or exposing to real users.
 
 **Deployment Stages:**
 1. **Pre-Deployment**: Setup and configuration
@@ -386,7 +386,7 @@ For small-scale production (personal use, small team, low traffic):
 
 - [Proxmox VM Deployment Guide](./proxmox-vm-deployment.md)
 - [Domain and SSL Setup Guide](./domain-and-ssl-setup.md)
-- [PaperTrade Documentation](../../README.md)
+- [Zebu Documentation](../../README.md)
 - [OWASP Security Best Practices](https://owasp.org/www-project-top-ten/)
 - [12 Factor App Methodology](https://12factor.net/)
 

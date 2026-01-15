@@ -61,7 +61,7 @@ return BalanceResponse(
 ```
 
 ### Fix
-**File**: `backend/src/papertrade/adapters/inbound/api/portfolios.py` (line ~320)
+**File**: `backend/src/zebu/adapters/inbound/api/portfolios.py` (line ~320)
 
 **Change From**:
 ```python
@@ -147,7 +147,7 @@ export const apiClient = axios.create({
  * TODO: Replace with real authentication in Phase 2
  */
 function getMockUserId(): string {
-  const STORAGE_KEY = 'papertrade_mock_user_id'
+  const STORAGE_KEY = 'zebu_mock_user_id'
 
   // Check localStorage for existing ID
   const stored = localStorage.getItem(STORAGE_KEY)
@@ -180,7 +180,7 @@ export const apiClient = axios.create({
 4. Refresh page
 5. Verify portfolio still appears (user ID persisted in localStorage)
 6. Open DevTools → Application → Local Storage
-7. Verify `papertrade_mock_user_id` is present
+7. Verify `zebu_mock_user_id` is present
 
 **Unit Test** (add to `frontend/src/services/api/client.test.ts`):
 ```typescript
@@ -193,7 +193,7 @@ describe('apiClient user ID persistence', () => {
     const { apiClient } = require('./client')
 
     // Verify user ID is stored
-    const stored = localStorage.getItem('papertrade_mock_user_id')
+    const stored = localStorage.getItem('zebu_mock_user_id')
     expect(stored).toBeTruthy()
     expect(stored).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)
 
@@ -203,7 +203,7 @@ describe('apiClient user ID persistence', () => {
 
   it('reuses existing user ID from localStorage', () => {
     const existingId = '12345678-1234-1234-1234-123456789012'
-    localStorage.setItem('papertrade_mock_user_id', existingId)
+    localStorage.setItem('zebu_mock_user_id', existingId)
 
     // Re-import to trigger getUserId again
     jest.resetModules()
@@ -239,8 +239,8 @@ Based on Bug #1 pattern, probably similar field name mismatch:
 - AttributeError at runtime
 
 **Check Files**:
-- `backend/src/papertrade/application/commands/execute_trade.py`
-- `backend/src/papertrade/adapters/inbound/api/portfolios.py` (execute_trade endpoint)
+- `backend/src/zebu/application/commands/execute_trade.py`
+- `backend/src/zebu/adapters/inbound/api/portfolios.py` (execute_trade endpoint)
 - `frontend/src/pages/PortfolioDetail.tsx`
 - `frontend/src/components/features/portfolio/TradeForm.tsx`
 
@@ -359,9 +359,9 @@ def test_holdings_after_multiple_trades(client: TestClient, default_user_id: UUI
 ## Files to Create/Modify
 
 ### Backend
-- **Fix**: `backend/src/papertrade/adapters/inbound/api/portfolios.py` - Balance endpoint field name
+- **Fix**: `backend/src/zebu/adapters/inbound/api/portfolios.py` - Balance endpoint field name
 - **Add**: `backend/tests/integration/test_portfolio_api_integration.py` - New integration tests
-- Possibly: `backend/src/papertrade/adapters/inbound/api/portfolios.py` - Trade endpoint (TBD)
+- Possibly: `backend/src/zebu/adapters/inbound/api/portfolios.py` - Trade endpoint (TBD)
 
 ### Frontend
 - **Fix**: `frontend/src/services/api/client.ts` - User ID persistence
@@ -412,7 +412,7 @@ def test_holdings_after_multiple_trades(client: TestClient, default_user_id: UUI
      runs-on: ubuntu-latest
      steps:
        - name: Start backend
-         run: cd backend && uv run uvicorn papertrade.main:app &
+         run: cd backend && uv run uvicorn zebu.main:app &
        - name: Run integration tests
          run: cd backend && uv run pytest tests/integration -v
    ```

@@ -2,10 +2,10 @@
 
 from decimal import Decimal
 
-from papertrade.domain.entities.holding import Holding
-from papertrade.domain.value_objects.money import Money
-from papertrade.domain.value_objects.quantity import Quantity
-from papertrade.domain.value_objects.ticker import Ticker
+from zebu.domain.entities.holding import Holding
+from zebu.domain.value_objects.money import Money
+from zebu.domain.value_objects.quantity import Quantity
+from zebu.domain.value_objects.ticker import Ticker
 
 
 class TestHoldingConstruction:

@@ -1,8 +1,8 @@
-# Copilot Code Review Instructions for PaperTrade
+# Copilot Code Review Instructions for Zebu
 
 ## Project Context
 
-PaperTrade is a stock market emulation platform following **Modern Software Engineering** principles (Dave Farley) and **Clean Architecture** (Robert C. Martin).
+Zebu is a stock market emulation platform following **Modern Software Engineering** principles (Dave Farley) and **Clean Architecture** (Robert C. Martin).
 
 ## Architecture Rules (CRITICAL)
 

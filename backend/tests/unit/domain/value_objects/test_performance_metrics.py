@@ -6,9 +6,9 @@ from uuid import uuid4
 
 import pytest
 
-from papertrade.domain.entities.portfolio_snapshot import PortfolioSnapshot
-from papertrade.domain.exceptions import InvalidPortfolioError
-from papertrade.domain.value_objects.performance_metrics import PerformanceMetrics
+from zebu.domain.entities.portfolio_snapshot import PortfolioSnapshot
+from zebu.domain.exceptions import InvalidPortfolioError
+from zebu.domain.value_objects.performance_metrics import PerformanceMetrics
 
 
 class TestPerformanceMetricsConstruction:

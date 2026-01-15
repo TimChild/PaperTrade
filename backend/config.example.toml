@@ -1,4 +1,4 @@
-# PaperTrade Backend Configuration
+# Zebu Backend Configuration
 # This is an EXAMPLE configuration file. Copy to config.toml and customize.
 
 [app]
@@ -66,10 +66,10 @@ redis_password = "${REDIS_PASSWORD}"  # Optional, set in .env if needed
 
 # Price cache settings
 price_ttl_seconds = 3600  # 1 hour (during market hours)
-price_key_prefix = "papertrade:price"
+price_key_prefix = "zebu:price"
 
 # Rate limiter cache settings
-ratelimit_key_prefix = "papertrade:ratelimit"
+ratelimit_key_prefix = "zebu:ratelimit"
 
 [scheduler]
 # Background job scheduler settings
@@ -106,7 +106,7 @@ retry_failed_after_hours = 6
 # Logging configuration
 format = "json"  # Options: "json", "text"
 level = "INFO"
-file = "/var/log/papertrade/app.log"  # Log file path
+file = "/var/log/zebu/app.log"  # Log file path
 
 # Log rotation
 max_bytes = 10485760  # 10 MB
@@ -114,7 +114,7 @@ backup_count = 5
 
 [api]
 # FastAPI settings
-title = "PaperTrade API"
+title = "Zebu API"
 version = "1.0.0"
 description = "Stock market paper trading platform"
 

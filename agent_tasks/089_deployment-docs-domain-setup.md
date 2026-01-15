@@ -105,7 +105,7 @@ This is a comprehensive, one-time setup guide for configuring a domain name with
   - Simpler but less flexible
 
 **Backend Code Changes**:
-- Update CORS allowed origins in `backend/src/papertrade/main.py`
+- Update CORS allowed origins in `backend/src/zebu/main.py`
 - Add domain to allowed origins list
 - Environment variable for ALLOWED_ORIGINS
 
@@ -241,7 +241,7 @@ git checkout -b docs/deployment-domain-setup
 
 ## References
 
-- PR #118: https://github.com/TimChild/PaperTrade/pull/118
+- PR #118: https://github.com/TimChild/Zebu/pull/118
 - Current deployment docs: `docs/deployment/proxmox-vm-deployment.md`
 - Deployment scripts: `scripts/proxmox-vm/deploy.sh`
 - NPMplus docs: https://nginxproxymanager.com/

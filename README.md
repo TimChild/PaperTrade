@@ -1,4 +1,4 @@
-# PaperTrade 📈
+# Zebu 📈
 
 [![CI](https://github.com/TimChild/PaperTrade/actions/workflows/ci.yml/badge.svg)](https://github.com/TimChild/PaperTrade/actions/workflows/ci.yml)
 
@@ -12,7 +12,7 @@ A stock market emulation platform for practicing trading strategies without risk
 
 **New Users?** Start here:
 - **[Executive Summary](docs/planning/executive-summary.md)** - Quick overview of current capabilities
-- **[User Guide](docs/USER_GUIDE.md)** - Step-by-step instructions for using PaperTrade
+- **[User Guide](docs/USER_GUIDE.md)** - Step-by-step instructions for using Zebu
 
 **Developers & Contributors:**
 - **[Feature Status Matrix](docs/planning/feature-status.md)** - Complete feature implementation status
@@ -30,7 +30,7 @@ A stock market emulation platform for practicing trading strategies without risk
 
 ## Overview
 
-PaperTrade allows users to:
+Zebu allows users to:
 - ✅ Start with virtual cash and practice investing
 - ✅ Create unlimited portfolios with different strategies
 - ✅ Execute BUY trades with real-time market data
@@ -42,7 +42,7 @@ PaperTrade allows users to:
 
 ## Philosophy
 
-This project follows **Modern Software Engineering** principles (Dave Farley):
+ZebuTrader follows **Modern Software Engineering** principles (Dave Farley):
 - **Iterative & Incremental**: Build smallest valuable increments
 - **Experimental & Empirical**: Hypothesis → Test → Learn
 - **Manage Complexity**: High cohesion, loose coupling
@@ -146,7 +146,7 @@ task --version
 ```bash
 # Clone the repository
 git clone https://github.com/TimChild/PaperTrade.git
-cd PaperTrade
+cd Zebu
 
 # OPTION 1: Automated setup (recommended)
 # This installs pre-commit hooks, dependencies, and starts Docker services
@@ -194,7 +194,7 @@ uv run uvicorn papertrade.main:app --reload
 
 ## Docker Development
 
-PaperTrade includes full Docker support for running the entire stack (PostgreSQL, Redis, Backend, Frontend) in containers.
+Zebu includes full Docker support for running the entire stack (PostgreSQL, Redis, Backend, Frontend) in containers.
 
 ### Quick Start with Docker
 
@@ -384,13 +384,13 @@ Production images use multi-stage builds to minimize size and attack surface.
 ## Project Structure
 
 ```
-PaperTrade/
+Zebu/
 ├── .github/
 │   ├── agents/              # Copilot agent instructions
 │   ├── workflows/           # CI/CD pipelines
 │   └── copilot-instructions.md
 ├── backend/
-│   ├── src/papertrade/
+│   ├── src/zebu/
 │   │   ├── domain/          # Pure business logic
 │   │   ├── application/     # Use cases
 │   │   ├── adapters/        # Interface implementations
@@ -454,7 +454,7 @@ task precommit:run     # Run pre-commit on all files
 
 ### Running Tests
 
-PaperTrade follows the **Test Pyramid** approach with unit, integration, and E2E tests. See [docs/TESTING_STRATEGY.md](docs/TESTING_STRATEGY.md) for details.
+Zebu follows the **Test Pyramid** approach with unit, integration, and E2E tests. See [docs/TESTING_STRATEGY.md](docs/TESTING_STRATEGY.md) for details.
 
 ```bash
 # All tests (backend + frontend)

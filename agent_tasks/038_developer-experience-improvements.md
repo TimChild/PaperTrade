@@ -39,11 +39,11 @@ These improvements don't block Phase 3 but significantly improve developer produ
 
   db:shell:
     desc: "Open PostgreSQL shell"
-    cmd: docker compose exec db psql -U papertrade -d papertrade_dev
+    cmd: docker compose exec db psql -U zebu -d zebu_dev
 
   db:shell:prod:
     desc: "Open PostgreSQL shell (production database)"
-    cmd: docker compose -f docker-compose.prod.yml exec db psql -U papertrade -d papertrade
+    cmd: docker compose -f docker-compose.prod.yml exec db psql -U zebu -d zebu
 
   db:migrate:
     desc: "Run database migrations"
@@ -76,19 +76,19 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from uuid import uuid4
 
-from papertrade.domain.value_objects.currency import Currency
-from papertrade.domain.value_objects.money import Money
-from papertrade.domain.value_objects.ticker import Ticker
-from papertrade.application.dtos.price_point import PricePoint
-from papertrade.infrastructure.database import engine, init_db
+from zebu.domain.value_objects.currency import Currency
+from zebu.domain.value_objects.money import Money
+from zebu.domain.value_objects.ticker import Ticker
+from zebu.application.dtos.price_point import PricePoint
+from zebu.infrastructure.database import engine, init_db
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 # Import repository classes
-from papertrade.adapters.outbound.repositories.portfolio_repository import (
+from zebu.adapters.outbound.repositories.portfolio_repository import (
     PortfolioRepository,
 )
-from papertrade.adapters.outbound.repositories.price_repository import (
+from zebu.adapters.outbound.repositories.price_repository import (
     PriceRepository,
 )
 
@@ -175,7 +175,7 @@ async def main() -> None:
 
     async with AsyncSession(engine) as session:
         # Check if database is already seeded
-        from papertrade.adapters.outbound.database.models import PortfolioModel
+        from zebu.adapters.outbound.database.models import PortfolioModel
 
         result = await session.exec(select(PortfolioModel))
         if result.first():
@@ -214,9 +214,9 @@ if __name__ == "__main__":
 
 **Create `CONTRIBUTING.md` at root**:
 ```markdown
-# Contributing to PaperTrade
+# Contributing to Zebu
 
-Thank you for your interest in contributing to PaperTrade! This document provides guidelines and instructions for developers.
+Thank you for your interest in contributing to Zebu! This document provides guidelines and instructions for developers.
 
 ## Quick Start
 
@@ -232,8 +232,8 @@ Thank you for your interest in contributing to PaperTrade! This document provide
 
 ```bash
 # Clone repository
-git clone https://github.com/TimChild/PaperTrade.git
-cd PaperTrade
+git clone https://github.com/TimChild/Zebu.git
+cd Zebu
 
 # Automated setup (recommended)
 ./github/copilot-setup.sh
@@ -335,7 +335,7 @@ task test:frontend  # Vitest
 
 ## Architecture
 
-PaperTrade follows **Clean Architecture**:
+Zebu follows **Clean Architecture**:
 
 ```
 Domain       → Pure business logic (no I/O)
@@ -433,15 +433,15 @@ Full task list: `task --list`
 - **Documentation**: Start with [README.md](README.md)
 - **Architecture**: See [project_strategy.md](project_strategy.md)
 - **Current Status**: Check [PROGRESS.md](PROGRESS.md)
-- **Issues**: Browse [GitHub Issues](https://github.com/TimChild/PaperTrade/issues)
+- **Issues**: Browse [GitHub Issues](https://github.com/TimChild/Zebu/issues)
 - **Discussions**: Use GitHub Discussions for questions
 
 ## Project Structure
 
 ```
-PaperTrade/
+Zebu/
 ├── backend/               # Python/FastAPI backend
-│   ├── src/papertrade/
+│   ├── src/zebu/
 │   │   ├── domain/       # Pure business logic
 │   │   ├── application/  # Use cases
 │   │   ├── adapters/     # Interface implementations

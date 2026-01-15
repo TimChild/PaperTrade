@@ -5,12 +5,12 @@ from decimal import Decimal
 
 import pytest
 
-from papertrade.adapters.outbound.market_data.in_memory_adapter import (
+from zebu.adapters.outbound.market_data.in_memory_adapter import (
     InMemoryMarketDataAdapter,
 )
-from papertrade.application.dtos.price_point import PricePoint
-from papertrade.domain.value_objects.money import Money
-from papertrade.domain.value_objects.ticker import Ticker
+from zebu.application.dtos.price_point import PricePoint
+from zebu.domain.value_objects.money import Money
+from zebu.domain.value_objects.ticker import Ticker
 
 
 @pytest.fixture

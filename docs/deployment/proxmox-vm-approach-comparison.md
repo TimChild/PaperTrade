@@ -281,7 +281,7 @@ Choose **qm Commands** if:
 - ✅ You're willing to maintain the code
 - ✅ You need deterministic, non-interactive execution
 
-## Recommendation for PaperTrade
+## Recommendation for Zebu
 
 **Use the community script with documentation wrapper.**
 

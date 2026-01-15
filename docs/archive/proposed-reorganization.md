@@ -30,7 +30,7 @@
 
 ## Executive Summary
 
-This proposal addresses the organic growth of PaperTrade's documentation by reorganizing 100+ documents into a clear, maintainable structure. The key goals are:
+This proposal addresses the organic growth of Zebu's documentation by reorganizing 100+ documents into a clear, maintainable structure. The key goals are:
 
 1. **Reduce confusion** - Clear separation between human docs and AI agent instructions
 2. **Improve discoverability** - Logical directory structure with clear navigation

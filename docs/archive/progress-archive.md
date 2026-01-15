@@ -1,4 +1,4 @@
-# PaperTrade Development Progress
+# Zebu Development Progress
 
 **Last Updated**: December 29, 2025 (00:30 PST)
 
@@ -243,10 +243,10 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 **Components**:
 - `backend/migrations/versions/e46ccf3fcc35_add_price_history_table.py` - Price history schema
 - `backend/migrations/versions/7ca1e9126eba_add_ticker_watchlist_table.py` - Watchlist schema
-- `backend/src/papertrade/adapters/outbound/models/price_history.py` - SQLModel with OHLCV
-- `backend/src/papertrade/adapters/outbound/models/ticker_watchlist.py` - Refresh tracking
-- `backend/src/papertrade/adapters/outbound/repositories/price_repository.py` - CRUD operations
-- `backend/src/papertrade/adapters/outbound/repositories/watchlist_manager.py` - Priority scheduling
+- `backend/src/zebu/adapters/outbound/models/price_history.py` - SQLModel with OHLCV
+- `backend/src/zebu/adapters/outbound/models/ticker_watchlist.py` - Refresh tracking
+- `backend/src/zebu/adapters/outbound/repositories/price_repository.py` - CRUD operations
+- `backend/src/zebu/adapters/outbound/repositories/watchlist_manager.py` - Priority scheduling
 
 **Key Features**:
 - Batch upsert operations for efficiency
@@ -268,10 +268,10 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 - Singleton MarketDataPort dependency injection
 
 **Components**:
-- `backend/src/papertrade/application/dtos/holding_dto.py` - Added current_price, price_change, percent_change
-- `backend/src/papertrade/application/queries/get_portfolio_balance.py` - Real valuations
-- `backend/src/papertrade/application/queries/get_portfolio_holdings.py` - Market data enrichment
-- `backend/src/papertrade/adapters/inbound/api/dependencies.py` - Singleton setup
+- `backend/src/zebu/application/dtos/holding_dto.py` - Added current_price, price_change, percent_change
+- `backend/src/zebu/application/queries/get_portfolio_balance.py` - Real valuations
+- `backend/src/zebu/application/queries/get_portfolio_holdings.py` - Market data enrichment
+- `backend/src/zebu/adapters/inbound/api/dependencies.py` - Singleton setup
 
 **Key Features**:
 - Real-time portfolio valuations using current market prices
@@ -291,7 +291,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 - Clean price comparison semantics
 
 **Changes**:
-- `backend/src/papertrade/application/dtos/price_point.py`:
+- `backend/src/zebu/application/dtos/price_point.py`:
   - Fixed `is_stale()`: Changed `age > max_age` to `age >= max_age` (off-by-one fix)
   - Added custom `__eq__()` and `__hash__()` excluding OHLCV fields
   - Two PricePoints equal if ticker, price, timestamp match (OHLCV ignored)

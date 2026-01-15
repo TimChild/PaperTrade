@@ -1,4 +1,4 @@
-# PaperTrade Project Plan
+# Zebu Project Plan
 
 **Note**: This is the **original project plan** from December 2025. For the **refined architecture plans** based on Phase 1-2 learnings, see:
 - **Phase 3 Refined**: `architecture_plans/phase3-refined/` (SELL → Auth → Analytics)
@@ -11,7 +11,7 @@ The original plan below is preserved for historical context. Phase 3-4 have been
 
 ## Overview
 
-This document outlines the development phases for PaperTrade, a stock market emulation platform. Each phase builds incrementally on the previous, following Modern Software Engineering principles.
+This document outlines the development phases for Zebu, a stock market emulation platform. Each phase builds incrementally on the previous, following Modern Software Engineering principles.
 
 ## Development Phases
 

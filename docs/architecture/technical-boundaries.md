@@ -1,11 +1,11 @@
-# PaperTrade: Technical Boundaries & Limitations
+# Zebu: Technical Boundaries & Limitations
 
 **Last Updated**: January 4, 2026
 **Version**: Phase 2 Complete
 
 ## Overview
 
-This document outlines known technical limitations, edge cases, and architectural boundaries in the PaperTrade application. Understanding these constraints helps set proper expectations and guides future development.
+This document outlines known technical limitations, edge cases, and architectural boundaries in the Zebu application. Understanding these constraints helps set proper expectations and guides future development.
 
 ---
 
@@ -25,8 +25,8 @@ This document outlines known technical limitations, edge cases, and architectura
 - Error handling for insufficient shares
 
 **Implementation**:
-- `backend/src/papertrade/domain/entities/transaction.py` - SELL transaction type
-- `backend/src/papertrade/application/commands/sell_stock.py` - SellStockHandler
+- `backend/src/zebu/domain/entities/transaction.py` - SELL transaction type
+- `backend/src/zebu/application/commands/sell_stock.py` - SellStockHandler
 - `frontend/src/components/features/portfolio/TradeForm.tsx` - BUY/SELL toggle
 
 ---
@@ -68,7 +68,7 @@ This document outlines known technical limitations, edge cases, and architectura
 - Social login, password reset, email verification included
 
 **Code References**:
-- `backend/src/papertrade/adapters/inbound/api/routes.py` - No auth middleware (yet)
+- `backend/src/zebu/adapters/inbound/api/routes.py` - No auth middleware (yet)
 - `frontend/src/lib/utils/userSession.ts` - LocalStorage user management (temporary)
 - See `architecture_plans/phase3-refined/phase3b-authentication.md` for detailed design
 
@@ -114,9 +114,9 @@ This document outlines known technical limitations, edge cases, and architectura
 - API call counter (not implemented)
 
 **Code References**:
-- `backend/src/papertrade/adapters/outbound/alpha_vantage.py` - Retry logic
-- `backend/src/papertrade/infrastructure/cache.py` - Redis caching
-- `backend/src/papertrade/infrastructure/scheduler.py` - Background updates
+- `backend/src/zebu/adapters/outbound/alpha_vantage.py` - Retry logic
+- `backend/src/zebu/infrastructure/cache.py` - Redis caching
+- `backend/src/zebu/infrastructure/scheduler.py` - Background updates
 
 ---
 
@@ -333,7 +333,7 @@ alert("Insufficient funds to execute trade")
 - TradingView widgets
 
 **Code References**:
-- `backend/src/papertrade/domain/entities.py` - PriceHistory model exists
+- `backend/src/zebu/domain/entities.py` - PriceHistory model exists
 - `frontend/src/components/` - No chart components yet
 
 ---
@@ -395,7 +395,7 @@ alert("Insufficient funds to execute trade")
 
 **Code References**:
 - `frontend/src/lib/utils/userSession.ts` - Current implementation
-- `backend/src/papertrade/adapters/inbound/api/dependencies.py` - Header parsing
+- `backend/src/zebu/adapters/inbound/api/dependencies.py` - Header parsing
 
 ---
 
@@ -515,7 +515,7 @@ Two trades execute simultaneously for same portfolio:
 - Idempotency keys for trade requests
 
 **Code References**:
-- `backend/src/papertrade/application/use_cases/execute_trade.py` - Transaction handling
+- `backend/src/zebu/application/use_cases/execute_trade.py` - Transaction handling
 - Database isolation level configuration
 
 ---
@@ -541,8 +541,8 @@ Two trades execute simultaneously for same portfolio:
 - Manual override capability
 
 **Code References**:
-- `backend/src/papertrade/domain/value_objects.py` - Money validation
-- `backend/src/papertrade/adapters/outbound/alpha_vantage.py` - API response parsing
+- `backend/src/zebu/domain/value_objects.py` - Money validation
+- `backend/src/zebu/adapters/outbound/alpha_vantage.py` - API response parsing
 
 ---
 
@@ -649,7 +649,7 @@ EACCES: permission denied
 - Search transactions
 
 **Code References**:
-- `backend/src/papertrade/adapters/inbound/api/routes.py` - No pagination limits
+- `backend/src/zebu/adapters/inbound/api/routes.py` - No pagination limits
 - `frontend/src/components/features/portfolio/TransactionHistory.tsx` - Renders all
 
 ---
@@ -678,7 +678,7 @@ EACCES: permission denied
 - Provider health monitoring
 
 **Code References**:
-- `backend/src/papertrade/application/ports.py` - MarketDataPort abstraction ready
+- `backend/src/zebu/application/ports.py` - MarketDataPort abstraction ready
 - Just need additional adapter implementations
 
 ---
@@ -755,7 +755,7 @@ EACCES: permission denied
 
 **Code References**:
 - `.env.example` - API key configuration
-- `backend/src/papertrade/config/settings.py` - Environment loading
+- `backend/src/zebu/config/settings.py` - Environment loading
 
 ---
 
@@ -793,4 +793,4 @@ EACCES: permission denied
 ---
 
 **Last Updated**: January 4, 2026
-**Maintained By**: PaperTrade Development Team
+**Maintained By**: Zebu Development Team

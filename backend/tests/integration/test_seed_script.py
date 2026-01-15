@@ -5,12 +5,12 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from papertrade.adapters.outbound.database.models import (
+from scripts.seed_db import clear_existing_data, seed_portfolios, seed_price_history
+from zebu.adapters.outbound.database.models import (
     PortfolioModel,
     TransactionModel,
 )
-from papertrade.adapters.outbound.models.price_history import PriceHistoryModel
-from scripts.seed_db import clear_existing_data, seed_portfolios, seed_price_history
+from zebu.adapters.outbound.models.price_history import PriceHistoryModel
 
 
 @pytest_asyncio.fixture

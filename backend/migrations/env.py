@@ -5,14 +5,14 @@ from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
 
 # Import all SQLModel models to ensure they're registered with metadata
-from papertrade.adapters.outbound.database.models import (  # noqa: F401
+from zebu.adapters.outbound.database.models import (  # noqa: F401
     PortfolioModel,
     TransactionModel,
 )
-from papertrade.adapters.outbound.models.price_history import (  # noqa: F401
+from zebu.adapters.outbound.models.price_history import (  # noqa: F401
     PriceHistoryModel,
 )
-from papertrade.adapters.outbound.models.ticker_watchlist import (  # noqa: F401
+from zebu.adapters.outbound.models.ticker_watchlist import (  # noqa: F401
     TickerWatchlistModel,
 )
 

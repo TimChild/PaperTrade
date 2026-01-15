@@ -88,7 +88,7 @@ Investigate:
 
 ### Files to Investigate
 - `frontend/src/components/features/portfolio/TradeForm.tsx`
-- `backend/src/papertrade/adapters/inbound/api/portfolios.py`
+- `backend/src/zebu/adapters/inbound/api/portfolios.py`
 - `frontend/src/services/api/portfolios.ts`
 
 ---

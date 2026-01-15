@@ -2,8 +2,8 @@
 
 import pytest
 
-from papertrade.domain.exceptions import InvalidTickerError
-from papertrade.domain.value_objects.ticker import Ticker
+from zebu.domain.exceptions import InvalidTickerError
+from zebu.domain.value_objects.ticker import Ticker
 
 
 class TestTickerConstruction:

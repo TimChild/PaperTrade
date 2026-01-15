@@ -82,10 +82,10 @@ Fetch and display real-time current prices for all holdings, showing users accur
 ### Files to Modify
 
 **Backend**:
-- `backend/src/papertrade/application/queries/get_holdings.py` - Add current price fetching
-- `backend/src/papertrade/adapters/inbound/api/routes/prices.py` - Add batch endpoint
-- `backend/src/papertrade/adapters/outbound/cache/redis_cache.py` - Price caching logic
-- `backend/src/papertrade/adapters/outbound/market_data/alpha_vantage_adapter.py` - Batch price support
+- `backend/src/zebu/application/queries/get_holdings.py` - Add current price fetching
+- `backend/src/zebu/adapters/inbound/api/routes/prices.py` - Add batch endpoint
+- `backend/src/zebu/adapters/outbound/cache/redis_cache.py` - Price caching logic
+- `backend/src/zebu/adapters/outbound/market_data/alpha_vantage_adapter.py` - Batch price support
 
 **Frontend** (if included):
 - `frontend/src/components/features/portfolio/HoldingsTable.tsx` - Display live prices

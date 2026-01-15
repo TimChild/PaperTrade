@@ -88,7 +88,7 @@ Create `.github/copilot-setup.sh`:
 #!/bin/bash
 set -e
 
-echo "🚀 Setting up PaperTrade development environment..."
+echo "🚀 Setting up Zebu development environment..."
 
 # 1. Install pre-commit hooks
 echo "📋 Installing pre-commit hooks..."
@@ -113,7 +113,7 @@ docker-compose up -d
 echo "✅ Setup complete!"
 echo ""
 echo "Next steps:"
-echo "  - Backend: cd backend && uv run uvicorn papertrade.main:app --reload"
+echo "  - Backend: cd backend && uv run uvicorn zebu.main:app --reload"
 echo "  - Frontend: cd frontend && npm run dev"
 echo "  - Tests: cd backend && uv run pytest"
 ```
@@ -184,7 +184,7 @@ setup:
    ### Daily Development
    ```bash
    # Start backend
-   cd backend && uv run uvicorn papertrade.main:app --reload
+   cd backend && uv run uvicorn zebu.main:app --reload
 
    # Start frontend (new terminal)
    cd frontend && npm run dev
@@ -228,7 +228,7 @@ While we're improving workflows, also address these minor issues from BACKLOG:
 - `.pre-commit-config.yaml` - Improved hook configuration
 - `AGENT_ORCHESTRATION.md` - Add setup instructions
 - `README.md` - Add quick start setup command
-- `backend/src/papertrade/adapters/inbound/api/dependencies.py` - Fix exception chaining
+- `backend/src/zebu/adapters/inbound/api/dependencies.py` - Fix exception chaining
 - `backend/tests/integration/test_api.py` - Fix test expectation
 - Possibly: `Taskfile.yml` - Add setup task if using Taskfile approach
 
@@ -245,7 +245,7 @@ While we're improving workflows, also address these minor issues from BACKLOG:
 2. Run setup script
 3. Verify:
    - Pre-commit hooks installed: `pre-commit run --all-files`
-   - Backend dependencies synced: `cd backend && uv run python -c "import papertrade"`
+   - Backend dependencies synced: `cd backend && uv run python -c "import zebu"`
    - Frontend dependencies installed: `cd frontend && npm list`
    - Docker services running: `docker-compose ps`
 4. Run tests: `cd backend && uv run pytest` (should pass)

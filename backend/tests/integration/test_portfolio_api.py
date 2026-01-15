@@ -244,10 +244,10 @@ def test_get_portfolios_returns_only_user_portfolios(
     This would have caught Bug #1 from Task 016: user ID mismatch issues.
     """
     # Import the auth adapter from conftest to add a second user
-    from papertrade.adapters.auth.in_memory_adapter import InMemoryAuthAdapter
-    from papertrade.adapters.inbound.api.dependencies import get_auth_port
-    from papertrade.application.ports.auth_port import AuthenticatedUser
-    from papertrade.main import app
+    from zebu.adapters.auth.in_memory_adapter import InMemoryAuthAdapter
+    from zebu.adapters.inbound.api.dependencies import get_auth_port
+    from zebu.application.ports.auth_port import AuthenticatedUser
+    from zebu.main import app
 
     # Get the test auth adapter and add a second user
     # The override is a function, so we need to call it
@@ -661,9 +661,9 @@ def test_delete_other_users_portfolio_returns_403(
     default_user_id: UUID,
 ) -> None:
     """Test that users cannot delete portfolios owned by other users."""
-    from papertrade.adapters.auth.in_memory_adapter import InMemoryAuthAdapter
-    from papertrade.adapters.inbound.api.dependencies import get_auth_port
-    from papertrade.application.ports.auth_port import AuthenticatedUser
+    from zebu.adapters.auth.in_memory_adapter import InMemoryAuthAdapter
+    from zebu.adapters.inbound.api.dependencies import get_auth_port
+    from zebu.application.ports.auth_port import AuthenticatedUser
 
     # Get the app's auth adapter and register a second user
     app = client.app

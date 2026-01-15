@@ -6,25 +6,25 @@ from uuid import uuid4
 
 import pytest
 
-from papertrade.application.commands.create_portfolio import (
+from zebu.application.commands.create_portfolio import (
     CreatePortfolioCommand,
     CreatePortfolioHandler,
 )
-from papertrade.application.commands.delete_portfolio import (
+from zebu.application.commands.delete_portfolio import (
     DeletePortfolioCommand,
     DeletePortfolioHandler,
 )
-from papertrade.application.ports.in_memory_portfolio_repository import (
+from zebu.application.ports.in_memory_portfolio_repository import (
     InMemoryPortfolioRepository,
 )
-from papertrade.application.ports.in_memory_snapshot_repository import (
+from zebu.application.ports.in_memory_snapshot_repository import (
     InMemorySnapshotRepository,
 )
-from papertrade.application.ports.in_memory_transaction_repository import (
+from zebu.application.ports.in_memory_transaction_repository import (
     InMemoryTransactionRepository,
 )
-from papertrade.domain.entities.portfolio import Portfolio
-from papertrade.domain.exceptions import PortfolioNotFoundError
+from zebu.domain.entities.portfolio import Portfolio
+from zebu.domain.exceptions import PortfolioNotFoundError
 
 
 @pytest.fixture

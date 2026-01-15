@@ -24,18 +24,18 @@ PR #12 delivered excellent domain layer implementation (9/10 score, 158 passing 
 **Action**:
 ```bash
 cd backend
-uv run ruff check --fix src/papertrade/domain
-uv run ruff format src/papertrade/domain
+uv run ruff check --fix src/zebu/domain
+uv run ruff format src/zebu/domain
 ```
 
 **Verify**:
 ```bash
-uv run ruff check src/papertrade/domain
+uv run ruff check src/zebu/domain
 # Should show 0 errors
 ```
 
 **Files affected**:
-- `src/papertrade/domain/entities/transaction.py`
+- `src/zebu/domain/entities/transaction.py`
 - Possibly others flagged by ruff
 
 ### 2. Fix Holding Equality Semantics (~15 min)
@@ -50,7 +50,7 @@ assert h1 == h2  # Returns True (wrong!)
 
 **Expected**: Holdings should be equal only if ticker, quantity, AND cost_basis all match
 
-**Fix**: Update `backend/src/papertrade/domain/entities/holding.py`:
+**Fix**: Update `backend/src/zebu/domain/entities/holding.py`:
 
 ```python
 def __eq__(self, other: object) -> bool:
@@ -100,7 +100,7 @@ uv run pytest tests/unit/domain/entities/test_holding.py -v
    - Find text about Portfolio mutability
    - Update to state Portfolio is fully immutable
 
-2. `backend/src/papertrade/domain/entities/portfolio.py` docstring:
+2. `backend/src/zebu/domain/entities/portfolio.py` docstring:
    - Update to clarify: "Portfolio is fully immutable after creation"
    - Remove any mention of name being changeable
 
@@ -162,8 +162,8 @@ if current_holding is None or current_holding.quantity < quantity_to_sell:
 
 ```bash
 # Run from backend/
-uv run ruff check src/papertrade/domain
-uv run ruff format --check src/papertrade/domain
+uv run ruff check src/zebu/domain
+uv run ruff format --check src/zebu/domain
 uv run pytest tests/unit/domain/ -v --tb=short
 ```
 

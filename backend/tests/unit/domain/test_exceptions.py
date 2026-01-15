@@ -2,7 +2,7 @@
 
 import pytest
 
-from papertrade.domain.exceptions import (
+from zebu.domain.exceptions import (
     BusinessRuleViolationError,
     DomainException,
     InsufficientFundsError,

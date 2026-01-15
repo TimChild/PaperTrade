@@ -1,6 +1,6 @@
-# PaperTrade Backend
+# Zebu Backend
 
-Backend API for the PaperTrade stock market emulation platform.
+Backend API for the Zebu stock market emulation platform.
 
 ## Architecture
 

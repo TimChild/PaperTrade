@@ -1,4 +1,4 @@
-# PaperTrade Development Progress
+# Zebu Development Progress
 
 **Last Updated**: January 8, 2026
 

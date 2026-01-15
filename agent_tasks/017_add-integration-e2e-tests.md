@@ -58,12 +58,12 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, create_engine, SQLModel
 from uuid import uuid4, UUID
 
-from papertrade.main import app
-from papertrade.adapters.inbound.api.dependencies import (
+from zebu.main import app
+from zebu.adapters.inbound.api.dependencies import (
     get_portfolio_repository,
     get_transaction_repository,
 )
-from papertrade.adapters.outbound.database.sqlmodel_repositories import (
+from zebu.adapters.outbound.database.sqlmodel_repositories import (
     SQLModelPortfolioRepository,
     SQLModelTransactionRepository,
 )
@@ -506,7 +506,7 @@ export default defineConfig({
 
   webServer: [
     {
-      command: 'cd ../backend && uv run uvicorn papertrade.main:app --port 8000',
+      command: 'cd ../backend && uv run uvicorn zebu.main:app --port 8000',
       port: 8000,
       reuseExistingServer: !process.env.CI,
     },

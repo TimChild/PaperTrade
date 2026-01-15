@@ -1,7 +1,7 @@
 # Task 004: Define Domain Entities and Value Objects
 
 ## Objective
-Design and implement the core domain layer for PaperTrade following Clean Architecture and Domain-Driven Design principles.
+Design and implement the core domain layer for Zebu following Clean Architecture and Domain-Driven Design principles.
 
 ## Context
 This is the first Phase 1 task. The domain layer is the heart of the application and must be pure Python with no dependencies on infrastructure (databases, APIs, frameworks).
@@ -160,7 +160,7 @@ class TransactionRepository(Protocol):
 
 ## File Structure
 ```
-backend/src/papertrade/domain/
+backend/src/zebu/domain/
 ├── __init__.py
 ├── value_objects/
 │   ├── __init__.py

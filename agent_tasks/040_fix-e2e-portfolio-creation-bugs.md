@@ -145,7 +145,7 @@ docker compose logs -f backend
 
 **Check Database:**
 ```bash
-docker compose exec db psql -U papertrade -d papertrade_dev -c "SELECT * FROM portfolio;"
+docker compose exec db psql -U zebu -d zebu_dev -c "SELECT * FROM portfolio;"
 ```
 - Does portfolio get created in database?
 - What's the `user_id` value?
@@ -267,8 +267,8 @@ onSuccess: () => {
 
 ### Backend (Possible Changes)
 
-- `backend/src/papertrade/adapters/inbound/api/routes/portfolio_routes.py` - Portfolio creation endpoint
-- `backend/src/papertrade/application/use_cases/portfolio/create_portfolio.py` - Business logic
+- `backend/src/zebu/adapters/inbound/api/routes/portfolio_routes.py` - Portfolio creation endpoint
+- `backend/src/zebu/application/use_cases/portfolio/create_portfolio.py` - Business logic
 
 ### Tests
 

@@ -1,6 +1,6 @@
 # Testing Conventions
 
-This document outlines the testing conventions for the PaperTrade project, including test ID naming standards for E2E tests.
+This document outlines the testing conventions for the Zebu project, including test ID naming standards for E2E tests.
 
 ## Test ID Conventions
 

@@ -6,10 +6,10 @@ from decimal import Decimal
 import pytest
 from fakeredis import aioredis as fakeredis
 
-from papertrade.application.dtos.price_point import PricePoint
-from papertrade.domain.value_objects.money import Money
-from papertrade.domain.value_objects.ticker import Ticker
-from papertrade.infrastructure.cache.price_cache import PriceCache
+from zebu.application.dtos.price_point import PricePoint
+from zebu.domain.value_objects.money import Money
+from zebu.domain.value_objects.ticker import Ticker
+from zebu.infrastructure.cache.price_cache import PriceCache
 
 
 @pytest.fixture
@@ -293,11 +293,11 @@ class TestPriceCacheKeyGeneration:
         sample_price: PricePoint,
     ) -> None:
         """Test that keys are formatted correctly."""
-        cache = PriceCache(redis, "papertrade:price")
+        cache = PriceCache(redis, "zebu:price")
 
         key = cache._get_key(Ticker("AAPL"))
 
-        assert key == "papertrade:price:AAPL"
+        assert key == "zebu:price:AAPL"
 
     async def test_different_prefixes_isolated(
         self,

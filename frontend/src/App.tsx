@@ -55,7 +55,7 @@ function AuthenticatedApp() {
           <div className="w-full max-w-md">
             <div className="mb-8 text-center">
               <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-                PaperTrade
+                Zebu
               </h1>
               <p className="mt-2 text-gray-600 dark:text-gray-400">
                 Practice trading without risking real money
@@ -82,7 +82,7 @@ function AuthenticatedApp() {
           <header className="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800">
             <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                PaperTrade
+                Zebu
               </h1>
               <UserButton afterSignOutUrl="/" />
             </div>

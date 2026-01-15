@@ -4,8 +4,8 @@ from decimal import Decimal
 
 import pytest
 
-from papertrade.domain.exceptions import InvalidMoneyError
-from papertrade.domain.value_objects.money import Money
+from zebu.domain.exceptions import InvalidMoneyError
+from zebu.domain.value_objects.money import Money
 
 
 class TestMoneyConstruction:

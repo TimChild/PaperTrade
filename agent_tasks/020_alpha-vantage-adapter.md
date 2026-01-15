@@ -37,7 +37,7 @@ This task implements the infrastructure described in the Phase 2 architecture:
 
 ### 1. RateLimiter (Token Bucket Algorithm)
 
-**File**: `backend/src/papertrade/infrastructure/rate_limiter.py`
+**File**: `backend/src/zebu/infrastructure/rate_limiter.py`
 
 **Key Features**:
 - Dual time windows (minute + day) to enforce both Alpha Vantage limits
@@ -65,7 +65,7 @@ calls_per_day = 500
 
 ### 2. PriceCache (Redis Wrapper)
 
-**File**: `backend/src/papertrade/infrastructure/cache/price_cache.py`
+**File**: `backend/src/zebu/infrastructure/cache/price_cache.py`
 
 **Key Features**:
 - Simple wrapper around Redis for PricePoint storage
@@ -78,7 +78,7 @@ calls_per_day = 500
   - `async def exists(ticker: Ticker) -> bool`
   - `async def get_ttl(ticker: Ticker) -> int` - Remaining seconds
 
-**Key Format**: `papertrade:price:{ticker.symbol}`
+**Key Format**: `zebu:price:{ticker.symbol}`
 
 **Testing Notes**:
 - Use `fakeredis` for unit tests
@@ -88,7 +88,7 @@ calls_per_day = 500
 
 ### 3. AlphaVantageAdapter
 
-**File**: `backend/src/papertrade/adapters/outbound/market_data/alpha_vantage_adapter.py`
+**File**: `backend/src/zebu/adapters/outbound/market_data/alpha_vantage_adapter.py`
 
 **Key Features**:
 - Implements `MarketDataPort` protocol from Task 018
@@ -270,13 +270,13 @@ async def test_ticker_not_found():
 ### New Files
 
 **Infrastructure**:
-- `backend/src/papertrade/infrastructure/__init__.py`
-- `backend/src/papertrade/infrastructure/rate_limiter.py` (~150 lines)
-- `backend/src/papertrade/infrastructure/cache/__init__.py`
-- `backend/src/papertrade/infrastructure/cache/price_cache.py` (~100 lines)
+- `backend/src/zebu/infrastructure/__init__.py`
+- `backend/src/zebu/infrastructure/rate_limiter.py` (~150 lines)
+- `backend/src/zebu/infrastructure/cache/__init__.py`
+- `backend/src/zebu/infrastructure/cache/price_cache.py` (~100 lines)
 
 **Adapters**:
-- `backend/src/papertrade/adapters/outbound/market_data/alpha_vantage_adapter.py` (~250 lines)
+- `backend/src/zebu/adapters/outbound/market_data/alpha_vantage_adapter.py` (~250 lines)
 
 **Tests**:
 - `backend/tests/unit/infrastructure/test_rate_limiter.py` (~200 lines)

@@ -27,16 +27,16 @@ import httpx
 from dotenv import load_dotenv
 from fakeredis import aioredis as fakeredis
 
-from papertrade.adapters.outbound.market_data.alpha_vantage_adapter import (
+from zebu.adapters.outbound.market_data.alpha_vantage_adapter import (
     AlphaVantageAdapter,
 )
-from papertrade.adapters.outbound.repositories.price_repository import (
+from zebu.adapters.outbound.repositories.price_repository import (
     PriceRepository,
 )
-from papertrade.domain.value_objects.ticker import Ticker
-from papertrade.infrastructure.cache.price_cache import PriceCache
-from papertrade.infrastructure.database import async_session_maker, engine, init_db
-from papertrade.infrastructure.rate_limiter import RateLimiter
+from zebu.domain.value_objects.ticker import Ticker
+from zebu.infrastructure.cache.price_cache import PriceCache
+from zebu.infrastructure.database import async_session_maker, engine, init_db
+from zebu.infrastructure.rate_limiter import RateLimiter
 
 # Default tickers to seed (common stocks for testing)
 DEFAULT_TICKERS = ["AAPL", "MSFT", "GOOGL", "TSLA", "NVDA"]
@@ -134,14 +134,14 @@ async def main() -> None:
 
         rate_limiter = RateLimiter(
             redis=redis_client,
-            key_prefix="papertrade:ratelimit:alphavantage:seed",
+            key_prefix="zebu:ratelimit:alphavantage:seed",
             calls_per_minute=5,  # Alpha Vantage free tier
             calls_per_day=500,
         )
 
         price_cache = PriceCache(
             redis=redis_client,
-            key_prefix="papertrade:price:seed",
+            key_prefix="zebu:price:seed",
             default_ttl=3600,
         )
 

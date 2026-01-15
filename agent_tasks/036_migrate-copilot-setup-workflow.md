@@ -146,7 +146,7 @@ jobs:
       - name: Verify backend imports
         working-directory: backend
         run: |
-          if uv run python -c "import papertrade" 2>/dev/null; then
+          if uv run python -c "import zebu" 2>/dev/null; then
             echo "✅ Backend imports work"
           else
             echo "⚠️  Backend imports failed"

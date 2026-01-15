@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Lifecycle management for PaperTrade services on Proxmox VM
+# Lifecycle management for Zebu services on Proxmox VM
 # Handles start, stop, restart, status, and logs
 
 # Get script directory
@@ -45,7 +45,7 @@ get_vm_connection() {
 
 # Start services
 cmd_start() {
-    log_step "Starting PaperTrade services..."
+    log_step "Starting Zebu services..."
 
     local vm_ip
     vm_ip=$(get_vm_connection)
@@ -58,7 +58,7 @@ cmd_start() {
 
 # Stop services
 cmd_stop() {
-    log_step "Stopping PaperTrade services..."
+    log_step "Stopping Zebu services..."
 
     local vm_ip
     vm_ip=$(get_vm_connection)
@@ -70,7 +70,7 @@ cmd_stop() {
 
 # Restart services
 cmd_restart() {
-    log_step "Restarting PaperTrade services..."
+    log_step "Restarting Zebu services..."
 
     local vm_ip
     vm_ip=$(get_vm_connection)
@@ -83,7 +83,7 @@ cmd_restart() {
 
 # Show status
 cmd_status() {
-    log_step "Checking PaperTrade deployment status..."
+    log_step "Checking Zebu deployment status..."
     echo ""
 
     # Check Proxmox connection

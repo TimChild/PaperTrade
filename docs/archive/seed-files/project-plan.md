@@ -1,4 +1,4 @@
-Project: "PaperTrade" - Stock Market Emulation App
+Project: "Zebu" - Stock Market Emulation App
 
 1. Engineering Philosophy (The "Modern SWE" Mindset)
 

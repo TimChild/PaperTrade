@@ -22,7 +22,7 @@ Read these documents IN ORDER before starting:
 
 ### File Structure to Create
 ```
-backend/src/papertrade/application/
+backend/src/zebu/application/
 ├── __init__.py
 ├── commands/
 │   ├── __init__.py
@@ -81,7 +81,7 @@ backend/tests/unit/application/
 - Aim for 90%+ test coverage on application layer
 
 ### 3. Dependency Rules
-- ✅ CAN import from domain layer (`papertrade.domain`)
+- ✅ CAN import from domain layer (`zebu.domain`)
 - ✅ CAN import from Python stdlib
 - ✅ CAN define interfaces (Protocols) for repositories
 - ❌ NO imports from adapters or infrastructure layers
@@ -144,14 +144,14 @@ Before considering this task complete:
 
 ### Testing
 - [ ] All unit tests pass: `pytest tests/unit/application -v`
-- [ ] Test coverage > 90%: `pytest --cov=papertrade.application --cov-report=term-missing`
+- [ ] Test coverage > 90%: `pytest --cov=zebu.application --cov-report=term-missing`
 - [ ] Mock repositories used in tests (no real database)
 - [ ] All test cases from implementation-sequence.md covered
 
 ### Code Quality
-- [ ] Type checking passes: `pyright src/papertrade/application`
-- [ ] Linting passes: `ruff check src/papertrade/application`
-- [ ] Formatting correct: `ruff format --check src/papertrade/application`
+- [ ] Type checking passes: `pyright src/zebu/application`
+- [ ] Linting passes: `ruff check src/zebu/application`
+- [ ] Formatting correct: `ruff format --check src/zebu/application`
 - [ ] NO imports from adapters/infrastructure layers
 
 ### Validation

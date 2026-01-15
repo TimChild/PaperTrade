@@ -486,7 +486,7 @@ Create `.env` files:
 VITE_API_BASE_URL=http://localhost:8000/api/v1
 
 # frontend/.env.production
-VITE_API_BASE_URL=https://api.papertrade.com/api/v1
+VITE_API_BASE_URL=https://api.zebu.com/api/v1
 ```
 
 Update `vite.config.ts` for proxy during development:

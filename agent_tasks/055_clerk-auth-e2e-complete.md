@@ -76,7 +76,7 @@ if request_state.payload:
     user_id = request_state.payload.get('sub')
 ```
 
-**Check existing backend implementation** at `backend/src/papertrade/adapters/auth/clerk_adapter.py` and fix if it uses wrong patterns.
+**Check existing backend implementation** at `backend/src/zebu/adapters/auth/clerk_adapter.py` and fix if it uses wrong patterns.
 
 ### 2. E2E Testing with @clerk/testing
 
@@ -147,7 +147,7 @@ You need a test user in Clerk. Either:
 curl -X POST https://api.clerk.com/v1/users \
   -H "Authorization: Bearer $CLERK_SECRET_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"email_address": ["test-e2e@papertrade.dev"]}'
+  -d '{"email_address": ["test-e2e@zebu.dev"]}'
 ```
 
 The user should NOT have 2FA enabled.
@@ -156,7 +156,7 @@ The user should NOT have 2FA enabled.
 
 ### Step 1: Verify/Fix Backend Auth
 
-1. Check `backend/src/papertrade/adapters/auth/clerk_adapter.py`
+1. Check `backend/src/zebu/adapters/auth/clerk_adapter.py`
 2. Ensure it uses `authenticate_request()` not `verify_token()`
 3. Ensure user ID comes from `payload['sub']`
 4. Ensure `SimpleRequest` has both header cases
@@ -220,7 +220,7 @@ task test:backend
 - `frontend/tests/e2e/*.spec.ts` - Update tests to use auth
 
 ### Backend (if fixes needed)
-- `backend/src/papertrade/adapters/auth/clerk_adapter.py` - JWT validation
+- `backend/src/zebu/adapters/auth/clerk_adapter.py` - JWT validation
 - `backend/docker-compose.yml` - Ensure CLERK_SECRET_KEY in env
 
 ### Environment
@@ -261,12 +261,12 @@ await page.evaluate(() => ({
 
 2. Check backend logs:
 ```bash
-docker logs papertrade-backend --tail 100 | grep -i "auth\|clerk"
+docker logs zebu-backend --tail 100 | grep -i "auth\|clerk"
 ```
 
 3. Check if `CLERK_SECRET_KEY` is in backend container:
 ```bash
-docker exec papertrade-backend env | grep CLERK
+docker exec zebu-backend env | grep CLERK
 ```
 
 4. Test backend API directly with a token

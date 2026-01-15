@@ -31,14 +31,14 @@
 ### 1. Domain Layer
 
 **Search For**:
-- [ ] User entity: `backend/src/papertrade/domain/entities/user.py`
+- [ ] User entity: `backend/src/zebu/domain/entities/user.py`
 - [ ] User-related exceptions: `UserNotFoundError`, `InvalidCredentialsError`
 - [ ] Value objects: Email, Password, etc.
 
 **Check**:
 ```bash
-find backend/src/papertrade/domain -name "*user*" -o -name "*auth*"
-grep -r "class User" backend/src/papertrade/domain/
+find backend/src/zebu/domain -name "*user*" -o -name "*auth*"
+grep -r "class User" backend/src/zebu/domain/
 ```
 
 ### 2. Application Layer
@@ -50,8 +50,8 @@ grep -r "class User" backend/src/papertrade/domain/
 
 **Check**:
 ```bash
-find backend/src/papertrade/application -name "*user*" -o -name "*auth*"
-grep -r "bcrypt\|hash_password\|verify_password" backend/src/papertrade/
+find backend/src/zebu/application -name "*user*" -o -name "*auth*"
+grep -r "bcrypt\|hash_password\|verify_password" backend/src/zebu/
 ```
 
 ### 3. API Layer
@@ -63,9 +63,9 @@ grep -r "bcrypt\|hash_password\|verify_password" backend/src/papertrade/
 
 **Check**:
 ```bash
-find backend/src/papertrade/adapters/inbound/api -name "*auth*"
-grep -r "/auth/\|jwt\|JWT" backend/src/papertrade/adapters/
-grep -r "get_current_user" backend/src/papertrade/
+find backend/src/zebu/adapters/inbound/api -name "*auth*"
+grep -r "/auth/\|jwt\|JWT" backend/src/zebu/adapters/
+grep -r "get_current_user" backend/src/zebu/
 ```
 
 **Existing Mock Implementation**:
@@ -93,7 +93,7 @@ async def get_current_user_id(
 
 **Check**:
 ```bash
-grep -r "owner_id" backend/src/papertrade/
+grep -r "owner_id" backend/src/zebu/
 ls backend/migrations/versions/ | grep -i user
 ```
 
@@ -184,19 +184,19 @@ Clear action items based on findings.
 
 ```bash
 # Domain layer
-find backend/src/papertrade/domain -name "*user*" -o -name "*auth*"
-grep -r "class User" backend/src/papertrade/domain/
+find backend/src/zebu/domain -name "*user*" -o -name "*auth*"
+grep -r "class User" backend/src/zebu/domain/
 
 # Application layer
-find backend/src/papertrade/application -name "*user*" -o -name "*auth*"
-grep -r "bcrypt\|hash_password" backend/src/papertrade/
+find backend/src/zebu/application -name "*user*" -o -name "*auth*"
+grep -r "bcrypt\|hash_password" backend/src/zebu/
 
 # API layer
-grep -r "/auth/\|register\|login" backend/src/papertrade/adapters/inbound/api/
-grep -r "JWT\|jwt\|Bearer" backend/src/papertrade/
+grep -r "/auth/\|register\|login" backend/src/zebu/adapters/inbound/api/
+grep -r "JWT\|jwt\|Bearer" backend/src/zebu/
 
 # Database
-grep -r "owner_id\|user_id" backend/src/papertrade/
+grep -r "owner_id\|user_id" backend/src/zebu/
 ls -la backend/migrations/versions/
 
 # Dependencies
@@ -225,7 +225,7 @@ grep -r "token\|auth" frontend/src/services/
 
 - **Architecture Spec**: `architecture_plans/phase3-refined/phase3b-authentication.md`
 - **Lesson Learned**: `agent_progress_docs/2026-01-04_06-00-00_phase3a-already-complete-discovery.md`
-- **Mock Implementation**: `backend/src/papertrade/adapters/inbound/api/dependencies.py` line 75-80
+- **Mock Implementation**: `backend/src/zebu/adapters/inbound/api/dependencies.py` line 75-80
 
 ---
 

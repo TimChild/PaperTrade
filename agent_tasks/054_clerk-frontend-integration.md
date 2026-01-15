@@ -9,7 +9,7 @@
 
 ## Objective
 
-Integrate Clerk authentication into the PaperTrade React frontend, replacing the current spoofable X-User-Id localStorage approach with proper authentication.
+Integrate Clerk authentication into the Zebu React frontend, replacing the current spoofable X-User-Id localStorage approach with proper authentication.
 
 ## Prerequisites
 
@@ -88,7 +88,7 @@ export default function App() {
   return (
     <>
       <header className="flex justify-between items-center p-4 border-b">
-        <h1 className="text-xl font-bold">PaperTrade</h1>
+        <h1 className="text-xl font-bold">Zebu</h1>
         <SignedOut>
           <div className="flex gap-2">
             <SignInButton />
@@ -104,7 +104,7 @@ export default function App() {
         <SignedOut>
           <div className="flex items-center justify-center min-h-[80vh]">
             <div className="text-center">
-              <h2 className="text-2xl mb-4">Welcome to PaperTrade</h2>
+              <h2 className="text-2xl mb-4">Welcome to Zebu</h2>
               <p className="mb-4">Sign in to start trading</p>
               <SignInButton mode="modal" />
             </div>

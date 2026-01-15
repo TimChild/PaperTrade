@@ -4,12 +4,12 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
 
-from papertrade.domain.entities.holding import Holding
-from papertrade.domain.entities.transaction import Transaction, TransactionType
-from papertrade.domain.services.portfolio_calculator import PortfolioCalculator
-from papertrade.domain.value_objects.money import Money
-from papertrade.domain.value_objects.quantity import Quantity
-from papertrade.domain.value_objects.ticker import Ticker
+from zebu.domain.entities.holding import Holding
+from zebu.domain.entities.transaction import Transaction, TransactionType
+from zebu.domain.services.portfolio_calculator import PortfolioCalculator
+from zebu.domain.value_objects.money import Money
+from zebu.domain.value_objects.quantity import Quantity
+from zebu.domain.value_objects.ticker import Ticker
 
 
 class TestCalculateCashBalance:
@@ -449,7 +449,7 @@ class TestCalculatePortfolioValue:
 
     def test_single_holding(self) -> None:
         """Should calculate value from single holding."""
-        from papertrade.domain.entities.holding import Holding
+        from zebu.domain.entities.holding import Holding
 
         holdings = [
             Holding(
@@ -466,7 +466,7 @@ class TestCalculatePortfolioValue:
 
     def test_multiple_holdings(self) -> None:
         """Should sum values of multiple holdings."""
-        from papertrade.domain.entities.holding import Holding
+        from zebu.domain.entities.holding import Holding
 
         holdings = [
             Holding(

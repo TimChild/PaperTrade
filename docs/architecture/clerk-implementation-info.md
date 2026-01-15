@@ -219,7 +219,7 @@ curl -X POST https://api.clerk.com/v1/users \
   -H "Authorization: Bearer $CLERK_SECRET_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "email_address": ["test-e2e@papertrade.dev"],
+    "email_address": ["test-e2e@zebu.dev"],
     "password": "test-password",
     "skip_password_requirement": true
   }'
@@ -281,7 +281,7 @@ except Exception as e:
 
 Check logs:
 ```bash
-docker logs papertrade-backend --tail 100 | grep -i "auth\|clerk"
+docker logs zebu-backend --tail 100 | grep -i "auth\|clerk"
 ```
 
 ---
@@ -307,7 +307,7 @@ When implementing or debugging Clerk authentication:
 ## Working Example
 
 See the complete working implementation:
-- Backend: `backend/src/papertrade/adapters/auth/clerk_adapter.py`
+- Backend: `backend/src/zebu/adapters/auth/clerk_adapter.py`
 - Frontend fixtures: `frontend/tests/e2e/fixtures.ts`
 - Global setup: `frontend/tests/e2e/global-setup.ts`
 - Example test: `frontend/tests/e2e/portfolio-creation.spec.ts`
@@ -325,7 +325,7 @@ See the complete working implementation:
 ## Known Limitations
 
 1. **Test data persistence**: Portfolios created during tests persist in the database. Either:
-   - Clear database before test runs: `docker exec papertrade-postgres psql -U papertrade -d papertrade_dev -c "TRUNCATE TABLE transactions, portfolios CASCADE;"`
+   - Clear database before test runs: `docker exec zebu-postgres psql -U zebu -d zebu_dev -c "TRUNCATE TABLE transactions, portfolios CASCADE;"`
    - Make tests independent (don't expect specific UI states)
 
 2. **Parallel test execution**: Tests run in parallel, creating multiple portfolios. Dashboard shows the first one, not necessarily the one just created by that test.

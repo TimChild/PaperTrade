@@ -8,8 +8,8 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from papertrade.adapters.outbound.repositories.watchlist_manager import WatchlistManager
-from papertrade.domain.value_objects.ticker import Ticker
+from zebu.adapters.outbound.repositories.watchlist_manager import WatchlistManager
+from zebu.domain.value_objects.ticker import Ticker
 
 
 class TestWatchlistManagerAdd:

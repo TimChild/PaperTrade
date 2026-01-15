@@ -1,4 +1,4 @@
-Project Strategy: PaperTrade Stock Emulation
+Project Strategy: Zebu Stock Emulation
 
 1. Vision & Philosophy
 

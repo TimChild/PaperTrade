@@ -13,7 +13,7 @@ Create the following directory structure:
 ```
 backend/
 ├── src/
-│   └── papertrade/
+│   └── zebu/
 │       ├── __init__.py
 │       ├── domain/           # Pure domain logic
 │       │   ├── __init__.py
@@ -81,7 +81,7 @@ Create a minimal FastAPI application with:
 - [ ] `ruff check .` passes with no errors
 - [ ] `pyright` passes with no errors
 - [ ] `pytest` runs and passes
-- [ ] `uvicorn papertrade.main:app` starts the server
+- [ ] `uvicorn zebu.main:app` starts the server
 - [ ] Health check endpoint responds
 
 ## References

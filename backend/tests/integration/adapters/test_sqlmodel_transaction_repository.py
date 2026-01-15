@@ -10,14 +10,14 @@ from uuid import uuid4
 
 import pytest
 
-from papertrade.adapters.outbound.database.transaction_repository import (
+from zebu.adapters.outbound.database.transaction_repository import (
     DuplicateTransactionError,
     SQLModelTransactionRepository,
 )
-from papertrade.domain.entities.transaction import Transaction, TransactionType
-from papertrade.domain.value_objects.money import Money
-from papertrade.domain.value_objects.quantity import Quantity
-from papertrade.domain.value_objects.ticker import Ticker
+from zebu.domain.entities.transaction import Transaction, TransactionType
+from zebu.domain.value_objects.money import Money
+from zebu.domain.value_objects.quantity import Quantity
+from zebu.domain.value_objects.ticker import Ticker
 
 
 class TestSQLModelTransactionRepository:

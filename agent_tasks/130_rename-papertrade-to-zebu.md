@@ -1,4 +1,4 @@
-# Task 130: Rename Project from PaperTrade to Zebu
+# Task 130: Rename Project from Zebu to Zebu
 
 **Agent**: refactorer (or backend-swe + frontend-swe in parallel)
 **Priority**: High
@@ -7,7 +7,7 @@
 
 ## Objective
 
-Rename the entire project from "PaperTrade" to "Zebu" (or "ZebuTrader" where appropriate), updating all code, documentation, configuration, and deployment references.
+Rename the entire project from "Zebu" to "Zebu" (or "ZebuTrader" where appropriate), updating all code, documentation, configuration, and deployment references.
 
 ## Background
 
@@ -24,31 +24,31 @@ The application is being renamed to **Zebu** (brand name) / **ZebuTrader** (full
 ### 1. Python Backend
 
 **Package/module names**:
-- `backend/src/papertrade/` → `backend/src/zebu/`
-- All imports: `from papertrade.` → `from zebu.`
-- `pyproject.toml`: package name `papertrade` → `zebu`
+- `backend/src/zebu/` → `backend/src/zebu/`
+- All imports: `from zebu.` → `from zebu.`
+- `pyproject.toml`: package name `zebu` → `zebu`
 
 **Code strings & comments**:
-- Docstrings mentioning "PaperTrade"
+- Docstrings mentioning "Zebu"
 - Error messages
 - Log messages
 - Comments
 
 **Configuration**:
-- Docker image names if they reference papertrade
+- Docker image names if they reference zebu
 - Environment variable prefixes if any (though keep existing vars for compatibility)
 
 ### 2. Frontend
 
 **Package configuration**:
-- `frontend/package.json`: name "papertrade-frontend" → "zebu-frontend"
+- `frontend/package.json`: name "zebu-frontend" → "zebu-frontend"
 - Update `description` field
 
 **Code & UI**:
-- All user-facing text: "PaperTrade" → "Zebu" or "ZebuTrader"
-- HTML title tags: `<title>PaperTrade</title>` → `<title>Zebu</title>`
+- All user-facing text: "Zebu" → "Zebu" or "ZebuTrader"
+- HTML title tags: `<title>Zebu</title>` → `<title>Zebu</title>`
 - Meta tags in `index.html`
-- Component names if they reference PaperTrade
+- Component names if they reference Zebu
 - Import paths if needed
 
 **Branding**:
@@ -59,7 +59,7 @@ The application is being renamed to **Zebu** (brand name) / **ZebuTrader** (full
 ### 3. Documentation
 
 **All markdown files** (use case-sensitive search):
-- "PaperTrade" → "Zebu" or "ZebuTrader" (context-dependent)
+- "Zebu" → "Zebu" or "ZebuTrader" (context-dependent)
 - Update product descriptions
 - Update project summaries
 
@@ -89,7 +89,7 @@ The application is being renamed to **Zebu** (brand name) / **ZebuTrader** (full
 - `.github/copilot-instructions.md` - all references
 - `.github/agents/*.md` - agent descriptions
 - `.github/workflows/*.yml` - workflow names, comments
-- Note: Repository name stays "PaperTrade" on GitHub (can't rename via PR)
+- Note: Repository name stays "Zebu" on GitHub (can't rename via PR)
 
 **Other configs**:
 - `Taskfile.yml` - comments, descriptions
@@ -98,7 +98,7 @@ The application is being renamed to **Zebu** (brand name) / **ZebuTrader** (full
 ### 5. Deployment & Domain
 
 **Proxmox VM scripts**:
-- `scripts/proxmox-vm/*.sh` - comments, git clone URL (stays PaperTrade on GitHub)
+- `scripts/proxmox-vm/*.sh` - comments, git clone URL (stays Zebu on GitHub)
 - Deployment docs - update to reference zebutrader.com
 
 **Domain references**:
@@ -115,8 +115,8 @@ The application is being renamed to **Zebu** (brand name) / **ZebuTrader** (full
 Use multiple search patterns to catch all variations:
 ```bash
 # Case-sensitive searches
-rg "PaperTrade" --type-add 'config:*.{json,yml,yaml,toml,env}' -t config -t py -t ts -t tsx -t md
-rg "papertrade" -i  # case-insensitive for lowercase
+rg "Zebu" --type-add 'config:*.{json,yml,yaml,toml,env}' -t config -t py -t ts -t tsx -t md
+rg "zebu" -i  # case-insensitive for lowercase
 rg "PAPERTRADE"     # all caps (env vars, constants)
 ```
 
@@ -131,12 +131,12 @@ rg "PAPERTRADE"     # all caps (env vars, constants)
 
 | Context | Old | New | Example |
 |---------|-----|-----|---------|
-| Formal product name | PaperTrade | ZebuTrader | "Welcome to ZebuTrader" |
-| Casual/brand | PaperTrade | Zebu | "Learn trading with Zebu" |
-| Python package | papertrade | zebu | `from zebu.domain` |
-| NPM package | papertrade-frontend | zebu-frontend | package.json |
+| Formal product name | Zebu | ZebuTrader | "Welcome to ZebuTrader" |
+| Casual/brand | Zebu | Zebu | "Learn trading with Zebu" |
+| Python package | zebu | zebu | `from zebu.domain` |
+| NPM package | zebu-frontend | zebu-frontend | package.json |
 | Domain | N/A | zebutrader.com | Production URLs |
-| Code comments | PaperTrade | Zebu | "Zebu application" |
+| Code comments | Zebu | Zebu | "Zebu application" |
 
 **Judgment calls**:
 - Use "Zebu" for casual, short references
@@ -146,7 +146,7 @@ rg "PAPERTRADE"     # all caps (env vars, constants)
 ## Tasks
 
 1. **Backend rename**:
-   - [ ] Rename `backend/src/papertrade/` to `backend/src/zebu/`
+   - [ ] Rename `backend/src/zebu/` to `backend/src/zebu/`
    - [ ] Update all imports throughout backend
    - [ ] Update `pyproject.toml` package name
    - [ ] Update docstrings, comments, error messages
@@ -179,31 +179,31 @@ rg "PAPERTRADE"     # all caps (env vars, constants)
    - [ ] Domain references
 
 6. **Verification**:
-   - [ ] Run `rg "PaperTrade|papertrade" --type-add 'ignore:*.{git}' -g '!agent_progress_docs' -g '!architecture_plans'` shows no matches
+   - [ ] Run `rg "Zebu|zebu" --type-add 'ignore:*.{git}' -g '!agent_progress_docs' -g '!architecture_plans'` shows no matches
    - [ ] All tests pass: `task ci`
    - [ ] Backend imports work: `cd backend && python -c "from zebu.domain.entities.portfolio import Portfolio; print('OK')"`
    - [ ] Frontend builds: `task build:frontend`
 
 ## Acceptance Criteria
 
-- [ ] All code references to "papertrade" updated to "zebu"
+- [ ] All code references to "zebu" updated to "zebu"
 - [ ] All user-facing text updated to "Zebu" or "ZebuTrader"
 - [ ] All documentation updated
 - [ ] Python package renamed and imports working
 - [ ] NPM package renamed
 - [ ] All tests passing (backend, frontend, E2E)
 - [ ] Docker images build successfully
-- [ ] No PaperTrade references remain (except historical docs/commits)
+- [ ] No Zebu references remain (except historical docs/commits)
 
 ## Implementation Notes
 
 **Python package rename**:
 ```bash
 cd backend/src
-git mv papertrade zebu
+git mv zebu zebu
 # Update all imports
-rg "from papertrade" --files-with-matches | xargs sed -i '' 's/from papertrade/from zebu/g'
-rg "import papertrade" --files-with-matches | xargs sed -i '' 's/import papertrade/import zebu/g'
+rg "from zebu" --files-with-matches | xargs sed -i '' 's/from zebu/from zebu/g'
+rg "import zebu" --files-with-matches | xargs sed -i '' 's/import zebu/import zebu/g'
 ```
 
 **Testing after rename**:
@@ -216,13 +216,13 @@ task ci                # Run all CI checks
 **Git commit strategy**:
 - Single commit with all changes OR
 - Separate commits for backend, frontend, docs, config (agent's choice)
-- Use conventional commit: `refactor: rename project from PaperTrade to Zebu`
+- Use conventional commit: `refactor: rename project from Zebu to Zebu`
 
 ## Known Limitations
 
 **Won't change**:
-- GitHub repository name (stays `TimChild/PaperTrade` - requires manual GitHub action)
-- Git clone URLs in scripts (stay as `github.com/TimChild/PaperTrade.git`)
+- GitHub repository name (stays `TimChild/Zebu` - requires manual GitHub action)
+- Git clone URLs in scripts (stay as `github.com/TimChild/Zebu.git`)
 - Historical documentation in `agent_progress_docs/`
 - Architecture plans in `architecture_plans/`
 - Git commit history (can't rewrite)
@@ -239,7 +239,7 @@ task ci                # Run all CI checks
 2. Frontend builds: `task build:frontend`
 3. Import test: `python -c "from zebu.domain.entities.portfolio import Portfolio"`
 4. Full stack: `task docker:up:all` and test portfolio creation
-5. Search verification: `rg "papertrade" -i -g '!agent_progress_docs' -g '!architecture_plans' -g '!.git'` shows minimal/expected results
+5. Search verification: `rg "zebu" -i -g '!agent_progress_docs' -g '!architecture_plans' -g '!.git'` shows minimal/expected results
 
 ## Related
 
