@@ -1,6 +1,6 @@
 # Proxmox VM Deployment Scripts
 
-This directory contains scripts for deploying PaperTrade to Proxmox using a VM-based Docker environment.
+This directory contains scripts for deploying Zebu to Proxmox using a VM-based Docker environment.
 
 ## Scripts Overview
 

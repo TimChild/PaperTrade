@@ -146,7 +146,7 @@ task --version
 ```bash
 # Clone the repository
 git clone https://github.com/TimChild/PaperTrade.git
-cd PaperTrade
+cd Zebu
 
 # OPTION 1: Automated setup (recommended)
 # This installs pre-commit hooks, dependencies, and starts Docker services

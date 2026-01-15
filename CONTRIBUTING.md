@@ -1,6 +1,6 @@
-# Contributing to PaperTrade
+# Contributing to Zebu
 
-Thank you for your interest in contributing to PaperTrade! This document provides guidelines and instructions for developers.
+Thank you for your interest in contributing to Zebu! This document provides guidelines and instructions for developers.
 
 ## Quick Start
 
@@ -17,7 +17,7 @@ Thank you for your interest in contributing to PaperTrade! This document provide
 ```bash
 # Clone repository
 git clone https://github.com/TimChild/PaperTrade.git
-cd PaperTrade
+cd Zebu
 
 # Automated setup (recommended)
 ./.github/copilot-setup.sh
@@ -149,7 +149,7 @@ export function PortfolioCard({ portfolioId, onSelect }: PortfolioCardProps): JS
 
 ## Architecture
 
-PaperTrade follows **Clean Architecture**:
+Zebu follows **Clean Architecture**:
 
 ```
 Domain       → Pure business logic (no I/O)
@@ -187,7 +187,7 @@ from papertrade.domain.ports.portfolio_repository import PortfolioRepository
 
 ### Test Pyramid
 
-PaperTrade follows the standard testing pyramid:
+Zebu follows the standard testing pyramid:
 
 ```
         /\
@@ -327,7 +327,7 @@ Full task list: `task --list`
 ## Project Structure
 
 ```
-PaperTrade/
+Zebu/
 ├── backend/               # Python/FastAPI backend
 │   ├── src/papertrade/
 │   │   ├── domain/       # Pure business logic

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Quick E2E Test Script for PaperTrade
+# Quick E2E Test Script for Zebu
 # Tests the complete workflow via API calls
 
 set -e  # Exit on error

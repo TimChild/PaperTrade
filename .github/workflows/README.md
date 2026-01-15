@@ -1,6 +1,6 @@
 # GitHub Actions Workflows
 
-This directory contains the CI/CD pipeline definitions for PaperTrade.
+This directory contains the CI/CD pipeline definitions for Zebu.
 
 ## Workflows
 
