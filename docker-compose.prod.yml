@@ -18,8 +18,8 @@ services:
   db:
     container_name: zebu-postgres-prod
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-zebu}
-      POSTGRES_USER: ${POSTGRES_USER:-zebu}
+      POSTGRES_DB: ${POSTGRES_DB:-papertrade}
+      POSTGRES_USER: ${POSTGRES_USER:-papertrade}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       # Remove trust-based auth for production (empty string removes it)
       POSTGRES_HOST_AUTH_METHOD: null

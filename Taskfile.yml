@@ -549,7 +549,7 @@ tasks:
 
         # Wait for PostgreSQL
         echo "  Waiting for PostgreSQL..."
-        timeout 30 bash -c 'until docker compose exec -T db pg_isready -U zebu 2>/dev/null; do sleep 1; done' || (echo "  ❌ PostgreSQL timeout" && exit 1)
+        timeout 30 bash -c 'until docker compose exec -T db pg_isready -U papertrade 2>/dev/null; do sleep 1; done' || (echo "  ❌ PostgreSQL timeout" && exit 1)
         echo "  ✅ PostgreSQL ready"
 
         # Wait for Redis
@@ -601,11 +601,11 @@ tasks:
 
   db:shell:
     desc: "Open PostgreSQL shell"
-    cmd: docker compose exec db psql -U zebu -d zebu_dev
+    cmd: docker compose exec db psql -U papertrade -d papertrade_dev
 
   db:shell:prod:
     desc: "Open PostgreSQL shell (production database)"
-    cmd: docker compose -f docker-compose.prod.yml exec db psql -U zebu -d zebu
+    cmd: docker compose -f docker-compose.prod.yml exec db psql -U papertrade -d papertrade
 
   db:migrate:
     desc: "Run database migrations"
