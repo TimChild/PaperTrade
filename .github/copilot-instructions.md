@@ -1,8 +1,8 @@
-# Copilot Instructions for PaperTrade
+# Copilot Instructions for Zebu
 
 ## Overview
 
-PaperTrade is a stock market emulation platform where users can practice trading strategies without risking real money. We follow **Modern Software Engineering** principles (Dave Farley) with a focus on Clean Architecture, testability, and iterative development.
+Zebu is a stock market emulation platform where users can practice trading strategies without risking real money. We follow **Modern Software Engineering** principles (Dave Farley) with a focus on Clean Architecture, testability, and iterative development.
 
 ## Core Principles
 

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document establishes guidelines for when and how to write End-to-End (E2E) tests in the PaperTrade project. Following these standards ensures we maintain a healthy test pyramid with fast, reliable tests at appropriate abstraction levels.
+This document establishes guidelines for when and how to write End-to-End (E2E) tests in the Zebu project. Following these standards ensures we maintain a healthy test pyramid with fast, reliable tests at appropriate abstraction levels.
 
 ## The Testing Pyramid
 

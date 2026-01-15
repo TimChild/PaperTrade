@@ -67,7 +67,7 @@ uv run pytest -v
 ## Files to Modify
 
 **If fixing adapter**:
-- `backend/src/papertrade/adapters/outbound/market_data/alpha_vantage_adapter.py`
+- `backend/src/zebu/adapters/outbound/market_data/alpha_vantage_adapter.py`
 - Possibly add `with_source()` method to `PricePoint` if it doesn't exist
 
 **If fixing test**:

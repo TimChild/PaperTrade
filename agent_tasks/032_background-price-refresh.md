@@ -22,7 +22,7 @@ Currently, price data is fetched on-demand. This causes:
 
 **Solution**: Background scheduler pre-populates cache for common stocks.
 
-**Architecture Reference**: [ADR 003: Background Refresh](cci:7://file:///Users/timchild/github/PaperTrade/architecture_plans/20251228_phase2-market-data/adr-003-background-refresh.md:0:0-0:0)
+**Architecture Reference**: [ADR 003: Background Refresh](cci:7://file:///Users/timchild/github/Zebu/architecture_plans/20251228_phase2-market-data/adr-003-background-refresh.md:0:0-0:0)
 
 ## Requirements
 
@@ -86,7 +86,7 @@ active_stock_days = 30  # Consider stocks traded in last N days
 
 ### Step 1: Scheduler Setup
 
-1. Create `backend/src/papertrade/scheduler.py`:
+1. Create `backend/src/zebu/scheduler.py`:
 ```python
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -187,16 +187,16 @@ pre_populate = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"]  # Always refresh these
    ```bash
    # Disable scheduler in config
    # Run refresh manually
-   uv run python -c "from papertrade.scheduler import refresh_active_stocks; import asyncio; asyncio.run(refresh_active_stocks())"
+   uv run python -c "from zebu.scheduler import refresh_active_stocks; import asyncio; asyncio.run(refresh_active_stocks())"
    ```
 
 ## Files to Change
 
-- [ ] `backend/src/papertrade/scheduler.py` - New file
-- [ ] `backend/src/papertrade/main.py` - Register scheduler
+- [ ] `backend/src/zebu/scheduler.py` - New file
+- [ ] `backend/src/zebu/main.py` - Register scheduler
 - [ ] `backend/config.toml` - Add scheduler section
-- [ ] `backend/src/papertrade/config.py` - Add scheduler settings
-- [ ] `backend/src/papertrade/application/queries/` - Add get_active_tickers query
+- [ ] `backend/src/zebu/config.py` - Add scheduler settings
+- [ ] `backend/src/zebu/application/queries/` - Add get_active_tickers query
 - [ ] Tests for scheduler and refresh logic
 
 ## Alternative: Celery
@@ -212,7 +212,7 @@ If APScheduler proves insufficient (distributed tasks, retries, etc.), consider 
 
 ## References
 
-- [ADR 003: Background Refresh](cci:7://file:///Users/timchild/github/PaperTrade/architecture_plans/20251228_phase2-market-data/adr-003-background-refresh.md:0:0-0:0)
+- [ADR 003: Background Refresh](cci:7://file:///Users/timchild/github/Zebu/architecture_plans/20251228_phase2-market-data/adr-003-background-refresh.md:0:0-0:0)
 - [APScheduler Docs](https://apscheduler.readthedocs.io/)
 
 ---

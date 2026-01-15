@@ -109,7 +109,7 @@ INSERT INTO ticker_watchlist (ticker, priority) VALUES
 
 ### 2. SQLModel Models
 
-**File**: `backend/src/papertrade/adapters/outbound/models/price_history.py`
+**File**: `backend/src/zebu/adapters/outbound/models/price_history.py`
 
 ```python
 from datetime import datetime
@@ -153,7 +153,7 @@ class PriceHistoryModel(SQLModel, table=True):
         # Implementation to convert PricePoint to model
 ```
 
-**File**: `backend/src/papertrade/adapters/outbound/models/ticker_watchlist.py`
+**File**: `backend/src/zebu/adapters/outbound/models/ticker_watchlist.py`
 
 ```python
 from datetime import datetime
@@ -178,7 +178,7 @@ class TickerWatchlistModel(SQLModel, table=True):
 
 ### 3. PriceRepository Implementation
 
-**File**: `backend/src/papertrade/adapters/outbound/repositories/price_repository.py`
+**File**: `backend/src/zebu/adapters/outbound/repositories/price_repository.py`
 
 **Key Methods** (from architecture):
 
@@ -224,7 +224,7 @@ class PriceRepository:
 
 ### 4. WatchlistManager Implementation
 
-**File**: `backend/src/papertrade/adapters/outbound/repositories/watchlist_manager.py`
+**File**: `backend/src/zebu/adapters/outbound/repositories/watchlist_manager.py`
 
 **Key Methods**:
 
@@ -263,7 +263,7 @@ class WatchlistManager:
 
 ### 5. Integrate with AlphaVantageAdapter
 
-**Modify**: `backend/src/papertrade/adapters/outbound/market_data/alpha_vantage_adapter.py`
+**Modify**: `backend/src/zebu/adapters/outbound/market_data/alpha_vantage_adapter.py`
 
 **Uncomment/Implement Tier 2 Logic**:
 
@@ -351,7 +351,7 @@ async def test_tier3_stores_in_db():
 
 ```toml
 [database]
-url = "postgresql+asyncpg://user:pass@localhost:5432/papertrade"
+url = "postgresql+asyncpg://user:pass@localhost:5432/zebu"
 
 [market_data.cache]
 tier1_ttl = 3600  # Redis: 1 hour
@@ -372,8 +372,8 @@ alembic revision --autogenerate -m "Add ticker_watchlist table"
 alembic upgrade head
 
 # Verify schema
-psql -d papertrade -c "\d price_history"
-psql -d papertrade -c "\d ticker_watchlist"
+psql -d zebu -c "\d price_history"
+psql -d zebu -c "\d ticker_watchlist"
 ```
 
 ## Files to Create/Modify
@@ -385,12 +385,12 @@ psql -d papertrade -c "\d ticker_watchlist"
 - `backend/migrations/versions/003_*.py` (ticker_watchlist)
 
 **Models**:
-- `backend/src/papertrade/adapters/outbound/models/price_history.py` (~120 lines)
-- `backend/src/papertrade/adapters/outbound/models/ticker_watchlist.py` (~50 lines)
+- `backend/src/zebu/adapters/outbound/models/price_history.py` (~120 lines)
+- `backend/src/zebu/adapters/outbound/models/ticker_watchlist.py` (~50 lines)
 
 **Repositories**:
-- `backend/src/papertrade/adapters/outbound/repositories/price_repository.py` (~280 lines)
-- `backend/src/papertrade/adapters/outbound/repositories/watchlist_manager.py` (~180 lines)
+- `backend/src/zebu/adapters/outbound/repositories/price_repository.py` (~280 lines)
+- `backend/src/zebu/adapters/outbound/repositories/watchlist_manager.py` (~180 lines)
 
 **Tests**:
 - `backend/tests/integration/repositories/test_price_repository.py` (~350 lines)
@@ -399,7 +399,7 @@ psql -d papertrade -c "\d ticker_watchlist"
 ### Modified Files
 
 **Adapter**:
-- `backend/src/papertrade/adapters/outbound/market_data/alpha_vantage_adapter.py`
+- `backend/src/zebu/adapters/outbound/market_data/alpha_vantage_adapter.py`
   - Uncomment PostgreSQL integration
   - Add database storage after API calls
   - Update Tier 2 fallback logic

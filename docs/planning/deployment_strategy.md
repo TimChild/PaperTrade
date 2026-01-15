@@ -1,4 +1,4 @@
-# PaperTrade Deployment Strategy
+# Zebu Deployment Strategy
 
 **Version**: 1.0
 **Last Updated**: January 9, 2026
@@ -6,7 +6,7 @@
 
 ## Overview
 
-Two-stage deployment strategy for PaperTrade:
+Two-stage deployment strategy for Zebu:
 1. **Stage 1**: Local Proxmox deployment (immediate, low-cost validation)
 2. **Stage 2**: AWS production deployment (scalable, public-facing)
 
@@ -61,7 +61,7 @@ This approach allows us to validate the application in a real production environ
          │ LAN Access
          ▼
    Local Network Users
-   (http://192.168.x.x or http://papertrade.local)
+   (http://192.168.x.x or http://zebu.local)
 ```
 
 ### Implementation Steps
@@ -117,13 +117,13 @@ services:
     image: postgres:16
     restart: always
     environment:
-      POSTGRES_DB: papertrade_prod
-      POSTGRES_USER: papertrade
+      POSTGRES_DB: zebu_prod
+      POSTGRES_USER: zebu
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U papertrade"]
+      test: ["CMD-SHELL", "pg_isready -U zebu"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -146,7 +146,7 @@ services:
       dockerfile: Dockerfile
     restart: always
     environment:
-      DATABASE_URL: postgresql://papertrade:${DB_PASSWORD}@db:5432/papertrade_prod
+      DATABASE_URL: postgresql://zebu:${DB_PASSWORD}@db:5432/zebu_prod
       REDIS_URL: redis://redis:6379
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
       ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY}
@@ -193,7 +193,7 @@ ALPHA_VANTAGE_API_KEY=DK1ACPJOWOIGLVIJ
 ### Success Criteria
 
 - ✅ All services running and healthy on Proxmox VM
-- ✅ Application accessible on LAN (http://192.168.x.x or http://papertrade.local)
+- ✅ Application accessible on LAN (http://192.168.x.x or http://zebu.local)
 - ✅ Database persists across container restarts
 - ✅ No critical bugs encountered during first week of usage
 - ✅ Performance acceptable for 1-5 concurrent users
@@ -238,7 +238,7 @@ Internet
     ▼
 ┌─────────────────────────────────────────────┐
 │         Route 53 DNS                        │
-│    papertrade.com → CloudFront             │
+│    zebu.com → CloudFront             │
 └─────────────────────────────────────────────┘
     │
     ▼

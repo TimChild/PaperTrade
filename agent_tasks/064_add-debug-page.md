@@ -90,7 +90,7 @@ A debug page would provide immediate visibility into the runtime state.
 {
   "database": {
     "connected": true,
-    "url": "postgresql://localhost:5432/papertrade",
+    "url": "postgresql://localhost:5432/zebu",
     "pool_size": 10,
     "active_connections": 2
   }
@@ -235,7 +235,7 @@ export async function getDebugInfo() {
 
 **1. Create Debug Router**
 ```python
-# backend/src/papertrade/adapters/inbound/api/debug.py
+# backend/src/zebu/adapters/inbound/api/debug.py
 from fastapi import APIRouter, Depends
 
 router = APIRouter(prefix="/debug", tags=["debug"])
@@ -277,7 +277,7 @@ def get_api_keys_status() -> dict:
 
 **3. Register Router**
 ```python
-# backend/src/papertrade/adapters/inbound/api/main.py
+# backend/src/zebu/adapters/inbound/api/main.py
 from .debug import router as debug_router
 
 app.include_router(debug_router, prefix="/api/v1")
@@ -357,8 +357,8 @@ def test_debug_endpoint_redacts_secrets():
 - `frontend/src/App.tsx` (add route)
 
 ### Backend
-- `backend/src/papertrade/adapters/inbound/api/debug.py` (create)
-- `backend/src/papertrade/adapters/inbound/api/main.py` (register router)
+- `backend/src/zebu/adapters/inbound/api/debug.py` (create)
+- `backend/src/zebu/adapters/inbound/api/main.py` (register router)
 - `backend/tests/unit/api/test_debug.py` (create)
 
 ## Future Enhancements

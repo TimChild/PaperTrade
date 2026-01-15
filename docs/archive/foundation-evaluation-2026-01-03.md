@@ -107,7 +107,7 @@ task docker:up:all  # Full Docker stack
 
    db:shell:
      desc: "Open PostgreSQL shell"
-     cmd: docker compose exec db psql -U papertrade -d papertrade_dev
+     cmd: docker compose exec db psql -U zebu -d zebu_dev
 
    db:migrate:
      desc: "Run database migrations"

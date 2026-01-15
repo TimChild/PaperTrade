@@ -29,7 +29,7 @@ Local testing revealed test failures after merging PRs #30, #31, #32. Two failur
 
 ### 1. Fix PricePoint.is_stale() Edge Case
 
-**File**: `backend/src/papertrade/application/dtos/price_point.py`
+**File**: `backend/src/zebu/application/dtos/price_point.py`
 
 **Failing Test**: `tests/unit/application/dtos/test_price_point.py::TestPricePointIsStale::test_exactly_at_threshold`
 
@@ -82,7 +82,7 @@ def test_exactly_at_threshold(self) -> None:
 
 ### 2. Fix PricePoint Equality to Exclude OHLCV
 
-**File**: `backend/src/papertrade/application/dtos/price_point.py`
+**File**: `backend/src/zebu/application/dtos/price_point.py`
 
 **Failing Test**: `tests/unit/application/dtos/test_price_point.py::TestPricePointEquality::test_ohlcv_not_in_equality`
 
@@ -182,7 +182,7 @@ def test_ohlcv_not_in_equality(self) -> None:
 
 ### 3. Fix AlphaVantageAdapter Cache Source Labeling
 
-**File**: `backend/src/papertrade/adapters/outbound/market_data/alpha_vantage_adapter.py`
+**File**: `backend/src/zebu/adapters/outbound/market_data/alpha_vantage_adapter.py`
 
 **Failing Test**: `tests/integration/adapters/test_alpha_vantage_adapter.py::TestAlphaVantageAdapterCacheHit::test_get_current_price_cache_hit`
 
@@ -311,12 +311,12 @@ async def test_get_current_price_cache_hit(
 
 ## Files to Modify
 
-1. `backend/src/papertrade/application/dtos/price_point.py`
+1. `backend/src/zebu/application/dtos/price_point.py`
    - Fix `is_stale()` method (change `>` to `>=`)
    - Add `__eq__()` method to exclude OHLCV from equality
    - Add `__hash__()` method to match `__eq__()`
 
-2. `backend/src/papertrade/adapters/outbound/market_data/alpha_vantage_adapter.py`
+2. `backend/src/zebu/adapters/outbound/market_data/alpha_vantage_adapter.py`
    - Update `get_current_price()` to set `source="cache"` for cached returns
    - Use `dataclasses.replace()` for clean immutable updates
 

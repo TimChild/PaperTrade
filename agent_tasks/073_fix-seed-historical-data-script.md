@@ -42,7 +42,7 @@ class MockRedis:
         pass
 ```
 
-**Required**: Add `eval()` method that the RateLimiter expects. Check `backend/src/papertrade/infrastructure/rate_limiter.py` to see how it's used.
+**Required**: Add `eval()` method that the RateLimiter expects. Check `backend/src/zebu/infrastructure/rate_limiter.py` to see how it's used.
 
 **Alternative approach**: Since this is a one-off script with manual 12-second delays between API calls, consider bypassing the RateLimiter entirely by creating a simpler adapter or mocking it differently.
 
@@ -55,7 +55,7 @@ The script hangs after completion because the SQLAlchemy engine isn't properly d
 
 Suggested fix:
 ```python
-from papertrade.infrastructure.database import engine
+from zebu.infrastructure.database import engine
 
 # At end of main(), before final print:
 await engine.dispose()
@@ -98,9 +98,9 @@ load_dotenv()  # Load from repository root .env
    - After running script, check data is in database:
    ```python
    # Quick verification script
-   from papertrade.infrastructure.database import async_session_maker
+   from zebu.infrastructure.database import async_session_maker
    from sqlalchemy import select
-   from papertrade.adapters.outbound.repositories.models import PriceHistoryModel
+   from zebu.adapters.outbound.repositories.models import PriceHistoryModel
 
    async with async_session_maker() as session:
        result = await session.execute(
@@ -150,9 +150,9 @@ task db:seed:historical-data -- --days 3
 
 ## References
 
-- RateLimiter: `backend/src/papertrade/infrastructure/rate_limiter.py`
-- Database setup: `backend/src/papertrade/infrastructure/database.py`
-- Alpha Vantage adapter: `backend/src/papertrade/adapters/outbound/market_data/alpha_vantage_adapter.py`
+- RateLimiter: `backend/src/zebu/infrastructure/rate_limiter.py`
+- Database setup: `backend/src/zebu/infrastructure/database.py`
+- Alpha Vantage adapter: `backend/src/zebu/adapters/outbound/market_data/alpha_vantage_adapter.py`
 
 ## Notes
 

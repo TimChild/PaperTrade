@@ -17,7 +17,7 @@ This task runs **after task 009** (Frontend-Backend Integration) completes. At t
 ### 1. Code Quality Analysis
 
 #### Backend (Python)
-Analyze `backend/src/papertrade/`:
+Analyze `backend/src/zebu/`:
 
 **Domain Layer** (`domain/`):
 - [ ] No duplication across entities, value objects, services
@@ -84,10 +84,10 @@ Analyze `frontend/src/`:
 **Verification Commands**:
 ```bash
 # Check for forbidden imports
-grep -r "from papertrade.adapters" backend/src/papertrade/domain/
-grep -r "from papertrade.adapters" backend/src/papertrade/application/
-grep -r "from fastapi" backend/src/papertrade/domain/
-grep -r "from sqlmodel" backend/src/papertrade/domain/
+grep -r "from zebu.adapters" backend/src/zebu/domain/
+grep -r "from zebu.adapters" backend/src/zebu/application/
+grep -r "from fastapi" backend/src/zebu/domain/
+grep -r "from sqlmodel" backend/src/zebu/domain/
 ```
 
 ### 3. Test Quality
@@ -95,7 +95,7 @@ grep -r "from sqlmodel" backend/src/papertrade/domain/
 **Coverage Analysis**:
 ```bash
 cd backend
-uv run pytest --cov=src/papertrade --cov-report=html --cov-report=term
+uv run pytest --cov=src/zebu --cov-report=html --cov-report=term
 ```
 
 Check for:
@@ -261,16 +261,16 @@ Add identified issues to backlog with priorities.
 ### Python Backend
 ```bash
 # Complexity analysis
-uv run radon cc backend/src/papertrade/ -a -nb
+uv run radon cc backend/src/zebu/ -a -nb
 
 # Maintainability index
-uv run radon mi backend/src/papertrade/ -nb
+uv run radon mi backend/src/zebu/ -nb
 
 # Type coverage
-uv run pyright --stats backend/src/papertrade/
+uv run pyright --stats backend/src/zebu/
 
 # Security scan
-uv run bandit -r backend/src/papertrade/
+uv run bandit -r backend/src/zebu/
 
 # Dependency vulnerabilities
 uv run pip-audit

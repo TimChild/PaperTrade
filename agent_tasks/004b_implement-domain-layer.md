@@ -1,7 +1,7 @@
 # Task 004b: Implement Domain Layer
 
 ## Objective
-Implement the PaperTrade domain layer based on the architecture documentation in `docs/architecture/domain/`.
+Implement the Zebu domain layer based on the architecture documentation in `docs/architecture/domain/`.
 
 ## Prerequisites
 - Architecture documentation must exist in `docs/architecture/domain/`
@@ -11,7 +11,7 @@ Implement the PaperTrade domain layer based on the architecture documentation in
 
 ### File Structure
 ```
-backend/src/papertrade/domain/
+backend/src/zebu/domain/
 ├── __init__.py
 ├── value_objects/
 │   ├── __init__.py

@@ -63,7 +63,7 @@ Replace modal alerts with toast notifications for a better, less intrusive user 
 
 ### Styling
 
-- Match existing PaperTrade color scheme
+- Match existing Zebu color scheme
 - Success: green-500 background
 - Error: red-500 background
 - Use Tailwind classes for consistency

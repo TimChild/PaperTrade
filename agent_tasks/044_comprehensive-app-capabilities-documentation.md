@@ -8,7 +8,7 @@
 
 ## Context
 
-PaperTrade has reached a significant milestone with Phase 1 completion and initial Phase 2 functionality. We now have a working application with portfolio management, real-time trading, and live market data integration. However, the current capabilities, boundaries, and limitations are not clearly documented from a user perspective.
+Zebu has reached a significant milestone with Phase 1 completion and initial Phase 2 functionality. We now have a working application with portfolio management, real-time trading, and live market data integration. However, the current capabilities, boundaries, and limitations are not clearly documented from a user perspective.
 
 We need a comprehensive, user-facing document that explains:
 - What features are currently implemented and working
@@ -23,7 +23,7 @@ This documentation will be created through:
 
 ## Problem
 
-As a user (or developer) approaching PaperTrade, it's unclear:
+As a user (or developer) approaching Zebu, it's unclear:
 - What can I actually do with the app right now?
 - Where will things break or not work as expected?
 - What features exist vs. what's coming in the future?
@@ -102,9 +102,9 @@ Review existing codebase and documentation to understand:
    - Review `BACKLOG.md` for known limitations
 
 2. **Implementation Boundaries**:
-   - Check which use cases are implemented in `backend/src/papertrade/application/use_cases/`
+   - Check which use cases are implemented in `backend/src/zebu/application/use_cases/`
    - Review domain models for supported operations
-   - Check API endpoints in `backend/src/papertrade/adapters/inbound/api/`
+   - Check API endpoints in `backend/src/zebu/adapters/inbound/api/`
    - Review frontend components for UI capabilities
 
 3. **Test Coverage Analysis**:
@@ -125,9 +125,9 @@ Create the following documents in `docs/`:
 
 Structure:
 ```markdown
-# PaperTrade User Guide
+# Zebu User Guide
 
-## What is PaperTrade?
+## What is Zebu?
 [Brief intro]
 
 ## Current Status (Phase 1 Complete, Phase 2 In Progress)

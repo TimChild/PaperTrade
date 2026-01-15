@@ -5,7 +5,7 @@
 
 ## Purpose
 
-This document captures key learnings from our Proxmox deployment prototype to inform a production-ready implementation. The prototype successfully deployed PaperTrade to Proxmox but identified important architectural and security considerations.
+This document captures key learnings from our Proxmox deployment prototype to inform a production-ready implementation. The prototype successfully deployed Zebu to Proxmox but identified important architectural and security considerations.
 
 ## Executive Summary
 

@@ -1,11 +1,11 @@
-# PaperTrade: Executive Summary
+# Zebu: Executive Summary
 
 **Version**: Phase 2 Complete (January 2026)
 **Status**: Production-Ready with Real Market Data Integration
 
-## What is PaperTrade?
+## What is Zebu?
 
-PaperTrade is a stock market emulation platform that lets you practice trading strategies with virtual money and real market data. Think of it as a flight simulator for investors – all the experience, none of the financial risk.
+Zebu is a stock market emulation platform that lets you practice trading strategies with virtual money and real market data. Think of it as a flight simulator for investors – all the experience, none of the financial risk.
 
 ## Current State
 
@@ -119,5 +119,5 @@ See [FEATURE_STATUS.md](./FEATURE_STATUS.md) for implementation details and [TEC
 ---
 
 **Last Updated**: January 4, 2026
-**Project Repository**: https://github.com/TimChild/PaperTrade
+**Project Repository**: https://github.com/TimChild/Zebu
 **License**: MIT

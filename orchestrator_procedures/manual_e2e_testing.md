@@ -1,6 +1,6 @@
 # Manual End-to-End Testing Procedure
 
-This document outlines the manual testing procedure for validating PaperTrade's core functionality before major releases or after significant changes.
+This document outlines the manual testing procedure for validating Zebu's core functionality before major releases or after significant changes.
 
 ## Prerequisites
 
@@ -192,7 +192,7 @@ This document outlines the manual testing procedure for validating PaperTrade's 
 **Steps**:
 1. Buy a stock (e.g., MSFT) - price fetched from API
 2. Refresh the page - price should come from Redis (< 100ms)
-3. Wait for Redis to expire (or clear Redis: `docker exec -it papertrade-redis redis-cli FLUSHALL`)
+3. Wait for Redis to expire (or clear Redis: `docker exec -it zebu-redis redis-cli FLUSHALL`)
 4. Refresh again - price should come from PostgreSQL cache
 5. Wait for PostgreSQL cache to expire or clear it
 6. Refresh again - price should be re-fetched from API
@@ -215,7 +215,7 @@ This document outlines the manual testing procedure for validating PaperTrade's 
 2. Try to buy with insufficient funds
 3. Try to sell more shares than owned
 4. Try to withdraw more cash than available
-5. Stop Redis: `docker stop papertrade-redis` and try to view prices
+5. Stop Redis: `docker stop zebu-redis` and try to view prices
 6. Stop backend and observe frontend behavior
 
 **Expected Results**:
@@ -251,7 +251,7 @@ For automated testing, use the Playwright script:
 
 ```bash
 # Start services first (see Prerequisites)
-cd /Users/timchild/github/PaperTrade
+cd /Users/timchild/github/Zebu
 uv run --directory backend python orchestrator_procedures/e2e_validation.py
 ```
 
@@ -283,8 +283,8 @@ cd backend && task dev:backend  # Restart to recreate tables
 
 ### Redis issues
 ```bash
-docker exec -it papertrade-redis redis-cli PING  # Should return PONG
-docker exec -it papertrade-redis redis-cli FLUSHALL  # Clear cache if needed
+docker exec -it zebu-redis redis-cli PING  # Should return PONG
+docker exec -it zebu-redis redis-cli FLUSHALL  # Clear cache if needed
 ```
 
 ---

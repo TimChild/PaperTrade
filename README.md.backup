@@ -1,4 +1,4 @@
-# Zebu 📈
+# PaperTrade 📈
 
 [![CI](https://github.com/TimChild/PaperTrade/actions/workflows/ci.yml/badge.svg)](https://github.com/TimChild/PaperTrade/actions/workflows/ci.yml)
 
@@ -12,7 +12,7 @@ A stock market emulation platform for practicing trading strategies without risk
 
 **New Users?** Start here:
 - **[Executive Summary](docs/planning/executive-summary.md)** - Quick overview of current capabilities
-- **[User Guide](docs/USER_GUIDE.md)** - Step-by-step instructions for using Zebu
+- **[User Guide](docs/USER_GUIDE.md)** - Step-by-step instructions for using PaperTrade
 
 **Developers & Contributors:**
 - **[Feature Status Matrix](docs/planning/feature-status.md)** - Complete feature implementation status
@@ -30,7 +30,7 @@ A stock market emulation platform for practicing trading strategies without risk
 
 ## Overview
 
-Zebu allows users to:
+PaperTrade allows users to:
 - ✅ Start with virtual cash and practice investing
 - ✅ Create unlimited portfolios with different strategies
 - ✅ Execute BUY trades with real-time market data
@@ -42,7 +42,7 @@ Zebu allows users to:
 
 ## Philosophy
 
-ZebuTrader follows **Modern Software Engineering** principles (Dave Farley):
+This project follows **Modern Software Engineering** principles (Dave Farley):
 - **Iterative & Incremental**: Build smallest valuable increments
 - **Experimental & Empirical**: Hypothesis → Test → Learn
 - **Manage Complexity**: High cohesion, loose coupling
@@ -194,7 +194,7 @@ uv run uvicorn papertrade.main:app --reload
 
 ## Docker Development
 
-Zebu includes full Docker support for running the entire stack (PostgreSQL, Redis, Backend, Frontend) in containers.
+PaperTrade includes full Docker support for running the entire stack (PostgreSQL, Redis, Backend, Frontend) in containers.
 
 ### Quick Start with Docker
 
@@ -384,13 +384,13 @@ Production images use multi-stage builds to minimize size and attack surface.
 ## Project Structure
 
 ```
-Zebu/
+PaperTrade/
 ├── .github/
 │   ├── agents/              # Copilot agent instructions
 │   ├── workflows/           # CI/CD pipelines
 │   └── copilot-instructions.md
 ├── backend/
-│   ├── src/zebu/
+│   ├── src/papertrade/
 │   │   ├── domain/          # Pure business logic
 │   │   ├── application/     # Use cases
 │   │   ├── adapters/        # Interface implementations
@@ -454,7 +454,7 @@ task precommit:run     # Run pre-commit on all files
 
 ### Running Tests
 
-Zebu follows the **Test Pyramid** approach with unit, integration, and E2E tests. See [docs/TESTING_STRATEGY.md](docs/TESTING_STRATEGY.md) for details.
+PaperTrade follows the **Test Pyramid** approach with unit, integration, and E2E tests. See [docs/TESTING_STRATEGY.md](docs/TESTING_STRATEGY.md) for details.
 
 ```bash
 # All tests (backend + frontend)

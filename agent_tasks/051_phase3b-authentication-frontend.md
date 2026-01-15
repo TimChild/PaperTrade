@@ -9,7 +9,7 @@
 
 ## Objective
 
-Implement authentication UI and state management for PaperTrade frontend. Enable users to register, login, and access protected routes with JWT token management.
+Implement authentication UI and state management for Zebu frontend. Enable users to register, login, and access protected routes with JWT token management.
 
 ## Context
 
@@ -66,7 +66,7 @@ export const useAuthStore = create<AuthState>()(
         set({ accessToken: null, refreshToken: null, user: null, isAuthenticated: false }),
     }),
     {
-      name: 'papertrade-auth',
+      name: 'zebu-auth',
       // Only persist refresh token (access token in memory only for security)
       partialize: (state) => ({ refreshToken: state.refreshToken }),
     }
@@ -249,7 +249,7 @@ export function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <div className="max-w-md w-full space-y-8 p-8 bg-white rounded-lg shadow">
         <div>
-          <h2 className="text-3xl font-bold text-center">Sign in to PaperTrade</h2>
+          <h2 className="text-3xl font-bold text-center">Sign in to Zebu</h2>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -499,7 +499,7 @@ export function Navigation() {
   return (
     <nav className="bg-blue-600 text-white p-4">
       <div className="container mx-auto flex justify-between items-center">
-        <h1 className="text-xl font-bold">PaperTrade</h1>
+        <h1 className="text-xl font-bold">Zebu</h1>
 
         <div className="flex items-center gap-4">
           <span className="text-sm">{user?.email}</span>

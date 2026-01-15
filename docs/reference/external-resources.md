@@ -1,6 +1,6 @@
 # Documentation & Resources
 
-This file contains links to external documentation, APIs, and resources relevant to PaperTrade development.
+This file contains links to external documentation, APIs, and resources relevant to Zebu development.
 
 ## Market Data APIs
 

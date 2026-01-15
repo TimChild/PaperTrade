@@ -7,7 +7,7 @@
 
 ## Objective
 
-Perform comprehensive end-to-end quality assurance testing of the PaperTrade application to validate critical user workflows, identify bugs, and ensure the application meets quality standards before release or after significant changes.
+Perform comprehensive end-to-end quality assurance testing of the Zebu application to validate critical user workflows, identify bugs, and ensure the application meets quality standards before release or after significant changes.
 
 ## Context
 
@@ -246,7 +246,7 @@ This is a reusable task template that can be referenced by the orchestrator when
 
 ```bash
 # Ensure services are running
-cd /Users/timchild/github/PaperTrade
+cd /Users/timchild/github/Zebu
 
 # Start Docker services
 task docker:up

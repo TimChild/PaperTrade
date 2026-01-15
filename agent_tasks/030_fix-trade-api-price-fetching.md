@@ -36,11 +36,11 @@ Trade endpoint should:
 
 ### Backend Changes
 
-1. **API Layer** ([backend/src/papertrade/adapters/inbound/api/portfolios.py](cci:7://file:///Users/timchild/github/PaperTrade/backend/src/papertrade/adapters/inbound/api/portfolios.py:0:0-0:0))
+1. **API Layer** ([backend/src/zebu/adapters/inbound/api/portfolios.py](cci:7://file:///Users/timchild/github/Zebu/backend/src/zebu/adapters/inbound/api/portfolios.py:0:0-0:0))
    - Remove `price` field from `TradeRequest`
    - Update endpoint handler to fetch price before calling command
 
-2. **Application Layer Commands** ([backend/src/papertrade/application/commands/](cci:7://file:///Users/timchild/github/PaperTrade/backend/src/papertrade/application/commands/:0:0-0:0))
+2. **Application Layer Commands** ([backend/src/zebu/application/commands/](cci:7://file:///Users/timchild/github/Zebu/backend/src/zebu/application/commands/:0:0-0:0))
    - Check if `ExecuteBuyCommand` and `ExecuteSellCommand` expect price
    - If they do, update command handlers to fetch price via `MarketDataPort`
    - If they don't, update API layer to call market data before command
@@ -52,7 +52,7 @@ Trade endpoint should:
 
 ### Frontend Changes (if needed)
 
-1. Check [frontend/src/services/api/types.ts](cci:7://file:///Users/timchild/github/PaperTrade/frontend/src/services/api/types.ts:0:0-0:0)
+1. Check [frontend/src/services/api/types.ts](cci:7://file:///Users/timchild/github/Zebu/frontend/src/services/api/types.ts:0:0-0:0)
    - Remove `price` from `TradeRequest` interface
 
 2. Check components that call `executeTrade`
@@ -122,8 +122,8 @@ class ExecuteBuyCommandHandler:
 ## References
 
 - API Spec: `GET /api/v1/portfolios/{id}/trades` endpoint
-- Market Data Port: [backend/src/papertrade/application/ports/market_data.py](cci:7://file:///Users/timchild/github/PaperTrade/backend/src/papertrade/application/ports/market_data.py:0:0-0:0)
-- Command Handlers: [backend/src/papertrade/application/commands/](cci:7://file:///Users/timchild/github/PaperTrade/backend/src/papertrade/application/commands/:0:0-0:0)
+- Market Data Port: [backend/src/zebu/application/ports/market_data.py](cci:7://file:///Users/timchild/github/Zebu/backend/src/zebu/application/ports/market_data.py:0:0-0:0)
+- Command Handlers: [backend/src/zebu/application/commands/](cci:7://file:///Users/timchild/github/Zebu/backend/src/zebu/application/commands/:0:0-0:0)
 
 ## Notes
 

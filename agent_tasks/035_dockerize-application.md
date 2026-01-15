@@ -82,7 +82,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      DATABASE_URL: postgresql://papertrade:papertrade@postgres:5432/papertrade
+      DATABASE_URL: postgresql://zebu:zebu@postgres:5432/zebu
       REDIS_URL: redis://redis:6379/0
       ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-demo}
     depends_on:

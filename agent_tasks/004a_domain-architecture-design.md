@@ -1,7 +1,7 @@
 # Task 004a: Domain Layer Architecture Design
 
 ## Objective
-Create comprehensive architecture documentation for the PaperTrade domain layer, including design decisions, entity relationships, and implementation specifications for backend engineers.
+Create comprehensive architecture documentation for the Zebu domain layer, including design decisions, entity relationships, and implementation specifications for backend engineers.
 
 ## Output Location
 All documentation should be created in `docs/architecture/domain/`:

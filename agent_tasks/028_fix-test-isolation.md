@@ -44,7 +44,7 @@ The failing test likely:
 3. Expects certain market data state
 4. Gets polluted state from earlier tests
 
-**Dependency File**: `src/papertrade/adapters/inbound/api/dependencies.py`
+**Dependency File**: `src/zebu/adapters/inbound/api/dependencies.py`
 
 ```python
 # Global singletons (problematic for tests)
@@ -79,7 +79,7 @@ Add a fixture that resets the global singletons after each test:
 
 ```python
 import pytest
-from papertrade.adapters.inbound.api import dependencies
+from zebu.adapters.inbound.api import dependencies
 
 @pytest.fixture(autouse=True)
 async def reset_global_singletons():
@@ -114,8 +114,8 @@ Override the `get_market_data()` dependency for integration tests:
 
 ```python
 from fastapi.testclient import TestClient
-from papertrade.adapters.inbound.api.dependencies import get_market_data
-from papertrade.adapters.outbound.market_data.in_memory_adapter import InMemoryMarketDataAdapter
+from zebu.adapters.inbound.api.dependencies import get_market_data
+from zebu.adapters.outbound.market_data.in_memory_adapter import InMemoryMarketDataAdapter
 
 @pytest.fixture
 def client(app):
@@ -220,7 +220,7 @@ pytest tests/ -v | grep -E "(PASSED|FAILED)"
 
 ```bash
 # Look for tests that might not clean up database
-grep -r "papertrade.db" tests/
+grep -r "zebu.db" tests/
 ```
 
 ### Check Redis State
@@ -257,7 +257,7 @@ pytest tests/ && pytest tests/ && pytest tests/
 
 **Investigate** (if needed):
 - `tests/integration/test_portfolio_api.py` - Check test setup/teardown
-- `src/papertrade/adapters/inbound/api/dependencies.py` - Review singleton implementation
+- `src/zebu/adapters/inbound/api/dependencies.py` - Review singleton implementation
 
 ## References
 

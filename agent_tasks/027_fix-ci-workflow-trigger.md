@@ -165,7 +165,7 @@ gh workflow list
 gh workflow view ci.yml
 
 # Test event trigger
-gh api repos/TimChild/PaperTrade/actions/workflows/ci.yml
+gh api repos/TimChild/Zebu/actions/workflows/ci.yml
 ```
 
 ## Known Constraints

@@ -107,7 +107,7 @@ for (const [deviceName, deviceConfig] of Object.entries(viewports)) {
         await page.setViewportSize(deviceConfig.viewport)
       }
 
-      const email = process.env.E2E_CLERK_USER_EMAIL || 'test-e2e@papertrade.dev'
+      const email = process.env.E2E_CLERK_USER_EMAIL || 'test-e2e@zebu.dev'
       // ... rest of beforeEach
     })
   })

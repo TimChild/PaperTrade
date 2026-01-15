@@ -324,7 +324,7 @@ Update `task test:backend` and `task test:frontend` to generate coverage in form
 ```yaml
 test:backend:
   cmds:
-    - uv run pytest --cov=papertrade --cov-report=term --cov-report=html --cov-report=xml
+    - uv run pytest --cov=zebu --cov-report=term --cov-report=html --cov-report=xml
 ```
 
 **Frontend** (verify coverage output):

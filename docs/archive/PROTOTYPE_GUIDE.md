@@ -125,7 +125,7 @@ When reviewing, consider:
 1. **Visual Appeal**: Which feels more professional/trustworthy?
 2. **Usability**: Which is easier to scan and navigate?
 3. **Information Density**: Is more/less information better?
-4. **Brand Alignment**: Which fits PaperTrade's identity?
+4. **Brand Alignment**: Which fits Zebu's identity?
 5. **Scalability**: Which works better with many portfolios?
 
 ---

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Lifecycle management for PaperTrade services on Proxmox VM
+# Lifecycle management for Zebu services on Proxmox VM
 # Handles start, stop, restart, status, and logs
 
 # Get script directory

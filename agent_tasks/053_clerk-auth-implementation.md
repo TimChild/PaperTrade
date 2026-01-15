@@ -30,7 +30,7 @@ uv add clerk-backend-api
 
 ### 1.2 Create Auth Port Interface
 
-`backend/src/papertrade/application/ports/auth_port.py`:
+`backend/src/zebu/application/ports/auth_port.py`:
 
 ```python
 from typing import Protocol
@@ -61,14 +61,14 @@ class AuthPort(Protocol):
 
 ### 1.3 Create Clerk Adapter
 
-`backend/src/papertrade/adapters/auth/clerk_adapter.py`:
+`backend/src/zebu/adapters/auth/clerk_adapter.py`:
 
 ```python
 from clerk_backend_api import Clerk
 from clerk_backend_api.jwks import AuthenticateRequestOptions
 
-from papertrade.application.ports.auth_port import AuthPort, AuthenticatedUser
-from papertrade.domain.exceptions import InvalidTokenError
+from zebu.application.ports.auth_port import AuthPort, AuthenticatedUser
+from zebu.domain.exceptions import InvalidTokenError
 
 class ClerkAuthAdapter(AuthPort):
     """Clerk implementation of AuthPort."""
@@ -105,11 +105,11 @@ class ClerkAuthAdapter(AuthPort):
 
 ### 1.4 Create In-Memory Adapter (Testing)
 
-`backend/src/papertrade/adapters/auth/in_memory_adapter.py`:
+`backend/src/zebu/adapters/auth/in_memory_adapter.py`:
 
 ```python
-from papertrade.application.ports.auth_port import AuthPort, AuthenticatedUser
-from papertrade.domain.exceptions import InvalidTokenError
+from zebu.application.ports.auth_port import AuthPort, AuthenticatedUser
+from zebu.domain.exceptions import InvalidTokenError
 
 class InMemoryAuthAdapter(AuthPort):
     """In-memory auth for testing - no Clerk dependency."""
@@ -135,15 +135,15 @@ class InMemoryAuthAdapter(AuthPort):
 
 ### 1.5 Create FastAPI Dependency
 
-`backend/src/papertrade/adapters/api/dependencies/auth.py`:
+`backend/src/zebu/adapters/api/dependencies/auth.py`:
 
 ```python
 from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-from papertrade.application.ports.auth_port import AuthPort, AuthenticatedUser
-from papertrade.domain.exceptions import InvalidTokenError
+from zebu.application.ports.auth_port import AuthPort, AuthenticatedUser
+from zebu.domain.exceptions import InvalidTokenError
 
 security = HTTPBearer()
 
@@ -190,7 +190,7 @@ async def create_portfolio(
 
 ### 1.7 Update Configuration
 
-`backend/src/papertrade/config.py`:
+`backend/src/zebu/config.py`:
 
 ```python
 class Settings(BaseSettings):
@@ -281,7 +281,7 @@ function App() {
 function Header() {
   return (
     <header className="flex justify-between p-4">
-      <h1>PaperTrade</h1>
+      <h1>Zebu</h1>
       <UserButton />  {/* Pre-built profile dropdown */}
     </header>
   )

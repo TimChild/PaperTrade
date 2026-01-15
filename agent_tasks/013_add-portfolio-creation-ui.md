@@ -297,7 +297,7 @@ Reusable empty state component for when no data exists.
 - API Hook: `frontend/src/hooks/usePortfolio.ts`
 - API Client: `frontend/src/services/api/portfolios.ts`
 - Types: `frontend/src/services/api/types.ts`
-- Backend: `backend/src/papertrade/adapters/inbound/api.py` (POST /portfolios)
+- Backend: `backend/src/zebu/adapters/inbound/api.py` (POST /portfolios)
 
 ## Future Enhancements (Backlog)
 

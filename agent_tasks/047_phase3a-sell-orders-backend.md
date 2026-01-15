@@ -48,11 +48,11 @@ Implement SELL order functionality in the backend (Domain, Application, and API 
 
 ### 1. Domain Layer Changes (2 days)
 
-**File**: `backend/src/papertrade/domain/entities/transaction.py`
+**File**: `backend/src/zebu/domain/entities/transaction.py`
 - [ ] Add `SELL` value to `TransactionType` enum
 - [ ] Verify Transaction entity supports SELL (should already work)
 
-**File**: `backend/src/papertrade/domain/services/portfolio_calculator.py`
+**File**: `backend/src/zebu/domain/services/portfolio_calculator.py`
 - [ ] Update `calculate_holdings()` method:
   - Separate BUY and SELL transactions
   - Calculate net quantity: `sum(buys) - sum(sells)`
@@ -78,7 +78,7 @@ Implement SELL order functionality in the backend (Domain, Application, and API 
 
 ### 2. Application Layer Changes (2 days)
 
-**File**: `backend/src/papertrade/application/use_cases/execute_trade.py`
+**File**: `backend/src/zebu/application/use_cases/execute_trade.py`
 - [ ] Update `ExecuteTrade` use case to handle `TradeType.SELL`
 - [ ] Add SELL-specific validation logic:
   ```python
@@ -106,7 +106,7 @@ Implement SELL order functionality in the backend (Domain, Application, and API 
 
 ### 3. API Layer Changes (1 day)
 
-**File**: `backend/src/papertrade/adapters/api/v1/endpoints/portfolios.py`
+**File**: `backend/src/zebu/adapters/api/v1/endpoints/portfolios.py`
 - [ ] Update trade endpoint to accept `"SELL"` action
 - [ ] Map domain exceptions to HTTP responses:
   - `InsufficientHoldingsError` → 400 Bad Request
@@ -205,8 +205,8 @@ task docker:up             # Start services if needed
 ## References
 
 - **Architecture Spec**: `architecture_plans/phase3-refined/phase3a-sell-orders.md`
-- **Existing BUY Implementation**: `backend/src/papertrade/application/use_cases/execute_trade.py`
-- **Holdings Calculator**: `backend/src/papertrade/domain/services/portfolio_calculator.py`
+- **Existing BUY Implementation**: `backend/src/zebu/application/use_cases/execute_trade.py`
+- **Holdings Calculator**: `backend/src/zebu/domain/services/portfolio_calculator.py`
 - **Testing Conventions**: `docs/TESTING_CONVENTIONS.md`
 - **Clean Architecture Guide**: `.github/copilot-instructions.md`
 

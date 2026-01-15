@@ -42,7 +42,7 @@ Deployment scripts should support configuration for:
 
 ## VM Resource Requirements
 
-### Minimum Resources for PaperTrade
+### Minimum Resources for Zebu
 
 Based on prototype testing:
 - **CPU**: 2 cores (minimum)
@@ -91,7 +91,7 @@ PROXMOX_STORAGE="local"        # Proxmox storage pool name
 
 ```bash
 PROXMOX_VM_ID="200"            # Unique VM identifier
-PROXMOX_VM_HOSTNAME="papertrade"  # VM hostname
+PROXMOX_VM_HOSTNAME="zebu"  # VM hostname
 ```
 
 ## Authentication & Access
@@ -152,7 +152,7 @@ PROXMOX_SSH_PRIVATE_KEY="<key-content>"  # For GHA
 
 ### Services Required
 
-PaperTrade requires these services:
+Zebu requires these services:
 1. **PostgreSQL** (database)
 2. **Redis** (cache/pub-sub)
 3. **Backend** (FastAPI application)
@@ -220,7 +220,7 @@ PROXMOX_HOST="${PROXMOX_HOST:-root@proxmox}"
 
 # VM Configuration
 PROXMOX_VM_ID="${PROXMOX_VM_ID:-200}"
-PROXMOX_VM_HOSTNAME="${PROXMOX_VM_HOSTNAME:-papertrade}"
+PROXMOX_VM_HOSTNAME="${PROXMOX_VM_HOSTNAME:-zebu}"
 PROXMOX_VM_CORES="${PROXMOX_VM_CORES:-4}"
 PROXMOX_VM_MEMORY="${PROXMOX_VM_MEMORY:-8192}"
 PROXMOX_VM_DISK_SIZE="${PROXMOX_VM_DISK_SIZE:-50}"

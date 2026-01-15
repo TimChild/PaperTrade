@@ -4,7 +4,7 @@
 Create a comprehensive architecture plan for implementing Phase 1 (The Ledger) backend MVP. This includes the complete design for domain entities, application layer use cases, repository ports, and their interactions.
 
 ## Context
-We are building Phase 1 of PaperTrade (see [project_plan.md](project_plan.md#phase-1-the-ledger-mvp)):
+We are building Phase 1 of Zebu (see [project_plan.md](project_plan.md#phase-1-the-ledger-mvp)):
 - User can create a portfolio with virtual cash
 - Execute buy/sell trades (mock prices initially)
 - View portfolio balance and holdings

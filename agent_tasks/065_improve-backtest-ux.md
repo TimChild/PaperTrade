@@ -62,7 +62,7 @@ Used Playwright MCP to test backtest mode:
 7. ❌ Result: 503 error with "No price data available"
 
 ### Backend Code Analysis
-From `backend/src/papertrade/adapters/outbound/market_data/alpha_vantage_adapter.py`:
+From `backend/src/zebu/adapters/outbound/market_data/alpha_vantage_adapter.py`:
 
 ```python
 async def get_price_at(self, ticker: Ticker, timestamp: datetime) -> PricePoint:
@@ -95,7 +95,7 @@ async def get_price_at(self, ticker: Ticker, timestamp: datetime) -> PricePoint:
 The method **only queries existing data** - it doesn't fetch from Alpha Vantage if data is missing.
 
 ### Related Code
-From `backend/src/papertrade/adapters/inbound/api/portfolios.py`:
+From `backend/src/zebu/adapters/inbound/api/portfolios.py`:
 
 ```python
 # Fetch market price (current or historical based on as_of)
@@ -184,7 +184,7 @@ async function checkHistoricalDataAvailability() {
 **1. Add Historical Data Check Endpoint**
 
 ```python
-# backend/src/papertrade/adapters/inbound/api/prices.py
+# backend/src/zebu/adapters/inbound/api/prices.py
 
 @router.get("/check/{ticker}")
 async def check_historical_data(
@@ -209,7 +209,7 @@ async def check_historical_data(
 **2. Add On-Demand Historical Data Fetch**
 
 ```python
-# backend/src/papertrade/adapters/inbound/api/prices.py
+# backend/src/zebu/adapters/inbound/api/prices.py
 
 @router.post("/fetch-historical")
 async def fetch_historical_data(
@@ -351,8 +351,8 @@ test('should auto-fetch historical data for backtest trades', async ({ page }) =
 - `frontend/src/services/api/prices.ts` (add check/fetch endpoints)
 
 ### Backend
-- `backend/src/papertrade/adapters/inbound/api/prices.py` (add endpoints)
-- `backend/src/papertrade/adapters/outbound/market_data/alpha_vantage_adapter.py` (ensure history stores data)
+- `backend/src/zebu/adapters/inbound/api/prices.py` (add endpoints)
+- `backend/src/zebu/adapters/outbound/market_data/alpha_vantage_adapter.py` (ensure history stores data)
 
 ### Tests
 - `frontend/tests/e2e/backtest.spec.ts` (create)
@@ -383,7 +383,7 @@ task dev
 task test:e2e
 
 # Check backend logs
-docker logs papertrade-backend-1 -f
+docker logs zebu-backend-1 -f
 ```
 
 ## References

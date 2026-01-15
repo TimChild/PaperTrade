@@ -46,7 +46,7 @@ The test expects that when a price is returned from cache, its `source` attribut
 
 ### 2. Migrate from session.execute() to session.exec()
 
-**Affected files** (in `backend/src/papertrade/`):
+**Affected files** (in `backend/src/zebu/`):
 - `adapters/outbound/database/portfolio_repository.py`
 - `adapters/outbound/database/transaction_repository.py`
 - `adapters/outbound/repositories/price_repository.py`
@@ -108,12 +108,12 @@ uv run pytest -v 2>&1 | grep "DeprecationWarning" | wc -l  # Should be 0
 
 ## Files to Modify
 
-- `backend/src/papertrade/adapters/outbound/alpha_vantage.py` (possibly)
-- `backend/src/papertrade/adapters/outbound/database/portfolio_repository.py`
-- `backend/src/papertrade/adapters/outbound/database/transaction_repository.py`
-- `backend/src/papertrade/adapters/outbound/repositories/price_repository.py`
-- `backend/src/papertrade/adapters/outbound/repositories/watchlist_manager.py`
-- `backend/src/papertrade/application/queries/get_active_tickers.py`
+- `backend/src/zebu/adapters/outbound/alpha_vantage.py` (possibly)
+- `backend/src/zebu/adapters/outbound/database/portfolio_repository.py`
+- `backend/src/zebu/adapters/outbound/database/transaction_repository.py`
+- `backend/src/zebu/adapters/outbound/repositories/price_repository.py`
+- `backend/src/zebu/adapters/outbound/repositories/watchlist_manager.py`
+- `backend/src/zebu/application/queries/get_active_tickers.py`
 - `backend/tests/integration/adapters/test_alpha_vantage_adapter.py` (possibly - if test is wrong)
 
 ## References

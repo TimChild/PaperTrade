@@ -8,7 +8,7 @@
 
 ## Context
 
-PaperTrade Phase 3c (Analytics) is complete with all core functionality working. Before deployment to first customers, we need to elevate the visual design from barebones Tailwind styling to a polished, professional appearance.
+Zebu Phase 3c (Analytics) is complete with all core functionality working. Before deployment to first customers, we need to elevate the visual design from barebones Tailwind styling to a polished, professional appearance.
 
 **Current State**:
 - ✅ All features working: portfolios, trading, real-time prices, charts, analytics

@@ -29,7 +29,7 @@ This feature spans multiple layers following Clean Architecture:
 
 **1. Domain Layer** - Portfolio value calculation
 
-**File**: `backend/src/papertrade/domain/services/portfolio_value_calculator.py`
+**File**: `backend/src/zebu/domain/services/portfolio_value_calculator.py`
 
 Add new method:
 
@@ -78,7 +78,7 @@ class PortfolioValueCalculator:
 
 **2. Application Layer** - Use case orchestration
 
-**File**: `backend/src/papertrade/application/use_cases/get_portfolio_value.py`
+**File**: `backend/src/zebu/application/use_cases/get_portfolio_value.py`
 
 Update existing use case to include daily change:
 
@@ -161,7 +161,7 @@ class GetPortfolioValue(UseCase[GetPortfolioValueQuery, PortfolioValueResult]):
 
 **3. Adapters Layer** - API endpoint
 
-**File**: `backend/src/papertrade/adapters/inbound/api/portfolios.py`
+**File**: `backend/src/zebu/adapters/inbound/api/portfolios.py`
 
 Update response model:
 
@@ -194,7 +194,7 @@ async def get_portfolio_value(
 
 **4. Adapters Layer** - Market data port implementation
 
-**File**: `backend/src/papertrade/adapters/outbound/market_data/alpha_vantage_adapter.py`
+**File**: `backend/src/zebu/adapters/outbound/market_data/alpha_vantage_adapter.py`
 
 Add method for historical price fetch:
 
@@ -262,7 +262,7 @@ class AlphaVantageAdapter(MarketDataPort):
 
 **5. Domain Port Interface**
 
-**File**: `backend/src/papertrade/domain/ports/market_data_port.py`
+**File**: `backend/src/zebu/domain/ports/market_data_port.py`
 
 Update interface:
 
@@ -479,11 +479,11 @@ test('should display daily change on portfolio dashboard', async ({ page }) => {
 ## Files to Create/Modify
 
 **Backend**:
-- `backend/src/papertrade/domain/services/portfolio_value_calculator.py` - Add calculate_daily_change method
-- `backend/src/papertrade/domain/ports/market_data_port.py` - Add get_historical_price to interface
-- `backend/src/papertrade/application/use_cases/get_portfolio_value.py` - Fetch previous close prices
-- `backend/src/papertrade/adapters/outbound/market_data/alpha_vantage_adapter.py` - Implement historical price fetch
-- `backend/src/papertrade/adapters/inbound/api/portfolios.py` - Add fields to response
+- `backend/src/zebu/domain/services/portfolio_value_calculator.py` - Add calculate_daily_change method
+- `backend/src/zebu/domain/ports/market_data_port.py` - Add get_historical_price to interface
+- `backend/src/zebu/application/use_cases/get_portfolio_value.py` - Fetch previous close prices
+- `backend/src/zebu/adapters/outbound/market_data/alpha_vantage_adapter.py` - Implement historical price fetch
+- `backend/src/zebu/adapters/inbound/api/portfolios.py` - Add fields to response
 - `backend/tests/unit/domain/services/test_portfolio_value_calculator.py` - Add tests
 - `backend/tests/integration/adapters/outbound/test_alpha_vantage_adapter.py` - Add tests
 

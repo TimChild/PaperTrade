@@ -8,10 +8,10 @@
 
 ## Overview
 
-This guide walks through configuring a custom domain (e.g., `zebutrader.com`) with automatic HTTPS/SSL for your PaperTrade deployment. This is a **one-time setup** performed after the application is running on your Proxmox VM.
+This guide walks through configuring a custom domain (e.g., `zebutrader.com`) with automatic HTTPS/SSL for your Zebu deployment. This is a **one-time setup** performed after the application is running on your Proxmox VM.
 
 **Prerequisites:**
-- PaperTrade deployed and running on Proxmox VM (see [proxmox-vm-deployment.md](./proxmox-vm-deployment.md))
+- Zebu deployed and running on Proxmox VM (see [proxmox-vm-deployment.md](./proxmox-vm-deployment.md))
 - Domain registered and managed through DNS provider (this guide uses Cloudflare)
 - Reverse proxy available (this guide uses NPMplus - Nginx Proxy Manager Plus)
 - Access to your network's public IP or ability to configure port forwarding
@@ -190,7 +190,7 @@ Web browsers enforce **Cross-Origin Resource Sharing (CORS)** rules. When your f
 
 ### Current CORS Configuration
 
-The backend respects the `CORS_ORIGINS` environment variable (see `backend/src/papertrade/main.py`):
+The backend respects the `CORS_ORIGINS` environment variable (see `backend/src/zebu/main.py`):
 
 ```python
 # CORS configuration
@@ -215,7 +215,7 @@ Configure allowed origins for your production domain:
 1. SSH into your VM:
 ```bash
 ssh root@192.168.4.111
-cd /opt/papertrade
+cd /opt/zebu
 ```
 
 2. Edit `.env` file and add:
@@ -227,7 +227,7 @@ APP_ENV=production
 
 3. Restart the backend to apply changes:
 ```bash
-cd /opt/papertrade
+cd /opt/zebu
 docker compose -f docker-compose.prod.yml restart backend
 ```
 
@@ -252,7 +252,7 @@ The frontend needs to know where to send API requests.
 1. SSH into VM:
 ```bash
 ssh root@192.168.4.111
-cd /opt/papertrade
+cd /opt/zebu
 ```
 
 2. Edit `.env` file:
@@ -279,7 +279,7 @@ VITE_API_BASE_URL=https://zebutrader.com/api/v1
 The frontend is built at Docker image build time, so you need to rebuild:
 
 ```bash
-cd /opt/papertrade
+cd /opt/zebu
 
 # Rebuild frontend with new environment variable
 docker compose -f docker-compose.prod.yml build frontend
@@ -423,14 +423,14 @@ has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is pres
 1. **Verify CORS_ORIGINS in .env:**
    ```bash
    ssh root@192.168.4.111
-   cat /opt/papertrade/.env | grep CORS_ORIGINS
+   cat /opt/zebu/.env | grep CORS_ORIGINS
    # Should show: CORS_ORIGINS=https://zebutrader.com,https://api.zebutrader.com
    ```
 
 2. **Check backend logs:**
    ```bash
    ssh root@192.168.4.111
-   cd /opt/papertrade
+   cd /opt/zebu
    docker compose -f docker-compose.prod.yml logs backend | tail -50
    ```
 
@@ -454,12 +454,12 @@ has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is pres
 2. **Verify environment variables:**
    ```bash
    ssh root@192.168.4.111
-   cat /opt/papertrade/.env | grep VITE_API_BASE_URL
+   cat /opt/zebu/.env | grep VITE_API_BASE_URL
    ```
 
 3. **Rebuild frontend:**
    ```bash
-   cd /opt/papertrade
+   cd /opt/zebu
    docker compose -f docker-compose.prod.yml build frontend
    docker compose -f docker-compose.prod.yml up -d
    ```
@@ -482,7 +482,7 @@ has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is pres
 
 **Solutions**:
 - Check VM is running: `ssh root@proxmox qm status 200`
-- Verify services running: `ssh root@192.168.4.111 docker compose -f /opt/papertrade/docker-compose.prod.yml ps`
+- Verify services running: `ssh root@192.168.4.111 docker compose -f /opt/zebu/docker-compose.prod.yml ps`
 - Check NPMplus can reach VM: From NPMplus host, `curl http://192.168.4.111`
 
 ### Cloudflare Proxy Issues
@@ -526,7 +526,7 @@ has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is pres
 1. **Check backend is running:**
    ```bash
    ssh root@192.168.4.111
-   docker compose -f /opt/papertrade/docker-compose.prod.yml ps backend
+   docker compose -f /opt/zebu/docker-compose.prod.yml ps backend
    ```
 
 2. **Verify port 8000 is listening:**
@@ -553,7 +553,7 @@ task proxmox-vm:status
 
 # From VM
 ssh root@192.168.4.111
-cd /opt/papertrade
+cd /opt/zebu
 docker compose -f docker-compose.prod.yml ps
 docker compose -f docker-compose.prod.yml logs --tail=100
 ```
@@ -588,7 +588,7 @@ iptables -L -n | grep 192.168.4.111
 - **Cloudflare DNS Documentation**: https://developers.cloudflare.com/dns/
 - **Let's Encrypt Documentation**: https://letsencrypt.org/docs/
 - **CORS Documentation**: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
-- **PaperTrade Deployment Docs**: [proxmox-vm-deployment.md](./proxmox-vm-deployment.md)
+- **Zebu Deployment Docs**: [proxmox-vm-deployment.md](./proxmox-vm-deployment.md)
 
 ---
 
@@ -627,4 +627,4 @@ All other services should remain on internal network.
 
 **Domain Setup Complete! 🎉**
 
-Your PaperTrade application is now accessible via your custom domain with automatic HTTPS!
+Your Zebu application is now accessible via your custom domain with automatic HTTPS!

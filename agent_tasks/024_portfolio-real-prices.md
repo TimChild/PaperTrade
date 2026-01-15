@@ -31,7 +31,7 @@ Currently, portfolio queries return static mock data. This task integrates the M
 
 ### 1. Update GetPortfolioBalance Query
 
-**File**: `backend/src/papertrade/application/queries/get_portfolio_balance.py`
+**File**: `backend/src/zebu/application/queries/get_portfolio_balance.py`
 
 **Current Signature**:
 ```python
@@ -105,9 +105,9 @@ async def execute(...) -> PortfolioBalanceDTO:
 
 ### 2. Update GetHoldings Query
 
-**File**: `backend/src/papertrade/application/queries/get_portfolio_holdings.py`
+**File**: `backend/src/zebu/application/queries/get_portfolio_holdings.py`
 
-**Update HoldingDTO** (in `backend/src/papertrade/application/dtos/holding.py`):
+**Update HoldingDTO** (in `backend/src/zebu/application/dtos/holding.py`):
 
 ```python
 @dataclass(frozen=True)
@@ -203,14 +203,14 @@ class GetHoldings:
 
 ### 3. Dependency Injection
 
-**File**: `backend/src/papertrade/adapters/inbound/api/dependencies.py`
+**File**: `backend/src/zebu/adapters/inbound/api/dependencies.py`
 
 **Add MarketData Dependency**:
 
 ```python
-from papertrade.adapters.outbound.market_data.alpha_vantage_adapter import AlphaVantageAdapter
-from papertrade.infrastructure.rate_limiter import RateLimiter
-from papertrade.infrastructure.cache.price_cache import PriceCache
+from zebu.adapters.outbound.market_data.alpha_vantage_adapter import AlphaVantageAdapter
+from zebu.infrastructure.rate_limiter import RateLimiter
+from zebu.infrastructure.cache.price_cache import PriceCache
 from redis.asyncio import Redis
 import httpx
 
@@ -218,7 +218,7 @@ async def get_market_data() -> AlphaVantageAdapter:
     """Provide MarketDataPort implementation (AlphaVantageAdapter)."""
 
     # Get config
-    from papertrade.config import settings
+    from zebu.config import settings
 
     # Create Redis client for rate limiter and cache
     redis = await Redis.from_url(
@@ -230,7 +230,7 @@ async def get_market_data() -> AlphaVantageAdapter:
     # Create rate limiter (5 calls/min, 500/day)
     rate_limiter = RateLimiter(
         redis=redis,
-        key_prefix="papertrade:ratelimit:alphavantage",
+        key_prefix="zebu:ratelimit:alphavantage",
         calls_per_minute=5,
         calls_per_day=500,
     )
@@ -238,7 +238,7 @@ async def get_market_data() -> AlphaVantageAdapter:
     # Create price cache
     price_cache = PriceCache(
         redis=redis,
-        key_prefix="papertrade:price",
+        key_prefix="zebu:price",
         default_ttl=3600,  # 1 hour
     )
 
@@ -258,11 +258,11 @@ async def get_market_data() -> AlphaVantageAdapter:
 
 **Update Portfolio Routes**:
 
-**File**: `backend/src/papertrade/adapters/inbound/api/routes/portfolios.py`
+**File**: `backend/src/zebu/adapters/inbound/api/routes/portfolios.py`
 
 ```python
-from papertrade.adapters.inbound.api.dependencies import get_market_data
-from papertrade.application.ports.market_data_port import MarketDataPort
+from zebu.adapters.inbound.api.dependencies import get_market_data
+from zebu.application.ports.market_data_port import MarketDataPort
 
 @router.get("/{portfolio_id}/balance")
 async def get_portfolio_balance(
@@ -310,7 +310,7 @@ api_key = "your_api_key_here"  # Or load from environment variable
 base_url = "https://www.alphavantage.co/query"
 ```
 
-**File**: `backend/src/papertrade/config.py`
+**File**: `backend/src/zebu/config.py`
 
 ```python
 from pydantic_settings import BaseSettings
@@ -340,7 +340,7 @@ settings = Settings()
 ```python
 import pytest
 from unittest.mock import AsyncMock
-from papertrade.application.queries.get_portfolio_balance import GetPortfolioBalance
+from zebu.application.queries.get_portfolio_balance import GetPortfolioBalance
 
 @pytest.fixture
 def mock_market_data():
@@ -382,7 +382,7 @@ async def test_portfolio_balance_handles_ticker_not_found(
     mock_market_data,
 ):
     """Test graceful handling when ticker not found."""
-    from papertrade.application.exceptions import TickerNotFoundError
+    from zebu.application.exceptions import TickerNotFoundError
 
     # Mock ticker not found
     mock_market_data.get_current_price.side_effect = TickerNotFoundError("INVALID")
@@ -443,16 +443,16 @@ async def test_get_holdings_with_real_prices(
 ### Modified Files
 
 **Application Layer**:
-- `backend/src/papertrade/application/queries/get_portfolio_balance.py`
-- `backend/src/papertrade/application/queries/get_portfolio_holdings.py`
-- `backend/src/papertrade/application/dtos/holding.py` (add market data fields)
+- `backend/src/zebu/application/queries/get_portfolio_balance.py`
+- `backend/src/zebu/application/queries/get_portfolio_holdings.py`
+- `backend/src/zebu/application/dtos/holding.py` (add market data fields)
 
 **Adapters Layer**:
-- `backend/src/papertrade/adapters/inbound/api/dependencies.py` (add get_market_data)
-- `backend/src/papertrade/adapters/inbound/api/routes/portfolios.py` (inject market_data)
+- `backend/src/zebu/adapters/inbound/api/dependencies.py` (add get_market_data)
+- `backend/src/zebu/adapters/inbound/api/routes/portfolios.py` (inject market_data)
 
 **Configuration**:
-- `backend/src/papertrade/config.py` (add redis_url, alpha_vantage_api_key)
+- `backend/src/zebu/config.py` (add redis_url, alpha_vantage_api_key)
 - `backend/settings.toml` (add redis and alpha_vantage sections)
 - `backend/.env.example` (add ALPHA_VANTAGE_API_KEY)
 

@@ -34,31 +34,31 @@ Phase 2 adds real market data to portfolios. Instead of showing $0.00 for holdin
 - No complex business logic, mostly data validation
 - Lives in Application layer as a DTO
 
-**Location**: `backend/src/papertrade/application/dtos/price_point.py`
+**Location**: `backend/src/zebu/application/dtos/price_point.py`
 
 ## Files to Create/Modify
 
 ### New Files
 
-1. **`backend/src/papertrade/application/dtos/price_point.py`**
+1. **`backend/src/zebu/application/dtos/price_point.py`**
    - PricePoint DTO class
    - Properties: ticker, price, timestamp, source, interval
    - Optional OHLCV properties: open, high, low, close, volume
    - Methods: `is_stale()`, `with_source()`
    - Validation and invariants
 
-2. **`backend/src/papertrade/application/exceptions.py`**
+2. **`backend/src/zebu/application/exceptions.py`**
    - MarketDataError base exception
    - TickerNotFoundError subclass
    - MarketDataUnavailableError subclass
    - InvalidPriceDataError subclass
 
-3. **`backend/src/papertrade/application/ports/market_data_port.py`**
+3. **`backend/src/zebu/application/ports/market_data_port.py`**
    - MarketDataPort Protocol interface
    - Methods: get_current_price, get_price_at, get_price_history, get_supported_tickers
    - Full type hints and docstrings
 
-4. **`backend/src/papertrade/adapters/outbound/market_data/in_memory_adapter.py`**
+4. **`backend/src/zebu/adapters/outbound/market_data/in_memory_adapter.py`**
    - InMemoryMarketDataAdapter (implements MarketDataPort)
    - For testing purposes
    - Stores prices in Dict[Ticker, List[PricePoint]]
@@ -193,8 +193,8 @@ Create Protocol interface in `application/ports/market_data_port.py`
 ```
 from typing import Protocol
 from datetime import datetime
-from papertrade.domain.value_objects.ticker import Ticker
-from papertrade.application.dtos.price_point import PricePoint
+from zebu.domain.value_objects.ticker import Ticker
+from zebu.application.dtos.price_point import PricePoint
 ```
 
 #### Interface Methods

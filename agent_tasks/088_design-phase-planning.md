@@ -7,7 +7,7 @@
 
 ## Context
 
-PaperTrade Phase 3c (Analytics) is complete with all core functionality working. Before deployment to first customers, we need to elevate the visual design from its current barebones state to a polished, professional appearance.
+Zebu Phase 3c (Analytics) is complete with all core functionality working. Before deployment to first customers, we need to elevate the visual design from its current barebones state to a polished, professional appearance.
 
 **Current State**:
 - ✅ All features working: portfolios, trading, real-time prices, charts, analytics
@@ -26,7 +26,7 @@ PaperTrade Phase 3c (Analytics) is complete with all core functionality working.
 
 ## Objective
 
-**Research, evaluate, and produce a detailed strategic plan** for implementing visual design and skinning across PaperTrade. This plan should be:
+**Research, evaluate, and produce a detailed strategic plan** for implementing visual design and skinning across Zebu. This plan should be:
 - **Maintainable**: Easy to update/tweak in the future
 - **Idiomatic**: Follow React/Tailwind best practices
 - **Scalable**: Support future features without massive refactoring

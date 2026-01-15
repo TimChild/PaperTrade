@@ -151,7 +151,7 @@ The architecture MUST support this from day one, even if we don't implement it i
 from datetime import datetime
 from decimal import Decimal
 from typing import Protocol
-from papertrade.domain.value_objects import Ticker, Money
+from zebu.domain.value_objects import Ticker, Money
 
 class PricePoint:
     """Single price observation at a point in time."""
@@ -389,7 +389,7 @@ class PriceHistory(SQLModel, table=True):
 environment = "development"
 
 [database]
-url = "postgresql+asyncpg://localhost/papertrade"
+url = "postgresql+asyncpg://localhost/zebu"
 
 [market_data]
 provider = "alpha_vantage"
@@ -509,9 +509,9 @@ Architect agent delivers:
 ## Reference Materials
 
 ### Existing Codebase
-- Domain Layer: `backend/src/papertrade/domain/`
-- Application Layer: `backend/src/papertrade/application/`
-- Adapters Layer: `backend/src/papertrade/adapters/`
+- Domain Layer: `backend/src/zebu/domain/`
+- Application Layer: `backend/src/zebu/application/`
+- Adapters Layer: `backend/src/zebu/adapters/`
 - Frontend: `frontend/src/`
 
 ### External References

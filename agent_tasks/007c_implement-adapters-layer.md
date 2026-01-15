@@ -23,7 +23,7 @@ Read these documents IN ORDER before starting:
 
 ### File Structure to Create
 ```
-backend/src/papertrade/adapters/
+backend/src/zebu/adapters/
 ├── __init__.py
 ├── inbound/
 │   ├── __init__.py
@@ -41,7 +41,7 @@ backend/src/papertrade/adapters/
         ├── portfolio_repository.py # SQLModel portfolio repo
         └── transaction_repository.py # SQLModel transaction repo
 
-backend/src/papertrade/infrastructure/
+backend/src/zebu/infrastructure/
 ├── __init__.py
 └── database.py                     # Database session management
 ```
@@ -167,13 +167,13 @@ Before considering this task complete:
 ### Testing
 - [ ] Integration tests pass: `pytest tests/integration -v`
 - [ ] E2E tests pass: `pytest tests/e2e -v`
-- [ ] Test coverage > 80%: `pytest --cov=papertrade.adapters --cov-report=term-missing`
+- [ ] Test coverage > 80%: `pytest --cov=zebu.adapters --cov-report=term-missing`
 - [ ] Real database operations tested
 
 ### Code Quality
-- [ ] Type checking passes: `pyright src/papertrade/adapters`
-- [ ] Linting passes: `ruff check src/papertrade/adapters`
-- [ ] Formatting correct: `ruff format --check src/papertrade/adapters`
+- [ ] Type checking passes: `pyright src/zebu/adapters`
+- [ ] Linting passes: `ruff check src/zebu/adapters`
+- [ ] Formatting correct: `ruff format --check src/zebu/adapters`
 - [ ] OpenAPI docs generated correctly
 
 ### Integration Validation

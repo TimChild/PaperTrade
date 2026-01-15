@@ -180,7 +180,7 @@ function HoldingRow({ holding }) {
 
 - Current implementation: `frontend/src/hooks/__tests__/usePriceQuery.test.tsx`
 - API client: `frontend/src/services/api/client.ts`
-- Price cache: `backend/src/papertrade/infrastructure/cache/price_cache.py` (backend reference)
+- Price cache: `backend/src/zebu/infrastructure/cache/price_cache.py` (backend reference)
 - Testing session: `orchestrator_procedures/playwright_e2e_testing.md`
 
 ## Notes

@@ -1,7 +1,7 @@
 # Task 005: Create Portfolio Dashboard UI
 
 ## Objective
-Build the initial portfolio dashboard frontend with mock data, establishing the UI patterns and component structure for PaperTrade.
+Build the initial portfolio dashboard frontend with mock data, establishing the UI patterns and component structure for Zebu.
 
 ## Context
 This is a Phase 1 task that can run in parallel with backend domain work. We'll use mock data initially, then connect to the real API once it's ready.
