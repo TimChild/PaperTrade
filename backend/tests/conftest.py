@@ -142,7 +142,7 @@ def client(test_engine: AsyncEngine) -> TestClient:
             # This matches the default_user_id fixture for backward compatibility
             test_user = AuthenticatedUser(
                 id="test-user-default",
-                email="test@papertrade.example",
+                email="test@zebutrader.com",
             )
             adapter.add_user(test_user, "test-token-default")
 

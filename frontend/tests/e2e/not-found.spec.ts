@@ -3,7 +3,7 @@ import { test, expect } from './fixtures'
 
 test.describe('NotFound Page', () => {
   test.beforeEach(async ({ page }) => {
-    const email = process.env.E2E_CLERK_USER_EMAIL || 'test-e2e@papertrade.dev'
+    const email = process.env.E2E_CLERK_USER_EMAIL || 'test-e2e@zebutrader.com'
 
     // Navigate to app and authenticate
     await page.goto('/')

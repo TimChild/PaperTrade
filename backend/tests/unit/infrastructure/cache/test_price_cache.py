@@ -293,7 +293,7 @@ class TestPriceCacheKeyGeneration:
         sample_price: PricePoint,
     ) -> None:
         """Test that keys are formatted correctly."""
-        cache = PriceCache(redis, "papertrade:price")
+        cache = PriceCache(redis, "zebu:price")
 
         key = cache._get_key(Ticker("AAPL"))
 

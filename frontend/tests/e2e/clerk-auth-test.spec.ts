@@ -3,7 +3,7 @@ import { test, expect } from './fixtures'
 
 test.describe('Clerk Auth Test', () => {
   test('should authenticate with Clerk and access protected API', async ({ page }) => {
-    const email = process.env.E2E_CLERK_USER_EMAIL || 'test-e2e@papertrade.dev'
+    const email = process.env.E2E_CLERK_USER_EMAIL || 'test-e2e@zebutrader.com'
 
     // Navigate to app first - Clerk must be loaded before signIn
     await page.goto('/')

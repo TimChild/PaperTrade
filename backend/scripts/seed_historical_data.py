@@ -134,14 +134,14 @@ async def main() -> None:
 
         rate_limiter = RateLimiter(
             redis=redis_client,
-            key_prefix="papertrade:ratelimit:alphavantage:seed",
+            key_prefix="zebu:ratelimit:alphavantage:seed",
             calls_per_minute=5,  # Alpha Vantage free tier
             calls_per_day=500,
         )
 
         price_cache = PriceCache(
             redis=redis_client,
-            key_prefix="papertrade:price:seed",
+            key_prefix="zebu:price:seed",
             default_ttl=3600,
         )
 
