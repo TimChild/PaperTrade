@@ -205,7 +205,7 @@ For detailed phase completion information and implementation details from Decemb
 - ✅ **Phase 1: The Ledger** (Dec 28, 2025) - Clean Architecture, domain entities, CQRS
 - ✅ **Phase 2a: Current Prices** (Jan 1, 2026) - Alpha Vantage integration, 3-tier caching
 - ✅ **Phase 2b: Historical Data** (Jan 1, 2026) - Price history API, charts, background refresh
-- ✅ **Phase 3a: SELL Orders** (Jan 4, 2026) - Cost basis tracking, complete trading loop  
+- ✅ **Phase 3a: SELL Orders** (Jan 4, 2026) - Cost basis tracking, complete trading loop
 - ✅ **Phase 3b: Authentication** (Jan 5, 2026) - Clerk integration with E2E tests
 - ✅ **Phase 3c: Analytics** (Jan 6, 2026) - Performance metrics, composition charts, backtesting
 
@@ -245,16 +245,16 @@ For detailed phase completion information and implementation details from Decemb
 
 ## Working Features
 
-✅ Portfolio management (create, deposit, withdraw)  
-✅ Stock trading (buy/sell with cost basis tracking)  
-✅ Real-time valuations (Alpha Vantage, 3-tier caching)  
-✅ Holdings with P&L tracking  
-✅ Transaction history (immutable ledger)  
-✅ Historical price charts with time ranges  
-✅ Background price refresh (daily)  
-✅ Performance metrics & analytics  
-✅ Authentication via Clerk  
-✅ Backtesting support  
+✅ Portfolio management (create, deposit, withdraw)
+✅ Stock trading (buy/sell with cost basis tracking)
+✅ Real-time valuations (Alpha Vantage, 3-tier caching)
+✅ Holdings with P&L tracking
+✅ Transaction history (immutable ledger)
+✅ Historical price charts with time ranges
+✅ Background price refresh (daily)
+✅ Performance metrics & analytics
+✅ Authentication via Clerk
+✅ Backtesting support
 
 ---
 
