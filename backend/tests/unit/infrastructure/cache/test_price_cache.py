@@ -297,7 +297,7 @@ class TestPriceCacheKeyGeneration:
 
         key = cache._get_key(Ticker("AAPL"))
 
-        assert key == "papertrade:price:AAPL"
+        assert key == "zebu:price:AAPL"
 
     async def test_different_prefixes_isolated(
         self,
