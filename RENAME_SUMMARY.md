@@ -21,16 +21,19 @@ Successfully renamed the entire project from "PaperTrade" to "Zebu" (brand name)
 
 ### Configuration
 
-| Category | Old | New |
-|----------|-----|-----|
-| Database (dev) | `papertrade_dev` | `zebu_dev` |
-| Database (prod) | `papertrade` | `zebu` |
-| DB User | `papertrade` | `zebu` |
-| DB Password (dev) | `papertrade_dev_password` | `zebu_dev_password` |
-| Docker network | `papertrade-network` | `zebu-network` |
-| Container names (prod) | `papertrade-*-prod` | `zebu-*-prod` |
-| Redis key prefix | `papertrade:*` | `zebu:*` |
-| Log directory | `/var/log/papertrade/` | `/var/log/zebu/` |
+| Category | Old | New | Notes |
+|----------|-----|-----|-------|
+| Database (dev) | `papertrade_dev` | `papertrade_dev` | **Kept unchanged** ⚠️ |
+| Database (prod) | `papertrade` | `papertrade` | **Kept unchanged** ⚠️ |
+| DB User | `papertrade` | `papertrade` | **Kept unchanged** ⚠️ |
+| DB Password (dev) | `papertrade_dev_password` | `papertrade_dev_password` | **Kept unchanged** ⚠️ |
+| SQLite filename | `papertrade.db` | `papertrade.db` | **Kept unchanged** ⚠️ |
+| Docker network | `papertrade-network` | `zebu-network` | ✅ |
+| Container names (prod) | `papertrade-*-prod` | `zebu-*-prod` | ✅ |
+| Redis key prefix | `papertrade:*` | `zebu:*` | ✅ |
+| Log directory | `/var/log/papertrade/` | `/var/log/zebu/` | ✅ |
+
+**⚠️ Database Identifiers**: Intentionally kept as `papertrade` to avoid requiring immediate database migration. See [RENAME_FOLLOWUP_TASKS.md](./RENAME_FOLLOWUP_TASKS.md) for future migration procedure.
 
 ### User-Facing
 
@@ -144,44 +147,32 @@ npm install  # Update lock file with new package name
 
 ### Database Migration
 
-If you have a local database with the old name:
+**No migration required!** 🎉
 
-```bash
-# Stop services
-task docker:down
+Database identifiers were intentionally kept as `papertrade` to maintain backward compatibility:
+- Database names: `papertrade_dev`, `papertrade`
+- Database user: `papertrade`
+- SQLite filename: `papertrade.db`
 
-# Remove old volume (⚠️ This deletes data!)
-docker volume rm papertrade_postgres_data
+**Your existing data is safe and compatible.**
 
-# Start with new database name
-task docker:up
-```
-
-Or keep your data by updating the `.env` file to use the old database names (not recommended).
+Future migration (optional): See [RENAME_FOLLOWUP_TASKS.md](./RENAME_FOLLOWUP_TASKS.md) for steps to migrate database identifiers during a planned maintenance window.
 
 ### Environment Variables
 
-Update your `.env` file to match `.env.example`:
+**No changes needed!** Environment variables use the same database identifiers as before.
 
-```bash
-# Old
-POSTGRES_DB=papertrade_dev
-POSTGRES_USER=papertrade
-POSTGRES_PASSWORD=papertrade_dev_password
-
-# New
-POSTGRES_DB=zebu_dev
-POSTGRES_USER=zebu
-POSTGRES_PASSWORD=zebu_dev_password
-```
+Your existing `.env` file will continue to work without modification.
 
 ## Next Steps
 
 1. ✅ Merge this PR to main
 2. ⏳ Update GitHub repository name (requires admin action)
    - Settings → General → Repository name → "Zebu" or "ZebuTrader"
-3. ⏳ Re-deploy to production with new configuration
-4. ⏳ Update any external integrations (CI/CD, monitoring, etc.)
+3. ⏳ (Optional) Database migration during planned maintenance
+   - See [RENAME_FOLLOWUP_TASKS.md](./RENAME_FOLLOWUP_TASKS.md) for procedure
+4. ⏳ Re-deploy to production with new configuration
+5. ⏳ Update any external integrations (CI/CD, monitoring, etc.)
 
 ## Rollback Plan
 
@@ -189,7 +180,7 @@ If issues arise, the changes can be reverted by:
 
 1. Reverting the commits in this PR
 2. Running `uv sync` and `npm install` again
-3. Updating `.env` files back to old values
+3. No database changes needed (identifiers weren't changed)
 4. Restarting Docker services
 
-All changes are backward-compatible in code structure.
+All changes are backward-compatible.
