@@ -6,10 +6,10 @@ from decimal import Decimal
 import pytest
 from fakeredis import aioredis as fakeredis
 
-from papertrade.application.dtos.price_point import PricePoint
-from papertrade.domain.value_objects.money import Money
-from papertrade.domain.value_objects.ticker import Ticker
-from papertrade.infrastructure.cache.price_cache import PriceCache
+from zebu.application.dtos.price_point import PricePoint
+from zebu.domain.value_objects.money import Money
+from zebu.domain.value_objects.ticker import Ticker
+from zebu.infrastructure.cache.price_cache import PriceCache
 
 
 @pytest.fixture

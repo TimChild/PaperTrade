@@ -5,22 +5,22 @@ from uuid import uuid4
 
 import pytest
 
-from papertrade.application.commands.create_portfolio import (
+from zebu.application.commands.create_portfolio import (
     CreatePortfolioCommand,
     CreatePortfolioHandler,
 )
-from papertrade.application.commands.withdraw_cash import (
+from zebu.application.commands.withdraw_cash import (
     WithdrawCashCommand,
     WithdrawCashHandler,
 )
-from papertrade.application.ports.in_memory_portfolio_repository import (
+from zebu.application.ports.in_memory_portfolio_repository import (
     InMemoryPortfolioRepository,
 )
-from papertrade.application.ports.in_memory_transaction_repository import (
+from zebu.application.ports.in_memory_transaction_repository import (
     InMemoryTransactionRepository,
 )
-from papertrade.domain.entities.transaction import TransactionType
-from papertrade.domain.exceptions import (
+from zebu.domain.entities.transaction import TransactionType
+from zebu.domain.exceptions import (
     InsufficientFundsError,
     InvalidPortfolioError,
     InvalidTransactionError,

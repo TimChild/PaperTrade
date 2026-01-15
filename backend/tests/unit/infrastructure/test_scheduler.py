@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from papertrade.infrastructure.scheduler import (
+from zebu.infrastructure.scheduler import (
     SchedulerConfig,
     refresh_active_stocks,
     start_scheduler,
@@ -93,7 +93,7 @@ class TestSchedulerLifecycle:
         await start_scheduler(config)
 
         # Assert - no scheduler should be created
-        from papertrade.infrastructure.scheduler import is_scheduler_running
+        from zebu.infrastructure.scheduler import is_scheduler_running
 
         assert not is_scheduler_running()
 
@@ -110,7 +110,7 @@ class TestSchedulerLifecycle:
             await start_scheduler(config)
 
             # Assert - Scheduler is running
-            from papertrade.infrastructure.scheduler import is_scheduler_running
+            from zebu.infrastructure.scheduler import is_scheduler_running
 
             assert is_scheduler_running()
 
@@ -119,7 +119,7 @@ class TestSchedulerLifecycle:
             await stop_scheduler()
 
             # Assert - Scheduler is stopped
-            from papertrade.infrastructure.scheduler import is_scheduler_running
+            from zebu.infrastructure.scheduler import is_scheduler_running
 
             assert not is_scheduler_running()
 
@@ -134,7 +134,7 @@ class TestSchedulerLifecycle:
             await start_scheduler(config)
 
             # Assert - Only one scheduler instance
-            from papertrade.infrastructure.scheduler import get_scheduler
+            from zebu.infrastructure.scheduler import get_scheduler
 
             scheduler = get_scheduler()
             assert scheduler is not None

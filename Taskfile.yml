@@ -49,7 +49,7 @@ tasks:
       - docker:up
     cmds:
       - 'echo "Starting backend server on http://localhost:8000"'
-      - uv run uvicorn papertrade.main:app --reload --host 0.0.0.0 --port 8000
+      - uv run uvicorn zebu.main:app --reload --host 0.0.0.0 --port 8000
 
   dev:frontend:
     desc: "Start frontend development server"
@@ -72,7 +72,7 @@ tasks:
     dir: "{{.BACKEND_DIR}}"
     cmds:
       - echo "Running backend tests..."
-      - uv run pytest --cov=papertrade --cov-report=term --cov-report=html --cov-report=xml
+      - uv run pytest --cov=zebu --cov-report=term --cov-report=html --cov-report=xml
 
   test:frontend:
     desc: "Run frontend unit tests (Vitest only)"
@@ -549,7 +549,7 @@ tasks:
 
         # Wait for PostgreSQL
         echo "  Waiting for PostgreSQL..."
-        timeout 30 bash -c 'until docker compose exec -T db pg_isready -U papertrade 2>/dev/null; do sleep 1; done' || (echo "  ❌ PostgreSQL timeout" && exit 1)
+        timeout 30 bash -c 'until docker compose exec -T db pg_isready -U zebu 2>/dev/null; do sleep 1; done' || (echo "  ❌ PostgreSQL timeout" && exit 1)
         echo "  ✅ PostgreSQL ready"
 
         # Wait for Redis
@@ -601,11 +601,11 @@ tasks:
 
   db:shell:
     desc: "Open PostgreSQL shell"
-    cmd: docker compose exec db psql -U papertrade -d papertrade_dev
+    cmd: docker compose exec db psql -U zebu -d zebu_dev
 
   db:shell:prod:
     desc: "Open PostgreSQL shell (production database)"
-    cmd: docker compose -f docker-compose.prod.yml exec db psql -U papertrade -d papertrade
+    cmd: docker compose -f docker-compose.prod.yml exec db psql -U zebu -d zebu
 
   db:migrate:
     desc: "Run database migrations"

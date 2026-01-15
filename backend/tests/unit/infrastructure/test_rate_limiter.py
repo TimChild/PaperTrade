@@ -3,7 +3,7 @@
 import pytest
 from fakeredis import aioredis as fakeredis
 
-from papertrade.infrastructure.rate_limiter import RateLimiter
+from zebu.infrastructure.rate_limiter import RateLimiter
 
 
 class TestRateLimiterInitialization:

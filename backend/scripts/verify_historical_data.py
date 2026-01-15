@@ -11,8 +11,8 @@ import asyncio
 
 from sqlmodel import select
 
-from papertrade.adapters.outbound.models.price_history import PriceHistoryModel
-from papertrade.infrastructure.database import async_session_maker, init_db
+from zebu.adapters.outbound.models.price_history import PriceHistoryModel
+from zebu.infrastructure.database import async_session_maker, init_db
 
 
 async def main() -> None:

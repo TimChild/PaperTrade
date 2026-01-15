@@ -9,10 +9,10 @@ from decimal import Decimal
 
 import pytest
 
-from papertrade.adapters.outbound.repositories.price_repository import PriceRepository
-from papertrade.application.dtos.price_point import PricePoint
-from papertrade.domain.value_objects.money import Money
-from papertrade.domain.value_objects.ticker import Ticker
+from zebu.adapters.outbound.repositories.price_repository import PriceRepository
+from zebu.application.dtos.price_point import PricePoint
+from zebu.domain.value_objects.money import Money
+from zebu.domain.value_objects.ticker import Ticker
 
 
 class TestPriceRepositoryUpsert:

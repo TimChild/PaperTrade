@@ -4,8 +4,8 @@ from decimal import Decimal
 
 import pytest
 
-from papertrade.domain.exceptions import InvalidQuantityError
-from papertrade.domain.value_objects.quantity import Quantity
+from zebu.domain.exceptions import InvalidQuantityError
+from zebu.domain.value_objects.quantity import Quantity
 
 
 class TestQuantityConstruction:

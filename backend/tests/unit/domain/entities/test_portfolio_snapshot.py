@@ -6,8 +6,8 @@ from uuid import uuid4
 
 import pytest
 
-from papertrade.domain.entities.portfolio_snapshot import PortfolioSnapshot
-from papertrade.domain.exceptions import InvalidPortfolioError
+from zebu.domain.entities.portfolio_snapshot import PortfolioSnapshot
+from zebu.domain.exceptions import InvalidPortfolioError
 
 
 class TestPortfolioSnapshotConstruction:

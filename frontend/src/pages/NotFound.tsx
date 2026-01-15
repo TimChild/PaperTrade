@@ -69,7 +69,7 @@ export function NotFound() {
                 rel="noopener noreferrer"
                 className="text-primary hover:underline"
               >
-                Report an issue
+                Report an issue on GitHub
               </a>
             </li>
           </ul>

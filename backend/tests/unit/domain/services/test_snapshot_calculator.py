@@ -4,7 +4,7 @@ from datetime import date
 from decimal import Decimal
 from uuid import uuid4
 
-from papertrade.domain.services.snapshot_calculator import SnapshotCalculator
+from zebu.domain.services.snapshot_calculator import SnapshotCalculator
 
 
 class TestSnapshotCalculator:

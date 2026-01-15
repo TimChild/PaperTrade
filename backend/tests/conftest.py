@@ -13,18 +13,18 @@ from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 # Import all models to ensure they're registered with SQLModel metadata
-from papertrade.adapters.outbound.database.models import (  # noqa: F401
+from zebu.adapters.outbound.database.models import (  # noqa: F401
     PortfolioModel,
     TransactionModel,
 )
-from papertrade.adapters.outbound.models.price_history import (  # noqa: F401
+from zebu.adapters.outbound.models.price_history import (  # noqa: F401
     PriceHistoryModel,
 )
-from papertrade.adapters.outbound.models.ticker_watchlist import (  # noqa: F401
+from zebu.adapters.outbound.models.ticker_watchlist import (  # noqa: F401
     TickerWatchlistModel,
 )
-from papertrade.infrastructure.database import get_session
-from papertrade.main import app
+from zebu.infrastructure.database import get_session
+from zebu.main import app
 
 
 @pytest_asyncio.fixture
@@ -57,15 +57,15 @@ def client(test_engine: AsyncEngine) -> TestClient:
     This ensures integration tests are fast and don't require external
     dependencies (Redis, API keys, Clerk).
     """
-    from papertrade.adapters.auth.in_memory_adapter import InMemoryAuthAdapter
-    from papertrade.adapters.inbound.api.dependencies import (
+    from zebu.adapters.auth.in_memory_adapter import InMemoryAuthAdapter
+    from zebu.adapters.inbound.api.dependencies import (
         get_auth_port,
         get_market_data,
     )
-    from papertrade.adapters.outbound.market_data.in_memory_adapter import (
+    from zebu.adapters.outbound.market_data.in_memory_adapter import (
         InMemoryMarketDataAdapter,
     )
-    from papertrade.application.ports.auth_port import AuthenticatedUser
+    from zebu.application.ports.auth_port import AuthenticatedUser
 
     async def get_test_session() -> AsyncGenerator[AsyncSession, None]:
         """Override session dependency to use test database."""
@@ -91,9 +91,9 @@ def client(test_engine: AsyncEngine) -> TestClient:
         from datetime import UTC, datetime
         from decimal import Decimal
 
-        from papertrade.application.dtos.price_point import PricePoint
-        from papertrade.domain.value_objects.money import Money
-        from papertrade.domain.value_objects.ticker import Ticker
+        from zebu.application.dtos.price_point import PricePoint
+        from zebu.domain.value_objects.money import Money
+        from zebu.domain.value_objects.ticker import Ticker
 
         adapter = InMemoryMarketDataAdapter()
 
@@ -221,7 +221,7 @@ async def reset_global_singletons() -> AsyncGenerator[None, None]:
     with a fresh state.
     """
     # Import here to avoid circular imports
-    from papertrade.adapters.inbound.api import dependencies
+    from zebu.adapters.inbound.api import dependencies
 
     # Run the test
     yield

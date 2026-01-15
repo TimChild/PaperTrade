@@ -13,7 +13,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from papertrade.domain.entities.portfolio_snapshot import PortfolioSnapshot
+from zebu.domain.entities.portfolio_snapshot import PortfolioSnapshot
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncEngine
@@ -41,7 +41,7 @@ async def test_get_performance_with_snapshots(
 
     # Create test snapshots using the same engine as the client
 
-    from papertrade.adapters.outbound.database.snapshot_repository import (
+    from zebu.adapters.outbound.database.snapshot_repository import (
         SQLModelSnapshotRepository,
     )
 
@@ -167,7 +167,7 @@ async def test_get_performance_different_time_ranges(
 
     # Create snapshots across different time periods
 
-    from papertrade.adapters.outbound.database.snapshot_repository import (
+    from zebu.adapters.outbound.database.snapshot_repository import (
         SQLModelSnapshotRepository,
     )
 

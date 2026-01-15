@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "papertrade"
+name = "zebu"
 version = "0.1.0"
 description = "Stock market emulation platform for practicing trading strategies"
 readme = "README.md"
@@ -36,7 +36,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/papertrade"]
+packages = ["src/zebu"]
 
 [tool.ruff]
 line-length = 88
@@ -55,7 +55,7 @@ select = [
 ignore = []
 
 [tool.ruff.lint.isort]
-known-first-party = ["papertrade"]
+known-first-party = ["zebu"]
 
 [tool.pyright]
 include = ["src"]
