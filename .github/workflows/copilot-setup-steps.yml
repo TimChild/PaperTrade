@@ -86,6 +86,10 @@ jobs:
       - name: Setup frontend dependencies
         run: task setup:frontend
 
+      - name: Install Playwright browsers
+        working-directory: ./frontend
+        run: npx playwright install --with-deps
+
       - name: Validate environment setup
         run: task validate:env
 

@@ -6,6 +6,20 @@ Minor improvements, tech debt, and enhancements that don't block main developmen
 
 ## Active Backlog
 
+## Monitoring & Observability
+
+See [Monitoring Solutions Analysis](docs/planning/research/monitoring-solutions-analysis.md) for detailed cost/benefit breakdown.
+
+**Recommended stack** ($9/month):
+- Sentry Free (error tracking, 5K errors/month) - $0
+- Grafana Cloud Free (infrastructure monitoring) - $0
+- Plausible (analytics, 10K pageviews) - $9/month
+
+**Setup time**: 2-3 hours total
+**When**: After domain/SSL setup (monitoring more useful in production)
+
+---
+
 ### UX Improvements (MEDIUM-HIGH PRIORITY)
 
 1. **Show Real-Time Stock Prices in Holdings** - ~2-3 hours
@@ -39,19 +53,13 @@ Minor improvements, tech debt, and enhancements that don't block main developmen
 
 ### Testing & Quality (MEDIUM PRIORITY)
 
-1. **Fix E2E Tests in Agent Environment** - ~2-4 hours
-   - **Problem**: E2E tests fail at runtime in agent environment despite Clerk auth fix (PR #83)
-   - **Root Cause**: Frontend container not accessible at `localhost:5173` + Playwright browser download blocked by firewall
-   - **Findings from PR #83**:
-     - ✅ Clerk authentication tokens now work (switched from `@clerk/backend` SDK to direct axios API calls)
-     - ✅ `.env` file created correctly with secrets
-     - ❌ Playwright can't download Chrome (firewall blocks `storage.googleapis.com`)
-     - ❌ Frontend container not reachable from test runner
-   - **Solution Options**:
-     - Add `storage.googleapis.com` to Copilot agent firewall allowlist
-     - Pre-install Playwright browsers in `copilot-setup-steps.yml`
-     - Investigate Docker networking for frontend accessibility
-   - **Reference**: `agent_progress_docs/2026-01-07_05-47-05_verify-e2e-tests-agent-environment.md`
+1. **E2E Tests in Agent Environment** - ✅ **DIAGNOSED** (PR #133)
+   - **Status**: E2E tests cannot run in agent environment due to Playwright browser binaries (~250MB)
+   - **Root Cause**: Browser download required, agent timeout constraints (30min) + slow Docker builds (9min) make installation impractical
+   - **Solution**: Use unit tests in agent environment, E2E validation happens in main CI (`.github/workflows/ci.yml` with browser caching)
+   - **Impact**: Agents validate with 545 backend + 197 frontend unit tests; E2E coverage maintained in CI pipeline
+   - **Reference**: `agent_progress_docs/2026-01-15_03-11-39_task133-verify-e2e-tests-agent-environment.md`
+   - **Action Needed**: Update `.github/workflows/copilot-setup-steps.yml` to install Playwright browsers (adds ~2min to agent startup)
 
 2. **Implement Skipped Scheduler Tests** - ~4-6 hours
    - 4 tests in `tests/unit/infrastructure/test_scheduler.py` are skipped
@@ -76,22 +84,13 @@ Minor improvements, tech debt, and enhancements that don't block main developmen
 
 ### Code Quality & Linting (LOW PRIORITY)
 
-1. **React Patterns Audit & Refactoring** - ~2-3 days (phased)
-   - **Problem**: After fixing PR #90, identified potential useEffect anti-patterns and ESLint suppressions in codebase
-   - **Goal**: Systematically audit and refactor to idiomatic React patterns
-   - **Scope**:
-     - Audit all ESLint suppressions (especially `react-hooks/*`)
-     - Identify setState-in-effect anti-patterns
-     - Refactor to use key prop pattern, controlled components, derived state
-     - Improve test reliability and reduce race conditions
-   - **Phases**:
-     1. Discovery & assessment (create findings document)
-     2. High-priority refactoring (ESLint suppressions, performance issues)
-     3. Medium-priority improvements (form libraries, error boundaries, code splitting)
-     4. Documentation & prevention (style guide, examples)
-   - **Benefits**: Better code quality, more reliable tests, easier maintenance, prevent future anti-patterns
-   - **Detailed Plan**: `docs/planning/react-patterns-audit.md`
-   - **Note**: Low priority tech debt - schedule during slower periods or allocate 10-20% sprint capacity
+1. **React Patterns Audit** - ✅ **COMPLETE** (PR #134)
+   - **Status**: Codebase quality is **exceptional** - only 1 ESLint suppression found across 98 files
+   - **Single Issue**: TradeForm.tsx setState-in-useEffect for Quick Sell feature (well-documented, functional)
+   - **Recommendation**: Optional low-priority refactor (~2 hours, medium ROI)
+   - **Impact**: Current implementation is well-tested (197 passing tests) and intentionally documented
+   - **Reference**: `agent_progress_docs/2026-01-15_030422_react-patterns-audit-findings.md`
+   - **Next Steps**: Defer refactor - focus on higher-value work. Consider tackling if working on TradeForm for other reasons.
 
 2. **Fix remaining ruff linting warnings** - ~10 minutes
    - 3 warnings: `B904` (exception chaining), `B007` (unused loop var), `E501` (long line)
