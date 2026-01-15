@@ -250,7 +250,7 @@ await page.getByText('Buy').click() // Breaks if text changes
 await page.locator('.btn-primary').click() // Breaks if CSS changes
 ```
 
-See `docs/TESTING_CONVENTIONS.md` for complete test ID naming guidelines.
+See [testing-conventions.md](./testing-conventions.md) for complete test ID naming guidelines.
 
 ## Current E2E Test Suite
 
@@ -319,7 +319,9 @@ npx playwright test -g "should execute buy trade"
 
 ## Related Documentation
 
-- [Testing Conventions](./TESTING_CONVENTIONS.md) - Test ID naming patterns
+- [Testing Conventions](./testing-conventions.md) - Test ID naming patterns
+- [Testing Guide](./testing.md) - Quick reference for running tests
+- [QA Accessibility Guide](./qa-accessibility-guide.md) - Accessibility testing
 - [Contributing Guide](../CONTRIBUTING.md) - General testing guidelines
 - [Playwright Docs](https://playwright.dev/) - Playwright API reference
 

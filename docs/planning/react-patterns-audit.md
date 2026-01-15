@@ -340,7 +340,7 @@ For each refactoring:
 ## Related Documents
 
 - `.github/agents/frontend-swe.md` - Agent instructions with React patterns guidance
-- `docs/TESTING_CONVENTIONS.md` - Testing best practices
+- `../reference/testing-conventions.md` - Testing best practices
 - `agent_progress_docs/2026-01-08_*_react-patterns-refactor.md` - Implementation progress
 
 ## Task Breakdown for Orchestrator

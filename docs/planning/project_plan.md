@@ -3,7 +3,7 @@
 **Note**: This is the **original project plan** from December 2025. For the **refined architecture plans** based on Phase 1-2 learnings, see:
 - **Phase 3 Refined**: `architecture_plans/phase3-refined/` (SELL → Auth → Analytics)
 - **Phase 4 Refined**: `architecture_plans/phase4-refined/` (UX, Orders, Multi-Provider, Observability)
-- **Product Roadmap**: `docs/PRODUCT_ROADMAP.md` (user-facing)
+- **Product Roadmap**: `product-roadmap.md` (user-facing)
 
 The original plan below is preserved for historical context. Phase 3-4 have been refined based on actual implementation velocity and user needs analysis.
 

@@ -11,12 +11,12 @@ A stock market emulation platform for practicing trading strategies without risk
 ## 📚 Documentation
 
 **New Users?** Start here:
-- **[Executive Summary](docs/EXECUTIVE_SUMMARY.md)** - Quick overview of current capabilities
+- **[Executive Summary](docs/planning/executive-summary.md)** - Quick overview of current capabilities
 - **[User Guide](docs/USER_GUIDE.md)** - Step-by-step instructions for using PaperTrade
 
 **Developers & Contributors:**
-- **[Feature Status Matrix](docs/FEATURE_STATUS.md)** - Complete feature implementation status
-- **[Technical Boundaries](docs/TECHNICAL_BOUNDARIES.md)** - Known limitations and edge cases
+- **[Feature Status Matrix](docs/planning/feature-status.md)** - Complete feature implementation status
+- **[Technical Boundaries](docs/architecture/technical-boundaries.md)** - Known limitations and edge cases
 
 **Deployment & Operations:**
 - **[Proxmox VM Deployment](docs/deployment/proxmox-vm-deployment.md)** - Production deployment guide

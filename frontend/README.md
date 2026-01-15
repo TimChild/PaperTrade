@@ -142,7 +142,7 @@ E2E tests use `data-testid` attributes for stable element targeting. Follow thes
 - `trade-form-buy-button` - Buy button in trade form
 - `holding-symbol-IBM` - IBM symbol in holdings table
 
-See `docs/TESTING_CONVENTIONS.md` for complete guidelines.
+See `docs/reference/testing-conventions.md` for complete guidelines.
 
 **Adding test IDs**:
 ```tsx

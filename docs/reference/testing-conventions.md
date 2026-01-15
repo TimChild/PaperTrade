@@ -201,6 +201,12 @@ See [testing.md](./testing.md) for:
 - Naming conventions for test functions
 - Common issues and solutions
 
+## Related Documentation
+
+- [E2E Testing Standards](./e2e-testing-standards.md) - When and how to write E2E tests
+- [Testing Guide](./testing.md) - Quick reference for running tests
+- [QA Accessibility Guide](./qa-accessibility-guide.md) - Accessibility testing
+
 ## References
 
 - [Playwright: Locate by test ID](https://playwright.dev/docs/locators#locate-by-test-id)
