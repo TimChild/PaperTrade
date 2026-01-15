@@ -1,8 +1,8 @@
-# MCP Server Configuration for PaperTrade
+# MCP Server Configuration for Zebu
 
 **Last Updated**: January 1, 2026
 
-This document explains the Model Context Protocol (MCP) servers configured for the PaperTrade workspace and how they enhance the orchestrator's capabilities.
+This document explains the Model Context Protocol (MCP) servers configured for the Zebu workspace and how they enhance the orchestrator's capabilities.
 
 ## Overview
 
@@ -51,7 +51,7 @@ MCP servers extend AI assistant capabilities by providing structured access to t
 **Purpose**: Database inspection and queries
 **Command**: `npx mcp-server-postgres`
 **Status**: ✅ Enabled
-**Connection**: `postgresql://papertrade:secret@localhost:5432/papertrade`
+**Connection**: `postgresql://zebu:secret@localhost:5432/zebu`
 
 **Capabilities**:
 - Inspect database schema
@@ -70,7 +70,7 @@ MCP servers extend AI assistant capabilities by providing structured access to t
 **Purpose**: Enhanced file operations
 **Command**: `npx @modelcontextprotocol/server-filesystem`
 **Status**: ✅ Enabled
-**Scope**: `/Users/timchild/github/PaperTrade`
+**Scope**: `/Users/timchild/github/Zebu`
 
 **Capabilities**:
 - Advanced file search and analysis
@@ -196,7 +196,7 @@ To disable a server temporarily, set `"disabled": true` in `.vscode/mcp.json`:
 
 2. Test connection manually:
    ```bash
-   psql postgresql://papertrade:secret@localhost:5432/papertrade
+   psql postgresql://zebu:secret@localhost:5432/zebu
    ```
 
 3. Check connection string in `mcp.json` matches `docker-compose.yml`
