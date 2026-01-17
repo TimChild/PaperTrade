@@ -23,8 +23,8 @@ from zebu.infrastructure.scheduler import (
     stop_scheduler,
 )
 
-# Configure logging
-logger = logging.getLogger(__name__)
+# Use uvicorn's logger which is already configured
+logger = logging.getLogger("uvicorn.error")
 
 
 @asynccontextmanager
