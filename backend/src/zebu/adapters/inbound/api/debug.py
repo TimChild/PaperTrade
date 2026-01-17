@@ -244,3 +244,62 @@ async def get_debug_info(
         "api_keys": _get_api_keys_status(),
         "services": await _get_services_health(),
     }
+
+
+@router.get("/scheduler")
+async def get_scheduler_status() -> dict[str, Any]:
+    """Get background scheduler status.
+
+    Returns information about the APScheduler background job scheduler,
+    including whether it's running and details about scheduled jobs.
+
+    Returns:
+        Dictionary containing:
+        - running: Whether scheduler is currently running
+        - jobs: List of scheduled jobs with their next run times
+        - job_count: Total number of jobs scheduled
+
+    Example:
+        ```json
+        {
+          "running": true,
+          "job_count": 2,
+          "jobs": [
+            {
+              "id": "refresh_prices",
+              "name": "Refresh Active Stock Prices",
+              "next_run_time": "2026-01-18T00:00:00+00:00"
+            }
+          ]
+        }
+        ```
+    """
+    from zebu.infrastructure.scheduler import get_scheduler
+
+    scheduler = get_scheduler()
+
+    if scheduler is None:
+        return {
+            "running": False,
+            "job_count": 0,
+            "jobs": [],
+        }
+
+    jobs_info = []
+    for job in scheduler.get_jobs():
+        jobs_info.append(
+            {
+                "id": job.id,
+                "name": job.name,
+                "next_run_time": (
+                    job.next_run_time.isoformat() if job.next_run_time else None
+                ),
+                "trigger": str(job.trigger),
+            }
+        )
+
+    return {
+        "running": scheduler.running,
+        "job_count": len(jobs_info),
+        "jobs": jobs_info,
+    }
