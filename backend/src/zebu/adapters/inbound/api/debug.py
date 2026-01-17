@@ -303,3 +303,95 @@ async def get_scheduler_status() -> dict[str, Any]:
         "job_count": len(jobs_info),
         "jobs": jobs_info,
     }
+
+
+@router.get("/price-cache/{ticker}")
+async def get_price_cache_status(
+    ticker: str,
+    session: SessionDep,
+) -> dict[str, Any]:
+    """Get price cache status for a ticker.
+
+    Shows what price data exists in the database for debugging
+    data completeness issues.
+
+    Args:
+        ticker: Stock ticker symbol
+        session: Database session
+
+    Returns:
+        Cache status including date coverage and gaps
+    """
+    from datetime import timedelta
+
+    from zebu.adapters.outbound.repositories.price_repository import (
+        PriceHistoryModel,
+    )
+
+    # Get all price points for this ticker
+    query = (
+        select(PriceHistoryModel)
+        .where(PriceHistoryModel.ticker == ticker.upper())
+        .where(PriceHistoryModel.interval == "1day")
+        .order_by(PriceHistoryModel.timestamp.asc())  # type: ignore[attr-defined]
+    )
+
+    result = await session.exec(query)
+    models = result.all()
+
+    if not models:
+        return {
+            "ticker": ticker.upper(),
+            "has_data": False,
+            "total_records": 0,
+        }
+
+    # Extract unique dates
+    unique_dates = sorted(set(m.timestamp.date() for m in models))
+
+    # Find gaps (missing dates between min and max)
+    gaps = []
+    if len(unique_dates) > 1:
+        for i in range(len(unique_dates) - 1):
+            current = unique_dates[i]
+            next_date = unique_dates[i + 1]
+            expected_next = current + timedelta(days=1)
+
+            # Skip weekends (Saturday=5, Sunday=6)
+            while expected_next.weekday() >= 5:
+                expected_next += timedelta(days=1)
+
+            if next_date != expected_next:
+                # Gap detected - list missing dates
+                missing = []
+                check_date = expected_next
+                while check_date < next_date:
+                    if check_date.weekday() < 5:  # Skip weekends
+                        missing.append(check_date.isoformat())
+                    check_date += timedelta(days=1)
+                gaps.append(
+                    {
+                        "after": current.isoformat(),
+                        "before": next_date.isoformat(),
+                        "missing_dates": missing,
+                    }
+                )
+
+    return {
+        "ticker": ticker.upper(),
+        "has_data": True,
+        "total_records": len(models),
+        "unique_dates": len(unique_dates),
+        "earliest_date": unique_dates[0].isoformat(),
+        "latest_date": unique_dates[-1].isoformat(),
+        "date_coverage": [d.isoformat() for d in unique_dates],
+        "gaps": gaps,
+        "sample_records": [
+            {
+                "date": m.timestamp.date().isoformat(),
+                "price": float(m.price_amount),
+                "timestamp": m.timestamp.isoformat(),
+            }
+            for m in models[:3]
+        ],
+    }
