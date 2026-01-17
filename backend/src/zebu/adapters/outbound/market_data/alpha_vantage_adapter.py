@@ -556,26 +556,41 @@ class AlphaVantageAdapter:
         else:
             logger.info("Cache miss", extra={"ticker": ticker.symbol})
 
-        # If we have data, return it
-        if history:
-            logger.info(
-                "Returning cached data",
-                extra={
-                    "ticker": ticker.symbol,
-                    "points_returned": len(history),
-                    "source": "database_cache",
-                },
-            )
-            return history
+        # Check if cached data is complete for requested range
+        if history and interval == "1day":
+            if self._is_cache_complete(history, start, end):
+                logger.info(
+                    "Returning complete cached data",
+                    extra={
+                        "ticker": ticker.symbol,
+                        "cached_points": len(history),
+                        "date_range": f"{start.date()} to {end.date()}",
+                    },
+                )
+                return history
+            else:
+                logger.info(
+                    "Cached data incomplete, fetching from API",
+                    extra={
+                        "ticker": ticker.symbol,
+                        "cached_points": len(history),
+                        "requested_range": f"{start.date()} to {end.date()}",
+                        "cached_range": (
+                            f"{history[0].timestamp.date()} to "
+                            f"{history[-1].timestamp.date()}"
+                        ),
+                    },
+                )
+                # Fall through to API fetch
 
-        # No cached data - fetch from API if interval is "1day"
+        # No cached data or incomplete - fetch from API if interval is "1day"
         # Only support daily data fetching for now (Alpha Vantage free tier)
         if interval == "1day":
             logger.info(
                 "Fetching from Alpha Vantage API",
                 extra={
                     "ticker": ticker.symbol,
-                    "reason": "cache_miss",
+                    "reason": "cache_miss" if not history else "cache_incomplete",
                 },
             )
 
@@ -651,6 +666,78 @@ class AlphaVantageAdapter:
 
         # For other intervals, return empty list if no cached data
         return []
+
+    def _is_cache_complete(
+        self,
+        cached_data: list[PricePoint],
+        start: datetime,
+        end: datetime,
+    ) -> bool:
+        """Check if cached data is complete for the requested date range.
+
+        For daily data, validates:
+        1. Boundary coverage: Cache spans from start to end (±1 day tolerance)
+        2. Density check: Has at least 70% of expected trading days
+           (for ranges ≤30 days)
+
+        Args:
+            cached_data: List of cached price points (assumed sorted by timestamp)
+            start: Start of requested range (UTC)
+            end: End of requested range (UTC)
+
+        Returns:
+            True if cached data appears complete, False if likely incomplete
+        """
+        if not cached_data:
+            return False
+
+        # Get boundary timestamps
+        first_cached = cached_data[0].timestamp.replace(tzinfo=UTC)
+        last_cached = cached_data[-1].timestamp.replace(tzinfo=UTC)
+
+        # Check boundary coverage (allow 1-day tolerance for timezone/market timing)
+        if first_cached > start + timedelta(days=1):
+            logger.debug(
+                "Cache incomplete: missing early dates",
+                extra={
+                    "first_cached": first_cached.date().isoformat(),
+                    "requested_start": start.date().isoformat(),
+                },
+            )
+            return False
+
+        if last_cached < end - timedelta(days=1):
+            logger.debug(
+                "Cache incomplete: missing recent dates",
+                extra={
+                    "last_cached": last_cached.date().isoformat(),
+                    "requested_end": end.date().isoformat(),
+                },
+            )
+            return False
+
+        # For short date ranges (≤30 days), verify density
+        # This catches major gaps in the middle of the range
+        days_requested = (end - start).days
+        if days_requested <= 30:
+            # Estimate expected trading days (rough: 5/7 of calendar days)
+            expected_trading_days = days_requested * 5 / 7
+            # Require at least 70% of expected days (allows for holidays, minor gaps)
+            min_required_points = int(expected_trading_days * 0.7)
+
+            if len(cached_data) < min_required_points:
+                logger.debug(
+                    "Cache incomplete: insufficient density",
+                    extra={
+                        "cached_points": len(cached_data),
+                        "min_required": min_required_points,
+                        "days_requested": days_requested,
+                    },
+                )
+                return False
+
+        # Cache appears complete
+        return True
 
     async def _fetch_daily_history_from_api(self, ticker: Ticker) -> list[PricePoint]:
         """Fetch daily historical price data from Alpha Vantage API.
