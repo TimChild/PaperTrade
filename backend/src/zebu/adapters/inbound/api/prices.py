@@ -6,7 +6,7 @@ Provides REST endpoints for price data operations:
 - Get supported tickers
 """
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 import structlog
@@ -247,8 +247,12 @@ async def get_current_price(
 async def get_price_history(
     ticker: str,
     market_data: MarketDataDep,
-    start: Annotated[datetime, Query(description="Start of time range (UTC)")],
-    end: Annotated[datetime, Query(description="End of time range (UTC)")],
+    start: Annotated[
+        str, Query(description="Start of time range (YYYY-MM-DD or ISO datetime)")
+    ],
+    end: Annotated[
+        str, Query(description="End of time range (YYYY-MM-DD or ISO datetime)")
+    ],
     interval: Annotated[
         str,
         Query(description="Price interval (1min, 5min, 1hour, 1day)"),
@@ -274,33 +278,45 @@ async def get_price_history(
         # Parse ticker
         ticker_obj = Ticker(ticker.upper())
 
+        # Parse dates - ensure timezone-aware datetimes (UTC)
+        # Supports both "2026-01-12" (naive) and "2026-01-12T00:00:00Z" (aware) formats
+
+        start_parsed = datetime.fromisoformat(start.replace("Z", "+00:00"))
+        end_parsed = datetime.fromisoformat(end.replace("Z", "+00:00"))
+
+        # If naive (no timezone), assume UTC
+        start_dt = (
+            start_parsed if start_parsed.tzinfo else start_parsed.replace(tzinfo=UTC)
+        )
+        end_dt = end_parsed if end_parsed.tzinfo else end_parsed.replace(tzinfo=UTC)
+
         # Bind ticker context for all logs in this request handler
         log = logger.bind(ticker=ticker, interval=interval)
 
         log.info(
             "Price history API request",
-            start=start.isoformat(),
-            end=end.isoformat(),
+            start=start_dt.isoformat(),
+            end=end_dt.isoformat(),
         )
 
         # Adjust end date to include full day if it's exactly midnight
         # When frontend sends "2026-01-17", it gets parsed as "2026-01-17T00:00:00"
         # but we want to include all data points on that day (up to 23:59:59.999999)
-        adjusted_end = end
-        if end.time() == end.min.time():  # Check if time is 00:00:00
+        adjusted_end = end_dt
+        if end_dt.time() == end_dt.min.time():  # Check if time is 00:00:00
             from datetime import timedelta
 
-            adjusted_end = end + timedelta(days=1, microseconds=-1)
+            adjusted_end = end_dt + timedelta(days=1, microseconds=-1)
 
             log.debug(
                 "Adjusted end date for midnight boundary",
-                original_end=end.isoformat(),
+                original_end=end_dt.isoformat(),
                 adjusted_end=adjusted_end.isoformat(),
             )
 
         # Get price history
         history = await market_data.get_price_history(
-            ticker_obj, start, adjusted_end, interval
+            ticker_obj, start_dt, adjusted_end, interval
         )
 
         # Convert to response model
@@ -327,15 +343,15 @@ async def get_price_history(
         if len(prices) == 0:
             log.warning(
                 "Price history returned empty",
-                start=start.isoformat(),
-                end=end.isoformat(),
+                start=start_dt.isoformat(),
+                end=adjusted_end.isoformat(),
             )
 
         return PriceHistoryResponse(
             ticker=ticker_obj.symbol,
             prices=prices,
-            start=start,
-            end=end,
+            start=start_dt,
+            end=adjusted_end,
             interval=interval,
             count=len(prices),
         )
