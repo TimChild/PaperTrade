@@ -1,9 +1,9 @@
 """FastAPI application entry point."""
 
-import logging
 import os
 from contextlib import asynccontextmanager
 
+import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -17,30 +17,42 @@ from zebu.adapters.inbound.api.portfolios import router as portfolios_router
 from zebu.adapters.inbound.api.prices import router as prices_router
 from zebu.adapters.inbound.api.transactions import router as transactions_router
 from zebu.infrastructure.database import init_db
+from zebu.infrastructure.logging import setup_structlog
+from zebu.infrastructure.middleware import LoggingContextMiddleware
 from zebu.infrastructure.scheduler import (
     SchedulerConfig,
     start_scheduler,
     stop_scheduler,
 )
 
-# Use uvicorn's logger which is already configured
-logger = logging.getLogger("uvicorn.error")
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):  # type: ignore[misc]  # AsyncGenerator return type is inferred correctly by FastAPI
     """Application lifespan manager - runs on startup and shutdown."""
-    logger.info("=== APPLICATION STARTUP ===")
+    # Setup logging based on environment
+    environment = os.getenv("APP_ENV", "development")
+    log_level = os.getenv("APP_LOG_LEVEL", "INFO")
+    json_output = environment == "production"
+
+    setup_structlog(log_level=log_level, json_output=json_output)
+
+    logger = structlog.get_logger(__name__)
+    logger.info(
+        "Application starting",
+        environment=environment,
+        log_level=log_level,
+        json_output=json_output,
+    )
 
     # Startup: Initialize database
-    logger.info("Initializing database...")
+    logger.info("Initializing database")
     await init_db()
     logger.info("Database initialized")
 
     # Startup: Initialize and start background scheduler
     # Configuration can be customized by creating SchedulerConfig instance
     # For now, using defaults (disabled in tests via config override)
-    logger.info("Preparing scheduler configuration...")
+    logger.info("Preparing scheduler configuration")
     scheduler_config = SchedulerConfig(
         enabled=True,  # Set to False to disable scheduler
         refresh_cron="0 0 * * *",  # Midnight UTC daily
@@ -48,22 +60,25 @@ async def lifespan(app: FastAPI):  # type: ignore[misc]  # AsyncGenerator return
         batch_delay_seconds=12,  # ~5 calls/min (12 seconds between calls)
         active_stock_days=30,  # Consider stocks traded in last 30 days
     )
-    logger.info(f"Scheduler config: enabled={scheduler_config.enabled}")
-    logger.info(f"Scheduler cron: {scheduler_config.refresh_cron}")
+    logger.info(
+        "Scheduler configuration",
+        enabled=scheduler_config.enabled,
+        cron=scheduler_config.refresh_cron,
+    )
 
-    logger.info("Starting background scheduler...")
+    logger.info("Starting background scheduler")
     try:
         await start_scheduler(scheduler_config)
         logger.info("Scheduler startup completed")
     except Exception as e:
-        logger.error(f"Failed to start scheduler: {e}", exc_info=True)
+        logger.error("Failed to start scheduler", error=str(e), exc_info=True)
 
-    logger.info("=== APPLICATION STARTUP COMPLETE ===")
+    logger.info("Application startup complete")
 
     yield
 
     # Shutdown: Stop background scheduler
-    logger.info("=== APPLICATION SHUTDOWN ===")
+    logger.info("Application shutting down")
     await stop_scheduler()
     logger.info("Scheduler stopped")
 
@@ -79,6 +94,9 @@ app = FastAPI(
 
 # Register exception handlers
 register_exception_handlers(app)
+
+# Add logging middleware (should be early in middleware chain)
+app.add_middleware(LoggingContextMiddleware)
 
 # CORS configuration
 # Allow specific origins from environment variable
