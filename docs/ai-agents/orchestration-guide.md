@@ -225,72 +225,18 @@ task lint           # Run linters
 
 ### Reviewing Agent Work
 
-**Quality Checklist** (score 0-10, merge at 9+):
-
-**Architecture (0-3 points)**:
-- [ ] Clean Architecture compliance (dependencies point inward)
-- [ ] Repository pattern used correctly
-- [ ] Domain logic is pure (no I/O)
-
-**Code Quality (0-3 points)**:
-- [ ] Complete type hints, no suppressions
-- [ ] Idiomatic patterns (no anti-patterns)
-- [ ] Proper error handling
-
-**Testing (0-3 points)**:
-- [ ] Behavior-focused tests (not implementation)
-- [ ] No mocking internal logic
-- [ ] Edge cases covered
-
-**Maintainability (0-1 point)**:
-- [ ] Clear, self-documenting code
-- [ ] Consistent with existing patterns
-
-**Scoring Guide**:
-- **10/10**: Exemplary - sets new quality bar
-- **9/10**: Excellent - merge immediately
-- **7-8/10**: Good but needs minor changes
-- **5-6/10**: Needs significant rework
-- **<5/10**: Reject - fundamental issues
-
-**Red Flags** (automatic rejection):
-- ❌ Domain imports from Infrastructure
-- ❌ Tests mock internal logic (not boundaries)
-- ❌ Type suppressions without justification
-- ❌ No tests for new functionality
-- ❌ Anti-patterns (setState-in-useEffect, etc.)
+**Use evaluation standards from 'Orchestrator Mindset' section above.** Merge at 9/10 or higher.
 
 ### Requesting Changes from Agents
-When you need the agent to fix issues in their PR, add comments starting with `@copilot`:
+Tag agent in PR comments with `@copilot`:
 
 ```bash
-# Tag the agent in PR comments to request changes
 GH_PAGER="" gh pr comment <PR_NUMBER> --body "@copilot Please fix the failing tests..."
 ```
 
-This ensures the Copilot agent sees and responds to your feedback.
-
-**GitHub CLI Best Practice**:
-Always prefix gh commands with `GH_PAGER=""` to prevent interactive pager blocking:
-
-```bash
-# Good
-GH_PAGER="" gh pr list
-GH_PAGER="" gh pr view 47
-GH_PAGER="" gh issue list
-
-# Bad - may hang waiting for pager input
-gh pr list
-gh pr view 47
-```
+**Note**: Always use `GH_PAGER=""` prefix for gh commands (see Troubleshooting section).
 
 ### Workflow
-
-**Strategic Priorities**:
-1. **Quality > Speed**: Better to delay a feature than merge technical debt
-2. **Architecture > Features**: Maintain Clean Architecture even if it takes longer
-3. **Tests > Coverage**: Behavior-focused tests matter more than high coverage numbers
-4. **Clarity > Cleverness**: Obvious code beats clever code
 
 **Work Organization**:
 - **Parallelize independent work** (different layers, different tech stacks)
@@ -388,105 +334,27 @@ git push --force-with-lease
 
 ## Real-World Examples from Zebu
 
-### Example 1: Quality Win - React Patterns Audit (Task #134)
+**Evaluation Before Action** (Task #134): Audited "React Patterns" tech debt → Found only 1 ESLint suppression across 98 files. Skipped refactor, celebrated exceptional quality. *Lesson: Verify assumptions with data.*
 
-**Context**: BACKLOG.md listed "React Patterns Audit - ~2-3 days (phased)" as potential tech debt.
+**Diagnostic Tasks** (Task #133): E2E failures → Agent found missing Playwright browsers. Orchestrator fixed directly (1-line change). *Lesson: Simple fixes don't need agent tasks.*
 
-**Orchestrator Action**:
-- Created evaluation-only task (don't fix yet, assess first)
-- Agent found: **Only 1 ESLint suppression across 98 files** - exceptional quality!
-- Decision: Skip refactor (low ROI), celebrate win
+**Protecting Standards**: Agent proposed `# type: ignore` → Rejected, requested proper types. *Lesson: Quality standards compound - one exception becomes ten.*
 
-**Lesson**: Don't assume tech debt exists - verify with data. Exceptional quality deserves recognition.
+**Strategic Wins** (PR #135): Fixed last ESLint suppression → Achieved 0 suppressions codebase-wide. Small effort, high morale value. *Lesson: Strategic small wins matter.*
 
-### Example 2: Infrastructure Fix - E2E Tests in Agent Environment (Task #133)
-
-**Context**: E2E tests failing in agent environment, blocking autonomous agent validation.
-
-**Orchestrator Action**:
-- Created diagnostic task (understand problem before fixing)
-- Agent found: Playwright browsers not installed (~250MB)
-- Root cause: Missing `npx playwright install` in copilot-setup-steps.yml
-- **Fixed immediately** by orchestrator (simple 1-line addition)
-
-**Lesson**: Diagnostic tasks reveal simple fixes. Sometimes orchestrator should fix directly vs creating another agent task.
-
-### Example 3: Rejecting a Compromise
-
-**Scenario**: Agent proposes quick fix with `# type: ignore` suppression.
-
-**Orchestrator Response**:
-```bash
-@copilot This PR adds a type suppression which violates our quality standards.
-
-❌ Problem: `# type: ignore` hides the real issue
-✅ Solution: Add proper type hints or define explicit types
-
-Our codebase has 0 type suppressions - let's keep it that way.
-Please refactor to resolve the type error properly.
-```
-
-**Outcome**: Agent provides proper types, maintains quality standard.
-
-**Lesson**: Protecting quality standards compounds over time. One suppression becomes ten.
-
-### Example 4: Strategic Refactor - TradeForm ESLint Suppression (PR #135)
-
-**Context**: Agent audit found 1 ESLint suppression (setState-in-useEffect pattern).
-
-**Orchestrator Decision**:
-- Evaluated: Is this a quick fix? Yes (~30 minutes)
-- Impact: Eliminates last suppression → **0 ESLint suppressions codebase-wide**
-- Trade-off: Small effort for significant quality milestone
-- **Action**: Fixed directly, merged same day
-
-**Lesson**: Strategic small wins (0 suppressions) have outsized morale and quality signaling value.
-
-### Example 5: Choosing Quality Over Speed
-
-**Scenario**: Two paths for implementing analytics:
-- Path A: Quick hacky implementation (2 days)
-- Path B: Proper domain modeling + ports (4 days)
-
-**Orchestrator Decision**: Path B
-
-**Rationale**:
-- Analytics will evolve (more metrics, more views)
-- Proper architecture makes changes easy
-- 2 extra days now saves weeks of refactoring later
-- Maintains Clean Architecture integrity
-
-**Outcome**: PR #73-78 (Analytics) scored 10/10, extensible architecture, 489+ tests.
-
-**Lesson**: Double the time for proper architecture is a bargain long-term.
-
----
-
-## Quality Metrics: Zebu's Current State
-
-As of January 14, 2026, these metrics demonstrate the value of quality-first orchestration:
-
-| Metric | Value | Achievement |
-|--------|-------|-------------|
-| Total Tests | 742 (545 backend + 197 frontend) | Comprehensive coverage |
-| ESLint Suppressions | **0** | Zero technical debt markers |
-| TypeScript `any` | **0** | Full type safety |
-| Architecture Violations | **0** | Clean Architecture maintained |
-| Backend Coverage | 81%+ | Domain/Application: 93-100% |
-| CI/CD | ✅ Passing | All quality gates automated |
-
-**Key Insight**: These metrics are not accidental - they result from **consistently rejecting substandard PRs** and maintaining high standards throughout development.
+**Quality vs Speed**: Analytics implementation - chose proper architecture (4 days) over quick hack (2 days) → 10/10 PR, extensible design, 489+ tests. *Lesson: 2x time for proper architecture is a bargain.*
 
 ---
 
 ## Orchestrator's Oath
 
-As an orchestrator, remember:
+**Zebu's Quality Metrics** (Jan 2026): 742 tests, 0 ESLint suppressions, 0 TypeScript `any`, 0 architecture violations, 81%+ coverage. *These results come from consistently rejecting substandard PRs.*
 
+**Core Principles**:
 1. **Quality compounds** - Every good decision makes the next one easier
 2. **Reject with respect** - Agents learn from feedback, not from merges
 3. **Long-term thinking** - Maintain code you'll be proud of in 5 years
 4. **Standards matter** - Consistency creates predictability
-5. **Celebrate wins** - Recognize exceptional work (0 suppressions!)
+5. **Celebrate wins** - Recognize exceptional work
 
-**Most importantly**: You're building a codebase, not just shipping features. Make decisions you'll thank yourself for later.
+**Remember**: You're building a codebase, not just shipping features. Make decisions you'll thank yourself for later.
