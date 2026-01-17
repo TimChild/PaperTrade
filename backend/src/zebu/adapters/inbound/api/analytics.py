@@ -326,9 +326,7 @@ admin_router = APIRouter(prefix="/analytics", tags=["analytics-admin"])
 
 
 @admin_router.post("/prices/refresh", status_code=201)
-async def trigger_price_refresh(
-    current_user_id: CurrentUserDep,
-) -> dict[str, str]:
+async def trigger_price_refresh() -> dict[str, str]:
     """Manually trigger price refresh job for active stocks.
 
     Refreshes prices for all active tickers (from watchlist and recent trades).
@@ -336,16 +334,13 @@ async def trigger_price_refresh(
 
     **Admin only** (TODO: Add admin authentication)
 
-    Args:
-        current_user_id: Current user ID (injected, for future admin check)
-
     Returns:
-        dict with status: {"status": "started", "message": "..."}
+        dict with status: {"status": "completed", "message": "..."}
 
     Raises:
         HTTPException: 500 if refresh fails
     """
-    # TODO: Add admin authentication check
+    # TODO: Add admin authentication check when auth is implemented
 
     logger.info("Manual price refresh triggered")
 
@@ -374,7 +369,6 @@ async def trigger_price_refresh(
 @admin_router.post("/snapshots/daily", status_code=201)
 async def trigger_daily_snapshots(
     snapshot_job: SnapshotJobDep,
-    current_user_id: CurrentUserDep,
 ) -> dict[str, str | dict[str, int]]:
     """Manually trigger daily snapshot job for all portfolios.
 
@@ -385,7 +379,6 @@ async def trigger_daily_snapshots(
 
     Args:
         snapshot_job: Snapshot job service (injected)
-        current_user_id: Current user ID (injected, for future admin check)
 
     Returns:
         dict with results: {"status": "completed", "results": {...}}
@@ -393,7 +386,7 @@ async def trigger_daily_snapshots(
     Raises:
         HTTPException: 501 if service not configured
     """
-    # TODO: Add admin authentication check
+    # TODO: Add admin authentication check when auth is implemented
 
     logger.info("Manual daily snapshot triggered")
 
