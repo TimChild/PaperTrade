@@ -170,14 +170,14 @@ cmd_status() {
     echo "Service Health:"
 
     # Check PostgreSQL
-    if ssh "$VM_DEFAULT_USER@$vm_ip" "docker exec papertrade-postgres-prod pg_isready -U papertrade &>/dev/null"; then
+    if ssh "$VM_DEFAULT_USER@$vm_ip" "docker exec zebu-postgres-prod pg_isready -U zebu &>/dev/null"; then
         echo "  PostgreSQL:  ✓ Healthy"
     else
         echo "  PostgreSQL:  ✗ Unhealthy"
     fi
 
     # Check Redis
-    if ssh "$VM_DEFAULT_USER@$vm_ip" "docker exec papertrade-redis-prod redis-cli ping &>/dev/null"; then
+    if ssh "$VM_DEFAULT_USER@$vm_ip" "docker exec zebu-redis-prod redis-cli ping &>/dev/null"; then
         echo "  Redis:       ✓ Healthy"
     else
         echo "  Redis:       ✗ Unhealthy"
@@ -209,8 +209,18 @@ cmd_logs() {
     log_step "Showing service logs (press Ctrl+C to exit)..."
     echo ""
 
+    # Check if VM exists
+    if ! vm_exists "$PROXMOX_VM_ID"; then
+        error_exit "VM $PROXMOX_VM_ID does not exist"
+    fi
+
+    # Get VM IP with shorter timeout for logs
     local vm_ip
-    vm_ip=$(get_vm_connection)
+    vm_ip=$(get_vm_ip "$PROXMOX_VM_ID" 5 2>/dev/null)
+
+    if [ -z "$vm_ip" ]; then
+        error_exit "Could not determine VM IP address"
+    fi
 
     # Follow logs from all services
     ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f"
