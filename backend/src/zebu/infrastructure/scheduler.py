@@ -8,6 +8,7 @@ The scheduler is integrated into the FastAPI application lifecycle and starts/st
 automatically with the application.
 """
 
+import asyncio
 import logging
 from datetime import UTC, datetime, timedelta
 
@@ -275,8 +276,17 @@ async def start_scheduler(config: SchedulerConfig | None = None) -> None:
 
     logger.info("Starting background scheduler")
 
-    # Create scheduler
-    _scheduler = AsyncIOScheduler(timezone=config.timezone)
+    # Create scheduler with explicit event loop
+    # This ensures the scheduler uses the same event loop as FastAPI
+    try:
+        event_loop = asyncio.get_running_loop()
+        logger.info(f"Using running event loop: {event_loop}")
+    except RuntimeError:
+        # No running loop, let AsyncIOScheduler create one
+        event_loop = None
+        logger.warning("No running event loop found, using default")
+
+    _scheduler = AsyncIOScheduler(timezone=config.timezone, event_loop=event_loop)
 
     # Add refresh job
     _scheduler.add_job(
@@ -308,7 +318,11 @@ async def start_scheduler(config: SchedulerConfig | None = None) -> None:
 
     # Start the scheduler
     _scheduler.start()
-    logger.info("Background scheduler started successfully")
+    logger.info(
+        f"Background scheduler started successfully. "
+        f"State: running={_scheduler.running}, "
+        f"jobs={len(_scheduler.get_jobs())}"
+    )
 
 
 async def stop_scheduler() -> None:
