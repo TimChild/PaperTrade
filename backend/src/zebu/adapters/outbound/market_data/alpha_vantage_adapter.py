@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from typing import TYPE_CHECKING
 
 import httpx
@@ -824,6 +824,19 @@ class AlphaVantageAdapter:
 
         raise MarketDataUnavailableError("API request failed after retries")
 
+    def _round_to_cents(self, amount_str: str) -> Decimal:
+        """Round decimal string to 2 places (cents) for USD prices.
+
+        Args:
+            amount_str: String representation of price (e.g., "123.4567")
+
+        Returns:
+            Decimal rounded to 2 decimal places using ROUND_HALF_UP
+        """
+        return Decimal(str(amount_str)).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+
     def _parse_daily_history_response(
         self, ticker: Ticker, data: dict[str, object]
     ) -> list[PricePoint]:
@@ -875,7 +888,8 @@ class AlphaVantageAdapter:
                 if not close_str:
                     continue  # Skip incomplete data
 
-                close_value = Decimal(str(close_str))
+                # Round to 2 decimal places before creating Money object
+                close_value = self._round_to_cents(close_str)
                 if close_value <= 0:
                     continue  # Skip invalid prices
 
@@ -891,11 +905,11 @@ class AlphaVantageAdapter:
                 volume = None
 
                 if open_str := daily_data.get("1. open"):
-                    open_value = Money(Decimal(str(open_str)), "USD")
+                    open_value = Money(self._round_to_cents(open_str), "USD")
                 if high_str := daily_data.get("2. high"):
-                    high_value = Money(Decimal(str(high_str)), "USD")
+                    high_value = Money(self._round_to_cents(high_str), "USD")
                 if low_str := daily_data.get("3. low"):
-                    low_value = Money(Decimal(str(low_str)), "USD")
+                    low_value = Money(self._round_to_cents(low_str), "USD")
                 if volume_str := daily_data.get("5. volume"):
                     volume = int(volume_str)
 
