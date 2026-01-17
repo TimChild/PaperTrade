@@ -325,6 +325,52 @@ async def backfill_portfolio_snapshots(
 admin_router = APIRouter(prefix="/analytics", tags=["analytics-admin"])
 
 
+@admin_router.post("/prices/refresh", status_code=201)
+async def trigger_price_refresh(
+    current_user_id: CurrentUserDep,
+) -> dict[str, str]:
+    """Manually trigger price refresh job for active stocks.
+
+    Refreshes prices for all active tickers (from watchlist and recent trades).
+    This is the same job that runs on the scheduled cron.
+
+    **Admin only** (TODO: Add admin authentication)
+
+    Args:
+        current_user_id: Current user ID (injected, for future admin check)
+
+    Returns:
+        dict with status: {"status": "started", "message": "..."}
+
+    Raises:
+        HTTPException: 500 if refresh fails
+    """
+    # TODO: Add admin authentication check
+
+    logger.info("Manual price refresh triggered")
+
+    try:
+        from zebu.infrastructure.scheduler import (
+            SchedulerConfig,
+            refresh_active_stocks,
+        )
+
+        # Use default scheduler config for manual refresh
+        config = SchedulerConfig()
+        await refresh_active_stocks(config)
+
+        return {
+            "status": "completed",
+            "message": "Price refresh completed successfully",
+        }
+    except Exception as e:
+        logger.error(f"Price refresh failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Price refresh failed: {str(e)}",
+        ) from e
+
+
 @admin_router.post("/snapshots/daily", status_code=201)
 async def trigger_daily_snapshots(
     snapshot_job: SnapshotJobDep,
