@@ -50,7 +50,8 @@ async def backfill_prices(days: int = 7) -> None:
         # Combine and deduplicate
         all_tickers = list(set(watchlist_tickers + transaction_tickers))
 
-        print(f"Found {len(all_tickers)} active tickers: {[t.symbol for t in all_tickers]}")
+        ticker_symbols = [t.symbol for t in all_tickers]
+        print(f"Found {len(all_tickers)} active tickers: {ticker_symbols}")
 
         # Get market data adapter
         market_data = await get_market_data(session)
@@ -85,7 +86,7 @@ async def backfill_prices(days: int = 7) -> None:
                 error_count += 1
                 # Continue with next ticker
 
-        print(f"\n=== Backfill Complete ===")
+        print("\n=== Backfill Complete ===")
         print(f"Success: {success_count}, Errors: {error_count}")
 
 
