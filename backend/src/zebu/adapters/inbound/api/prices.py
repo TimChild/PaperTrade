@@ -271,8 +271,19 @@ async def get_price_history(
         # Parse ticker
         ticker_obj = Ticker(ticker.upper())
 
+        # Adjust end date to include full day if it's exactly midnight
+        # When frontend sends "2026-01-17", it gets parsed as "2026-01-17T00:00:00"
+        # but we want to include all data points on that day (up to 23:59:59.999999)
+        adjusted_end = end
+        if end.time() == end.min.time():  # Check if time is 00:00:00
+            from datetime import timedelta
+
+            adjusted_end = end + timedelta(days=1, microseconds=-1)
+
         # Get price history
-        history = await market_data.get_price_history(ticker_obj, start, end, interval)
+        history = await market_data.get_price_history(
+            ticker_obj, start, adjusted_end, interval
+        )
 
         # Convert to response model
         prices = [
