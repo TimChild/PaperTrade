@@ -59,6 +59,7 @@ async def backfill_prices(days: int = 7) -> None:
         # Fetch history for each ticker
         success_count = 0
         error_count = 0
+        total_points_fetched = 0
 
         for ticker in all_tickers:
             try:
@@ -72,7 +73,15 @@ async def backfill_prices(days: int = 7) -> None:
                     interval="1day",
                 )
 
-                print(f"  ✓ Got {len(history)} price points")
+                total_points_fetched += len(history)
+                if history:
+                    first_date = history[0].timestamp.date()
+                    last_date = history[-1].timestamp.date()
+                    date_range = f"{first_date} to {last_date}"
+                    print(f"  ✓ Got {len(history)} price points ({date_range})")
+                else:
+                    print(f"  ✓ Got {len(history)} price points (no data)")
+
                 success_count += 1
 
                 # Commit after each ticker to persist data
@@ -87,7 +96,9 @@ async def backfill_prices(days: int = 7) -> None:
                 # Continue with next ticker
 
         print("\n=== Backfill Complete ===")
+        print(f"Tickers processed: {len(all_tickers)}")
         print(f"Success: {success_count}, Errors: {error_count}")
+        print(f"Total price points fetched: {total_points_fetched}")
 
 
 if __name__ == "__main__":

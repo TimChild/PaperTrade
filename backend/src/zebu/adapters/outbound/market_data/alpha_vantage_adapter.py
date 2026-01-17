@@ -10,6 +10,7 @@ stale cached data if available rather than failing completely.
 
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import TYPE_CHECKING
@@ -31,6 +32,8 @@ if TYPE_CHECKING:
     from zebu.adapters.outbound.repositories.price_repository import (
         PriceRepository,
     )
+
+logger = logging.getLogger(__name__)
 
 
 class AlphaVantageAdapter:
@@ -505,6 +508,18 @@ class AlphaVantageAdapter:
             >>> end = datetime(2024, 12, 31, tzinfo=UTC)
             >>> history = await adapter.get_price_history(Ticker("AAPL"), start, end)
         """
+        # Log incoming request
+        logger.info(
+            "Price history request",
+            extra={
+                "ticker": ticker.symbol,
+                "start": start.isoformat(),
+                "end": end.isoformat(),
+                "interval": interval,
+                "requested_days": (end - start).days,
+            },
+        )
+
         # Validate inputs
         if end < start:
             raise ValueError(f"End date ({end}) must be after start date ({start})")
@@ -526,15 +541,50 @@ class AlphaVantageAdapter:
             ticker, start, end, interval
         )
 
+        # Log cache query result
+        if history:
+            first_date = history[0].timestamp.date()
+            last_date = history[-1].timestamp.date()
+            logger.info(
+                "Cache query result",
+                extra={
+                    "ticker": ticker.symbol,
+                    "cached_points": len(history),
+                    "cached_range": f"{first_date} to {last_date}",
+                },
+            )
+        else:
+            logger.info("Cache miss", extra={"ticker": ticker.symbol})
+
         # If we have data, return it
         if history:
+            logger.info(
+                "Returning cached data",
+                extra={
+                    "ticker": ticker.symbol,
+                    "points_returned": len(history),
+                    "source": "database_cache",
+                },
+            )
             return history
 
         # No cached data - fetch from API if interval is "1day"
         # Only support daily data fetching for now (Alpha Vantage free tier)
         if interval == "1day":
+            logger.info(
+                "Fetching from Alpha Vantage API",
+                extra={
+                    "ticker": ticker.symbol,
+                    "reason": "cache_miss",
+                },
+            )
+
             # Check rate limiting before API call
             if not await self.rate_limiter.can_make_request():
+                logger.warning(
+                    "Rate limit exceeded, cannot fetch data",
+                    extra={"ticker": ticker.symbol},
+                )
                 raise MarketDataUnavailableError(
                     "Rate limit exceeded. Cannot fetch historical data at this time."
                 )
@@ -542,6 +592,10 @@ class AlphaVantageAdapter:
             # Consume rate limit token
             consumed = await self.rate_limiter.consume_token()
             if not consumed:
+                logger.warning(
+                    "Failed to consume rate limit token",
+                    extra={"ticker": ticker.symbol},
+                )
                 raise MarketDataUnavailableError(
                     "Rate limit exceeded. Cannot fetch historical data."
                 )
@@ -550,6 +604,20 @@ class AlphaVantageAdapter:
             try:
                 history = await self._fetch_daily_history_from_api(ticker)
 
+                logger.info(
+                    "Alpha Vantage API fetch successful",
+                    extra={
+                        "ticker": ticker.symbol,
+                        "total_points_fetched": len(history),
+                        "fetched_range": (
+                            f"{history[0].timestamp.date()} to "
+                            f"{history[-1].timestamp.date()}"
+                        )
+                        if history
+                        else "none",
+                    },
+                )
+
                 # Filter to requested date range
                 filtered_history = [
                     p
@@ -557,9 +625,26 @@ class AlphaVantageAdapter:
                     if start <= p.timestamp.replace(tzinfo=UTC) <= end
                 ]
 
+                logger.info(
+                    "Returning filtered API data",
+                    extra={
+                        "ticker": ticker.symbol,
+                        "points_returned": len(filtered_history),
+                        "source": "alpha_vantage_api",
+                    },
+                )
+
                 return filtered_history
 
-            except Exception:
+            except Exception as e:
+                logger.error(
+                    "Alpha Vantage API fetch failed",
+                    extra={
+                        "ticker": ticker.symbol,
+                        "error": str(e),
+                    },
+                    exc_info=True,
+                )
                 # API call failed - return empty list rather than error
                 # This matches the original behavior of returning empty if no data
                 return []
@@ -588,7 +673,12 @@ class AlphaVantageAdapter:
             "function": "TIME_SERIES_DAILY",
             "symbol": ticker.symbol,
             "apikey": self.api_key,
-            "outputsize": "compact",  # Last 100 data points (vs "full" = 20+ years)
+            # Last 100 TRADING days (~4-5 months of calendar time,
+            # excluding weekends/holidays)
+            "outputsize": "compact",
+            # Note: "compact" is limited to 100 data points.
+            # For older data, use "full" (requires premium API key).
+            # Requests beyond this range will return partial results.
         }
 
         last_error: Exception | None = None
@@ -610,6 +700,13 @@ class AlphaVantageAdapter:
 
                     # Store all fetched data in repository
                     if self.price_repository:
+                        logger.info(
+                            "Storing fetched price data in repository",
+                            extra={
+                                "ticker": ticker.symbol,
+                                "points_to_store": len(price_points),
+                            },
+                        )
                         for price_point in price_points:
                             await self.price_repository.upsert_price(price_point)
 
