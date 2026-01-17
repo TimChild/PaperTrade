@@ -6,10 +6,10 @@ Provides REST endpoints for price data operations:
 - Get supported tickers
 """
 
-import logging
 from datetime import datetime, timedelta
 from typing import Annotated
 
+import structlog
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
@@ -20,7 +20,7 @@ from zebu.application.exceptions import (
 )
 from zebu.domain.value_objects.ticker import Ticker
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/prices", tags=["prices"])
 
@@ -274,14 +274,13 @@ async def get_price_history(
         # Parse ticker
         ticker_obj = Ticker(ticker.upper())
 
-        logger.info(
+        # Bind ticker context for all logs in this request handler
+        log = logger.bind(ticker=ticker, interval=interval)
+
+        log.info(
             "Price history API request",
-            extra={
-                "ticker": ticker,
-                "start": start.isoformat(),
-                "end": end.isoformat(),
-                "interval": interval,
-            },
+            start=start.isoformat(),
+            end=end.isoformat(),
         )
 
         # Adjust end date to include full day if it's exactly midnight
@@ -293,13 +292,10 @@ async def get_price_history(
 
             adjusted_end = end + timedelta(days=1, microseconds=-1)
 
-            logger.debug(
+            log.debug(
                 "Adjusted end date for midnight boundary",
-                extra={
-                    "ticker": ticker,
-                    "original_end": end.isoformat(),
-                    "adjusted_end": adjusted_end.isoformat(),
-                },
+                original_end=end.isoformat(),
+                adjusted_end=adjusted_end.isoformat(),
             )
 
         # Get price history
@@ -321,25 +317,18 @@ async def get_price_history(
         ]
 
         # Log response metadata
-        logger.info(
+        log.info(
             "Price history API response",
-            extra={
-                "ticker": ticker,
-                "count": len(prices),
-                "status": "success",
-            },
+            count=len(prices),
+            status="success",
         )
 
         # Warn if response is empty
         if len(prices) == 0:
-            logger.warning(
+            log.warning(
                 "Price history returned empty",
-                extra={
-                    "ticker": ticker,
-                    "start": start.isoformat(),
-                    "end": end.isoformat(),
-                    "interval": interval,
-                },
+                start=start.isoformat(),
+                end=end.isoformat(),
             )
 
         return PriceHistoryResponse(
@@ -625,7 +614,8 @@ async def inspect_price_cache(
     except Exception as e:
         logger.error(
             "Error inspecting price cache",
-            extra={"ticker": ticker, "error": str(e)},
+            ticker=ticker,
+            error=str(e),
             exc_info=True,
         )
         return {

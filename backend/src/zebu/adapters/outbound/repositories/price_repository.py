@@ -5,9 +5,9 @@ price data from PostgreSQL (or SQLite in development). It provides the Tier 2 ca
 layer in the tiered market data architecture.
 """
 
-import logging
 from datetime import UTC, datetime, timedelta
 
+import structlog
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -15,7 +15,7 @@ from zebu.adapters.outbound.models.price_history import PriceHistoryModel
 from zebu.application.dtos.price_point import PricePoint
 from zebu.domain.value_objects.ticker import Ticker
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class PriceRepository:
@@ -100,11 +100,9 @@ class PriceRepository:
 
             logger.debug(
                 "Updated existing price",
-                extra={
-                    "ticker": price.ticker.symbol,
-                    "timestamp": price.timestamp.isoformat(),
-                    "action": "update",
-                },
+                ticker=price.ticker.symbol,
+                timestamp=price.timestamp.isoformat(),
+                action="update",
             )
         else:
             # Insert new record
@@ -113,11 +111,9 @@ class PriceRepository:
 
             logger.debug(
                 "Inserted new price",
-                extra={
-                    "ticker": price.ticker.symbol,
-                    "timestamp": price.timestamp.isoformat(),
-                    "action": "insert",
-                },
+                ticker=price.ticker.symbol,
+                timestamp=price.timestamp.isoformat(),
+                action="insert",
             )
 
         await self.session.flush()
@@ -250,12 +246,10 @@ class PriceRepository:
         """
         logger.debug(
             "Querying price history",
-            extra={
-                "ticker": ticker.symbol,
-                "start": start.isoformat(),
-                "end": end.isoformat(),
-                "interval": interval,
-            },
+            ticker=ticker.symbol,
+            start=start.isoformat(),
+            end=end.isoformat(),
+            interval=interval,
         )
 
         # Build query - strip timezone for PostgreSQL TIMESTAMP WITHOUT TIME ZONE
@@ -277,10 +271,8 @@ class PriceRepository:
 
         logger.debug(
             "Price history query result",
-            extra={
-                "ticker": ticker.symbol,
-                "points_found": len(models),
-            },
+            ticker=ticker.symbol,
+            points_found=len(models),
         )
 
         # Convert to PricePoints
