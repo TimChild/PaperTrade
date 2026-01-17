@@ -203,12 +203,12 @@ wait_for_services_healthy() {
         local all_healthy=true
 
         # Check PostgreSQL
-        if ! ssh "$VM_DEFAULT_USER@$vm_ip" "docker exec papertrade-postgres-prod pg_isready -U papertrade &>/dev/null"; then
+        if ! ssh "$VM_DEFAULT_USER@$vm_ip" "docker exec zebu-postgres-prod pg_isready -U zebu &>/dev/null"; then
             all_healthy=false
         fi
 
         # Check Redis
-        if ! ssh "$VM_DEFAULT_USER@$vm_ip" "docker exec papertrade-redis-prod redis-cli ping &>/dev/null"; then
+        if ! ssh "$VM_DEFAULT_USER@$vm_ip" "docker exec zebu-redis-prod redis-cli ping &>/dev/null"; then
             all_healthy=false
         fi
 
