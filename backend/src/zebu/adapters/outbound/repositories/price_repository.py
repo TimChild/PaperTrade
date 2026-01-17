@@ -5,6 +5,7 @@ price data from PostgreSQL (or SQLite in development). It provides the Tier 2 ca
 layer in the tiered market data architecture.
 """
 
+import logging
 from datetime import UTC, datetime, timedelta
 
 from sqlmodel import select
@@ -13,6 +14,8 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from zebu.adapters.outbound.models.price_history import PriceHistoryModel
 from zebu.application.dtos.price_point import PricePoint
 from zebu.domain.value_objects.ticker import Ticker
+
+logger = logging.getLogger(__name__)
 
 
 class PriceRepository:
@@ -94,10 +97,28 @@ class PriceRepository:
             existing.close_amount = price.close.amount if price.close else None
             existing.close_currency = price.close.currency if price.close else None
             existing.volume = price.volume
+
+            logger.debug(
+                "Updated existing price",
+                extra={
+                    "ticker": price.ticker.symbol,
+                    "timestamp": price.timestamp.isoformat(),
+                    "action": "update",
+                },
+            )
         else:
             # Insert new record
             model = PriceHistoryModel.from_price_point(price)
             self.session.add(model)
+
+            logger.debug(
+                "Inserted new price",
+                extra={
+                    "ticker": price.ticker.symbol,
+                    "timestamp": price.timestamp.isoformat(),
+                    "action": "insert",
+                },
+            )
 
         await self.session.flush()
 
@@ -227,6 +248,16 @@ class PriceRepository:
             ...     interval="1day"
             ... )
         """
+        logger.debug(
+            "Querying price history",
+            extra={
+                "ticker": ticker.symbol,
+                "start": start.isoformat(),
+                "end": end.isoformat(),
+                "interval": interval,
+            },
+        )
+
         # Build query - strip timezone for PostgreSQL TIMESTAMP WITHOUT TIME ZONE
         start_naive = start.replace(tzinfo=None) if start.tzinfo else start
         end_naive = end.replace(tzinfo=None) if end.tzinfo else end
@@ -243,6 +274,14 @@ class PriceRepository:
         # Execute query
         result = await self.session.exec(query)
         models = result.all()
+
+        logger.debug(
+            "Price history query result",
+            extra={
+                "ticker": ticker.symbol,
+                "points_found": len(models),
+            },
+        )
 
         # Convert to PricePoints
         return [model.to_price_point() for model in models]

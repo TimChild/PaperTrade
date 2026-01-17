@@ -6,6 +6,7 @@ Provides REST endpoints for price data operations:
 - Get supported tickers
 """
 
+import logging
 from datetime import datetime, timedelta
 from typing import Annotated
 
@@ -18,6 +19,8 @@ from zebu.application.exceptions import (
     TickerNotFoundError,
 )
 from zebu.domain.value_objects.ticker import Ticker
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/prices", tags=["prices"])
 
@@ -271,6 +274,16 @@ async def get_price_history(
         # Parse ticker
         ticker_obj = Ticker(ticker.upper())
 
+        logger.info(
+            "Price history API request",
+            extra={
+                "ticker": ticker,
+                "start": start.isoformat(),
+                "end": end.isoformat(),
+                "interval": interval,
+            },
+        )
+
         # Adjust end date to include full day if it's exactly midnight
         # When frontend sends "2026-01-17", it gets parsed as "2026-01-17T00:00:00"
         # but we want to include all data points on that day (up to 23:59:59.999999)
@@ -279,6 +292,15 @@ async def get_price_history(
             from datetime import timedelta
 
             adjusted_end = end + timedelta(days=1, microseconds=-1)
+
+            logger.debug(
+                "Adjusted end date for midnight boundary",
+                extra={
+                    "ticker": ticker,
+                    "original_end": end.isoformat(),
+                    "adjusted_end": adjusted_end.isoformat(),
+                },
+            )
 
         # Get price history
         history = await market_data.get_price_history(
@@ -297,6 +319,28 @@ async def get_price_history(
             )
             for p in history
         ]
+
+        # Log response metadata
+        logger.info(
+            "Price history API response",
+            extra={
+                "ticker": ticker,
+                "count": len(prices),
+                "status": "success",
+            },
+        )
+
+        # Warn if response is empty
+        if len(prices) == 0:
+            logger.warning(
+                "Price history returned empty",
+                extra={
+                    "ticker": ticker,
+                    "start": start.isoformat(),
+                    "end": end.isoformat(),
+                    "interval": interval,
+                },
+            )
 
         return PriceHistoryResponse(
             ticker=ticker_obj.symbol,
@@ -479,3 +523,113 @@ async def fetch_historical_data(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(e),
         ) from e
+
+
+@router.get(
+    "/debug/cache/{ticker}",
+    summary="Inspect price cache (Debug only)",
+    description="Development endpoint to inspect cached price data for debugging",
+    include_in_schema=True,
+)
+async def inspect_price_cache(
+    ticker: str,
+    market_data: MarketDataDep,
+) -> dict[str, object]:
+    """Inspect cached price data for debugging.
+
+    **Development only** - shows what data exists in cache for a ticker.
+    This endpoint helps diagnose data completeness issues by showing:
+    - Total cached points for the ticker
+    - Date range of cached data
+    - List of all cached dates
+    - Potential gaps in the data
+
+    Args:
+        ticker: Stock ticker symbol (e.g., "AAPL")
+        market_data: Market data port implementation (injected)
+
+    Returns:
+        Dictionary with cache inspection data
+    """
+    try:
+        from zebu.adapters.outbound.market_data.alpha_vantage_adapter import (
+            AlphaVantageAdapter,
+        )
+
+        ticker_obj = Ticker(ticker.upper())
+
+        # Get all data for this ticker (last 100 days)
+        end = datetime.now()
+        start = end - timedelta(days=100)
+
+        # Check if we have access to price repository
+        # (only available on AlphaVantageAdapter implementation)
+        if not isinstance(market_data, AlphaVantageAdapter):
+            return {
+                "ticker": ticker,
+                "status": "error",
+                "message": "Debug endpoint only works with AlphaVantageAdapter",
+            }
+
+        if not market_data.price_repository:
+            return {
+                "ticker": ticker,
+                "status": "error",
+                "message": "Price repository not configured",
+            }
+
+        history = await market_data.price_repository.get_price_history(
+            ticker_obj, start, end, "1day"
+        )
+
+        if not history:
+            return {
+                "ticker": ticker,
+                "status": "no_data",
+                "message": "No cached data found for this ticker",
+            }
+
+        # Extract dates and find gaps
+        dates = [p.timestamp.date() for p in history]
+        date_strings = [d.isoformat() for d in dates]
+
+        # Simple gap detection: find dates more than 7 days apart
+        # (allowing for weekends/holidays)
+        gaps = []
+        for i in range(len(dates) - 1):
+            days_apart = (dates[i + 1] - dates[i]).days
+            # More than a week gap (accounting for weekends/holidays)
+            if days_apart > 7:
+                gaps.append(
+                    {
+                        "after": dates[i].isoformat(),
+                        "before": dates[i + 1].isoformat(),
+                        "days_gap": days_apart,
+                    }
+                )
+
+        return {
+            "ticker": ticker,
+            "status": "ok",
+            "total_points": len(history),
+            "date_range": {
+                "start": history[0].timestamp.isoformat(),
+                "end": history[-1].timestamp.isoformat(),
+                "span_days": (dates[-1] - dates[0]).days,
+            },
+            "dates": date_strings,
+            "gaps_detected": gaps,
+            "sources": list({p.source for p in history}),
+        }
+
+    except Exception as e:
+        logger.error(
+            "Error inspecting price cache",
+            extra={"ticker": ticker, "error": str(e)},
+            exc_info=True,
+        )
+        return {
+            "ticker": ticker,
+            "status": "error",
+            "message": f"Error inspecting cache: {str(e)}",
+        }
