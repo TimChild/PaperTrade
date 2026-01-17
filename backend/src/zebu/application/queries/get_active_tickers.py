@@ -71,7 +71,8 @@ class GetActiveTickersHandler:
             raise ValueError("Days must be at least 1")
 
         # Calculate cutoff date
-        cutoff = datetime.now(UTC) - timedelta(days=query.days)
+        # Use naive datetime (no timezone) to match database column type
+        cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=query.days)
 
         # Query for tickers from recent transactions
         # Get distinct tickers that have been traded recently
