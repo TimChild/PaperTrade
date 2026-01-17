@@ -510,3 +510,49 @@ class TestCacheCompletenessNonDailyInterval:
         # support intraday fetching yet
         assert result == []
         mock_rate_limiter.consume_token.assert_not_called()
+
+
+class TestDecimalPrecisionRounding:
+    """Tests for decimal precision rounding of API prices."""
+
+    async def test_parse_response_rounds_decimal_precision(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+    ) -> None:
+        """Should round prices with >2 decimals to 2 decimal places."""
+        # Arrange
+        ticker = Ticker("AAPL")
+
+        # API response with >2 decimal precision
+        api_response: dict[str, object] = {
+            "Meta Data": {"2. Symbol": "AAPL"},
+            "Time Series (Daily)": {
+                "2026-01-17": {
+                    "1. open": "150.4567",  # 4 decimals
+                    "2. high": "152.8912",  # 4 decimals
+                    "3. low": "148.1234",  # 4 decimals
+                    "4. close": "151.5678",  # 4 decimals
+                    "5. volume": "1000000",
+                },
+            },
+        }
+
+        # Act
+        price_points = alpha_vantage_adapter._parse_daily_history_response(
+            ticker, api_response
+        )
+
+        # Assert
+        assert len(price_points) == 1
+        point = price_points[0]
+
+        # Should be rounded to 2 decimals using ROUND_HALF_UP
+        assert point.open is not None
+        assert point.high is not None
+        assert point.low is not None
+        assert point.close is not None
+        assert point.open.amount == Decimal("150.46")  # 150.4567 → 150.46
+        assert point.high.amount == Decimal("152.89")  # 152.8912 → 152.89
+        assert point.low.amount == Decimal("148.12")  # 148.1234 → 148.12
+        assert point.close.amount == Decimal("151.57")  # 151.5678 → 151.57
+        assert point.price.amount == Decimal("151.57")  # Same as close
