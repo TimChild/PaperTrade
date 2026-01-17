@@ -35,7 +35,7 @@ from zebu.application.queries.get_active_tickers import (
 from zebu.application.services.snapshot_job import SnapshotJobService
 from zebu.infrastructure.database import async_session_maker
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("uvicorn.error")  # Use uvicorn's configured logger
 
 # Global scheduler instance
 _scheduler: AsyncIOScheduler | None = None
