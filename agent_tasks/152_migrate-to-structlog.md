@@ -1,9 +1,9 @@
 # Task 152: Migrate to Structlog for Structured Logging
 
-**Agent**: backend-swe  
-**Priority**: Medium  
-**Type**: Infrastructure Enhancement  
-**Depends On**: Task 151 (cache completeness fix)  
+**Agent**: backend-swe
+**Priority**: Medium
+**Type**: Infrastructure Enhancement
+**Depends On**: Task 151 (cache completeness fix)
 **Related**: PR #137 (observability improvements)
 
 ## Objective
@@ -69,7 +69,7 @@ def setup_structlog(
     json_output: bool = True,
 ) -> None:
     """Configure structlog for the application.
-    
+
     Args:
         log_level: Minimum log level (DEBUG, INFO, WARNING, ERROR)
         json_output: If True, output JSON lines. If False, human-readable
@@ -90,14 +90,14 @@ def setup_structlog(
             ]
         ),  # Add call site info
     ]
-    
+
     if json_output:
         # Production: JSON output for machine parsing
         from pythonjsonlogger import jsonlogger
-        
+
         handler = logging.StreamHandler()
         handler.setFormatter(jsonlogger.JsonFormatter())
-        
+
         structlog.configure(
             processors=shared_processors + [
                 structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
@@ -115,7 +115,7 @@ def setup_structlog(
             logger_factory=structlog.stdlib.LoggerFactory(),
             cache_logger_on_first_use=True,
         )
-    
+
     # Configure stdlib logging
     logging.basicConfig(
         format="%(message)s",
@@ -140,17 +140,17 @@ async def lifespan(app: FastAPI):
         log_level=settings.log_level,
         json_output=settings.environment == "production",
     )
-    
+
     logger = structlog.get_logger(__name__)
     logger.info(
         "Application starting",
         environment=settings.environment,
         log_level=settings.log_level,
     )
-    
+
     # ... (existing startup code)
     yield
-    
+
     logger.info("Application shutting down")
 ```
 
@@ -168,7 +168,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 class LoggingContextMiddleware(BaseHTTPMiddleware):
     """Add request correlation ID and context to all logs."""
-    
+
     async def dispatch(
         self,
         request: Request,
@@ -176,7 +176,7 @@ class LoggingContextMiddleware(BaseHTTPMiddleware):
     ) -> Response:
         # Generate correlation ID
         correlation_id = request.headers.get("X-Correlation-ID") or str(uuid.uuid4())
-        
+
         # Bind context for all logs in this request
         structlog.contextvars.clear_contextvars()
         structlog.contextvars.bind_contextvars(
@@ -185,25 +185,25 @@ class LoggingContextMiddleware(BaseHTTPMiddleware):
             request_method=request.method,
             client_ip=request.client.host if request.client else None,
         )
-        
+
         logger = structlog.get_logger(__name__)
         logger.info(
             "Request started",
             path=request.url.path,
             method=request.method,
         )
-        
+
         # Process request
         response = await call_next(request)
-        
+
         # Add correlation ID to response headers
         response.headers["X-Correlation-ID"] = correlation_id
-        
+
         logger.info(
             "Request completed",
             status_code=response.status_code,
         )
-        
+
         return response
 ```
 
@@ -261,7 +261,7 @@ log.info("Returning cached data", cached_points=len(history))
        ticker=ticker.symbol,
        interval=interval,
    )
-   
+
    log.info("Price history request", start=start.isoformat(), end=end.isoformat())
    # ... (cache query)
    log.info("Cache query result", cached_points=len(history))

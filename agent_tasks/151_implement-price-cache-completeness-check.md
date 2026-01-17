@@ -1,9 +1,9 @@
 # Task 151: Implement Price Cache Completeness Check
 
-**Agent**: backend-swe  
-**Priority**: High  
-**Type**: Bug Fix + Enhancement  
-**Depends On**: Task 150 (✅ Complete)  
+**Agent**: backend-swe
+**Priority**: High
+**Type**: Bug Fix + Enhancement
+**Depends On**: Task 150 (✅ Complete)
 **Related**: PR #137 (observability improvements merged)
 
 ## Objective
@@ -45,12 +45,12 @@ async def get_price_history(
     interval: str = "1day",
 ) -> list[PricePoint]:
     # ... (existing validation code)
-    
+
     # Try to get cached data first
     cached_history = await self.price_repository.get_price_history(
         ticker, start, end, interval
     )
-    
+
     # Check if cached data is complete for requested range
     if cached_history and interval == "1day":
         if self._is_cache_complete(cached_history, start, end):
@@ -74,11 +74,11 @@ async def get_price_history(
                 }
             )
             # Fall through to API fetch
-    
+
     # No cached data or incomplete - fetch from API
     if interval == "1day":
         # ... (existing API fetch logic)
-    
+
     # For other intervals, return cached data or empty
     return cached_history or []
 
@@ -89,26 +89,26 @@ def _is_cache_complete(
     end: datetime,
 ) -> bool:
     """Check if cached data is complete for the requested date range.
-    
+
     For daily data, validates:
     1. Boundary coverage: Cache spans from start to end (±1 day tolerance)
     2. Density check: Has at least 70% of expected trading days (for ranges ≤30 days)
-    
+
     Args:
         cached_data: List of cached price points (assumed sorted by timestamp)
         start: Start of requested range (UTC)
         end: End of requested range (UTC)
-    
+
     Returns:
         True if cached data appears complete, False if likely incomplete
     """
     if not cached_data:
         return False
-    
+
     # Get boundary timestamps
     first_cached = cached_data[0].timestamp.replace(tzinfo=UTC)
     last_cached = cached_data[-1].timestamp.replace(tzinfo=UTC)
-    
+
     # Check boundary coverage (allow 1-day tolerance for timezone/market timing)
     if first_cached > start + timedelta(days=1):
         logger.debug(
@@ -119,7 +119,7 @@ def _is_cache_complete(
             }
         )
         return False
-    
+
     if last_cached < end - timedelta(days=1):
         logger.debug(
             "Cache incomplete: missing recent dates",
@@ -129,7 +129,7 @@ def _is_cache_complete(
             }
         )
         return False
-    
+
     # For short date ranges (≤30 days), verify density
     # This catches major gaps in the middle of the range
     days_requested = (end - start).days
@@ -138,7 +138,7 @@ def _is_cache_complete(
         expected_trading_days = days_requested * 5 / 7
         # Require at least 70% of expected days (allows for holidays, minor gaps)
         min_required_points = int(expected_trading_days * 0.7)
-        
+
         if len(cached_data) < min_required_points:
             logger.debug(
                 "Cache incomplete: insufficient density",
@@ -149,7 +149,7 @@ def _is_cache_complete(
                 }
             )
             return False
-    
+
     # Cache appears complete
     return True
 ```
@@ -219,7 +219,7 @@ async def test_cache_completeness_partial_early_dates_missing(
     ticker = Ticker("AAPL")
     start = datetime(2026, 1, 10, 0, 0, 0, tzinfo=UTC)
     end = datetime(2026, 1, 17, 23, 59, 59, tzinfo=UTC)
-    
+
     # Cache only has Jan 15-17 (missing Jan 10-14)
     cached_data = [
         PricePoint(ticker=ticker, timestamp=datetime(2026, 1, 15, 21, 0, 0, tzinfo=UTC), ...),
@@ -227,13 +227,13 @@ async def test_cache_completeness_partial_early_dates_missing(
         PricePoint(ticker=ticker, timestamp=datetime(2026, 1, 17, 21, 0, 0, tzinfo=UTC), ...),
     ]
     mock_price_repository.get_price_history = AsyncMock(return_value=cached_data)
-    
+
     # Mock API response (will be called because cache incomplete)
     mock_api_response = {...}  # Full data
-    
+
     # Act
     result = await alpha_vantage_adapter.get_price_history(ticker, start, end, "1day")
-    
+
     # Assert
     # Should NOT return partial cache
     assert len(result) > 3, "Should fetch from API, not return incomplete cache"
