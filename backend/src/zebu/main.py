@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):  # type: ignore[misc]  # AsyncGenerator return type is inferred correctly by FastAPI
     """Application lifespan manager - runs on startup and shutdown."""
     logger.info("=== APPLICATION STARTUP ===")
-    
+
     # Startup: Initialize database
     logger.info("Initializing database...")
     await init_db()
@@ -48,15 +48,16 @@ async def lifespan(app: FastAPI):  # type: ignore[misc]  # AsyncGenerator return
         batch_delay_seconds=12,  # ~5 calls/min (12 seconds between calls)
         active_stock_days=30,  # Consider stocks traded in last 30 days
     )
-    logger.info(f"Scheduler config: enabled={scheduler_config.enabled}, cron={scheduler_config.refresh_cron}")
-    
+    logger.info(f"Scheduler config: enabled={scheduler_config.enabled}")
+    logger.info(f"Scheduler cron: {scheduler_config.refresh_cron}")
+
     logger.info("Starting background scheduler...")
     try:
         await start_scheduler(scheduler_config)
         logger.info("Scheduler startup completed")
     except Exception as e:
         logger.error(f"Failed to start scheduler: {e}", exc_info=True)
-    
+
     logger.info("=== APPLICATION STARTUP COMPLETE ===")
 
     yield
