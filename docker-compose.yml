@@ -3,7 +3,7 @@
 # ============================================================================
 # This is the base configuration shared by all environments.
 #
-# Dev mode:  `docker compose up` 
+# Dev mode:  `docker compose up`
 #            (automatically loads docker-compose.override.yml if present)
 # Prod mode: `docker compose -f docker-compose.yml -f docker-compose.prod.yml up`
 #
