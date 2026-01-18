@@ -183,8 +183,8 @@ class TestGetCurrentPriceOnWeekend:
         mock_price_cache: MagicMock,
     ) -> None:
         """Test that get_current_price returns cached price on MLK Day."""
-        # Mock today as Monday, Jan 20, 2026 (MLK Day - holiday)
-        mock_now = datetime(2026, 1, 20, 15, 0, 0, tzinfo=UTC)
+        # Mock today as Monday, Jan 19, 2026 (MLK Day - holiday)
+        mock_now = datetime(2026, 1, 19, 15, 0, 0, tzinfo=UTC)
 
         # Setup: Cached Friday price exists (last trading day before 3-day weekend)
         friday_price = create_price_point(
@@ -452,8 +452,8 @@ class TestGetBatchPricesOnWeekend:
         mock_price_cache: MagicMock,
     ) -> None:
         """Test batch prices uses last trading day on MLK Day."""
-        # Mock Monday, Jan 20, 2026 (MLK Day)
-        mock_now = datetime(2026, 1, 20, 15, 0, 0, tzinfo=UTC)
+        # Mock Monday, Jan 19, 2026 (MLK Day)
+        mock_now = datetime(2026, 1, 19, 15, 0, 0, tzinfo=UTC)
 
         friday_price = create_price_point(
             Ticker("AAPL"),
