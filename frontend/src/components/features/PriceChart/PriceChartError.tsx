@@ -7,13 +7,11 @@ import type { ApiError, ApiErrorType } from '@/types/errors'
 
 interface PriceChartErrorProps {
   error: ApiError
-  ticker: string
   onRetry?: () => void
 }
 
 export function PriceChartError({
   error,
-  ticker,
   onRetry,
 }: PriceChartErrorProps): React.JSX.Element {
   const { icon, title } = getErrorDisplay(error.type)

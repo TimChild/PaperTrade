@@ -69,7 +69,6 @@ export function PriceChart({
           <CardContent>
             <PriceChartError
               error={error as ApiError}
-              ticker={ticker}
               onRetry={() => refetch()}
             />
           </CardContent>

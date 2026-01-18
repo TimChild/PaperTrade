@@ -15,7 +15,7 @@ describe('PriceChartError', () => {
       retryAfter: 60,
     }
 
-    render(<PriceChartError error={error} ticker="AAPL" />)
+    render(<PriceChartError error={error} />)
 
     expect(screen.getByText('Too Many Requests')).toBeInTheDocument()
     expect(screen.getByText(error.message)).toBeInTheDocument()
@@ -31,7 +31,7 @@ describe('PriceChartError', () => {
       details: 'Database connection failed',
     }
 
-    render(<PriceChartError error={error} ticker="AAPL" />)
+    render(<PriceChartError error={error} />)
 
     expect(screen.getByText('Server Error')).toBeInTheDocument()
     expect(screen.getByText(error.message)).toBeInTheDocument()
@@ -43,7 +43,7 @@ describe('PriceChartError', () => {
       message: 'Unable to connect to server',
     }
 
-    render(<PriceChartError error={error} ticker="AAPL" />)
+    render(<PriceChartError error={error} />)
 
     expect(screen.getByText('Connection Error')).toBeInTheDocument()
     expect(screen.getByText(error.message)).toBeInTheDocument()
@@ -55,7 +55,7 @@ describe('PriceChartError', () => {
       message: 'No data found for INVALID',
     }
 
-    render(<PriceChartError error={error} ticker="INVALID" />)
+    render(<PriceChartError error={error} />)
 
     expect(screen.getByText('Data Not Found')).toBeInTheDocument()
     expect(screen.getByText(error.message)).toBeInTheDocument()
@@ -67,7 +67,7 @@ describe('PriceChartError', () => {
       message: 'An unexpected error occurred',
     }
 
-    render(<PriceChartError error={error} ticker="AAPL" />)
+    render(<PriceChartError error={error} />)
 
     expect(screen.getByText('Something Went Wrong')).toBeInTheDocument()
     expect(screen.getByText(error.message)).toBeInTheDocument()
@@ -80,7 +80,7 @@ describe('PriceChartError', () => {
       message: 'Server error occurred',
     }
 
-    render(<PriceChartError error={error} ticker="AAPL" onRetry={onRetry} />)
+    render(<PriceChartError error={error} onRetry={onRetry} />)
 
     const retryButton = screen.getByRole('button', {
       name: /retry loading price history/i,
@@ -95,7 +95,7 @@ describe('PriceChartError', () => {
       message: 'No data found for INVALID',
     }
 
-    render(<PriceChartError error={error} ticker="INVALID" onRetry={onRetry} />)
+    render(<PriceChartError error={error} onRetry={onRetry} />)
 
     expect(
       screen.queryByRole('button', { name: /retry loading price history/i })
@@ -108,7 +108,7 @@ describe('PriceChartError', () => {
       message: 'Server error occurred',
     }
 
-    render(<PriceChartError error={error} ticker="AAPL" />)
+    render(<PriceChartError error={error} />)
 
     expect(
       screen.queryByRole('button', { name: /retry loading price history/i })
@@ -123,7 +123,7 @@ describe('PriceChartError', () => {
       message: 'Server error occurred',
     }
 
-    render(<PriceChartError error={error} ticker="AAPL" onRetry={onRetry} />)
+    render(<PriceChartError error={error} onRetry={onRetry} />)
 
     const retryButton = screen.getByRole('button', {
       name: /retry loading price history/i,
@@ -136,7 +136,6 @@ describe('PriceChartError', () => {
   it('shows technical details in development mode', () => {
     // Mock development mode
     const originalEnv = import.meta.env.DEV
-    // @ts-expect-error - Mocking env for test
     import.meta.env.DEV = true
 
     const error: ApiError = {
@@ -145,12 +144,11 @@ describe('PriceChartError', () => {
       details: 'Database connection failed',
     }
 
-    render(<PriceChartError error={error} ticker="AAPL" />)
+    render(<PriceChartError error={error} />)
 
     expect(screen.getByText('Technical Details')).toBeInTheDocument()
 
     // Restore original env
-    // @ts-expect-error - Restoring env after test
     import.meta.env.DEV = originalEnv
   })
 
@@ -161,7 +159,7 @@ describe('PriceChartError', () => {
       retryAfter: 120,
     }
 
-    render(<PriceChartError error={error} ticker="AAPL" />)
+    render(<PriceChartError error={error} />)
 
     expect(
       screen.getByText('Please try again in 120 seconds')

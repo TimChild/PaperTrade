@@ -58,7 +58,10 @@ export function parseApiError(error: unknown, ticker?: string): ApiError {
 
   // Network/timeout errors
   if (error instanceof Error) {
-    if (error.message.includes('timeout') || error.message.includes('network')) {
+    if (
+      error.message.includes('timeout') ||
+      error.message.includes('network')
+    ) {
       return {
         type: 'network_error',
         message: 'Unable to connect to server',

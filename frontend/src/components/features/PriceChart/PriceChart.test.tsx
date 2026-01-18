@@ -164,7 +164,6 @@ describe('PriceChart', () => {
   it('shows dev warning banner when using mock data with error', async () => {
     // Mock development mode
     const originalEnv = import.meta.env.DEV
-    // @ts-expect-error - Mocking env for test
     import.meta.env.DEV = true
 
     const mockHistoryWithError = {
@@ -201,7 +200,6 @@ describe('PriceChart', () => {
     })
 
     // Restore original env
-    // @ts-expect-error - Restoring env after test
     import.meta.env.DEV = originalEnv
   })
 })
