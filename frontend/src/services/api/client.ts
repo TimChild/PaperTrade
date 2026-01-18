@@ -42,13 +42,26 @@ apiClient.interceptors.request.use(
             : '[short-token]'
           console.log(`[API Client] Token retrieved for ${config.method?.toUpperCase()} ${config.url}: ${tokenPreview}`)
         } else {
-          console.warn(`[API Client] No token available for ${config.method?.toUpperCase()} ${config.url}`)
+          console.error(
+            `[API Client] CRITICAL: No token available for ${config.method?.toUpperCase()} ${config.url}. ` +
+            'This will result in 401 Unauthorized. ' +
+            'Check that Clerk is properly initialized and user is signed in.'
+          )
+          // Don't set Authorization header - this will cause 401
+          // which is better than sending an invalid token
         }
       } catch (error) {
-        console.error(`[API Client] Failed to get auth token for ${config.method?.toUpperCase()} ${config.url}:`, error)
+        console.error(
+          `[API Client] CRITICAL: Failed to get auth token for ${config.method?.toUpperCase()} ${config.url}:`,
+          error
+        )
+        // Don't set Authorization header
       }
     } else {
-      console.warn(`[API Client] No tokenGetter set for ${config.method?.toUpperCase()} ${config.url}`)
+      console.warn(
+        `[API Client] WARNING: No tokenGetter set for ${config.method?.toUpperCase()} ${config.url}. ` +
+        'Authentication will fail. Check that AuthProvider is mounted.'
+      )
     }
     return config
   },

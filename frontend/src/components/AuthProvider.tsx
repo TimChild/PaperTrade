@@ -16,19 +16,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return
     }
 
-    console.log(`[AuthProvider] Clerk loaded. isSignedIn: ${isSignedIn}`)
+    console.log(
+      `[AuthProvider] Clerk loaded. isSignedIn: ${isSignedIn}, ` +
+      `setting up token getter`
+    )
 
     // Set up the token getter for API requests
     setAuthTokenGetter(async () => {
       try {
         if (!isLoaded) {
-          console.warn('[AuthProvider] Clerk not loaded yet, cannot get token')
+          console.error('[AuthProvider] Clerk not loaded yet, cannot get token')
+          return null
+        }
+
+        if (!isSignedIn) {
+          console.error(
+            '[AuthProvider] User not signed in, cannot get token. ' +
+            'Check that Clerk session was properly loaded from storage state.'
+          )
           return null
         }
 
         const token = await getToken()
         if (!token) {
-          console.warn('[AuthProvider] No token available from Clerk')
+          console.error(
+            '[AuthProvider] getToken() returned null despite isSignedIn=true. ' +
+            'This may indicate a Clerk SDK issue or session expiration.'
+          )
         }
         return token
       } catch (error) {
