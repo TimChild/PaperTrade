@@ -78,18 +78,18 @@ export function PortfolioCard({
             variant="interactive"
             data-testid={`portfolio-card-${portfolio.id}`}
           >
-            <CardHeader>
-              <CardTitle>{portfolio.name}</CardTitle>
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="text-lg sm:text-xl pr-8">{portfolio.name}</CardTitle>
             </CardHeader>
 
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 sm:space-y-4">
               {/* Total Value */}
               <div>
-                <p className="text-sm text-foreground-tertiary mb-1">
+                <p className="text-xs sm:text-sm text-foreground-tertiary mb-1">
                   Total Value
                 </p>
                 <p
-                  className="text-value-primary text-foreground-primary"
+                  className="text-xl sm:text-value-primary text-foreground-primary"
                   data-testid={`portfolio-card-value-${portfolio.id}`}
                 >
                   {formatCurrency(portfolio.totalValue)}
@@ -97,20 +97,20 @@ export function PortfolioCard({
               </div>
 
               {/* Cash Balance & Daily Change */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <div>
-                  <p className="text-sm text-foreground-tertiary mb-1">
+                  <p className="text-xs sm:text-sm text-foreground-tertiary mb-1">
                     Cash Balance
                   </p>
-                  <p className="text-value-secondary text-foreground-primary">
+                  <p className="text-base sm:text-value-secondary text-foreground-primary">
                     {formatCurrency(portfolio.cashBalance)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-foreground-tertiary mb-1">
+                  <p className="text-xs sm:text-sm text-foreground-tertiary mb-1">
                     Daily Change
                   </p>
-                  <p className={cn('text-value-secondary', changeColorClass)}>
+                  <p className={cn('text-base sm:text-value-secondary', changeColorClass)}>
                     {isPositiveChange ? '+' : ''}
                     {formatCurrency(portfolio.dailyChange)}
                   </p>
@@ -123,13 +123,13 @@ export function PortfolioCard({
         {/* Delete button - positioned absolutely in top-right corner */}
         <button
           onClick={handleDeleteClick}
-          className="absolute right-2 top-2 rounded p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
+          className="absolute right-2 top-2 rounded p-1.5 sm:p-2 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400"
           aria-label={`Delete ${portfolio.name}`}
           data-testid={`delete-portfolio-${portfolio.id}`}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="h-4 w-4"
+            className="h-4 w-4 sm:h-5 sm:w-5"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"

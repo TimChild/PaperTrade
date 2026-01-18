@@ -77,9 +77,29 @@
     --color-text-tertiary: 107 114 128; /* gray-500 */
   }
 
+  /* Responsive base font size */
+  html {
+    font-size: 14px; /* Base for mobile */
+  }
+
+  @media (min-width: 640px) {
+    html {
+      font-size: 16px; /* Standard for desktop */
+    }
+  }
+
   body {
     @apply bg-background text-foreground;
     @apply min-h-screen font-sans antialiased;
+  }
+
+  /* Ensure minimum touch target size (44x44px) for accessibility */
+  button,
+  a,
+  input[type="button"],
+  input[type="submit"],
+  [role="button"] {
+    min-height: 44px;
   }
 
   /* Smooth theme transitions */

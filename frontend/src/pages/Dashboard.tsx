@@ -38,32 +38,35 @@ export function Dashboard(): React.JSX.Element {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-background-primary px-container-padding-x py-container-padding-y">
+      <div className="min-h-screen bg-background-primary px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
         <ErrorDisplay error={error} />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background-primary px-container-padding-x py-container-padding-y">
+    <div className="min-h-screen bg-background-primary px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
       <div className="max-w-7xl mx-auto">
-        <header className="mb-12 flex items-center justify-between">
-          <div>
-            <h1 className="text-heading-xl text-foreground-primary mb-4">
-              Portfolio Dashboard
-            </h1>
-            <p className="text-heading-md text-foreground-secondary">
-              Track your investments and performance
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <Button
-              onClick={() => setShowCreateModal(true)}
-              data-testid="create-portfolio-header-btn"
-            >
-              Create Portfolio
-            </Button>
+        <header className="mb-8 sm:mb-12">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl lg:text-heading-xl text-foreground-primary mb-2 sm:mb-4">
+                Portfolio Dashboard
+              </h1>
+              <p className="text-base sm:text-heading-md text-foreground-secondary">
+                Track your investments and performance
+              </p>
+            </div>
+            <div className="flex items-center gap-3 sm:gap-4">
+              <ThemeToggle />
+              <Button
+                onClick={() => setShowCreateModal(true)}
+                data-testid="create-portfolio-header-btn"
+                className="w-full sm:w-auto"
+              >
+                Create Portfolio
+              </Button>
+            </div>
           </div>
         </header>
 
@@ -97,7 +100,7 @@ export function Dashboard(): React.JSX.Element {
                   </p>
                 </div>
                 <div
-                  className="grid gap-card-gap sm:grid-cols-2 lg:grid-cols-3"
+                  className="grid gap-4 sm:gap-6 lg:gap-card-gap grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
                   data-testid="portfolio-grid"
                 >
                   {portfolios.map((portfolioDTO) => (
