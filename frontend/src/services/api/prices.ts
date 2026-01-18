@@ -35,6 +35,82 @@ export async function getCurrentPrice(ticker: string): Promise<PricePoint> {
 }
 
 /**
+ * Check if historical price data exists for a ticker at a specific date
+ * Used by backtest mode to verify data availability
+ */
+export async function checkHistoricalPrice(
+  ticker: string,
+  date: string
+): Promise<{ available: boolean; closest_date?: string }> {
+  const response = await apiClient.get<{
+    available: boolean
+    closest_date: string | null
+  }>(`/prices/${ticker}/check`, {
+    params: { date },
+  })
+
+  return {
+    available: response.data.available,
+    closest_date: response.data.closest_date || undefined,
+  }
+}
+
+/**
+ * Get historical price for a ticker at a specific date
+ * Returns the closest available price if exact date not available
+ */
+export async function getHistoricalPrice(
+  ticker: string,
+  date: string
+): Promise<PricePoint> {
+  // Use the /history endpoint with a 1-day range around the target date
+  const response = await apiClient.get<{
+    ticker: string
+    prices: Array<{
+      ticker: string
+      price: string
+      currency: string
+      timestamp: string
+      source: string
+      interval: string
+    }>
+    start: string
+    end: string
+    interval: string
+    count: number
+  }>(`/prices/${ticker}/history`, {
+    params: {
+      start: date,
+      end: date,
+      interval: '1day',
+    },
+  })
+
+  if (!response.data.prices || response.data.prices.length === 0) {
+    throw new Error(`No price data available for ${ticker} at ${date}`)
+  }
+
+  // Return first (and should be only) price point
+  const priceData = response.data.prices[0]
+  return {
+    ticker: { symbol: priceData.ticker },
+    price: {
+      amount: parseFloat(priceData.price),
+      currency: priceData.currency,
+    },
+    timestamp: priceData.timestamp,
+    source: priceData.source as 'alpha_vantage' | 'cache' | 'database',
+    interval: priceData.interval as
+      | '1day'
+      | 'real-time'
+      | '1hour'
+      | '5min'
+      | '1min',
+  }
+}
+
+
+/**
  * Batch fetch prices for multiple tickers
  * Uses the /prices/batch endpoint for efficient single-request fetching
  */
