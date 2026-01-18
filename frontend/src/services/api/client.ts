@@ -36,10 +36,19 @@ apiClient.interceptors.request.use(
         const token = await tokenGetter()
         if (token) {
           config.headers.Authorization = `Bearer ${token}`
+          // Log token retrieval success for debugging (first/last 10 chars only)
+          const tokenPreview = token.length > 20 
+            ? `${token.substring(0, 10)}...${token.substring(token.length - 10)}`
+            : '[short-token]'
+          console.log(`[API Client] Token retrieved for ${config.method?.toUpperCase()} ${config.url}: ${tokenPreview}`)
+        } else {
+          console.warn(`[API Client] No token available for ${config.method?.toUpperCase()} ${config.url}`)
         }
       } catch (error) {
-        console.error('Failed to get auth token:', error)
+        console.error(`[API Client] Failed to get auth token for ${config.method?.toUpperCase()} ${config.url}:`, error)
       }
+    } else {
+      console.warn(`[API Client] No tokenGetter set for ${config.method?.toUpperCase()} ${config.url}`)
     }
     return config
   },
