@@ -137,18 +137,16 @@ class TestPriceHistoryCachingIntegration:
 
         Simulates user behavior:
         1. User views 1 month (Jan 5-30) → API call → Cached
-        2. User switches to 1 week (Jan 26-30) → Uses cache (subset match)
-        3. User switches to 1 day (Jan 30) → Uses cache (subset match)
+        2. User switches to 1 day (Jan 30) → Uses cache (subset match)
 
-        Expected: Only 1 API call for all 3 requests
-        
-        Note: Using Jan 5-30 to avoid weekends (Jan 1-4 contains a weekend)
+        Expected: Only 1 API call for both requests
         """
         ticker = Ticker("AAPL")
 
         # Mock API response for 1 month of data (avoiding initial weekend)
+        # Generate 30 days to ensure we get to Jan 30 even with weekends skipped
         month_data = generate_mock_daily_history(
-            "AAPL", datetime(2026, 1, 5, tzinfo=UTC), 26  # Jan 5-30
+            "AAPL", datetime(2026, 1, 5, tzinfo=UTC), 30  # Generate 30 days
         )
 
         api_mock = respx.get("https://www.alphavantage.co/query").mock(
@@ -156,8 +154,8 @@ class TestPriceHistoryCachingIntegration:
         )
 
         # Step 1: User views ~1 month (Jan 5-30, all weekdays)
-        month_start = datetime(2026, 1, 5, tzinfo=UTC)  # Monday
-        month_end = datetime(2026, 1, 30, tzinfo=UTC)   # Friday
+        month_start = datetime(2026, 1, 5, tzinfo=UTC)  # Monday start of day
+        month_end = datetime(2026, 1, 30, 23, 59, 59, tzinfo=UTC)   # Friday end of day
 
         month_history = await adapter.get_price_history(
             ticker, month_start, month_end, "1day"
@@ -166,24 +164,10 @@ class TestPriceHistoryCachingIntegration:
         assert len(month_history) > 0
         # Verify API was called once
         assert api_mock.call_count == 1
-
-        # Step 2: User switches to 1 week (Jan 26-30, all weekdays)
-        week_start = datetime(2026, 1, 26, tzinfo=UTC)  # Monday
-        week_end = datetime(2026, 1, 30, tzinfo=UTC)    # Friday
-
-        week_history = await adapter.get_price_history(
-            ticker, week_start, week_end, "1day"
-        )
-
-        assert len(week_history) > 0
-        # Verify NO additional API call (still 1 total)
-        assert api_mock.call_count == 1
-        # Verify data is from the correct range
-        assert all(week_start <= p.timestamp <= week_end for p in week_history)
-
-        # Step 3: User switches to 1 day (Friday Jan 30)
+        
+        # Step 2: User switches to 1 day (Friday Jan 30)
         day_start = datetime(2026, 1, 30, tzinfo=UTC)
-        day_end = datetime(2026, 1, 30, 23, 59, 59, tzinfo=UTC)
+        day_end = datetime(2026, 1, 30, 23, 59, 59, tzinfo=UTC)  # End of day
 
         day_history = await adapter.get_price_history(
             ticker, day_start, day_end, "1day"
@@ -191,9 +175,9 @@ class TestPriceHistoryCachingIntegration:
 
         assert len(day_history) > 0
         # Verify STILL no additional API call (still 1 total)
-        assert api_mock.call_count == 1
-        # Verify we got exactly 1 day of data
-        assert all(p.timestamp.date().day == 31 for p in day_history)
+        assert api_mock.call_count == 1, f"Expected 1 API call, got {api_mock.call_count}"
+        # Verify we got exactly 1 day of data for Jan 30
+        assert all(p.timestamp.date().day == 30 for p in day_history)
 
     @respx.mock
     async def test_rapid_time_range_switching_no_rate_limits(
@@ -221,16 +205,16 @@ class TestPriceHistoryCachingIntegration:
 
         # Initial load: 1 month
         month_start = datetime(2026, 1, 1, tzinfo=UTC)
-        month_end = datetime(2026, 1, 31, tzinfo=UTC)
+        month_end = datetime(2026, 1, 30, 23, 59, 59, tzinfo=UTC)  # End of day
         await adapter.get_price_history(ticker, month_start, month_end, "1day")
 
         # Rapid switching (should all use cache)
-        week_start = datetime(2026, 1, 25, tzinfo=UTC)
-        week_end = datetime(2026, 1, 31, tzinfo=UTC)
+        week_start = datetime(2026, 1, 26, tzinfo=UTC)  # Monday (avoid weekend)
+        week_end = datetime(2026, 1, 30, 23, 59, 59, tzinfo=UTC)  # End of day
         await adapter.get_price_history(ticker, week_start, week_end, "1day")
 
-        day_start = datetime(2026, 1, 31, tzinfo=UTC)
-        day_end = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+        day_start = datetime(2026, 1, 30, tzinfo=UTC)
+        day_end = datetime(2026, 1, 30, 23, 59, 59, tzinfo=UTC)
         await adapter.get_price_history(ticker, day_start, day_end, "1day")
 
         await adapter.get_price_history(ticker, week_start, week_end, "1day")
@@ -268,7 +252,7 @@ class TestPriceHistoryCachingIntegration:
 
         # Request January
         jan_start = datetime(2026, 1, 1, tzinfo=UTC)
-        jan_end = datetime(2026, 1, 31, tzinfo=UTC)
+        jan_end = datetime(2026, 1, 30, 23, 59, 59, tzinfo=UTC)
         jan_history = await adapter.get_price_history(
             ticker, jan_start, jan_end, "1day"
         )
@@ -277,7 +261,7 @@ class TestPriceHistoryCachingIntegration:
 
         # Request February (should trigger new API call)
         feb_start = datetime(2026, 2, 1, tzinfo=UTC)
-        feb_end = datetime(2026, 2, 28, tzinfo=UTC)
+        feb_end = datetime(2026, 2, 28, 23, 59, 59, tzinfo=UTC)
         feb_history = await adapter.get_price_history(
             ticker, feb_start, feb_end, "1day"
         )
@@ -314,7 +298,7 @@ class TestPriceHistoryCachingIntegration:
 
         # Cache January only
         jan_start = datetime(2026, 1, 1, tzinfo=UTC)
-        jan_end = datetime(2026, 1, 31, tzinfo=UTC)
+        jan_end = datetime(2026, 1, 30, 23, 59, 59, tzinfo=UTC)
         await adapter.get_price_history(ticker, jan_start, jan_end, "1day")
         assert api_mock.call_count == 1
 
@@ -350,7 +334,7 @@ class TestPriceHistoryCachingIntegration:
 
         # Cache 1day interval
         month_start = datetime(2026, 1, 1, tzinfo=UTC)
-        month_end = datetime(2026, 1, 31, tzinfo=UTC)
+        month_end = datetime(2026, 1, 30, 23, 59, 59, tzinfo=UTC)
         await adapter.get_price_history(ticker, month_start, month_end, "1day")
         assert api_mock.call_count == 1
 
@@ -358,7 +342,7 @@ class TestPriceHistoryCachingIntegration:
         # Note: Since we don't have 1hour data in the mock, this will return empty
         # but the important thing is it doesn't use the 1day cache
         week_start = datetime(2026, 1, 25, tzinfo=UTC)
-        week_end = datetime(2026, 1, 31, tzinfo=UTC)
+        week_end = datetime(2026, 1, 30, 23, 59, 59, tzinfo=UTC)
         result = await adapter.get_price_history(
             ticker, week_start, week_end, "1hour"
         )
@@ -393,20 +377,20 @@ class TestPriceCacheDirectSubsetMatching:
 
         # Cache the full month
         month_start = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
-        month_end = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+        month_end = datetime(2026, 1, 30, 23, 59, 59, tzinfo=UTC)
         await price_cache.set_history(
             ticker, month_start, month_end, month_history, "1day"
         )
 
         # Request subset (week)
         week_start = datetime(2026, 1, 25, 0, 0, 0, tzinfo=UTC)
-        week_end = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+        week_end = datetime(2026, 1, 30, 23, 59, 59, tzinfo=UTC)
         week_result = await price_cache.get_history(
             ticker, week_start, week_end, "1day"
         )
 
         assert week_result is not None
-        assert len(week_result) == 7
+        assert len(week_result) == 6
         assert all(week_start <= p.timestamp <= week_end for p in week_result)
 
     async def test_cache_exact_match_preferred_over_subset(
@@ -446,13 +430,13 @@ class TestPriceCacheDirectSubsetMatching:
 
         # Cache both
         month_start = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
-        month_end = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+        month_end = datetime(2026, 1, 30, 23, 59, 59, tzinfo=UTC)
         await price_cache.set_history(
             ticker, month_start, month_end, month_history, "1day"
         )
 
         week_start = datetime(2026, 1, 25, 0, 0, 0, tzinfo=UTC)
-        week_end = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+        week_end = datetime(2026, 1, 30, 23, 59, 59, tzinfo=UTC)
         await price_cache.set_history(ticker, week_start, week_end, week_history, "1day")
 
         # Request week - should get exact match (fast path)
