@@ -50,7 +50,7 @@ apiClient.interceptors.request.use(
         if (token) {
           config.headers.Authorization = `Bearer ${token}`
           // Log token retrieval success for debugging (first/last 10 chars only)
-          const tokenPreview = token.length > 20 
+          const tokenPreview = token.length > 20
             ? `${token.substring(0, 10)}...${token.substring(token.length - 10)}`
             : '[short-token]'
           console.log(`[API Client] Token retrieved for ${config.method?.toUpperCase()} ${config.url}: ${tokenPreview}`)

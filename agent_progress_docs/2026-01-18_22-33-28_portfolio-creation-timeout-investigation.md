@@ -1,9 +1,9 @@
 # Agent Progress Documentation
 
-**Date**: 2026-01-18  
-**Time**: 22:33:28 UTC  
-**Agent**: backend-swe  
-**Task**: Task 161 - Investigate Portfolio Creation Timeout Issue  
+**Date**: 2026-01-18
+**Time**: 22:33:28 UTC
+**Agent**: backend-swe
+**Task**: Task 161 - Investigate Portfolio Creation Timeout Issue
 **Status**: Investigation Complete - Awaiting Test Validation
 
 ---
@@ -19,7 +19,7 @@ Investigated critical issue where ALL portfolio creation requests timeout in E2E
 ### Symptoms
 - E2E Tests: 15/22 tests fail with `TimeoutError: page.waitForURL: Timeout 10000ms exceeded`
 - Backend logs show: "Clerk auth status: AuthStatus.SIGNED_OUT" for POST requests
-- Frontend shows 2 timeout alerts in create portfolio dialog  
+- Frontend shows 2 timeout alerts in create portfolio dialog
 - GET requests work perfectly (<1s response time)
 - POST requests fail with 401 Unauthorized
 
@@ -161,7 +161,7 @@ useEffect(() => {
     console.log('[AuthProvider] Waiting for Clerk to load...')
     return
   }
-  
+
   setAuthTokenGetter(async () => {
     if (!isSignedIn) {
       console.error('[AuthProvider] User not signed in...')
@@ -228,27 +228,27 @@ logger.info(
 Based on investigation, the issue is likely ONE of the following:
 
 ### Hypothesis #1: Clerk Not Fully Initialized (Most Likely)
-**Symptoms**: `isLoaded=false` or `isSignedIn=false` when token requested  
-**Cause**: Storage state loads but Clerk SDK hasn't finished initializing  
-**Fix**: Wait for Clerk to be ready (implemented in AuthProvider)  
+**Symptoms**: `isLoaded=false` or `isSignedIn=false` when token requested
+**Cause**: Storage state loads but Clerk SDK hasn't finished initializing
+**Fix**: Wait for Clerk to be ready (implemented in AuthProvider)
 **Validation**: Logs will show `[AuthProvider] Waiting for Clerk to load...`
 
 ### Hypothesis #2: Session Not in Storage State
-**Symptoms**: `isLoaded=true` but `isSignedIn=false`  
-**Cause**: auth.setup.ts didn't save session properly, or cookies expired  
-**Fix**: Verify storage state includes necessary cookies, check session expiration  
+**Symptoms**: `isLoaded=true` but `isSignedIn=false`
+**Cause**: auth.setup.ts didn't save session properly, or cookies expired
+**Fix**: Verify storage state includes necessary cookies, check session expiration
 **Validation**: Logs will show `[AuthProvider] User not signed in`
 
 ### Hypothesis #3: getToken() Returning Null Despite Sign-In
-**Symptoms**: `isLoaded=true`, `isSignedIn=true`, but `getToken()` returns null  
-**Cause**: Clerk SDK bug or session token refresh failure  
-**Fix**: May need to manually refresh token or use different Clerk method  
+**Symptoms**: `isLoaded=true`, `isSignedIn=true`, but `getToken()` returns null
+**Cause**: Clerk SDK bug or session token refresh failure
+**Fix**: May need to manually refresh token or use different Clerk method
 **Validation**: Logs will show `[AuthProvider] getToken() returned null despite isSignedIn=true`
 
 ### Hypothesis #4: Invalid Clerk Configuration
-**Symptoms**: Clerk rejects valid tokens  
-**Cause**: Clerk secret key mismatch or publishable key configuration issue  
-**Fix**: Verify env vars match Clerk dashboard  
+**Symptoms**: Clerk rejects valid tokens
+**Cause**: Clerk secret key mismatch or publishable key configuration issue
+**Fix**: Verify env vars match Clerk dashboard
 **Validation**: Backend logs will show specific Clerk error in `reason`/`message`
 
 ---
@@ -267,7 +267,7 @@ cd backend
 uv run python -m zebu.main
 
 # Run frontend dev server in another terminal
-cd frontend  
+cd frontend
 npm run dev
 
 # Run single portfolio creation test
@@ -374,7 +374,7 @@ If no cookies, the auth setup isn't working. Review `frontend/tests/e2e/setup/au
 
 Clerk SDK issue. Possible solutions:
 1. Call `await session.reload()` before `getToken()`
-2. Use `await session.getToken({ template: "default" })`  
+2. Use `await session.getToken({ template: "default" })`
 3. Check Clerk session expiration (default: 7 days, can be shorter)
 
 ### If All Else Fails: E2E Mode Workaround

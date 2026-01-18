@@ -174,9 +174,7 @@ async def get_current_user(
     import logging
 
     logger = logging.getLogger(__name__)
-    logger.info(
-        f"Authenticating user with auth adapter: {auth.__class__.__name__}"
-    )
+    logger.info(f"Authenticating user with auth adapter: {auth.__class__.__name__}")
 
     try:
         user = await auth.verify_token(credentials.credentials)

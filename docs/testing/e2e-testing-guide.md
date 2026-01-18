@@ -1,6 +1,6 @@
 # E2E Testing Infrastructure Guide
 
-**Date**: 2026-01-18  
+**Date**: 2026-01-18
 **Purpose**: Document the E2E testing strategy and infrastructure
 
 ---
@@ -36,7 +36,7 @@ task test:e2e -- tests/e2e/portfolio-creation.spec.ts
 
 ### E2E Mode Architecture
 
-**Frontend**: Detects `VITE_E2E_TEST_MODE=true` → Sends static token  
+**Frontend**: Detects `VITE_E2E_TEST_MODE=true` → Sends static token
 **Backend**: Detects `E2E_TEST_MODE=true` → Accepts any token
 
 ```
