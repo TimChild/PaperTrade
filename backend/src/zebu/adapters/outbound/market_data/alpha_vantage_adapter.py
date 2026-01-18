@@ -114,11 +114,12 @@ class AlphaVantageAdapter:
     async def get_current_price(self, ticker: Ticker) -> PricePoint:
         """Get the most recent available price for a ticker.
 
-        Implements tiered caching strategy:
+        Implements tiered caching strategy with weekend/holiday awareness:
         1. Check Redis cache (return if fresh)
         2. Check PostgreSQL (return if reasonably fresh)
-        3. Fetch from Alpha Vantage API (if rate limit allows)
-        4. Serve stale cached data if rate limited
+        3. **If weekend/holiday, get last trading day's cached price**
+        4. Fetch from Alpha Vantage API (if rate limit allows)
+        5. Serve stale cached data if rate limited
 
         Args:
             ticker: Stock ticker symbol to get price for
@@ -150,7 +151,39 @@ class AlphaVantageAdapter:
                 await self.price_cache.set(db_price, ttl=3600)
                 return db_price.with_source("database")
 
-        # Tier 3: Fetch from Alpha Vantage API
+        # Weekend/Holiday Check - Don't fetch from API if markets are closed
+        now = datetime.now(UTC)
+        if not MarketCalendar.is_trading_day(now.date()):
+            # Markets are closed - get last trading day's cached price
+            last_trading_day = self._get_last_trading_day(now)
+
+            logger.info(
+                "Markets closed, using last trading day price",
+                ticker=ticker.symbol,
+                current_date=now.date().isoformat(),
+                last_trading_day=last_trading_day.date().isoformat(),
+            )
+
+            if self.price_repository:
+                # Get price at last trading day's close (21:00 UTC = 4:00 PM ET)
+                historical_price = await self.price_repository.get_price_at(
+                    ticker, last_trading_day
+                )
+                if historical_price:
+                    # Warm cache with last trading day price (longer TTL on weekends)
+                    await self.price_cache.set(historical_price, ttl=7200)  # 2 hours
+                    return historical_price.with_source("database")
+
+            # Fallback: Check if we have any stale cached data
+            if cached:
+                return cached.with_source("cache")
+
+            # No data available for this ticker
+            raise TickerNotFoundError(
+                f"No cached data available for {ticker.symbol} (markets closed)"
+            )
+
+        # Tier 3: Fetch from Alpha Vantage API (only on trading days)
         if not await self.rate_limiter.can_make_request():
             # Rate limited - serve stale data if available
             if cached:
@@ -196,16 +229,8 @@ class AlphaVantageAdapter:
     async def get_batch_prices(self, tickers: list[Ticker]) -> dict[Ticker, PricePoint]:
         """Get current prices for multiple tickers in a single batch request.
 
-        This method optimizes price fetching by:
-        1. Checking cache for all tickers first
-        2. Only fetching uncached tickers from API (one by one)
-        3. Returning partial results if some tickers fail
-
-        Note: Alpha Vantage free tier doesn't have a true batch API, so we fetch
-        uncached tickers sequentially. However, we still get the benefit of:
-        - Batch cache checking (fast)
-        - Only fetching what's needed
-        - Graceful handling of partial failures
+        With weekend/holiday awareness - fetches from cache/database instead
+        of attempting API calls when markets are closed.
 
         Args:
             tickers: List of stock ticker symbols to get prices for
@@ -225,6 +250,19 @@ class AlphaVantageAdapter:
         if not tickers:
             return result
 
+        # Check if today is a trading day
+        now = datetime.now(UTC)
+        is_trading_day = MarketCalendar.is_trading_day(now.date())
+        last_trading_day = None if is_trading_day else self._get_last_trading_day(now)
+
+        if not is_trading_day:
+            logger.info(
+                "Markets closed, using last trading day prices for batch",
+                current_date=now.date().isoformat(),
+                last_trading_day=last_trading_day.date().isoformat() if last_trading_day else None,
+                ticker_count=len(tickers),
+            )
+
         # Step 1: Check cache for all tickers
         uncached_tickers: list[Ticker] = []
         for ticker in tickers:
@@ -239,21 +277,31 @@ class AlphaVantageAdapter:
         if self.price_repository and uncached_tickers:
             db_uncached: list[Ticker] = []
             for ticker in uncached_tickers:
-                db_price = await self.price_repository.get_latest_price(
-                    ticker, max_age=timedelta(hours=4)
-                )
-                if db_price and not db_price.is_stale(max_age=timedelta(hours=4)):
+                if not is_trading_day and last_trading_day:
+                    # Weekend/Holiday: Get last trading day's price
+                    db_price = await self.price_repository.get_price_at(
+                        ticker, last_trading_day
+                    )
+                else:
+                    # Trading day: Get latest price (4 hour max age)
+                    db_price = await self.price_repository.get_latest_price(
+                        ticker, max_age=timedelta(hours=4)
+                    )
+
+                if db_price:
                     # Warm the cache
-                    await self.price_cache.set(db_price, ttl=3600)
+                    ttl = 7200 if not is_trading_day else 3600  # Longer TTL on weekends
+                    await self.price_cache.set(db_price, ttl=ttl)
                     result[ticker] = db_price.with_source("database")
                 else:
                     db_uncached.append(ticker)
+
             uncached_tickers = db_uncached
 
-        # Step 3: Fetch remaining uncached tickers from API
+        # Step 3: Fetch remaining uncached tickers from API (only on trading days)
         # Note: We fetch sequentially to respect rate limits
         # Alpha Vantage free tier: 5 calls/minute
-        if uncached_tickers:
+        if uncached_tickers and is_trading_day:
             for ticker in uncached_tickers:
                 try:
                     # Check rate limit before each API call
