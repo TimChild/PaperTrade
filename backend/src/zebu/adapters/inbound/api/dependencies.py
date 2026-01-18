@@ -101,21 +101,54 @@ def get_auth_port() -> AuthPort:
     """Get authentication port implementation.
 
     Returns the appropriate AuthPort implementation based on environment
-    configuration. Uses ClerkAuthAdapter for production with a valid
-    Clerk secret key, or InMemoryAuthAdapter for testing.
+    configuration:
+    - E2E_TEST_MODE=true: InMemoryAuthAdapter in permissive mode (accepts any token)
+    - CLERK_SECRET_KEY set: ClerkAuthAdapter for production authentication
+    - Otherwise: InMemoryAuthAdapter in strict mode (for unit tests)
+
+    E2E test mode allows frontend E2E tests to authenticate without requiring
+    valid Clerk sessions, making tests more reliable and faster.
 
     Returns:
         AuthPort implementation (ClerkAuthAdapter or InMemoryAuthAdapter)
     """
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    # Check for E2E test mode (for Playwright tests)
+    e2e_mode = os.getenv("E2E_TEST_MODE", "").lower() in ("true", "1", "yes")
+
+    if e2e_mode:
+        logger.info(
+            "E2E_TEST_MODE enabled - using InMemoryAuthAdapter in permissive mode"
+        )
+        from zebu.application.ports.auth_port import AuthenticatedUser
+
+        # Create a default test user for E2E tests
+        default_user = AuthenticatedUser(
+            id=os.getenv("E2E_CLERK_USER_ID", "user_e2e_test"),
+            email=os.getenv("E2E_CLERK_USER_EMAIL", "test-e2e@papertrade.dev"),
+        )
+
+        # Permissive mode: accepts any non-empty token for the default user
+        # This allows E2E tests to work without valid Clerk sessions
+        return InMemoryAuthAdapter(
+            permissive_mode=True,
+            default_user=default_user,
+        )
+
     clerk_secret_key = os.getenv("CLERK_SECRET_KEY", "")
 
     # Use Clerk adapter if secret key is configured
     if clerk_secret_key and clerk_secret_key != "test":
+        logger.info("Using ClerkAuthAdapter for authentication")
         return ClerkAuthAdapter(secret_key=clerk_secret_key)
 
     # Fall back to in-memory adapter for testing
     # In test environments, this will be overridden with a properly
     # configured InMemoryAuthAdapter
+    logger.info("Using InMemoryAuthAdapter (no Clerk secret key)")
     return InMemoryAuthAdapter()
 
 

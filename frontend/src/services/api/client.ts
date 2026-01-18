@@ -11,6 +11,12 @@ const API_BASE_URL =
     ? '/api/v1'
     : 'http://localhost:8000/api/v1')
 
+// E2E test mode detection
+// In E2E tests, we use a static token that the backend's InMemoryAuthAdapter
+// will accept in permissive mode
+const isE2EMode = import.meta.env.VITE_E2E_TEST_MODE === 'true'
+const E2E_TEST_TOKEN = 'e2e-test-token'
+
 // Global token setter for Clerk authentication
 // This will be called from AuthProvider which has access to Clerk's useAuth
 let tokenGetter: (() => Promise<string | null>) | null = null
@@ -30,6 +36,13 @@ export const apiClient = axios.create({
 // Request interceptor to add authentication token
 apiClient.interceptors.request.use(
   async (config) => {
+    // In E2E test mode, always use a static test token
+    if (isE2EMode) {
+      config.headers.Authorization = `Bearer ${E2E_TEST_TOKEN}`
+      console.log(`[API Client] E2E mode: Using static test token for ${config.method?.toUpperCase()} ${config.url}`)
+      return config
+    }
+
     // Get token from Clerk if tokenGetter is set
     if (tokenGetter) {
       try {

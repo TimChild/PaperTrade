@@ -67,6 +67,10 @@ services:
       SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
       # Authentication configuration
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
+      # E2E test mode (set to 'true' when running E2E tests)
+      E2E_TEST_MODE: ${E2E_TEST_MODE:-false}
+      E2E_CLERK_USER_ID: ${E2E_CLERK_USER_ID:-user_e2e_test}
+      E2E_CLERK_USER_EMAIL: ${E2E_CLERK_USER_EMAIL:-test-e2e@papertrade.dev}
       # CORS configuration
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
       # Application configuration
