@@ -109,9 +109,8 @@ class TestWeekendObservation:
 
     def test_holiday_on_sunday_observed_monday(self) -> None:
         """Holiday on Sunday should be observed on Monday."""
-        sunday = date(2026, 1, 1)  # Jan 1, 2026 is Thursday (let me check)
-        # Actually need a year where Jan 1 is Sunday
-        sunday = date(2023, 1, 1)  # Jan 1, 2023 is Sunday
+        # Jan 1, 2023 is Sunday
+        sunday = date(2023, 1, 1)
         assert sunday.weekday() == 6
         observed = MarketCalendar._get_observed_date(sunday)
         assert observed == date(2023, 1, 2)  # Monday
