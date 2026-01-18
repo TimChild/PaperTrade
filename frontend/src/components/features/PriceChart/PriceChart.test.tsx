@@ -162,7 +162,8 @@ describe('PriceChart', () => {
   })
 
   it('shows dev warning banner when using mock data with error', async () => {
-    // Mock development mode
+    // Note: Directly mutating import.meta.env works in Vitest but could be improved
+    // with proper environment mocking through Vitest config in the future
     const originalEnv = import.meta.env.DEV
     import.meta.env.DEV = true
 
@@ -199,7 +200,7 @@ describe('PriceChart', () => {
       ).toBeInTheDocument()
     })
 
-    // Restore original env
+    // Restore environment (Note: This works in Vitest, could use proper config in future)
     import.meta.env.DEV = originalEnv
   })
 })

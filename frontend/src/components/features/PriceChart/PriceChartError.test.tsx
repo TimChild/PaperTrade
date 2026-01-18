@@ -134,7 +134,8 @@ describe('PriceChartError', () => {
   })
 
   it('shows technical details in development mode', () => {
-    // Mock development mode
+    // Note: Directly mutating import.meta.env works in Vitest but could be improved
+    // with proper environment mocking through Vitest config in the future
     const originalEnv = import.meta.env.DEV
     import.meta.env.DEV = true
 
@@ -148,7 +149,7 @@ describe('PriceChartError', () => {
 
     expect(screen.getByText('Technical Details')).toBeInTheDocument()
 
-    // Restore original env
+    // Restore environment (Note: This works in Vitest, could use proper config in future)
     import.meta.env.DEV = originalEnv
   })
 
