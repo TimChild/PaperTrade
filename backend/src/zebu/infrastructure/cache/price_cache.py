@@ -8,14 +8,35 @@ TTL is configurable to balance freshness vs. API quota usage.
 """
 
 import json
-from datetime import datetime
-from typing import Protocol
+from datetime import date, datetime, timedelta
+from typing import Any, Protocol
 
 from redis.asyncio import Redis
 
 from zebu.application.dtos.price_point import PricePoint
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.ticker import Ticker
+
+
+class RedisPipeline(Protocol):
+    """Protocol for Redis pipeline interface."""
+
+    def get(self, key: str) -> Any:
+        """Queue a GET operation."""
+        ...
+
+    def set(
+        self,
+        key: str,
+        value: str | bytes,
+        ex: int | None = None,
+    ) -> Any:
+        """Queue a SET operation with optional expiration."""
+        ...
+
+    async def execute(self) -> list[Any]:
+        """Execute all queued operations."""
+        ...
 
 
 class RedisClient(Protocol):
@@ -47,6 +68,10 @@ class RedisClient(Protocol):
 
     async def ttl(self, key: str) -> int:
         """Get TTL for key in seconds."""
+        ...
+
+    def pipeline(self) -> RedisPipeline:
+        """Create a pipeline for batch operations."""
         ...
 
 
@@ -101,30 +126,27 @@ class PriceCache:
         """
         return f"{self.key_prefix}:{ticker.symbol}"
 
-    def _get_history_key(
+    def _get_day_key(
         self,
         ticker: Ticker,
-        start: datetime,
-        end: datetime,
+        day: date,
         interval: str = "1day",
     ) -> str:
-        """Generate Redis key for price history range.
+        """Generate Redis key for single day's price.
 
         Args:
             ticker: Stock ticker
-            start: Start of time range
-            end: End of time range
+            day: Date of price observation
             interval: Price interval type
 
         Returns:
-            Redis key like "papertrade:price:AAPL:history:2025-12-01:2026-01-17:1day"
+            Redis key like "zebu:price:AAPL:1day:2026-01-01"
+
+        Example:
+            >>> cache._get_day_key(Ticker("AAPL"), date(2026, 1, 15), "1day")
+            'zebu:price:AAPL:1day:2026-01-15'
         """
-        start_date = start.date().isoformat()
-        end_date = end.date().isoformat()
-        return (
-            f"{self.key_prefix}:{ticker.symbol}:history:"
-            f"{start_date}:{end_date}:{interval}"
-        )
+        return f"{self.key_prefix}:{ticker.symbol}:{interval}:{day.isoformat()}"
 
     def _serialize_price(self, price: PricePoint) -> str:
         """Serialize PricePoint to JSON string.
@@ -303,94 +325,6 @@ class PriceCache:
         key = self._get_key(ticker)
         return await self.redis.ttl(key)
 
-    def _serialize_history(self, prices: list[PricePoint]) -> str:
-        """Serialize list of PricePoints to JSON string.
-
-        Args:
-            prices: List of PricePoints to serialize
-
-        Returns:
-            JSON string representation
-        """
-        # Convert each price point to dict
-        data = [
-            {
-                "ticker": p.ticker.symbol,
-                "price_amount": str(p.price.amount),
-                "price_currency": p.price.currency,
-                "timestamp": p.timestamp.isoformat(),
-                "source": p.source,
-                "interval": p.interval,
-                "open_amount": str(p.open.amount) if p.open else None,
-                "open_currency": p.open.currency if p.open else None,
-                "high_amount": str(p.high.amount) if p.high else None,
-                "high_currency": p.high.currency if p.high else None,
-                "low_amount": str(p.low.amount) if p.low else None,
-                "low_currency": p.low.currency if p.low else None,
-                "close_amount": str(p.close.amount) if p.close else None,
-                "close_currency": p.close.currency if p.close else None,
-                "volume": p.volume,
-            }
-            for p in prices
-        ]
-        return json.dumps(data)
-
-    def _deserialize_history(self, json_str: str) -> list[PricePoint]:
-        """Deserialize JSON string to list of PricePoints.
-
-        Args:
-            json_str: JSON string to deserialize
-
-        Returns:
-            List of reconstructed PricePoints
-
-        Raises:
-            ValueError: If JSON is malformed or invalid
-        """
-        from decimal import Decimal
-
-        data = json.loads(json_str)
-
-        price_points: list[PricePoint] = []
-        for item in data:
-            # Reconstruct Money objects
-            price = Money(Decimal(item["price_amount"]), item["price_currency"])
-
-            open_price = None
-            if item.get("open_amount") is not None:
-                open_price = Money(Decimal(item["open_amount"]), item["open_currency"])
-
-            high_price = None
-            if item.get("high_amount") is not None:
-                high_price = Money(Decimal(item["high_amount"]), item["high_currency"])
-
-            low_price = None
-            if item.get("low_amount") is not None:
-                low_price = Money(Decimal(item["low_amount"]), item["low_currency"])
-
-            close_price = None
-            if item.get("close_amount") is not None:
-                close_price = Money(
-                    Decimal(item["close_amount"]), item["close_currency"]
-                )
-
-            # Reconstruct PricePoint
-            price_point = PricePoint(
-                ticker=Ticker(item["ticker"]),
-                price=price,
-                timestamp=datetime.fromisoformat(item["timestamp"]),
-                source=item["source"],
-                interval=item["interval"],
-                open=open_price,
-                high=high_price,
-                low=low_price,
-                close=close_price,
-                volume=item.get("volume"),
-            )
-            price_points.append(price_point)
-
-        return price_points
-
     async def get_history(
         self,
         ticker: Ticker,
@@ -398,7 +332,10 @@ class PriceCache:
         end: datetime,
         interval: str = "1day",
     ) -> list[PricePoint] | None:
-        """Get cached price history for date range.
+        """Get cached price history by fetching individual days.
+
+        Uses Redis pipeline (MGET) to efficiently fetch all days in range.
+        Returns partial results if only some days are cached.
 
         Args:
             ticker: Stock ticker to get history for
@@ -407,29 +344,47 @@ class PriceCache:
             interval: Price interval type (default: "1day")
 
         Returns:
-            Cached list of PricePoints if exists, None if cache miss
-
-        Raises:
-            ValueError: If cached data is corrupted
+            List of cached PricePoints (may be partial), None if no days cached
 
         Example:
+            >>> # User requests Jan 1-31
             >>> history = await cache.get_history(
             ...     Ticker("AAPL"),
-            ...     datetime(2025, 12, 1, tzinfo=UTC),
-            ...     datetime(2026, 1, 17, tzinfo=UTC)
+            ...     datetime(2026, 1, 1, tzinfo=UTC),
+            ...     datetime(2026, 1, 31, tzinfo=UTC)
             ... )
-            >>> if history is None:
-            ...     # Cache miss, fetch from database or API
+            >>> len(history)  # May return 15 if only 15 days are cached
+            15
         """
-        key = self._get_history_key(ticker, start, end, interval)
-        value = await self.redis.get(key)
+        # Generate list of all days in range
+        days_to_fetch = []
+        current = start.date()
+        end_date = end.date()
 
-        if value is None:
-            return None
+        while current <= end_date:
+            days_to_fetch.append(current)
+            current += timedelta(days=1)
 
-        # Deserialize from JSON
-        json_str = value.decode("utf-8") if isinstance(value, bytes) else value
-        return self._deserialize_history(json_str)
+        # Build pipeline to fetch all days
+        pipeline = self.redis.pipeline()
+        for day in days_to_fetch:
+            key = self._get_day_key(ticker, day, interval)
+            pipeline.get(key)
+
+        # Execute all GET operations in one network round-trip
+        results = await pipeline.execute()
+
+        # Deserialize found prices (skip None results)
+        prices = []
+        for result in results:
+            if result is not None:
+                json_str = (
+                    result.decode("utf-8") if isinstance(result, bytes) else result
+                )
+                prices.append(self._deserialize_price(json_str))
+
+        # Return None if no days were cached, otherwise return what we found
+        return prices if prices else None
 
     async def set_history(
         self,
@@ -440,12 +395,15 @@ class PriceCache:
         interval: str = "1day",
         ttl: int | None = None,
     ) -> None:
-        """Cache price history with appropriate TTL.
+        """Cache price history with per-day keys.
+
+        Stores each price point individually by day, allowing flexible
+        range queries without exact key matching.
 
         Args:
             ticker: Stock ticker
-            start: Start of time range
-            end: End of time range
+            start: Start of time range (for reference, not used in keys)
+            end: End of time range (for reference, not used in keys)
             prices: List of PricePoints to cache
             interval: Price interval type (default: "1day")
             ttl: Time-to-live in seconds (overrides default_ttl if provided)
@@ -453,16 +411,27 @@ class PriceCache:
         Example:
             >>> await cache.set_history(
             ...     Ticker("AAPL"),
-            ...     datetime(2025, 12, 1, tzinfo=UTC),
-            ...     datetime(2026, 1, 17, tzinfo=UTC),
-            ...     price_points,
-            ...     ttl=7 * 24 * 3600  # 7 days
+            ...     datetime(2026, 1, 1, tzinfo=UTC),
+            ...     datetime(2026, 1, 31, tzinfo=UTC),
+            ...     price_points,  # 31 days of data
+            ...     ttl=7 * 24 * 3600
             ... )
+            # Creates 31 individual Redis keys:
+            # AAPL:1day:2026-01-01
+            # AAPL:1day:2026-01-02
+            # ...
+            # AAPL:1day:2026-01-31
         """
-        key = self._get_history_key(ticker, start, end, interval)
-        value = self._serialize_history(prices)
+        # Use Redis pipeline for efficiency (batch operation)
+        pipeline = self.redis.pipeline()
 
-        # Use provided TTL or default
         expiration = ttl if ttl is not None else self.default_ttl
 
-        await self.redis.set(key, value, ex=expiration)
+        for price in prices:
+            day = price.timestamp.date()
+            key = self._get_day_key(ticker, day, interval)
+            value = self._serialize_price(price)
+            pipeline.set(key, value, ex=expiration)
+
+        # Execute all SET operations in one network round-trip
+        await pipeline.execute()

@@ -428,12 +428,15 @@ class TestPriceCacheHistoryMethods:
             ttl=7 * 24 * 3600,
         )
 
-        # Verify TTL by checking key exists and has expected TTL
-        key = cache._get_history_key(Ticker("AAPL"), start, end, "1day")
-        ttl = await redis.ttl(key)
-        # Allow for some timing variance (should be close to 7 days)
+        # Verify TTL by checking individual day keys
+        from datetime import date
+
         expected_ttl = 7 * 24 * 3600
-        assert expected_ttl - 5 <= ttl <= expected_ttl
+        for day_num in [1, 2, 3]:
+            key = cache._get_day_key(Ticker("AAPL"), date(2025, 12, day_num), "1day")
+            ttl = await redis.ttl(key)
+            # Allow for some timing variance (should be close to 7 days)
+            assert expected_ttl - 5 <= ttl <= expected_ttl
 
     async def test_set_history_with_default_ttl(
         self,
@@ -450,24 +453,13 @@ class TestPriceCacheHistoryMethods:
             Ticker("AAPL"), start, end, sample_history, interval="1day"
         )
 
-        # Verify default TTL was used
-        key = cache._get_history_key(Ticker("AAPL"), start, end, "1day")
-        ttl = await redis.ttl(key)
-        assert 3595 <= ttl <= 3600  # Allow small timing variance
+        # Verify default TTL was used on individual day keys
+        from datetime import date
 
-    async def test_history_key_format(
-        self,
-        redis: fakeredis.FakeRedis,  # type: ignore[type-arg]
-    ) -> None:
-        """Test that history keys are formatted correctly."""
-        cache = PriceCache(redis, "zebu:price")
-
-        start = datetime(2025, 12, 1, 0, 0, 0, tzinfo=UTC)
-        end = datetime(2025, 12, 3, 23, 59, 59, tzinfo=UTC)
-
-        key = cache._get_history_key(Ticker("AAPL"), start, end, "1day")
-
-        assert key == "zebu:price:AAPL:history:2025-12-01:2025-12-03:1day"
+        for day_num in [1, 2, 3]:
+            key = cache._get_day_key(Ticker("AAPL"), date(2025, 12, day_num), "1day")
+            ttl = await redis.ttl(key)
+            assert 3595 <= ttl <= 3600  # Allow small timing variance
 
     async def test_different_ranges_isolated(
         self,
@@ -493,3 +485,230 @@ class TestPriceCacheHistoryMethods:
         # Should NOT exist for second range
         result2 = await cache.get_history(Ticker("AAPL"), start2, end2)
         assert result2 is None
+
+
+class TestPriceCachePerDayStorage:
+    """Tests for per-day storage implementation."""
+
+    @pytest.fixture
+    def sample_history(self) -> list[PricePoint]:
+        """Provide sample price history for testing."""
+        return [
+            PricePoint(
+                ticker=Ticker("AAPL"),
+                price=Money(Decimal("150.00"), "USD"),
+                timestamp=datetime(2026, 1, 1, 21, 0, 0, tzinfo=UTC),
+                source="alpha_vantage",
+                interval="1day",
+                open=Money(Decimal("149.00"), "USD"),
+                high=Money(Decimal("151.00"), "USD"),
+                low=Money(Decimal("148.00"), "USD"),
+                close=Money(Decimal("150.00"), "USD"),
+                volume=1000000,
+            ),
+            PricePoint(
+                ticker=Ticker("AAPL"),
+                price=Money(Decimal("151.00"), "USD"),
+                timestamp=datetime(2026, 1, 2, 21, 0, 0, tzinfo=UTC),
+                source="alpha_vantage",
+                interval="1day",
+                open=Money(Decimal("150.00"), "USD"),
+                high=Money(Decimal("152.00"), "USD"),
+                low=Money(Decimal("149.00"), "USD"),
+                close=Money(Decimal("151.00"), "USD"),
+                volume=1100000,
+            ),
+            PricePoint(
+                ticker=Ticker("AAPL"),
+                price=Money(Decimal("152.00"), "USD"),
+                timestamp=datetime(2026, 1, 3, 21, 0, 0, tzinfo=UTC),
+                source="alpha_vantage",
+                interval="1day",
+                open=Money(Decimal("151.00"), "USD"),
+                high=Money(Decimal("153.00"), "USD"),
+                low=Money(Decimal("150.00"), "USD"),
+                close=Money(Decimal("152.00"), "USD"),
+                volume=1200000,
+            ),
+        ]
+
+    async def test_set_history_stores_individual_days(
+        self,
+        redis: fakeredis.FakeRedis,  # type: ignore[type-arg]
+        sample_history: list[PricePoint],
+    ) -> None:
+        """Verify each price point gets its own Redis key."""
+        cache = PriceCache(redis, "test:price")
+
+        start = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 1, 3, 23, 59, 59, tzinfo=UTC)
+
+        await cache.set_history(
+            Ticker("AAPL"), start, end, sample_history, interval="1day"
+        )
+
+        # Verify three separate keys exist
+        key1 = "test:price:AAPL:1day:2026-01-01"
+        key2 = "test:price:AAPL:1day:2026-01-02"
+        key3 = "test:price:AAPL:1day:2026-01-03"
+
+        assert await redis.exists(key1) == 1
+        assert await redis.exists(key2) == 1
+        assert await redis.exists(key3) == 1
+
+    async def test_get_history_returns_partial_results(
+        self,
+        redis: fakeredis.FakeRedis,  # type: ignore[type-arg]
+    ) -> None:
+        """Verify partial cache hits return available days."""
+        cache = PriceCache(redis, "test:price")
+
+        # Cache only days 1-2
+        prices_partial = [
+            PricePoint(
+                ticker=Ticker("AAPL"),
+                price=Money(Decimal("150.00"), "USD"),
+                timestamp=datetime(2026, 1, 1, 21, 0, 0, tzinfo=UTC),
+                source="alpha_vantage",
+                interval="1day",
+            ),
+            PricePoint(
+                ticker=Ticker("AAPL"),
+                price=Money(Decimal("151.00"), "USD"),
+                timestamp=datetime(2026, 1, 2, 21, 0, 0, tzinfo=UTC),
+                source="alpha_vantage",
+                interval="1day",
+            ),
+        ]
+
+        start_cache = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
+        end_cache = datetime(2026, 1, 2, 23, 59, 59, tzinfo=UTC)
+
+        await cache.set_history(
+            Ticker("AAPL"), start_cache, end_cache, prices_partial, interval="1day"
+        )
+
+        # Request days 1-5 (should get back only 1-2)
+        start_request = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
+        end_request = datetime(2026, 1, 5, 23, 59, 59, tzinfo=UTC)
+
+        result = await cache.get_history(
+            Ticker("AAPL"), start_request, end_request, interval="1day"
+        )
+
+        # Should return the 2 days we have
+        assert result is not None
+        assert len(result) == 2
+        assert result[0].timestamp.date().day == 1
+        assert result[1].timestamp.date().day == 2
+
+    async def test_overlapping_ranges_reuse_cached_days(
+        self,
+        redis: fakeredis.FakeRedis,  # type: ignore[type-arg]
+    ) -> None:
+        """Verify time range switching uses cached days."""
+        cache = PriceCache(redis, "test:price")
+
+        # Cache 1 month (Jan 1-31)
+        month_prices = []
+        for day in range(1, 32):
+            month_prices.append(
+                PricePoint(
+                    ticker=Ticker("AAPL"),
+                    price=Money(Decimal("150.00") + Decimal(day), "USD"),
+                    timestamp=datetime(2026, 1, day, 21, 0, 0, tzinfo=UTC),
+                    source="alpha_vantage",
+                    interval="1day",
+                )
+            )
+
+        start_month = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
+        end_month = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+
+        await cache.set_history(
+            Ticker("AAPL"), start_month, end_month, month_prices, interval="1day"
+        )
+
+        # Request 1 week (Jan 25-31) - should find all 7 days in cache
+        start_week = datetime(2026, 1, 25, 0, 0, 0, tzinfo=UTC)
+        end_week = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+
+        week_result = await cache.get_history(
+            Ticker("AAPL"), start_week, end_week, interval="1day"
+        )
+
+        assert week_result is not None
+        assert len(week_result) == 7
+
+        # Request 1 day (Jan 31) - should find in cache
+        start_day = datetime(2026, 1, 31, 0, 0, 0, tzinfo=UTC)
+        end_day = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+
+        day_result = await cache.get_history(
+            Ticker("AAPL"), start_day, end_day, interval="1day"
+        )
+
+        assert day_result is not None
+        assert len(day_result) == 1
+        assert day_result[0].timestamp.date().day == 31
+
+    async def test_set_history_applies_ttl_to_all_days(
+        self,
+        redis: fakeredis.FakeRedis,  # type: ignore[type-arg]
+    ) -> None:
+        """Verify custom TTL is applied to all cached days."""
+        cache = PriceCache(redis, "test:price")
+
+        prices = []
+        for day in range(1, 4):
+            prices.append(
+                PricePoint(
+                    ticker=Ticker("AAPL"),
+                    price=Money(Decimal("150.00"), "USD"),
+                    timestamp=datetime(2026, 1, day, 21, 0, 0, tzinfo=UTC),
+                    source="alpha_vantage",
+                    interval="1day",
+                )
+            )
+
+        start = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 1, 3, 23, 59, 59, tzinfo=UTC)
+
+        custom_ttl = 7 * 24 * 3600  # 7 days
+        await cache.set_history(
+            Ticker("AAPL"), start, end, prices, interval="1day", ttl=custom_ttl
+        )
+
+        # Check TTL on all keys
+        for day in [1, 2, 3]:
+            key = f"test:price:AAPL:1day:2026-01-0{day}"
+            ttl = await redis.ttl(key)
+            # Allow for some timing variance
+            assert custom_ttl - 5 <= ttl <= custom_ttl
+
+    async def test_per_day_key_format(
+        self,
+        redis: fakeredis.FakeRedis,  # type: ignore[type-arg]
+    ) -> None:
+        """Test that per-day keys are formatted correctly."""
+        from datetime import date
+
+        cache = PriceCache(redis, "zebu:price")
+
+        key = cache._get_day_key(Ticker("AAPL"), date(2026, 1, 15), "1day")
+
+        assert key == "zebu:price:AAPL:1day:2026-01-15"
+
+    async def test_empty_result_returns_none(
+        self,
+        redis: fakeredis.FakeRedis,  # type: ignore[type-arg]
+    ) -> None:
+        """Test that requesting non-cached days returns None."""
+        cache = PriceCache(redis, "test:price")
+
+        start = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 1, 5, 23, 59, 59, tzinfo=UTC)
+
+        result = await cache.get_history(Ticker("TSLA"), start, end, interval="1day")
+
+        assert result is None
