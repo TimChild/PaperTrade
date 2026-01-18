@@ -288,11 +288,16 @@ class AlphaVantageAdapter:
                         ticker, max_age=timedelta(hours=4)
                     )
 
+                # Check if price is valid and not stale (for trading days)
                 if db_price:
-                    # Warm the cache
-                    ttl = 7200 if not is_trading_day else 3600  # Longer TTL on weekends
-                    await self.price_cache.set(db_price, ttl=ttl)
-                    result[ticker] = db_price.with_source("database")
+                    if is_trading_day and db_price.is_stale(max_age=timedelta(hours=4)):
+                        # On trading days, don't use stale database prices
+                        db_uncached.append(ticker)
+                    else:
+                        # Valid price - warm the cache and add to results
+                        ttl = 7200 if not is_trading_day else 3600  # Longer TTL on weekends
+                        await self.price_cache.set(db_price, ttl=ttl)
+                        result[ticker] = db_price.with_source("database")
                 else:
                     db_uncached.append(ticker)
 
