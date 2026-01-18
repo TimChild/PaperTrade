@@ -1,0 +1,594 @@
+{
+  "dashboard": {
+    "title": "Zebu - Application Overview",
+    "tags": ["zebu", "production", "overview"],
+    "timezone": "browser",
+    "editable": true,
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "templating": {
+      "list": [
+        {
+          "name": "container",
+          "type": "constant",
+          "current": {
+            "value": "zebu-backend-prod"
+          },
+          "hide": 0,
+          "label": "Container",
+          "query": "zebu-backend-prod"
+        },
+        {
+          "name": "interval",
+          "type": "interval",
+          "current": {
+            "value": "1m"
+          },
+          "hide": 0,
+          "label": "Time Bucket",
+          "query": "30s,1m,5m,15m",
+          "options": [
+            {"text": "30s", "value": "30s"},
+            {"text": "1m", "value": "1m"},
+            {"text": "5m", "value": "5m"},
+            {"text": "15m", "value": "15m"}
+          ]
+        },
+        {
+          "name": "log_level",
+          "type": "custom",
+          "current": {
+            "value": "all"
+          },
+          "hide": 0,
+          "label": "Log Level",
+          "query": "all,debug,info,warning,error",
+          "options": [
+            {"text": "All", "value": "all"},
+            {"text": "Debug", "value": "debug"},
+            {"text": "Info", "value": "info"},
+            {"text": "Warning", "value": "warning"},
+            {"text": "Error", "value": "error"}
+          ]
+        }
+      ]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "type": "row",
+        "title": "System Health",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+        "collapsed": false
+      },
+      {
+        "id": 2,
+        "type": "timeseries",
+        "title": "Request Rate",
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 1},
+        "targets": [{
+          "expr": "sum(rate({container=\"${container}\"} | json | event=\"Request started\" [1m]))",
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 10},
+                {"color": "red", "value": 50}
+              ]
+            }
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "type": "timeseries",
+        "title": "Error Rate",
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 1},
+        "targets": [{
+          "expr": "sum(rate({container=\"${container}\"} | json | level=\"error\" [1m]))",
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "eps",
+            "color": {"mode": "palette-classic"},
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 0.05},
+                {"color": "red", "value": 0.1}
+              ]
+            }
+          },
+          "overrides": [{
+            "matcher": {"id": "byName", "options": "Error Rate"},
+            "properties": [{
+              "id": "color",
+              "value": {"mode": "fixed", "fixedColor": "red"}
+            }]
+          }]
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          }
+        }
+      },
+      {
+        "id": 4,
+        "type": "stat",
+        "title": "Service Uptime",
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 1},
+        "targets": [{
+          "expr": "count_over_time({container=\"${container}\"} [5m]) > 0",
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
+          "instant": true
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "type": "value",
+                "options": {
+                  "0": {"text": "DOWN", "color": "red"}
+                }
+              },
+              {
+                "type": "range",
+                "options": {
+                  "from": 1,
+                  "to": 999999,
+                  "result": {"text": "UP", "color": "green"}
+                }
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value"
+        }
+      },
+      {
+        "id": 5,
+        "type": "row",
+        "title": "Performance Metrics",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 9},
+        "collapsed": false
+      },
+      {
+        "id": 6,
+        "type": "timeseries",
+        "title": "Response Time (P50, P95, P99)",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 10},
+        "targets": [
+          {
+            "expr": "quantile_over_time(0.50, {container=\"${container}\"} | json | unwrap duration_seconds [1m])",
+            "refId": "A",
+            "legendFormat": "P50",
+            "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+          },
+          {
+            "expr": "quantile_over_time(0.95, {container=\"${container}\"} | json | unwrap duration_seconds [1m])",
+            "refId": "B",
+            "legendFormat": "P95",
+            "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+          },
+          {
+            "expr": "quantile_over_time(0.99, {container=\"${container}\"} | json | unwrap duration_seconds [1m])",
+            "refId": "C",
+            "legendFormat": "P99",
+            "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 0.5},
+                {"color": "red", "value": 1.0}
+              ]
+            }
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          }
+        }
+      },
+      {
+        "id": 7,
+        "type": "timeseries",
+        "title": "Slow Requests (>1s)",
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 10},
+        "targets": [{
+          "expr": "count_over_time({container=\"${container}\"} | json | duration_seconds > 1.0 [1m])",
+          "refId": "A",
+          "legendFormat": "Slow Requests",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          }
+        }
+      },
+      {
+        "id": 8,
+        "type": "heatmap",
+        "title": "Request Duration Heatmap",
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 10},
+        "targets": [{
+          "expr": "{container=\"${container}\"} | json | unwrap duration_seconds",
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+        }],
+        "options": {
+          "calculate": true,
+          "calculation": {
+            "xBuckets": {
+              "mode": "size",
+              "value": "0.01s"
+            }
+          },
+          "color": {
+            "mode": "scheme",
+            "scheme": "Blues",
+            "steps": 128
+          },
+          "yAxis": {
+            "unit": "s"
+          }
+        }
+      },
+      {
+        "id": 9,
+        "type": "row",
+        "title": "Cache Performance",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 18},
+        "collapsed": false
+      },
+      {
+        "id": 10,
+        "type": "gauge",
+        "title": "Cache Hit Ratio",
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 19},
+        "targets": [{
+          "expr": "sum(rate({container=\"${container}\"} | json | event=\"Price fetched from cache\" | source=\"redis\" [5m])) / sum(rate({container=\"${container}\"} | json | event =~ \"Price fetched.*\" [5m])) * 100",
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
+          "instant": true
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "yellow", "value": 70},
+                {"color": "green", "value": 90}
+              ]
+            }
+          }
+        },
+        "options": {
+          "showThresholdLabels": true,
+          "showThresholdMarkers": true
+        }
+      },
+      {
+        "id": 11,
+        "type": "timeseries",
+        "title": "Cache Hits vs Misses",
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 19},
+        "targets": [
+          {
+            "expr": "sum(rate({container=\"${container}\"} | json | event=\"Price fetched from cache\" [1m]))",
+            "refId": "A",
+            "legendFormat": "Cache Hits",
+            "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+          },
+          {
+            "expr": "sum(rate({container=\"${container}\"} | json | event=\"Alpha Vantage API called\" [1m]))",
+            "refId": "B",
+            "legendFormat": "API Calls",
+            "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "fillOpacity": 20,
+              "lineWidth": 2,
+              "stacking": {
+                "mode": "normal"
+              }
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Cache Hits"},
+              "properties": [{
+                "id": "color",
+                "value": {"mode": "fixed", "fixedColor": "green"}
+              }]
+            },
+            {
+              "matcher": {"id": "byName", "options": "API Calls"},
+              "properties": [{
+                "id": "color",
+                "value": {"mode": "fixed", "fixedColor": "orange"}
+              }]
+            }
+          ]
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          }
+        }
+      },
+      {
+        "id": 12,
+        "type": "logs",
+        "title": "Redis Status",
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 19},
+        "targets": [{
+          "expr": "{container=\"zebu-redis-prod\"}",
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
+          "maxLines": 50
+        }],
+        "options": {
+          "showTime": true,
+          "showLabels": false,
+          "showCommonLabels": false,
+          "wrapLogMessage": true,
+          "dedupStrategy": "none"
+        }
+      },
+      {
+        "id": 13,
+        "type": "row",
+        "title": "Error Analysis",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 27},
+        "collapsed": false
+      },
+      {
+        "id": 14,
+        "type": "table",
+        "title": "Top 10 Errors",
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 28},
+        "targets": [{
+          "expr": "topk(10, count_over_time({container=\"${container}\"} | json | level=\"error\" [1h]) by (event, logger))",
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
+          "instant": true
+        }],
+        "fieldConfig": {
+          "defaults": {}
+        },
+        "options": {
+          "showHeader": true,
+          "sortBy": [{"displayName": "Value", "desc": true}]
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "event": "Event",
+                "logger": "Logger",
+                "Value": "Count"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "type": "logs",
+        "title": "Error Logs",
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 28},
+        "targets": [{
+          "expr": "{container=\"${container}\"} | json | level=\"error\"",
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
+          "maxLines": 100
+        }],
+        "options": {
+          "showTime": true,
+          "showLabels": true,
+          "showCommonLabels": false,
+          "wrapLogMessage": true,
+          "dedupStrategy": "none"
+        }
+      },
+      {
+        "id": 16,
+        "type": "barchart",
+        "title": "Error Rate by Endpoint",
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 28},
+        "targets": [{
+          "expr": "sum by (request_path) (count_over_time({container=\"${container}\"} | json | level=\"error\" [1h]))",
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
+          "instant": true
+        }],
+        "fieldConfig": {
+          "defaults": {}
+        },
+        "options": {
+          "orientation": "horizontal",
+          "barWidth": 0.8,
+          "groupWidth": 0.7,
+          "showValue": "auto",
+          "legend": {
+            "displayMode": "hidden"
+          }
+        }
+      },
+      {
+        "id": 17,
+        "type": "row",
+        "title": "HTTP Status Codes",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 36},
+        "collapsed": false
+      },
+      {
+        "id": 18,
+        "type": "piechart",
+        "title": "Status Code Distribution",
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 37},
+        "targets": [{
+          "expr": "sum by (status_code) (count_over_time({container=\"${container}\"} | json | status_code > 0 [1h]))",
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
+          "instant": true
+        }],
+        "fieldConfig": {
+          "defaults": {},
+          "overrides": [
+            {
+              "matcher": {"id": "byRegexp", "options": "/^2.*/"},
+              "properties": [{
+                "id": "color",
+                "value": {"mode": "fixed", "fixedColor": "green"}
+              }]
+            },
+            {
+              "matcher": {"id": "byRegexp", "options": "/^3.*/"},
+              "properties": [{
+                "id": "color",
+                "value": {"mode": "fixed", "fixedColor": "blue"}
+              }]
+            },
+            {
+              "matcher": {"id": "byRegexp", "options": "/^4.*/"},
+              "properties": [{
+                "id": "color",
+                "value": {"mode": "fixed", "fixedColor": "yellow"}
+              }]
+            },
+            {
+              "matcher": {"id": "byRegexp", "options": "/^5.*/"},
+              "properties": [{
+                "id": "color",
+                "value": {"mode": "fixed", "fixedColor": "red"}
+              }]
+            }
+          ]
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "right",
+            "showLegend": true
+          },
+          "pieType": "pie",
+          "displayLabels": ["percent"]
+        }
+      },
+      {
+        "id": 19,
+        "type": "timeseries",
+        "title": "4xx Errors Over Time",
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 37},
+        "targets": [{
+          "expr": "sum(rate({container=\"${container}\"} | json | status_code >= 400 | status_code < 500 [1m]))",
+          "refId": "A",
+          "legendFormat": "4xx Errors",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "color": {"mode": "fixed", "fixedColor": "yellow"}
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          }
+        }
+      },
+      {
+        "id": 20,
+        "type": "timeseries",
+        "title": "5xx Errors Over Time",
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 37},
+        "targets": [{
+          "expr": "sum(rate({container=\"${container}\"} | json | status_code >= 500 [1m]))",
+          "refId": "A",
+          "legendFormat": "5xx Errors",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "color": {"mode": "fixed", "fixedColor": "red"}
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          }
+        }
+      }
+    ]
+  }
+}
