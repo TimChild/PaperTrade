@@ -71,7 +71,7 @@ async def list_transactions(
 
     Supports pagination and filtering by transaction type.
     """
-    start_time = time.time()
+    start_time = time.perf_counter()
 
     logger.info(
         "Transaction list request received",
@@ -146,7 +146,7 @@ async def list_transactions(
             for tx in result.transactions
         ]
 
-        duration_ms = (time.time() - start_time) * 1000
+        duration_ms = (time.perf_counter() - start_time) * 1000
 
         logger.info(
             "Transaction list retrieved",
@@ -167,7 +167,7 @@ async def list_transactions(
         # Re-raise HTTP exceptions without logging (already logged above)
         raise
     except Exception as e:
-        duration_ms = (time.time() - start_time) * 1000
+        duration_ms = (time.perf_counter() - start_time) * 1000
         logger.error(
             "Transaction list request failed",
             portfolio_id=str(portfolio_id),
