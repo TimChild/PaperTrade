@@ -890,3 +890,119 @@ class TestRedisCachingIntegration:
         assert mock_price_repository.upsert_price.called
         # Data was stored in Redis
         mock_price_cache.set_history.assert_called_once()
+
+
+class TestRateLimitWithStaleCache:
+    """Tests for rate limit scenarios with stale/incomplete cached data."""
+
+    async def test_rate_limit_serves_stale_cache_instead_of_failing(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_price_repository: MagicMock,
+        mock_rate_limiter: MagicMock,
+        mock_price_cache: MagicMock,
+    ) -> None:
+        """When rate-limited, should serve stale/incomplete cache instead of failing."""
+        # Arrange
+        ticker = Ticker("AAPL")
+        start = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 1, 17, 23, 59, 59, tzinfo=UTC)
+
+        # Redis cache miss
+        mock_price_cache.get_history = AsyncMock(return_value=None)
+
+        # Database has incomplete/stale data (only partial range)
+        stale_data = [
+            create_price_point(ticker, datetime(2026, 1, 10, 0, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 13, 0, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 14, 0, 0, 0, tzinfo=UTC)),
+        ]
+        mock_price_repository.get_price_history = AsyncMock(return_value=stale_data)
+
+        # Rate limiter blocks request
+        mock_rate_limiter.can_make_request = AsyncMock(return_value=False)
+
+        # Act
+        result = await alpha_vantage_adapter.get_price_history(
+            ticker, start, end, "1day"
+        )
+
+        # Assert
+        # Should return the stale cached data
+        assert result == stale_data
+        assert len(result) == 3
+        # Rate limiter was checked but not consumed (since request blocked)
+        mock_rate_limiter.can_make_request.assert_called_once()
+        mock_rate_limiter.consume_token.assert_not_called()
+
+    async def test_rate_limit_with_no_cache_raises_error(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_price_repository: MagicMock,
+        mock_rate_limiter: MagicMock,
+        mock_price_cache: MagicMock,
+    ) -> None:
+        """When rate-limited with no cached data, should raise error."""
+        # Arrange
+        ticker = Ticker("AAPL")
+        start = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 1, 17, 23, 59, 59, tzinfo=UTC)
+
+        # No cached data anywhere
+        mock_price_cache.get_history = AsyncMock(return_value=None)
+        mock_price_repository.get_price_history = AsyncMock(return_value=[])
+
+        # Rate limiter blocks request
+        mock_rate_limiter.can_make_request = AsyncMock(return_value=False)
+
+        # Act & Assert
+        from zebu.application.exceptions import MarketDataUnavailableError
+
+        with pytest.raises(
+            MarketDataUnavailableError,
+            match="Rate limit exceeded. Cannot fetch historical data",
+        ):
+            await alpha_vantage_adapter.get_price_history(ticker, start, end, "1day")
+
+        # Rate limiter was checked
+        mock_rate_limiter.can_make_request.assert_called_once()
+
+    async def test_consume_token_failure_serves_stale_cache(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_price_repository: MagicMock,
+        mock_rate_limiter: MagicMock,
+        mock_price_cache: MagicMock,
+    ) -> None:
+        """When consume_token fails, should serve stale cache instead of failing."""
+        # Arrange
+        ticker = Ticker("AAPL")
+        start = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 1, 17, 23, 59, 59, tzinfo=UTC)
+
+        # Redis cache miss
+        mock_price_cache.get_history = AsyncMock(return_value=None)
+
+        # Database has stale data
+        stale_data = [
+            create_price_point(ticker, datetime(2026, 1, 10, 0, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 13, 0, 0, 0, tzinfo=UTC)),
+        ]
+        mock_price_repository.get_price_history = AsyncMock(return_value=stale_data)
+
+        # Rate limiter allows request check but fails to consume token
+        mock_rate_limiter.can_make_request = AsyncMock(return_value=True)
+        mock_rate_limiter.consume_token = AsyncMock(return_value=False)
+
+        # Act
+        result = await alpha_vantage_adapter.get_price_history(
+            ticker, start, end, "1day"
+        )
+
+        # Assert
+        # Should return the stale cached data
+        assert result == stale_data
+        assert len(result) == 2
+        # Both checks were made
+        mock_rate_limiter.can_make_request.assert_called_once()
+        mock_rate_limiter.consume_token.assert_called_once()
