@@ -103,13 +103,13 @@ export function TransactionList({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* Search Box */}
       {showSearch && (
         <div className="relative">
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
             <svg
-              className="h-5 w-5 text-foreground-tertiary"
+              className="h-4 w-4 sm:h-5 sm:w-5 text-foreground-tertiary"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -127,7 +127,7 @@ export function TransactionList({
             placeholder="Search by ticker, type, or date..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-9 sm:pl-10 text-sm sm:text-base"
             data-testid="transaction-search-input"
           />
         </div>
@@ -138,7 +138,7 @@ export function TransactionList({
         <Card>
           <CardContent className="pt-6">
             <p
-              className="text-center text-foreground-secondary"
+              className="text-center text-foreground-secondary text-sm sm:text-base"
               data-testid="no-search-results"
             >
               No transactions found for &quot;{searchTerm}&quot;
@@ -160,20 +160,20 @@ export function TransactionList({
                   <div
                     key={transaction.id}
                     data-testid={`transaction-row-${idx}`}
-                    className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    className="flex items-center justify-between p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                   >
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
                       <span
-                        className="text-2xl"
+                        className="text-xl sm:text-2xl flex-shrink-0"
                         role="img"
                         aria-label={transaction.type}
                       >
                         {getTransactionIcon(transaction.type)}
                       </span>
-                      <div>
-                        <div className="flex items-center gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <p
-                            className="font-medium text-foreground-primary"
+                            className="font-medium text-foreground-primary text-sm sm:text-base"
                             data-testid={`transaction-type-${idx}`}
                           >
                             {getTransactionLabel(transaction.type)}
@@ -182,12 +182,13 @@ export function TransactionList({
                             <Badge
                               variant="secondary"
                               data-testid={`transaction-symbol-${idx}`}
+                              className="text-xs"
                             >
                               {transaction.ticker}
                             </Badge>
                           )}
                         </div>
-                        <div className="mt-1 text-sm text-foreground-secondary">
+                        <div className="mt-1 text-xs sm:text-sm text-foreground-secondary">
                           <span>{formatDate(transaction.timestamp)}</span>
                           {transaction.quantity &&
                             transaction.pricePerShare && (
@@ -198,15 +199,17 @@ export function TransactionList({
                             )}
                         </div>
                         {transaction.notes && (
-                          <p className="mt-1 text-xs text-foreground-tertiary">
+                          <p className="mt-1 text-xs text-foreground-tertiary truncate">
                             {transaction.notes}
                           </p>
                         )}
                       </div>
                     </div>
-                    <div className={`text-right ${colorClass}`}>
+                    <div
+                      className={`text-right flex-shrink-0 ml-2 ${colorClass}`}
+                    >
                       <p
-                        className="text-lg font-semibold"
+                        className="text-base sm:text-lg font-semibold"
                         data-testid={`transaction-amount-${idx}`}
                       >
                         {isPositive ? '+' : ''}

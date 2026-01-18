@@ -17,7 +17,7 @@ export function PortfolioAnalytics(): React.JSX.Element {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <LoadingSpinner size="lg" className="py-12" />
       </div>
     )
@@ -25,11 +25,11 @@ export function PortfolioAnalytics(): React.JSX.Element {
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <ErrorDisplay error={error} />
         <Link
           to="/dashboard"
-          className="mt-4 inline-block text-blue-600 hover:underline dark:text-blue-400"
+          className="mt-4 inline-block text-blue-600 hover:underline dark:text-blue-400 text-sm sm:text-base"
         >
           ← Back to Dashboard
         </Link>
@@ -39,11 +39,11 @@ export function PortfolioAnalytics(): React.JSX.Element {
 
   if (!portfolioId) {
     return (
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <p className="text-red-500">Portfolio not found</p>
         <Link
           to="/dashboard"
-          className="mt-4 inline-block text-blue-600 hover:underline dark:text-blue-400"
+          className="mt-4 inline-block text-blue-600 hover:underline dark:text-blue-400 text-sm sm:text-base"
         >
           ← Back to Dashboard
         </Link>
@@ -53,27 +53,27 @@ export function PortfolioAnalytics(): React.JSX.Element {
 
   return (
     <div
-      className="container mx-auto px-4 py-8"
+      className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8"
       data-testid="portfolio-analytics"
     >
       {/* Header with navigation */}
-      <div className="mb-6">
+      <div className="mb-6 sm:mb-8">
         <Link
           to={`/portfolio/${portfolioId}`}
           data-testid="analytics-back-link"
-          className="mb-4 inline-flex items-center text-blue-600 hover:underline dark:text-blue-400"
+          className="mb-3 sm:mb-4 inline-flex items-center text-blue-600 hover:underline dark:text-blue-400 text-sm sm:text-base"
         >
           ← Back to Portfolio
         </Link>
-        <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white">
           {portfolio?.name} - Analytics
         </h1>
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8">
         {/* Performance Summary */}
         <section>
-          <h2 className="mb-4 text-2xl font-semibold text-gray-900 dark:text-white">
+          <h2 className="mb-3 sm:mb-4 text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
             Performance Summary
           </h2>
           <MetricsCards portfolioId={portfolioId} />
@@ -81,20 +81,20 @@ export function PortfolioAnalytics(): React.JSX.Element {
 
         {/* Performance Chart */}
         <section>
-          <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+          <h3 className="mb-3 sm:mb-4 text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
             Portfolio Value Over Time
           </h3>
-          <div className="rounded-lg bg-white p-4 shadow dark:bg-gray-800">
+          <div className="rounded-lg bg-white p-3 sm:p-4 shadow dark:bg-gray-800">
             <PerformanceChart portfolioId={portfolioId} />
           </div>
         </section>
 
         {/* Composition Chart */}
         <section>
-          <h3 className="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+          <h3 className="mb-3 sm:mb-4 text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
             Holdings Composition
           </h3>
-          <div className="rounded-lg bg-white p-4 shadow dark:bg-gray-800">
+          <div className="rounded-lg bg-white p-3 sm:p-4 shadow dark:bg-gray-800">
             <CompositionChart portfolioId={portfolioId} />
           </div>
         </section>

@@ -96,21 +96,23 @@ export function TradeForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-heading-md">Execute Trade</CardTitle>
+        <CardTitle className="text-lg sm:text-xl lg:text-heading-md">
+          Execute Trade
+        </CardTitle>
       </CardHeader>
 
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
           {/* Action Toggle */}
           <div>
-            <Label className="mb-2">Action</Label>
+            <Label className="mb-2 text-sm sm:text-base">Action</Label>
             <div className="flex gap-2">
               <Button
                 type="button"
                 data-testid="trade-form-action-buy"
                 onClick={() => setAction('BUY')}
                 variant={action === 'BUY' ? 'default' : 'secondary'}
-                className="flex-1"
+                className="flex-1 text-sm sm:text-base py-2.5 sm:py-3"
                 disabled={isSubmitting}
               >
                 Buy
@@ -120,7 +122,7 @@ export function TradeForm({
                 data-testid="trade-form-action-sell"
                 onClick={() => setAction('SELL')}
                 variant={action === 'SELL' ? 'destructive' : 'secondary'}
-                className="flex-1"
+                className="flex-1 text-sm sm:text-base py-2.5 sm:py-3"
                 disabled={isSubmitting}
               >
                 Sell
@@ -130,7 +132,9 @@ export function TradeForm({
 
           {/* Symbol Input */}
           <div>
-            <Label htmlFor="ticker">Symbol</Label>
+            <Label htmlFor="ticker" className="text-sm sm:text-base">
+              Symbol
+            </Label>
             <Input
               id="ticker"
               data-testid="trade-form-ticker-input"
@@ -146,7 +150,9 @@ export function TradeForm({
 
           {/* Quantity Input */}
           <div>
-            <Label htmlFor="quantity">Quantity</Label>
+            <Label htmlFor="quantity" className="text-sm sm:text-base">
+              Quantity
+            </Label>
             <Input
               id="quantity"
               data-testid="trade-form-quantity-input"
@@ -187,7 +193,9 @@ export function TradeForm({
 
           {/* Price Display (Read-Only) */}
           <div>
-            <Label htmlFor="price">Estimated Execution Price</Label>
+            <Label htmlFor="price" className="text-sm sm:text-base">
+              Estimated Execution Price
+            </Label>
             <div className="relative">
               <Input
                 id="price"
@@ -293,7 +301,9 @@ export function TradeForm({
 
             {backtestMode && (
               <div className="mt-3">
-                <Label htmlFor="backtest-date">Trade Date</Label>
+                <Label htmlFor="backtest-date" className="text-sm sm:text-base">
+                  Trade Date
+                </Label>
                 <Input
                   id="backtest-date"
                   type="date"
@@ -328,8 +338,8 @@ export function TradeForm({
 
           {/* Preview */}
           {isValid && (
-            <div className="rounded-lg bg-gray-50 p-4 dark:bg-gray-900">
-              <p className="text-sm text-foreground-secondary">
+            <div className="rounded-lg bg-gray-50 p-3 sm:p-4 dark:bg-gray-900">
+              <p className="text-xs sm:text-sm text-foreground-secondary">
                 {action === 'BUY' ? 'Buying' : 'Selling'} {quantity} shares of{' '}
                 {ticker.toUpperCase()}
                 {priceData?.price?.amount
@@ -342,7 +352,7 @@ export function TradeForm({
                 )}
               </p>
               {estimatedTotal > 0 && (
-                <p className="mt-1 text-sm font-semibold text-foreground-primary">
+                <p className="mt-1 text-base sm:text-lg font-semibold text-foreground-primary">
                   Estimated Total: ${estimatedTotal.toFixed(2)}
                 </p>
               )}
@@ -364,7 +374,7 @@ export function TradeForm({
             }
             disabled={!isValid || isSubmitting}
             variant={action === 'BUY' ? 'default' : 'destructive'}
-            className="w-full"
+            className="w-full text-sm sm:text-base py-2.5 sm:py-3"
           >
             {isSubmitting
               ? 'Processing...'

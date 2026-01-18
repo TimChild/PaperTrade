@@ -80,8 +80,8 @@ function AuthenticatedApp() {
         <div className="flex min-h-screen flex-col">
           {/* Header with user button */}
           <header className="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800">
-            <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
                 Zebu
               </h1>
               <UserButton afterSignOutUrl="/" />

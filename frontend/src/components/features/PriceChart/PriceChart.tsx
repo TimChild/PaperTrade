@@ -45,8 +45,10 @@ export function PriceChart({
   if (isLoading) {
     return (
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-heading-md">{ticker}</CardTitle>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
+          <CardTitle className="text-lg sm:text-xl lg:text-heading-md">
+            {ticker}
+          </CardTitle>
           <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
         </CardHeader>
         <CardContent>
@@ -62,8 +64,10 @@ export function PriceChart({
     if (isApiError(error)) {
       return (
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-heading-md">{ticker}</CardTitle>
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
+            <CardTitle className="text-lg sm:text-xl lg:text-heading-md">
+              {ticker}
+            </CardTitle>
             <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
           </CardHeader>
           <CardContent>
@@ -79,8 +83,10 @@ export function PriceChart({
     // Fallback to old error component for non-API errors
     return (
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-heading-md">{ticker}</CardTitle>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
+          <CardTitle className="text-lg sm:text-xl lg:text-heading-md">
+            {ticker}
+          </CardTitle>
           <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
         </CardHeader>
         <CardContent>
@@ -94,8 +100,10 @@ export function PriceChart({
   if (!data || data.prices.length === 0) {
     return (
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-heading-md">{ticker}</CardTitle>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
+          <CardTitle className="text-lg sm:text-xl lg:text-heading-md">
+            {ticker}
+          </CardTitle>
           <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
         </CardHeader>
         <CardContent>
@@ -126,8 +134,10 @@ export function PriceChart({
   if (!Number.isFinite(firstPrice) || !Number.isFinite(lastPrice)) {
     return (
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-heading-md">{ticker}</CardTitle>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
+          <CardTitle className="text-lg sm:text-xl lg:text-heading-md">
+            {ticker}
+          </CardTitle>
           <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
         </CardHeader>
         <CardContent>
@@ -146,8 +156,10 @@ export function PriceChart({
   return (
     <Card>
       {/* Header */}
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-heading-md">{ticker}</CardTitle>
+      <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
+        <CardTitle className="text-lg sm:text-xl lg:text-heading-md">
+          {ticker}
+        </CardTitle>
         <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
       </CardHeader>
 
@@ -170,7 +182,7 @@ export function PriceChart({
         />
 
         {/* Chart */}
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height={250}>
           <LineChart data={chartData}>
             <CartesianGrid
               strokeDasharray="3 3"
@@ -179,12 +191,17 @@ export function PriceChart({
             <XAxis
               dataKey="time"
               stroke="hsl(var(--foreground) / 0.5)"
-              style={{ fontSize: '12px' }}
+              style={{ fontSize: '10px' }}
+              className="sm:text-xs"
+              angle={-45}
+              textAnchor="end"
+              height={60}
             />
             <YAxis
               domain={['dataMin - 5', 'dataMax + 5']}
               stroke="hsl(var(--foreground) / 0.5)"
-              style={{ fontSize: '12px' }}
+              style={{ fontSize: '10px' }}
+              className="sm:text-xs"
               tickFormatter={(value) => `$${value.toFixed(0)}`}
             />
             <Tooltip

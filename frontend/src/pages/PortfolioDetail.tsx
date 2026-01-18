@@ -97,12 +97,12 @@ export function PortfolioDetail(): React.JSX.Element {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-background-primary px-container-padding-x py-container-padding-y">
+      <div className="min-h-screen bg-background-primary px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
         <div className="max-w-screen-2xl mx-auto">
           <ErrorDisplay error={error} />
           <Link
             to="/dashboard"
-            className="mt-4 inline-block text-primary hover:underline"
+            className="mt-4 inline-block text-primary hover:underline text-sm sm:text-base"
           >
             ← Back to Dashboard
           </Link>
@@ -113,7 +113,7 @@ export function PortfolioDetail(): React.JSX.Element {
 
   if (portfolioLoading) {
     return (
-      <div className="min-h-screen bg-background-primary px-container-padding-x py-container-padding-y">
+      <div className="min-h-screen bg-background-primary px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
         <div className="max-w-screen-2xl mx-auto">
           <PortfolioDetailSkeleton />
         </div>
@@ -122,20 +122,20 @@ export function PortfolioDetail(): React.JSX.Element {
   }
 
   return (
-    <div className="min-h-screen bg-background-primary px-container-padding-x py-container-padding-y">
+    <div className="min-h-screen bg-background-primary px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
       <div className="max-w-screen-2xl mx-auto">
         {/* Header with navigation */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <Link
             to="/dashboard"
             data-testid="portfolio-detail-back-link"
-            className="mb-4 inline-flex items-center text-primary hover:underline"
+            className="mb-3 sm:mb-4 inline-flex items-center text-primary hover:underline text-sm sm:text-base"
           >
             ← Back to Dashboard
           </Link>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <h1
-              className="text-heading-xl text-foreground-primary"
+              className="text-2xl sm:text-3xl lg:text-heading-xl text-foreground-primary"
               data-testid="portfolio-detail-name"
             >
               {portfolio?.name || 'Portfolio Details'}
@@ -143,16 +143,16 @@ export function PortfolioDetail(): React.JSX.Element {
             <Link
               to={`/portfolio/${portfolioId}/analytics`}
               data-testid="analytics-tab"
-              className="inline-flex items-center justify-center rounded-button bg-primary text-white px-4 py-2 hover:bg-primary-hover shadow-card transition-colors"
+              className="inline-flex items-center justify-center rounded-button bg-primary text-white px-4 py-2.5 hover:bg-primary-hover shadow-card transition-colors text-sm sm:text-base w-full sm:w-auto"
             >
               View Analytics
             </Link>
           </div>
         </div>
 
-        <div className="grid gap-card-gap lg:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 lg:gap-card-gap grid-cols-1 lg:grid-cols-3">
           {/* Main Content */}
-          <div className="space-y-card-gap lg:col-span-2">
+          <div className="space-y-4 sm:space-y-6 lg:space-y-card-gap lg:col-span-2">
             {/* Portfolio Summary */}
             <section>
               {balanceLoading || !portfolio ? (
@@ -180,10 +180,10 @@ export function PortfolioDetail(): React.JSX.Element {
             {/* Performance Chart - Show charts for each holding */}
             {holdings.length > 0 && (
               <section>
-                <h2 className="mb-4 text-heading-lg text-foreground-primary">
+                <h2 className="mb-3 sm:mb-4 text-lg sm:text-xl lg:text-heading-lg text-foreground-primary">
                   Performance
                 </h2>
-                <div className="space-y-card-gap">
+                <div className="space-y-4 sm:space-y-6 lg:space-y-card-gap">
                   {holdings.map((holding) => (
                     <PriceChart
                       key={holding.ticker}
@@ -197,7 +197,7 @@ export function PortfolioDetail(): React.JSX.Element {
 
             {/* Holdings */}
             <section>
-              <h2 className="mb-4 text-heading-lg text-foreground-primary">
+              <h2 className="mb-3 sm:mb-4 text-lg sm:text-xl lg:text-heading-lg text-foreground-primary">
                 Holdings
               </h2>
               <HoldingsTable
@@ -210,7 +210,7 @@ export function PortfolioDetail(): React.JSX.Element {
 
             {/* Transaction History */}
             <section>
-              <h2 className="mb-4 text-heading-lg text-foreground-primary">
+              <h2 className="mb-3 sm:mb-4 text-lg sm:text-xl lg:text-heading-lg text-foreground-primary">
                 Transaction History
               </h2>
               <TransactionList
@@ -222,7 +222,7 @@ export function PortfolioDetail(): React.JSX.Element {
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-card-gap lg:col-span-1">
+          <div className="space-y-4 sm:space-y-6 lg:space-y-card-gap lg:col-span-1">
             {/* Trade Form */}
             <section ref={tradeFormRef}>
               <TradeForm
