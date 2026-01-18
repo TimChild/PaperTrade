@@ -2,9 +2,52 @@
 
 These tests verify that the price endpoints work correctly end-to-end,
 including proper error handling and response formatting.
+
+Note: These integration tests use InMemoryMarketDataAdapter which doesn't
+implement weekend/holiday logic. The weekend-specific tests below serve as
+behavioral specifications for when integration tests use the real adapter.
 """
 
+from datetime import UTC, datetime
+
+import pytest
 from fastapi.testclient import TestClient
+
+
+@pytest.fixture
+def mock_weekday():
+    """Mock current time as a weekday (Friday, Jan 16, 2026).
+
+    This fixture can be used with AlphaVantageAdapter integration tests
+    to ensure consistent weekday behavior regardless of when tests run.
+    """
+    from unittest.mock import patch
+
+    friday = datetime(2026, 1, 16, 15, 0, 0, tzinfo=UTC)
+    with patch(
+        "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
+    ) as mock_dt:
+        mock_dt.now.return_value = friday
+        mock_dt.side_effect = lambda *args, **kwargs: datetime(*args, **kwargs)
+        yield mock_dt
+
+
+@pytest.fixture
+def mock_weekend():
+    """Mock current time as a weekend (Sunday, Jan 18, 2026).
+
+    This fixture can be used with AlphaVantageAdapter integration tests
+    to verify weekend price fallback behavior.
+    """
+    from unittest.mock import patch
+
+    sunday = datetime(2026, 1, 18, 15, 0, 0, tzinfo=UTC)
+    with patch(
+        "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
+    ) as mock_dt:
+        mock_dt.now.return_value = sunday
+        mock_dt.side_effect = lambda *args, **kwargs: datetime(*args, **kwargs)
+        yield mock_dt
 
 
 def test_get_current_price_aapl(
@@ -373,3 +416,68 @@ def test_get_batch_prices_includes_metadata(
     assert aapl_price["ticker"] == "AAPL"
     assert aapl_price["currency"] == "USD"
     assert aapl_price["source"] == "database"
+
+
+# Weekend/Weekday Behavior Tests
+# Note: These tests serve as behavioral specifications for when integration
+# tests use AlphaVantageAdapter instead of InMemoryAdapter.
+# Currently, InMemoryAdapter is used which doesn't implement weekend logic.
+
+
+def test_price_api_documentation_weekend_behavior(
+    client: TestClient,
+) -> None:
+    """Document expected weekend behavior for price APIs.
+
+    This test serves as documentation of expected behavior when the
+    integration tests use AlphaVantageAdapter:
+
+    - On weekends, prices should return cached/DB values
+    - Source should be "cache" or "database", not "alpha_vantage"
+    - Timestamps should reflect the last trading day
+    - No API calls should be attempted to Alpha Vantage
+
+    Currently passes because InMemoryAdapter is used which always
+    returns cached prices. When switching to AlphaVantageAdapter,
+    the mock_weekend fixture should be applied to these tests.
+    """
+    # This test documents the expected behavior pattern
+    # Actual implementation with AlphaVantageAdapter would need:
+    # 1. Apply mock_weekend fixture
+    # 2. Seed database with Friday's prices
+    # 3. Verify responses use cached/database source
+    # 4. Verify no Alpha Vantage API calls made
+
+    response = client.get("/api/v1/prices/AAPL")
+    assert response.status_code == 200
+    data = response.json()
+
+    # Should return a price (from cache/database, not API)
+    assert "price" in data
+    assert "source" in data
+    # InMemoryAdapter returns "database" as source
+    assert data["source"] in ["cache", "database"]
+
+
+def test_batch_prices_weekend_documentation(
+    client: TestClient,
+) -> None:
+    """Document expected weekend behavior for batch price endpoint.
+
+    When using AlphaVantageAdapter on weekends:
+    - Should return last trading day prices for all tickers
+    - Should use cache/database sources only
+    - Should not attempt any Alpha Vantage API calls
+    - All requested tickers should be returned if cached
+    """
+    response = client.get("/api/v1/prices/batch?tickers=AAPL,MSFT,GOOGL")
+    assert response.status_code == 200
+    data = response.json()
+
+    # Should return all seeded tickers
+    assert data["requested"] == 3
+    assert data["returned"] == 3
+
+    # All should come from cache/database
+    for ticker_data in data["prices"].values():
+        assert ticker_data["source"] in ["cache", "database"]
