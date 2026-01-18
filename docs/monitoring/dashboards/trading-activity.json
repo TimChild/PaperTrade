@@ -108,7 +108,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "instant": true
         }
@@ -146,7 +146,7 @@
           "legendFormat": "Trades per Minute",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -184,7 +184,7 @@
           "legendFormat": "Buy",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         },
         {
@@ -193,7 +193,7 @@
           "legendFormat": "Sell",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -276,7 +276,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "instant": true
         }
@@ -310,7 +310,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -345,7 +345,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "instant": true
         }
@@ -390,7 +390,7 @@
           "legendFormat": "Portfolios/hour",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -427,7 +427,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "instant": true
         }
@@ -460,7 +460,7 @@
           "legendFormat": "Calculations/minute",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -506,7 +506,7 @@
           "legendFormat": "Avg Execution Time",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -557,7 +557,7 @@
           "legendFormat": "Failures/minute",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -594,7 +594,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "instant": true
         }
@@ -652,7 +652,7 @@
           "legendFormat": "Active Users",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -685,7 +685,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -726,7 +726,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -751,7 +751,7 @@
           "legendFormat": "Avg Trade Value",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -788,7 +788,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "instant": true
         }

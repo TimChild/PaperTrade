@@ -115,7 +115,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -168,7 +168,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -238,7 +238,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "instant": true
         }
@@ -317,7 +317,7 @@
           "legendFormat": "P50",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         },
         {
@@ -326,7 +326,7 @@
           "legendFormat": "P95",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         },
         {
@@ -335,7 +335,7 @@
           "legendFormat": "P99",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -386,7 +386,7 @@
           "legendFormat": "Slow Requests",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -419,7 +419,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -469,7 +469,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "instant": true
         }
@@ -520,7 +520,7 @@
           "legendFormat": "Cache Hits",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         },
         {
@@ -529,7 +529,7 @@
           "legendFormat": "API Calls",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -600,7 +600,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "maxLines": 50
         }
@@ -641,7 +641,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "instant": true
         }
@@ -687,7 +687,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "maxLines": 100
         }
@@ -716,7 +716,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "instant": true
         }
@@ -762,7 +762,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "instant": true
         }
@@ -861,7 +861,7 @@
           "legendFormat": "4xx Errors",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -899,7 +899,7 @@
           "legendFormat": "5xx Errors",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],

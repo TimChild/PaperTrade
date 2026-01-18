@@ -74,7 +74,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "instant": true
         }
@@ -127,7 +127,7 @@
           "legendFormat": "Calls/minute",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -178,7 +178,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "maxLines": 50
         }
@@ -207,7 +207,7 @@
           "legendFormat": "P50",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         },
         {
@@ -216,7 +216,7 @@
           "legendFormat": "P95",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -263,7 +263,7 @@
           "legendFormat": "Errors/minute",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -312,7 +312,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "instant": true
         }
@@ -378,7 +378,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "maxLines": 100
         }
@@ -407,7 +407,7 @@
           "legendFormat": "Active Connections",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -453,7 +453,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "maxLines": 50
         }
@@ -482,7 +482,7 @@
           "legendFormat": "Errors/minute",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -531,7 +531,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "instant": true
         }
@@ -598,7 +598,7 @@
           "legendFormat": "Reads",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         },
         {
@@ -607,7 +607,7 @@
           "legendFormat": "Writes",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -646,7 +646,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "maxLines": 50
         }
@@ -675,7 +675,7 @@
           "legendFormat": "Memory Used",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -722,7 +722,7 @@
           "legendFormat": "Evictions/minute",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -767,7 +767,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "instant": true
         }
@@ -818,7 +818,7 @@
           "legendFormat": "Available calls/min",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -869,7 +869,7 @@
           "legendFormat": "Stale cache requests/min",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -902,7 +902,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "instant": true
         }
@@ -946,7 +946,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "instant": true
         }
@@ -996,7 +996,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "instant": true
         }
@@ -1042,7 +1042,7 @@
           "legendFormat": "Database fallback/min",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -1088,7 +1088,7 @@
           "legendFormat": "Network errors/min",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           }
         }
       ],
@@ -1125,7 +1125,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "instant": true
         }
@@ -1157,7 +1157,7 @@
           "refId": "A",
           "datasource": {
             "type": "loki",
-            "uid": "${DS_LOKI}"
+            "uid": "grafanacloud-zebutrader-logs"
           },
           "maxLines": 50
         }
