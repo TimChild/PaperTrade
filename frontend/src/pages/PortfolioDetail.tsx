@@ -170,10 +170,7 @@ export function PortfolioDetail(): React.JSX.Element {
                   isLoading={true}
                 />
               ) : (
-                <PortfolioSummaryCard
-                  portfolio={portfolio}
-                  holdingsDTO={holdingsData?.holdings}
-                />
+                <PortfolioSummaryCard portfolio={portfolio} />
               )}
             </section>
 

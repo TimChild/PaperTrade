@@ -1,64 +1,22 @@
-import { useMemo } from 'react'
 import type { Portfolio } from '@/types/portfolio'
-import type { HoldingDTO } from '@/services/api/types'
 import { formatCurrency, formatPercent } from '@/utils/formatters'
-import { useBatchPricesQuery, usePriceStaleness } from '@/hooks/usePriceQuery'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 
 interface PortfolioSummaryCardProps {
   portfolio: Portfolio
-  holdingsDTO?: HoldingDTO[] // Raw backend DTOs for ticker extraction
   isLoading?: boolean
 }
 
 export function PortfolioSummaryCard({
   portfolio,
-  holdingsDTO,
   isLoading = false,
 }: PortfolioSummaryCardProps): React.JSX.Element {
-  // Extract tickers from holdings
-  const tickers = useMemo(() => {
-    return holdingsDTO ? holdingsDTO.map((h) => h.ticker) : []
-  }, [holdingsDTO])
+  // Use backend-calculated total value (already accounts for weekends/holidays)
+  const totalValue = portfolio.totalValue
+  const holdingsValue = portfolio.totalValue - portfolio.cashBalance
 
-  // Fetch real-time prices
-  const { data: priceMap, isLoading: pricesLoading } =
-    useBatchPricesQuery(tickers)
-
-  // Calculate total portfolio value with real prices
-  const { totalValue, holdingsValue } = useMemo(() => {
-    if (!priceMap || !holdingsDTO || holdingsDTO.length === 0) {
-      return { totalValue: portfolio.cashBalance, holdingsValue: 0 }
-    }
-
-    const holdingsVal = holdingsDTO.reduce((sum, holding) => {
-      const price = priceMap.get(holding.ticker)
-      if (!price) return sum
-      return sum + price.price.amount * parseFloat(holding.quantity)
-    }, 0)
-
-    return {
-      totalValue: portfolio.cashBalance + holdingsVal,
-      holdingsValue: holdingsVal,
-    }
-  }, [portfolio.cashBalance, holdingsDTO, priceMap])
-
-  // Determine most stale price (for indicator)
-  const stalestPrice = useMemo(() => {
-    if (!priceMap || priceMap.size === 0) return null
-
-    const prices = Array.from(priceMap.values())
-    return prices.reduce((oldest, current) => {
-      return new Date(current.timestamp) < new Date(oldest.timestamp)
-        ? current
-        : oldest
-    }, prices[0])
-  }, [priceMap])
-
-  const staleness = usePriceStaleness(stalestPrice ?? undefined)
-
-  if (isLoading || pricesLoading) {
+  if (isLoading) {
     return (
       <Card>
         <CardContent className="space-y-4 pt-6">
@@ -92,11 +50,6 @@ export function PortfolioSummaryCard({
           >
             {formatCurrency(totalValue)}
           </p>
-          {staleness && (
-            <p className="text-xs text-foreground-tertiary">
-              Updated {staleness}
-            </p>
-          )}
         </div>
 
         <div>
