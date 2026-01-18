@@ -687,7 +687,9 @@ class AlphaVantageAdapter:
 
         Example:
             >>> # Sunday, Jan 19
-            >>> last_trading = self._get_last_trading_day(datetime(2026, 1, 19, tzinfo=UTC))
+            >>> result = self._get_last_trading_day(
+            ...     datetime(2026, 1, 19, tzinfo=UTC)
+            ... )
             >>> # Returns Friday, Jan 17
         """
         current_date = from_date.date()

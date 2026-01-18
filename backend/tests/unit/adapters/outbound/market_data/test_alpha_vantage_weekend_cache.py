@@ -166,11 +166,21 @@ class TestWeekendCacheValidation:
 
             # Cache has data through Friday (Jan 30)
             cached_data = [
-                create_price_point(ticker, datetime(2026, 1, 20, 21, 0, 0, tzinfo=UTC)),  # Mon
-                create_price_point(ticker, datetime(2026, 1, 21, 21, 0, 0, tzinfo=UTC)),  # Tue
-                create_price_point(ticker, datetime(2026, 1, 22, 21, 0, 0, tzinfo=UTC)),  # Wed
-                create_price_point(ticker, datetime(2026, 1, 23, 21, 0, 0, tzinfo=UTC)),  # Thu
-                create_price_point(ticker, datetime(2026, 1, 29, 21, 0, 0, tzinfo=UTC)),  # Thu
+                create_price_point(
+                    ticker, datetime(2026, 1, 20, 21, 0, 0, tzinfo=UTC)
+                ),  # Mon
+                create_price_point(
+                    ticker, datetime(2026, 1, 21, 21, 0, 0, tzinfo=UTC)
+                ),  # Tue
+                create_price_point(
+                    ticker, datetime(2026, 1, 22, 21, 0, 0, tzinfo=UTC)
+                ),  # Wed
+                create_price_point(
+                    ticker, datetime(2026, 1, 23, 21, 0, 0, tzinfo=UTC)
+                ),  # Thu
+                create_price_point(
+                    ticker, datetime(2026, 1, 29, 21, 0, 0, tzinfo=UTC)
+                ),  # Thu
                 create_price_point(
                     ticker, datetime(2026, 1, 30, 21, 0, 0, tzinfo=UTC)
                 ),  # Friday
@@ -204,11 +214,21 @@ class TestWeekendCacheValidation:
 
             # Cache has data through Friday (Jan 30)
             cached_data = [
-                create_price_point(ticker, datetime(2026, 1, 20, 21, 0, 0, tzinfo=UTC)),  # Mon
-                create_price_point(ticker, datetime(2026, 1, 21, 21, 0, 0, tzinfo=UTC)),  # Tue
-                create_price_point(ticker, datetime(2026, 1, 22, 21, 0, 0, tzinfo=UTC)),  # Wed
-                create_price_point(ticker, datetime(2026, 1, 23, 21, 0, 0, tzinfo=UTC)),  # Thu
-                create_price_point(ticker, datetime(2026, 1, 29, 21, 0, 0, tzinfo=UTC)),  # Thu
+                create_price_point(
+                    ticker, datetime(2026, 1, 20, 21, 0, 0, tzinfo=UTC)
+                ),  # Mon
+                create_price_point(
+                    ticker, datetime(2026, 1, 21, 21, 0, 0, tzinfo=UTC)
+                ),  # Tue
+                create_price_point(
+                    ticker, datetime(2026, 1, 22, 21, 0, 0, tzinfo=UTC)
+                ),  # Wed
+                create_price_point(
+                    ticker, datetime(2026, 1, 23, 21, 0, 0, tzinfo=UTC)
+                ),  # Thu
+                create_price_point(
+                    ticker, datetime(2026, 1, 29, 21, 0, 0, tzinfo=UTC)
+                ),  # Thu
                 create_price_point(
                     ticker, datetime(2026, 1, 30, 21, 0, 0, tzinfo=UTC)
                 ),  # Friday Jan 30
@@ -389,7 +409,10 @@ class TestHistoricalRequestsWithWeekendEndDates:
 
 
 class TestWeekendNoRepeatedAPICalls:
-    """Integration test for the reported bug - weekend requests causing repeated API calls."""
+    """Integration test for the reported bug.
+
+    Tests weekend requests causing repeated API calls.
+    """
 
     async def test_weekend_does_not_trigger_repeated_api_calls(
         self,
