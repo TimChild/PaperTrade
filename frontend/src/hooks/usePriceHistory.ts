@@ -52,10 +52,15 @@ export function usePriceHistory(ticker: string, range: TimeRange) {
     queryKey: ['priceHistory', ticker, range],
     queryFn: () => getPriceHistory(ticker, start, end),
     staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // Keep cached data for 10 minutes even if unused
     enabled: Boolean(ticker), // Only run if we have a ticker
     retry: (failureCount, error) => {
       // Don't retry 404s (ticker not found)
       if (isApiError(error) && error.type === 'not_found') {
+        return false
+      }
+      // Don't retry rate limit errors (503)
+      if (isApiError(error) && error.type === 'rate_limit') {
         return false
       }
       // Retry network errors and server errors once

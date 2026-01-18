@@ -673,7 +673,19 @@ class AlphaVantageAdapter:
 
             # Check rate limiting before API call
             if not await self.rate_limiter.can_make_request():
-                log.warning("Rate limit exceeded, cannot fetch data")
+                log.warning("Rate limit exceeded")
+                # If we have partial/stale data from database, return it instead of failing
+                if db_history:
+                    log.info(
+                        "Rate limit exceeded, serving stale cached data",
+                        cached_points=len(db_history),
+                        cached_range=(
+                            f"{db_history[0].timestamp.date()} to "
+                            f"{db_history[-1].timestamp.date()}"
+                        ),
+                    )
+                    return db_history
+                # No cached data available at all, must fail
                 raise MarketDataUnavailableError(
                     "Rate limit exceeded. Cannot fetch historical data at this time."
                 )
@@ -682,6 +694,18 @@ class AlphaVantageAdapter:
             consumed = await self.rate_limiter.consume_token()
             if not consumed:
                 log.warning("Failed to consume rate limit token")
+                # If we have partial/stale data from database, return it instead of failing
+                if db_history:
+                    log.info(
+                        "Rate limit exceeded, serving stale cached data",
+                        cached_points=len(db_history),
+                        cached_range=(
+                            f"{db_history[0].timestamp.date()} to "
+                            f"{db_history[-1].timestamp.date()}"
+                        ),
+                    )
+                    return db_history
+                # No cached data available at all, must fail
                 raise MarketDataUnavailableError(
                     "Rate limit exceeded. Cannot fetch historical data."
                 )
