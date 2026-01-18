@@ -33,7 +33,6 @@ from zebu.domain.value_objects.ticker import Ticker
 from zebu.infrastructure.cache.price_cache import PriceCache
 from zebu.infrastructure.rate_limiter import RateLimiter
 
-
 # Mock current time to be a trading day (Thursday, Jan 15, 2026 at 3PM UTC)
 MOCK_TRADING_DAY = datetime(2026, 1, 15, 15, 0, 0, tzinfo=UTC)
 
@@ -246,7 +245,9 @@ class TestAlphaVantageAdapterCacheHit:
 
             # Second call - hits cache (no new HTTP request)
             price2 = await adapter.get_current_price(Ticker("AAPL"))
-            assert price2.source == "cache"  # Returned value has source changed to "cache"
+            assert (
+                price2.source == "cache"
+            )  # Returned value has source changed to "cache"
             assert price2.ticker == price1.ticker
             assert price2.price == price1.price
             # Verify no additional API calls were made

@@ -97,14 +97,18 @@ class TestGetCurrentPriceOnWeekend:
     ) -> None:
         """Should return Friday's cached price on Sunday without API call."""
         # Mock current time as Sunday, Jan 18, 2026 at 3:00 PM UTC
+        # (Verify: Jan 18, 2026 is a Sunday - weekday 6)
         mock_now = datetime(2026, 1, 18, 15, 0, 0, tzinfo=UTC)
+        assert mock_now.weekday() == 6  # Sunday
 
         # Mock Friday's price from database (Jan 16, 2026 at market close)
+        # (Verify: Jan 16, 2026 is a Friday - weekday 4)
         friday_price = create_price_point(
             ticker=Ticker("AAPL"),
             timestamp=datetime(2026, 1, 16, 21, 0, 0, tzinfo=UTC),
             price=Decimal("259.96"),
         )
+        assert friday_price.timestamp.weekday() == 4  # Friday
         mock_price_repository.get_latest_price = AsyncMock(return_value=None)
         mock_price_repository.get_price_at = AsyncMock(return_value=friday_price)
 
@@ -122,7 +126,7 @@ class TestGetCurrentPriceOnWeekend:
             # Assert: Should return Friday's price
             assert result.price.amount == Decimal("259.96")
             assert result.source == "database"
-            assert result.timestamp.date().weekday() == 4  # Friday (Jan 16 is Friday)
+            assert result.timestamp.date().weekday() == 4  # Friday (weekday: 0=Mon, 4=Fri, 6=Sun)
 
             # Verify get_price_at was called with last trading day
             mock_price_repository.get_price_at.assert_called_once()
@@ -145,7 +149,9 @@ class TestGetCurrentPriceOnWeekend:
     ) -> None:
         """Should return Friday's cached price on Saturday without API call."""
         # Mock current time as Saturday, Jan 17, 2026 at 10:00 AM UTC
+        # (Verify: Jan 17, 2026 is a Saturday - weekday 5)
         mock_now = datetime(2026, 1, 17, 10, 0, 0, tzinfo=UTC)
+        assert mock_now.weekday() == 5  # Saturday
 
         # Mock Friday's price
         friday_price = create_price_point(
@@ -181,9 +187,15 @@ class TestGetCurrentPriceOnWeekend:
         mock_price_repository: MagicMock,
         mock_rate_limiter: MagicMock,
     ) -> None:
-        """Should return last trading day price on holidays (MLK Day)."""
-        # Mock current time as Monday, Jan 19, 2026 (MLK Day)
+        """Should return last trading day price on holidays (MLK Day).
+
+        MLK Day 2026 is Monday, January 19 (3rd Monday in January).
+        Last trading day before MLK Day is Friday, January 16.
+        """
+        # Mock current time as Monday, Jan 19, 2026 (MLK Day - holiday)
+        # (Verify: Jan 19, 2026 is the 3rd Monday in January = MLK Day)
         mock_now = datetime(2026, 1, 19, 15, 0, 0, tzinfo=UTC)
+        assert mock_now.weekday() == 0  # Monday
 
         # Mock Friday's price (Jan 16, last trading day before MLK Day)
         friday_price = create_price_point(
