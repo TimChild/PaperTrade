@@ -76,14 +76,14 @@ export function PortfolioSummaryCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-heading-md">{portfolio.name}</CardTitle>
+        <CardTitle className="text-lg sm:text-xl lg:text-heading-md">{portfolio.name}</CardTitle>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 sm:space-y-4">
         <div>
-          <p className="text-sm text-foreground-secondary">Total Value</p>
+          <p className="text-xs sm:text-sm text-foreground-secondary">Total Value</p>
           <p
-            className="text-value-primary text-foreground-primary"
+            className="text-xl sm:text-2xl lg:text-value-primary text-foreground-primary"
             data-testid="portfolio-total-value"
           >
             {formatCurrency(totalValue)}
@@ -96,17 +96,17 @@ export function PortfolioSummaryCard({
         </div>
 
         <div>
-          <p className="text-sm text-foreground-secondary">Daily Change</p>
+          <p className="text-xs sm:text-sm text-foreground-secondary">Daily Change</p>
           <div className="flex items-baseline gap-2">
             <p
-              className={`text-value-secondary ${changeColorClass}`}
+              className={`text-base sm:text-lg lg:text-value-secondary ${changeColorClass}`}
               data-testid="portfolio-daily-change"
             >
               {isPositiveChange ? '+' : ''}
               {formatCurrency(portfolio.dailyChange)}
             </p>
             <p
-              className={`text-lg font-medium ${changeColorClass}`}
+              className={`text-base sm:text-lg font-medium ${changeColorClass}`}
               data-testid="portfolio-daily-change-percent"
             >
               ({formatPercent(portfolio.dailyChangePercent)})
@@ -114,11 +114,11 @@ export function PortfolioSummaryCard({
           </div>
         </div>
 
-        <div className="border-t border-gray-200 pt-4 dark:border-gray-700">
+        <div className="border-t border-gray-200 pt-3 sm:pt-4 dark:border-gray-700">
           <div className="flex justify-between">
-            <p className="text-sm text-foreground-secondary">Cash Balance</p>
+            <p className="text-xs sm:text-sm text-foreground-secondary">Cash Balance</p>
             <p
-              className="text-sm font-medium text-foreground-primary"
+              className="text-xs sm:text-sm font-medium text-foreground-primary"
               data-testid="portfolio-cash-balance"
             >
               {formatCurrency(portfolio.cashBalance)}
@@ -126,10 +126,10 @@ export function PortfolioSummaryCard({
           </div>
           {holdingsValue > 0 && (
             <div className="mt-2 flex justify-between">
-              <p className="text-sm text-foreground-secondary">
+              <p className="text-xs sm:text-sm text-foreground-secondary">
                 Holdings Value
               </p>
-              <p className="text-sm font-medium text-foreground-primary">
+              <p className="text-xs sm:text-sm font-medium text-foreground-primary">
                 {formatCurrency(holdingsValue)}
               </p>
             </div>
