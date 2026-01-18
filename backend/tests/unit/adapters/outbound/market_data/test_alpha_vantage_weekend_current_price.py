@@ -1,11 +1,12 @@
-"""Unit tests for AlphaVantageAdapter weekend handling in get_current_price and get_batch_prices.
+"""Unit tests for AlphaVantageAdapter weekend handling.
 
-These tests verify the fix for Task 159 - ensuring that get_current_price and
-get_batch_prices return cached prices on weekends/holidays instead of failing with
-"Ticker not found" errors.
+Tests weekend handling in get_current_price and get_batch_prices methods.
+These tests verify the fix for Task 159 - ensuring that get_current_price
+and get_batch_prices return cached prices on weekends/holidays instead of
+failing with "Ticker not found" errors.
 """
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -221,7 +222,10 @@ class TestGetCurrentPriceOnWeekend:
         mock_price_repository: MagicMock,
         mock_price_cache: MagicMock,
     ) -> None:
-        """Test that get_current_price raises TickerNotFoundError when no cached data on weekend."""
+        """Test get_current_price raises TickerNotFoundError with no cache.
+
+        When called on a weekend with no cached data available.
+        """
         # Mock today as Sunday, Jan 18, 2026
         mock_now = datetime(2026, 1, 18, 15, 0, 0, tzinfo=UTC)
 
@@ -251,7 +255,10 @@ class TestGetCurrentPriceOnWeekend:
         mock_price_repository: MagicMock,
         mock_price_cache: MagicMock,
     ) -> None:
-        """Test that get_current_price falls back to stale cache if no DB data on weekend."""
+        """Test get_current_price falls back to stale cache on weekend.
+
+        When database has no data but stale cached data is available.
+        """
         # Mock today as Sunday, Jan 18, 2026
         mock_now = datetime(2026, 1, 18, 15, 0, 0, tzinfo=UTC)
 
@@ -345,7 +352,9 @@ class TestGetBatchPricesOnWeekend:
             Decimal("123.45"),
         )
 
-        async def mock_get_price_at(ticker: Ticker, timestamp: datetime) -> PricePoint | None:
+        async def mock_get_price_at(
+            ticker: Ticker, timestamp: datetime
+        ) -> PricePoint | None:
             if ticker.symbol == "AAPL":
                 return friday_aapl
             elif ticker.symbol == "MSFT":
@@ -413,7 +422,9 @@ class TestGetBatchPricesOnWeekend:
             datetime(2026, 1, 16, 21, 0, 0, tzinfo=UTC),
         )
 
-        async def mock_get_price_at(ticker: Ticker, timestamp: datetime) -> PricePoint | None:
+        async def mock_get_price_at(
+            ticker: Ticker, timestamp: datetime
+        ) -> PricePoint | None:
             if ticker.symbol == "AAPL":
                 return db_aapl
             elif ticker.symbol == "MSFT":
