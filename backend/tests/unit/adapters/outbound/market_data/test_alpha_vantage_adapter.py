@@ -576,9 +576,7 @@ class TestHistoryCachingTTL:
         now = datetime.now(UTC)
 
         # Create price points including today
-        prices = [
-            create_price_point(ticker, now.replace(hour=21, minute=0, second=0))
-        ]
+        prices = [create_price_point(ticker, now.replace(hour=21, minute=0, second=0))]
 
         ttl = alpha_vantage_adapter._calculate_history_ttl(prices)
 
@@ -598,9 +596,7 @@ class TestHistoryCachingTTL:
 
         # Create price points for yesterday
         prices = [
-            create_price_point(
-                ticker, yesterday.replace(hour=21, minute=0, second=0)
-            )
+            create_price_point(ticker, yesterday.replace(hour=21, minute=0, second=0))
         ]
 
         ttl = alpha_vantage_adapter._calculate_history_ttl(prices)
@@ -651,7 +647,7 @@ class TestCacheCompletenessMarketHours:
 
         If market hasn't closed and we have data through yesterday, that's complete.
         """
-        from datetime import UTC, datetime, timedelta
+        from datetime import UTC, datetime
         from unittest.mock import patch
 
         ticker = Ticker("AAPL")
@@ -659,9 +655,13 @@ class TestCacheCompletenessMarketHours:
         # Mock current time to be 3:00 PM UTC (before market close at 9:00 PM UTC)
         mock_now = datetime(2026, 1, 18, 15, 0, 0, tzinfo=UTC)
 
-        with patch("zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime") as mock_datetime:
+        with patch(
+            "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
+        ) as mock_datetime:
             mock_datetime.now.return_value = mock_now
-            mock_datetime.side_effect = lambda *args, **kwargs: datetime(*args, **kwargs)
+            mock_datetime.side_effect = lambda *args, **kwargs: datetime(
+                *args, **kwargs
+            )
 
             # Request data through today
             start = datetime(2026, 1, 10, 0, 0, 0, tzinfo=UTC)
@@ -669,30 +669,18 @@ class TestCacheCompletenessMarketHours:
 
             # Cache has data through yesterday (Jan 17)
             cached_data = [
-                create_price_point(
-                    ticker, datetime(2026, 1, 10, 21, 0, 0, tzinfo=UTC)
-                ),
-                create_price_point(
-                    ticker, datetime(2026, 1, 13, 21, 0, 0, tzinfo=UTC)
-                ),
-                create_price_point(
-                    ticker, datetime(2026, 1, 14, 21, 0, 0, tzinfo=UTC)
-                ),
-                create_price_point(
-                    ticker, datetime(2026, 1, 15, 21, 0, 0, tzinfo=UTC)
-                ),
-                create_price_point(
-                    ticker, datetime(2026, 1, 16, 21, 0, 0, tzinfo=UTC)
-                ),
+                create_price_point(ticker, datetime(2026, 1, 10, 21, 0, 0, tzinfo=UTC)),
+                create_price_point(ticker, datetime(2026, 1, 13, 21, 0, 0, tzinfo=UTC)),
+                create_price_point(ticker, datetime(2026, 1, 14, 21, 0, 0, tzinfo=UTC)),
+                create_price_point(ticker, datetime(2026, 1, 15, 21, 0, 0, tzinfo=UTC)),
+                create_price_point(ticker, datetime(2026, 1, 16, 21, 0, 0, tzinfo=UTC)),
                 create_price_point(
                     ticker, datetime(2026, 1, 17, 21, 0, 0, tzinfo=UTC)
                 ),  # Yesterday
             ]
 
             # Should be considered complete
-            result = alpha_vantage_adapter._is_cache_complete(
-                cached_data, start, end
-            )
+            result = alpha_vantage_adapter._is_cache_complete(cached_data, start, end)
 
             assert result is True
 
@@ -709,33 +697,27 @@ class TestCacheCompletenessMarketHours:
         # Mock current time to be 3:00 PM UTC (before market close)
         mock_now = datetime(2026, 1, 18, 15, 0, 0, tzinfo=UTC)
 
-        with patch("zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime") as mock_datetime:
+        with patch(
+            "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
+        ) as mock_datetime:
             mock_datetime.now.return_value = mock_now
-            mock_datetime.side_effect = lambda *args, **kwargs: datetime(*args, **kwargs)
+            mock_datetime.side_effect = lambda *args, **kwargs: datetime(
+                *args, **kwargs
+            )
 
             start = datetime(2026, 1, 10, 0, 0, 0, tzinfo=UTC)
             end = datetime(2026, 1, 18, 23, 59, 59, tzinfo=UTC)
 
             # Cache only has data through Jan 15 (missing 16, 17)
             cached_data = [
-                create_price_point(
-                    ticker, datetime(2026, 1, 10, 21, 0, 0, tzinfo=UTC)
-                ),
-                create_price_point(
-                    ticker, datetime(2026, 1, 13, 21, 0, 0, tzinfo=UTC)
-                ),
-                create_price_point(
-                    ticker, datetime(2026, 1, 14, 21, 0, 0, tzinfo=UTC)
-                ),
-                create_price_point(
-                    ticker, datetime(2026, 1, 15, 21, 0, 0, tzinfo=UTC)
-                ),
+                create_price_point(ticker, datetime(2026, 1, 10, 21, 0, 0, tzinfo=UTC)),
+                create_price_point(ticker, datetime(2026, 1, 13, 21, 0, 0, tzinfo=UTC)),
+                create_price_point(ticker, datetime(2026, 1, 14, 21, 0, 0, tzinfo=UTC)),
+                create_price_point(ticker, datetime(2026, 1, 15, 21, 0, 0, tzinfo=UTC)),
             ]
 
             # Should be incomplete (missing yesterday)
-            result = alpha_vantage_adapter._is_cache_complete(
-                cached_data, start, end
-            )
+            result = alpha_vantage_adapter._is_cache_complete(cached_data, start, end)
 
             assert result is False
 

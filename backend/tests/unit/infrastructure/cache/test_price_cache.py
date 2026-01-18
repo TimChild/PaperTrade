@@ -377,9 +377,7 @@ class TestPriceCacheHistoryMethods:
         await cache.set_history(
             Ticker("AAPL"), start, end, sample_history, interval="1day"
         )
-        retrieved = await cache.get_history(
-            Ticker("AAPL"), start, end, interval="1day"
-        )
+        retrieved = await cache.get_history(Ticker("AAPL"), start, end, interval="1day")
 
         assert retrieved is not None
         assert len(retrieved) == len(sample_history)
@@ -396,7 +394,8 @@ class TestPriceCacheHistoryMethods:
             assert price.volume == sample_history[i].volume
 
     async def test_get_nonexistent_history(
-        self, redis: fakeredis.FakeRedis  # type: ignore[type-arg]
+        self,
+        redis: fakeredis.FakeRedis,  # type: ignore[type-arg]
     ) -> None:
         """Test getting history that doesn't exist returns None."""
         cache = PriceCache(redis, "test:price")
