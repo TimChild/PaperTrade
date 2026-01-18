@@ -485,9 +485,9 @@ class AlphaVantageAdapter:
         """Get price history over a time range.
 
         This method implements tiered caching for historical data:
-        1. Check price repository for cached date range
-        2. If data is missing or incomplete, fetch from Alpha Vantage API
-        3. Store fetched data in repository for future use
+        1. Check Redis cache (Tier 1)
+        2. Check PostgreSQL repository (Tier 2)
+        3. Fetch from Alpha Vantage API (Tier 3)
 
         Args:
             ticker: Stock ticker symbol
@@ -532,57 +532,74 @@ class AlphaVantageAdapter:
                 f"Invalid interval: {interval}. Must be one of {valid_intervals}"
             )
 
-        # Query repository for price history
+        # Tier 1: Check Redis cache
+        cached_history = await self.price_cache.get_history(
+            ticker, start, end, interval
+        )
+        if cached_history and self._is_cache_complete(cached_history, start, end):
+            log.info(
+                "Redis cache hit",
+                cached_points=len(cached_history),
+                source="redis",
+            )
+            return cached_history
+
+        # Tier 2: Check PostgreSQL repository
         if not self.price_repository:
             raise MarketDataUnavailableError(
                 "Price repository not configured - cannot query historical data"
             )
 
-        # Try to get cached data first
-        history = await self.price_repository.get_price_history(
+        db_history = await self.price_repository.get_price_history(
             ticker, start, end, interval
         )
 
-        # Log cache query result
-        if history:
-            first_date = history[0].timestamp.date()
-            last_date = history[-1].timestamp.date()
+        # Log database query result
+        if db_history:
+            first_date = db_history[0].timestamp.date()
+            last_date = db_history[-1].timestamp.date()
             log.info(
-                "Cache query result",
-                cached_points=len(history),
+                "Database query result",
+                cached_points=len(db_history),
                 cached_range=f"{first_date} to {last_date}",
             )
         else:
-            log.info("Cache miss")
+            log.info("Database cache miss")
 
-        # Check if cached data is complete for requested range
-        if history and interval == "1day":
-            if self._is_cache_complete(history, start, end):
+        # Check if database data is complete for requested range
+        if db_history and interval == "1day":
+            if self._is_cache_complete(db_history, start, end):
+                # Warm Redis cache with database data
+                ttl = self._calculate_history_ttl(db_history)
+                await self.price_cache.set_history(
+                    ticker, start, end, db_history, interval, ttl=ttl
+                )
                 log.info(
-                    "Returning complete cached data",
-                    cached_points=len(history),
+                    "Database cache hit, warmed Redis cache",
+                    cached_points=len(db_history),
+                    ttl=ttl,
                     date_range=f"{start.date()} to {end.date()}",
                 )
-                return history
+                return db_history
             else:
                 log.info(
-                    "Cached data incomplete",
-                    cached_points=len(history),
+                    "Database data incomplete",
+                    cached_points=len(db_history),
                     requested_range=f"{start.date()} to {end.date()}",
                     cached_range=(
-                        f"{history[0].timestamp.date()} to "
-                        f"{history[-1].timestamp.date()}"
+                        f"{db_history[0].timestamp.date()} to "
+                        f"{db_history[-1].timestamp.date()}"
                     ),
                     reason="missing_dates",
                 )
                 # Fall through to API fetch
 
-        # No cached data or incomplete - fetch from API if interval is "1day"
+        # Tier 3: Fetch from Alpha Vantage API
         # Only support daily data fetching for now (Alpha Vantage free tier)
         if interval == "1day":
             log.info(
                 "Fetching from Alpha Vantage API",
-                reason="cache_miss" if not history else "cache_incomplete",
+                reason="cache_miss" if not db_history else "cache_incomplete",
             )
 
             # Check rate limiting before API call
@@ -602,25 +619,37 @@ class AlphaVantageAdapter:
 
             # Fetch from API
             try:
-                history = await self._fetch_daily_history_from_api(ticker)
+                api_history = await self._fetch_daily_history_from_api(ticker)
 
                 log.info(
                     "Alpha Vantage API fetch successful",
-                    total_points_fetched=len(history),
+                    total_points_fetched=len(api_history),
                     fetched_range=(
-                        f"{history[0].timestamp.date()} to "
-                        f"{history[-1].timestamp.date()}"
+                        f"{api_history[0].timestamp.date()} to "
+                        f"{api_history[-1].timestamp.date()}"
                     )
-                    if history
+                    if api_history
                     else "none",
                 )
 
                 # Filter to requested date range
                 filtered_history = [
                     p
-                    for p in history
+                    for p in api_history
                     if start <= p.timestamp.replace(tzinfo=UTC) <= end
                 ]
+
+                # Store in Redis cache for future requests
+                if filtered_history:
+                    ttl = self._calculate_history_ttl(filtered_history)
+                    await self.price_cache.set_history(
+                        ticker, start, end, filtered_history, interval, ttl=ttl
+                    )
+                    log.info(
+                        "Stored API data in Redis cache",
+                        points_cached=len(filtered_history),
+                        ttl=ttl,
+                    )
 
                 log.info(
                     "Returning filtered API data",
@@ -652,9 +681,14 @@ class AlphaVantageAdapter:
         """Check if cached data is complete for the requested date range.
 
         For daily data, validates:
-        1. Boundary coverage: Cache spans from start to end (±1 day tolerance)
+        1. Boundary coverage: Cache spans from start to end (with smart tolerance)
         2. Density check: Has at least 70% of expected trading days
            (for ranges ≤30 days)
+
+        Improvements:
+        - Don't require today's data if market hasn't closed yet
+        - For historical data (end date > 1 day ago), don't expect new data
+        - Allow 1-day gap for weekends/holidays at boundaries
 
         Args:
             cached_data: List of cached price points (assumed sorted by timestamp)
@@ -671,7 +705,7 @@ class AlphaVantageAdapter:
         first_cached = cached_data[0].timestamp.replace(tzinfo=UTC)
         last_cached = cached_data[-1].timestamp.replace(tzinfo=UTC)
 
-        # Check boundary coverage (allow 1-day tolerance for timezone/market timing)
+        # Check start boundary (allow 1-day tolerance for timezone/market timing)
         if first_cached > start + timedelta(days=1):
             logger.debug(
                 "Cache incomplete: missing early dates",
@@ -680,13 +714,51 @@ class AlphaVantageAdapter:
             )
             return False
 
-        if last_cached < end - timedelta(days=1):
-            logger.debug(
-                "Cache incomplete: missing recent dates",
-                last_cached=last_cached.date().isoformat(),
-                requested_end=end.date().isoformat(),
-            )
-            return False
+        # Smart end boundary check
+        now = datetime.now(UTC)
+        # Market closes at 4:00 PM ET = 21:00 UTC
+        market_close_today = now.replace(hour=21, minute=0, second=0, microsecond=0)
+
+        # If requesting data through today and market hasn't closed yet
+        if end.date() >= now.date():
+            if now < market_close_today:
+                # Market hasn't closed today yet, so we can't have today's data
+                # Check if we have data through yesterday
+                yesterday = now.date() - timedelta(days=1)
+                if last_cached.date() >= yesterday:
+                    # We have data through yesterday or more recent, good enough
+                    logger.debug(
+                        "Cache complete: has data through yesterday (market open)",
+                        last_cached=last_cached.date().isoformat(),
+                        yesterday=yesterday.isoformat(),
+                    )
+                else:
+                    logger.debug(
+                        "Cache incomplete: missing recent dates (before yesterday)",
+                        last_cached=last_cached.date().isoformat(),
+                        yesterday=yesterday.isoformat(),
+                    )
+                    return False
+            else:
+                # Market has closed today, we should have today's data
+                # Allow 1-day tolerance (data might not be available immediately)
+                if last_cached < end - timedelta(days=1):
+                    logger.debug(
+                        "Cache incomplete: missing today's data (market closed)",
+                        last_cached=last_cached.date().isoformat(),
+                        requested_end=end.date().isoformat(),
+                    )
+                    return False
+        else:
+            # Requesting historical data (end date is in the past)
+            # Use standard 1-day tolerance
+            if last_cached < end - timedelta(days=1):
+                logger.debug(
+                    "Cache incomplete: missing recent dates",
+                    last_cached=last_cached.date().isoformat(),
+                    requested_end=end.date().isoformat(),
+                )
+                return False
 
         # For short date ranges (≤30 days), verify density
         # This catches major gaps in the middle of the range
@@ -708,6 +780,39 @@ class AlphaVantageAdapter:
 
         # Cache appears complete
         return True
+
+    def _calculate_history_ttl(self, prices: list[PricePoint]) -> int:
+        """Calculate appropriate TTL based on data recency.
+
+        Args:
+            prices: List of PricePoints to calculate TTL for
+
+        Returns:
+            TTL in seconds:
+            - Recent data (includes today): 1 hour (data may update)
+            - Yesterday's data: 4 hours (market closed, but might get corrections)
+            - Older data: 7 days (immutable, long cache)
+
+        Example:
+            >>> ttl = adapter._calculate_history_ttl(price_points)
+            >>> await cache.set_history(ticker, start, end, prices, ttl=ttl)
+        """
+        if not prices:
+            # Empty data - use short TTL
+            return 3600  # 1 hour
+
+        now = datetime.now(UTC)
+        most_recent = max(p.timestamp for p in prices)
+
+        if most_recent.date() >= now.date():
+            # Includes today's data - short TTL
+            return 3600  # 1 hour
+        elif most_recent.date() >= (now.date() - timedelta(days=1)):
+            # Yesterday's data - medium TTL
+            return 4 * 3600  # 4 hours
+        else:
+            # Historical data - long TTL
+            return 7 * 24 * 3600  # 7 days
 
     async def _fetch_daily_history_from_api(self, ticker: Ticker) -> list[PricePoint]:
         """Fetch daily historical price data from Alpha Vantage API.
