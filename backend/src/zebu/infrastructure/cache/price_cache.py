@@ -8,6 +8,7 @@ TTL is configurable to balance freshness vs. API quota usage.
 """
 
 import json
+from datetime import datetime
 from typing import Protocol
 
 from redis.asyncio import Redis
@@ -99,6 +100,31 @@ class PriceCache:
             Redis key like "papertrade:price:AAPL"
         """
         return f"{self.key_prefix}:{ticker.symbol}"
+
+    def _get_history_key(
+        self,
+        ticker: Ticker,
+        start: datetime,
+        end: datetime,
+        interval: str = "1day",
+    ) -> str:
+        """Generate Redis key for price history range.
+
+        Args:
+            ticker: Stock ticker
+            start: Start of time range
+            end: End of time range
+            interval: Price interval type
+
+        Returns:
+            Redis key like "papertrade:price:AAPL:history:2025-12-01:2026-01-17:1day"
+        """
+        start_date = start.date().isoformat()
+        end_date = end.date().isoformat()
+        return (
+            f"{self.key_prefix}:{ticker.symbol}:history:"
+            f"{start_date}:{end_date}:{interval}"
+        )
 
     def _serialize_price(self, price: PricePoint) -> str:
         """Serialize PricePoint to JSON string.
@@ -276,3 +302,167 @@ class PriceCache:
         """
         key = self._get_key(ticker)
         return await self.redis.ttl(key)
+
+    def _serialize_history(self, prices: list[PricePoint]) -> str:
+        """Serialize list of PricePoints to JSON string.
+
+        Args:
+            prices: List of PricePoints to serialize
+
+        Returns:
+            JSON string representation
+        """
+        # Convert each price point to dict
+        data = [
+            {
+                "ticker": p.ticker.symbol,
+                "price_amount": str(p.price.amount),
+                "price_currency": p.price.currency,
+                "timestamp": p.timestamp.isoformat(),
+                "source": p.source,
+                "interval": p.interval,
+                "open_amount": str(p.open.amount) if p.open else None,
+                "open_currency": p.open.currency if p.open else None,
+                "high_amount": str(p.high.amount) if p.high else None,
+                "high_currency": p.high.currency if p.high else None,
+                "low_amount": str(p.low.amount) if p.low else None,
+                "low_currency": p.low.currency if p.low else None,
+                "close_amount": str(p.close.amount) if p.close else None,
+                "close_currency": p.close.currency if p.close else None,
+                "volume": p.volume,
+            }
+            for p in prices
+        ]
+        return json.dumps(data)
+
+    def _deserialize_history(self, json_str: str) -> list[PricePoint]:
+        """Deserialize JSON string to list of PricePoints.
+
+        Args:
+            json_str: JSON string to deserialize
+
+        Returns:
+            List of reconstructed PricePoints
+
+        Raises:
+            ValueError: If JSON is malformed or invalid
+        """
+        from decimal import Decimal
+
+        data = json.loads(json_str)
+
+        price_points: list[PricePoint] = []
+        for item in data:
+            # Reconstruct Money objects
+            price = Money(Decimal(item["price_amount"]), item["price_currency"])
+
+            open_price = None
+            if item.get("open_amount") is not None:
+                open_price = Money(Decimal(item["open_amount"]), item["open_currency"])
+
+            high_price = None
+            if item.get("high_amount") is not None:
+                high_price = Money(Decimal(item["high_amount"]), item["high_currency"])
+
+            low_price = None
+            if item.get("low_amount") is not None:
+                low_price = Money(Decimal(item["low_amount"]), item["low_currency"])
+
+            close_price = None
+            if item.get("close_amount") is not None:
+                close_price = Money(
+                    Decimal(item["close_amount"]), item["close_currency"]
+                )
+
+            # Reconstruct PricePoint
+            price_point = PricePoint(
+                ticker=Ticker(item["ticker"]),
+                price=price,
+                timestamp=datetime.fromisoformat(item["timestamp"]),
+                source=item["source"],
+                interval=item["interval"],
+                open=open_price,
+                high=high_price,
+                low=low_price,
+                close=close_price,
+                volume=item.get("volume"),
+            )
+            price_points.append(price_point)
+
+        return price_points
+
+    async def get_history(
+        self,
+        ticker: Ticker,
+        start: datetime,
+        end: datetime,
+        interval: str = "1day",
+    ) -> list[PricePoint] | None:
+        """Get cached price history for date range.
+
+        Args:
+            ticker: Stock ticker to get history for
+            start: Start of time range (inclusive)
+            end: End of time range (inclusive)
+            interval: Price interval type (default: "1day")
+
+        Returns:
+            Cached list of PricePoints if exists, None if cache miss
+
+        Raises:
+            ValueError: If cached data is corrupted
+
+        Example:
+            >>> history = await cache.get_history(
+            ...     Ticker("AAPL"),
+            ...     datetime(2025, 12, 1, tzinfo=UTC),
+            ...     datetime(2026, 1, 17, tzinfo=UTC)
+            ... )
+            >>> if history is None:
+            ...     # Cache miss, fetch from database or API
+        """
+        key = self._get_history_key(ticker, start, end, interval)
+        value = await self.redis.get(key)
+
+        if value is None:
+            return None
+
+        # Deserialize from JSON
+        json_str = value.decode("utf-8") if isinstance(value, bytes) else value
+        return self._deserialize_history(json_str)
+
+    async def set_history(
+        self,
+        ticker: Ticker,
+        start: datetime,
+        end: datetime,
+        prices: list[PricePoint],
+        interval: str = "1day",
+        ttl: int | None = None,
+    ) -> None:
+        """Cache price history with appropriate TTL.
+
+        Args:
+            ticker: Stock ticker
+            start: Start of time range
+            end: End of time range
+            prices: List of PricePoints to cache
+            interval: Price interval type (default: "1day")
+            ttl: Time-to-live in seconds (overrides default_ttl if provided)
+
+        Example:
+            >>> await cache.set_history(
+            ...     Ticker("AAPL"),
+            ...     datetime(2025, 12, 1, tzinfo=UTC),
+            ...     datetime(2026, 1, 17, tzinfo=UTC),
+            ...     price_points,
+            ...     ttl=7 * 24 * 3600  # 7 days
+            ... )
+        """
+        key = self._get_history_key(ticker, start, end, interval)
+        value = self._serialize_history(prices)
+
+        # Use provided TTL or default
+        expiration = ttl if ttl is not None else self.default_ttl
+
+        await self.redis.set(key, value, ex=expiration)
