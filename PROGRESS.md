@@ -1,6 +1,6 @@
 # Zebu Development Progress
 
-**Last Updated**: January 17, 2026
+**Last Updated**: January 18, 2026
 
 ## Current Status
 
@@ -13,11 +13,21 @@
 | Phase 3b: Authentication | ✅ Complete | Clerk integration |
 | Phase 3c: Analytics | ✅ Complete | 489+ tests, Charts & Insights |
 | **UX Polish** | ✅ **Complete** | Real-time prices, Charts working |
-| **Code Quality** | ✅ **Exceptional** | 0 ESLint suppressions, 746 tests |
+| **Code Quality** | ✅ **Exceptional** | 0 ESLint suppressions, 796 tests |
 | **Production Deployment** | ✅ **Live** | zebutrader.com with SSL |
 | Infrastructure | ✅ Production-Ready | Docker, CI/CD, E2E testing |
 
 ### Recent Work (Jan 18, 2026)
+- ✅ **Cache Architecture Refactor** (PR #150):
+  - **Strategic Decision**: Per-day caching over subset matching (evaluation: 9.5/10 vs 6.5/10)
+  - **Architecture Win**: Redis model now matches database model (per-day granularity)
+  - **Simplicity**: Net -35 lines of code (reduced complexity)
+  - **Performance**: Consistent 10-20ms pipeline operations vs variable SCAN-based approach
+  - **Future-Proof**: Intraday intervals (5min, 15min) work with same code
+  - **Intelligent Combination**: Merges Redis + PostgreSQL + API data for partial cache hits
+  - **Better UX**: Returns partial data when rate-limited instead of failing
+  - See full analysis: `agent_progress_docs/pr_evaluation_149_vs_150.md`
+
 - ✅ **Production Infrastructure Improvements** (PRs #144, #145, #146, #147):
   - **PR #144**: Market Holiday Calendar
     - MarketCalendar class with 10 US market holidays + Easter algorithm
