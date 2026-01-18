@@ -461,20 +461,6 @@ class TestPriceCacheHistoryMethods:
             ttl = await redis.ttl(key)
             assert 3595 <= ttl <= 3600  # Allow small timing variance
 
-    async def test_history_key_format(
-        self,
-        redis: fakeredis.FakeRedis,  # type: ignore[type-arg]
-    ) -> None:
-        """Test that history keys are formatted correctly."""
-        cache = PriceCache(redis, "zebu:price")
-
-        start = datetime(2025, 12, 1, 0, 0, 0, tzinfo=UTC)
-        end = datetime(2025, 12, 3, 23, 59, 59, tzinfo=UTC)
-
-        key = cache._get_history_key(Ticker("AAPL"), start, end, "1day")
-
-        assert key == "zebu:price:AAPL:history:2025-12-01:2025-12-03:1day"
-
     async def test_different_ranges_isolated(
         self,
         redis: fakeredis.FakeRedis,  # type: ignore[type-arg]

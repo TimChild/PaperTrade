@@ -736,7 +736,7 @@ class AlphaVantageAdapter:
                         await self.price_repository.upsert_price(price_point)
 
                 # Combine all sources and filter to requested range
-                all_prices = all_prices + api_history
+                all_prices.extend(api_history)
                 filtered = [
                     p
                     for p in all_prices
