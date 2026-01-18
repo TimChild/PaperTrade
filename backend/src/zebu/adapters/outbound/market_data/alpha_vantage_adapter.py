@@ -322,13 +322,26 @@ class AlphaVantageAdapter:
             MarketDataUnavailableError: API error or network failure
             InvalidPriceDataError: Malformed API response
         """
+        import asyncio
+
         params = {
             "function": "GLOBAL_QUOTE",
             "symbol": ticker.symbol,
             "apikey": self.api_key,
         }
 
+        # Log API call attempt with rate limiter status
+        remaining_tokens = await self.rate_limiter.get_remaining_tokens()
+        logger.info(
+            "Alpha Vantage API called",
+            ticker=ticker.symbol,
+            endpoint="GLOBAL_QUOTE",
+            tokens_remaining_minute=remaining_tokens["minute"],
+            tokens_remaining_day=remaining_tokens["day"],
+        )
+
         last_error: Exception | None = None
+        start_time = asyncio.get_event_loop().time()
 
         for attempt in range(self.max_retries):
             try:
@@ -340,28 +353,83 @@ class AlphaVantageAdapter:
 
                 # Check HTTP status
                 if response.status_code == 200:
-                    return self._parse_response(ticker, response.json())
+                    result = self._parse_response(ticker, response.json())
+                    duration_ms = (asyncio.get_event_loop().time() - start_time) * 1000
+
+                    logger.info(
+                        "Alpha Vantage API response received",
+                        ticker=ticker.symbol,
+                        status_code=200,
+                        price=float(result.price.amount),
+                        duration_ms=round(duration_ms, 2),
+                        attempt=attempt + 1,
+                    )
+
+                    return result
                 elif response.status_code == 404:
+                    logger.warning(
+                        "Ticker not found in Alpha Vantage",
+                        ticker=ticker.symbol,
+                        status_code=404,
+                    )
                     raise TickerNotFoundError(ticker.symbol)
                 else:
                     last_error = MarketDataUnavailableError(
                         f"API returned status {response.status_code}"
                     )
+                    logger.warning(
+                        "Alpha Vantage API error",
+                        ticker=ticker.symbol,
+                        status_code=response.status_code,
+                        attempt=attempt + 1,
+                    )
 
             except httpx.TimeoutException as e:
                 last_error = MarketDataUnavailableError(f"Request timeout: {e}")
+                logger.warning(
+                    "Alpha Vantage API timeout",
+                    ticker=ticker.symbol,
+                    error=str(e),
+                    attempt=attempt + 1,
+                )
             except httpx.NetworkError as e:
                 last_error = MarketDataUnavailableError(f"Network error: {e}")
+                logger.warning(
+                    "Alpha Vantage network error",
+                    ticker=ticker.symbol,
+                    error=str(e),
+                    attempt=attempt + 1,
+                )
             except httpx.HTTPError as e:
                 last_error = MarketDataUnavailableError(f"HTTP error: {e}")
+                logger.warning(
+                    "Alpha Vantage HTTP error",
+                    ticker=ticker.symbol,
+                    error=str(e),
+                    attempt=attempt + 1,
+                )
 
             # Exponential backoff between retries (except on last attempt)
             if attempt < self.max_retries - 1:
-                import asyncio
-
-                await asyncio.sleep(2**attempt)  # 1s, 2s, 4s, etc.
+                backoff_seconds = 2**attempt
+                logger.debug(
+                    "Retrying Alpha Vantage API call",
+                    ticker=ticker.symbol,
+                    backoff_seconds=backoff_seconds,
+                    attempt=attempt + 1,
+                )
+                await asyncio.sleep(backoff_seconds)  # 1s, 2s, 4s, etc.
 
         # All retries exhausted
+        duration_ms = (asyncio.get_event_loop().time() - start_time) * 1000
+        logger.error(
+            "Alpha Vantage API failed after retries",
+            ticker=ticker.symbol,
+            error=str(last_error),
+            duration_ms=round(duration_ms, 2),
+            max_retries=self.max_retries,
+        )
+
         if last_error:
             raise last_error
 
