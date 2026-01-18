@@ -824,4 +824,3 @@ class TestPriceCacheSubsetMatching:
         assert all(week_start <= p.timestamp <= week_end for p in result)
         assert result[0].timestamp.date().day == 25
         assert result[-1].timestamp.date().day == 31
-

@@ -56,7 +56,7 @@ class RedisClient(Protocol):
         count: int | None = None,
     ) -> tuple[int, list[str]]:
         """Scan keys incrementally.
-        
+
         Returns:
             Tuple of (next_cursor, list_of_keys)
         """
@@ -412,7 +412,7 @@ class PriceCache:
         """Parse start and end dates from cache key.
 
         Args:
-            key: Cache key in format "prefix:TICKER:history:START_DATE:END_DATE:interval"
+            key: Cache key format "prefix:TICKER:history:START:END:interval"
 
         Returns:
             Tuple of (start_datetime, end_datetime) or None if parsing fails
@@ -452,9 +452,7 @@ class PriceCache:
 
             # Set to start/end of day for proper range comparison
             start_datetime = start_date.replace(hour=0, minute=0, second=0, tzinfo=UTC)
-            end_datetime = end_date.replace(
-                hour=23, minute=59, second=59, tzinfo=UTC
-            )
+            end_datetime = end_date.replace(hour=23, minute=59, second=59, tzinfo=UTC)
 
             return (start_datetime, end_datetime)
 
@@ -515,9 +513,7 @@ class PriceCache:
         from datetime import UTC
 
         return [
-            p
-            for p in price_points
-            if start <= p.timestamp.replace(tzinfo=UTC) <= end
+            p for p in price_points if start <= p.timestamp.replace(tzinfo=UTC) <= end
         ]
 
     async def _find_broader_cached_ranges(

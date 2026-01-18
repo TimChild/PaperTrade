@@ -146,7 +146,9 @@ class TestPriceHistoryCachingIntegration:
         # Mock API response for 1 month of data (avoiding initial weekend)
         # Generate 30 days to ensure we get to Jan 30 even with weekends skipped
         month_data = generate_mock_daily_history(
-            "AAPL", datetime(2026, 1, 5, tzinfo=UTC), 30  # Generate 30 days
+            "AAPL",
+            datetime(2026, 1, 5, tzinfo=UTC),
+            30,  # Generate 30 days
         )
 
         api_mock = respx.get("https://www.alphavantage.co/query").mock(
@@ -155,7 +157,7 @@ class TestPriceHistoryCachingIntegration:
 
         # Step 1: User views ~1 month (Jan 5-30, all weekdays)
         month_start = datetime(2026, 1, 5, tzinfo=UTC)  # Monday start of day
-        month_end = datetime(2026, 1, 30, 23, 59, 59, tzinfo=UTC)   # Friday end of day
+        month_end = datetime(2026, 1, 30, 23, 59, 59, tzinfo=UTC)  # Friday end of day
 
         month_history = await adapter.get_price_history(
             ticker, month_start, month_end, "1day"
@@ -164,7 +166,7 @@ class TestPriceHistoryCachingIntegration:
         assert len(month_history) > 0
         # Verify API was called once
         assert api_mock.call_count == 1
-        
+
         # Step 2: User switches to 1 day (Friday Jan 30)
         day_start = datetime(2026, 1, 30, tzinfo=UTC)
         day_end = datetime(2026, 1, 30, 23, 59, 59, tzinfo=UTC)  # End of day
@@ -175,7 +177,9 @@ class TestPriceHistoryCachingIntegration:
 
         assert len(day_history) > 0
         # Verify STILL no additional API call (still 1 total)
-        assert api_mock.call_count == 1, f"Expected 1 API call, got {api_mock.call_count}"
+        assert api_mock.call_count == 1, (
+            f"Expected 1 API call, got {api_mock.call_count}"
+        )
         # Verify we got exactly 1 day of data for Jan 30
         assert all(p.timestamp.date().day == 30 for p in day_history)
 
@@ -305,9 +309,7 @@ class TestPriceHistoryCachingIntegration:
         # Request partial overlap (Jan 25 - Feb 5)
         extended_start = datetime(2026, 1, 25, tzinfo=UTC)
         extended_end = datetime(2026, 2, 5, tzinfo=UTC)
-        result = await adapter.get_price_history(
-            ticker, extended_start, extended_end, "1day"
-        )
+        await adapter.get_price_history(ticker, extended_start, extended_end, "1day")
 
         # Should trigger new API call (partial overlap not sufficient)
         # The adapter will attempt to fetch fresh data
@@ -343,9 +345,7 @@ class TestPriceHistoryCachingIntegration:
         # but the important thing is it doesn't use the 1day cache
         week_start = datetime(2026, 1, 25, tzinfo=UTC)
         week_end = datetime(2026, 1, 30, 23, 59, 59, tzinfo=UTC)
-        result = await adapter.get_price_history(
-            ticker, week_start, week_end, "1hour"
-        )
+        result = await adapter.get_price_history(ticker, week_start, week_end, "1hour")
 
         # For 1hour interval, the adapter doesn't support it from API
         # so it returns empty list, but importantly doesn't use the 1day cache
@@ -437,7 +437,9 @@ class TestPriceCacheDirectSubsetMatching:
 
         week_start = datetime(2026, 1, 25, 0, 0, 0, tzinfo=UTC)
         week_end = datetime(2026, 1, 30, 23, 59, 59, tzinfo=UTC)
-        await price_cache.set_history(ticker, week_start, week_end, week_history, "1day")
+        await price_cache.set_history(
+            ticker, week_start, week_end, week_history, "1day"
+        )
 
         # Request week - should get exact match (fast path)
         result = await price_cache.get_history(ticker, week_start, week_end, "1day")
