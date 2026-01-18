@@ -81,7 +81,11 @@ class ClerkAuthAdapter(AuthPort):
                 request=request, options=AuthenticateRequestOptions()
             )
 
-            logger.info(f"Clerk auth status: {request_state.status}")
+            logger.info(
+                f"Clerk auth status: {request_state.status}, "
+                f"reason: {request_state.reason}, "
+                f"message: {request_state.message}"
+            )
 
             # Check if authentication was successful
             if request_state.status != AuthStatus.SIGNED_IN:
