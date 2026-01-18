@@ -1,0 +1,778 @@
+{
+  "dashboard": {
+    "title": "Zebu - External Services",
+    "tags": ["zebu", "production", "external-services", "dependencies"],
+    "timezone": "browser",
+    "editable": true,
+    "refresh": "1m",
+    "time": {
+      "from": "now-6h",
+      "to": "now"
+    },
+    "templating": {
+      "list": [
+        {
+          "name": "service",
+          "type": "custom",
+          "current": {
+            "value": "all"
+          },
+          "hide": 0,
+          "label": "Service",
+          "query": "all,Alpha Vantage,PostgreSQL,Redis",
+          "options": [
+            {"text": "All", "value": "all"},
+            {"text": "Alpha Vantage", "value": "Alpha Vantage"},
+            {"text": "PostgreSQL", "value": "PostgreSQL"},
+            {"text": "Redis", "value": "Redis"}
+          ]
+        }
+      ]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "type": "row",
+        "title": "Alpha Vantage API",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
+        "collapsed": false
+      },
+      {
+        "id": 2,
+        "type": "stat",
+        "title": "API Calls Today",
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 1},
+        "targets": [{
+          "expr": "count_over_time({container=\"zebu-backend-prod\"} | json | event=\"Alpha Vantage API called\" [24h])",
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
+          "instant": true
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 400},
+                {"color": "red", "value": 480}
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area",
+          "textMode": "value_and_name",
+          "text": {
+            "valueSize": 48
+          }
+        }
+      },
+      {
+        "id": 3,
+        "type": "timeseries",
+        "title": "API Call Rate",
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 1},
+        "targets": [{
+          "expr": "sum(rate({container=\"zebu-backend-prod\"} | json | event=\"Alpha Vantage API called\" [1m]))",
+          "refId": "A",
+          "legendFormat": "Calls/minute",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "cpm",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 4}
+              ]
+            },
+            "custom": {
+              "thresholdsStyle": {
+                "mode": "line"
+              }
+            }
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          }
+        }
+      },
+      {
+        "id": 4,
+        "type": "logs",
+        "title": "Rate Limit Warnings",
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 1},
+        "targets": [{
+          "expr": "{container=\"zebu-backend-prod\"} | json | event =~ \".*rate limit.*\" | level=\"warning\"",
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
+          "maxLines": 50
+        }],
+        "options": {
+          "showTime": true,
+          "showLabels": false,
+          "wrapLogMessage": true,
+          "dedupStrategy": "none"
+        }
+      },
+      {
+        "id": 5,
+        "type": "timeseries",
+        "title": "API Response Times",
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 1},
+        "targets": [
+          {
+            "expr": "quantile_over_time(0.50, {container=\"zebu-backend-prod\"} | json | event=\"Alpha Vantage API called\" | unwrap duration_ms [5m])",
+            "refId": "A",
+            "legendFormat": "P50",
+            "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+          },
+          {
+            "expr": "quantile_over_time(0.95, {container=\"zebu-backend-prod\"} | json | event=\"Alpha Vantage API called\" | unwrap duration_ms [5m])",
+            "refId": "B",
+            "legendFormat": "P95",
+            "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 2000}
+              ]
+            }
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          }
+        }
+      },
+      {
+        "id": 6,
+        "type": "timeseries",
+        "title": "API Errors",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 9},
+        "targets": [{
+          "expr": "sum(rate({container=\"zebu-backend-prod\"} | json | logger=\"zebu.adapters.outbound.market_data.alpha_vantage_adapter\" | level=\"error\" [5m]))",
+          "refId": "A",
+          "legendFormat": "Errors/minute",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "cpm",
+            "color": {"mode": "fixed", "fixedColor": "red"}
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          }
+        }
+      },
+      {
+        "id": 7,
+        "type": "row",
+        "title": "PostgreSQL Database",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 17},
+        "collapsed": false
+      },
+      {
+        "id": 8,
+        "type": "stat",
+        "title": "Database Connection Status",
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 18},
+        "targets": [{
+          "expr": "count_over_time({container=\"zebu-postgres-prod\"} [1m]) > 0",
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
+          "instant": true
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "type": "value",
+                "options": {
+                  "0": {"text": "Disconnected", "color": "red"}
+                }
+              },
+              {
+                "type": "range",
+                "options": {
+                  "from": 1,
+                  "to": 999999,
+                  "result": {"text": "Connected", "color": "green"}
+                }
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value"
+        }
+      },
+      {
+        "id": 9,
+        "type": "logs",
+        "title": "Database Logs",
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 18},
+        "targets": [{
+          "expr": "{container=\"zebu-postgres-prod\"}",
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
+          "maxLines": 100
+        }],
+        "options": {
+          "showTime": true,
+          "showLabels": false,
+          "wrapLogMessage": true,
+          "dedupStrategy": "none"
+        }
+      },
+      {
+        "id": 10,
+        "type": "timeseries",
+        "title": "Connection Pool Usage",
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 18},
+        "targets": [{
+          "expr": "{container=\"zebu-backend-prod\"} | json | event =~ \".*connection pool.*\" | unwrap active_connections",
+          "refId": "A",
+          "legendFormat": "Active Connections",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "mode": "percentage",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 80}
+              ]
+            }
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          }
+        }
+      },
+      {
+        "id": 11,
+        "type": "logs",
+        "title": "Slow Queries",
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 18},
+        "targets": [{
+          "expr": "{container=\"zebu-postgres-prod\"} |~ \"duration.*ms\" | regexp \"duration: (?P<duration>[0-9.]+) ms\" | duration > 1000",
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
+          "maxLines": 50
+        }],
+        "options": {
+          "showTime": true,
+          "showLabels": false,
+          "wrapLogMessage": true,
+          "dedupStrategy": "none"
+        }
+      },
+      {
+        "id": 12,
+        "type": "timeseries",
+        "title": "Database Errors",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 26},
+        "targets": [{
+          "expr": "sum(rate({container=\"zebu-postgres-prod\"} |~ \"ERROR|FATAL\" [5m]))",
+          "refId": "A",
+          "legendFormat": "Errors/minute",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "cpm",
+            "color": {"mode": "fixed", "fixedColor": "red"}
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          }
+        }
+      },
+      {
+        "id": 13,
+        "type": "row",
+        "title": "Redis Cache",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 34},
+        "collapsed": false
+      },
+      {
+        "id": 14,
+        "type": "stat",
+        "title": "Redis Status",
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 35},
+        "targets": [{
+          "expr": "count_over_time({container=\"zebu-redis-prod\"} [1m]) > 0",
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
+          "instant": true
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {
+                "type": "value",
+                "options": {
+                  "0": {"text": "Offline", "color": "red"}
+                }
+              },
+              {
+                "type": "range",
+                "options": {
+                  "from": 1,
+                  "to": 999999,
+                  "result": {"text": "Online", "color": "green"}
+                }
+              }
+            ],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "green", "value": 1}
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "none",
+          "textMode": "value"
+        }
+      },
+      {
+        "id": 15,
+        "type": "timeseries",
+        "title": "Cache Operations",
+        "gridPos": {"h": 8, "w": 9, "x": 6, "y": 35},
+        "targets": [
+          {
+            "expr": "sum(rate({container=\"zebu-backend-prod\"} | json | event=\"Price fetched from cache\" | source=\"redis\" [1m]))",
+            "refId": "A",
+            "legendFormat": "Reads",
+            "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+          },
+          {
+            "expr": "sum(rate({container=\"zebu-backend-prod\"} | json | event =~ \".*cache.*set.*\" [1m]))",
+            "refId": "B",
+            "legendFormat": "Writes",
+            "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "fillOpacity": 20,
+              "lineWidth": 2,
+              "stacking": {
+                "mode": "normal"
+              }
+            }
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          }
+        }
+      },
+      {
+        "id": 16,
+        "type": "logs",
+        "title": "Redis Logs",
+        "gridPos": {"h": 8, "w": 9, "x": 15, "y": 35},
+        "targets": [{
+          "expr": "{container=\"zebu-redis-prod\"}",
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
+          "maxLines": 50
+        }],
+        "options": {
+          "showTime": true,
+          "showLabels": false,
+          "wrapLogMessage": true,
+          "dedupStrategy": "none"
+        }
+      },
+      {
+        "id": 17,
+        "type": "timeseries",
+        "title": "Cache Memory Usage",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 43},
+        "targets": [{
+          "expr": "{container=\"zebu-redis-prod\"} |~ \"memory\" | regexp \"used_memory:(?P<memory>[0-9]+)\"",
+          "refId": "A",
+          "legendFormat": "Memory Used",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "bytes",
+            "thresholds": {
+              "mode": "percentage",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 80}
+              ]
+            }
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          }
+        }
+      },
+      {
+        "id": 18,
+        "type": "timeseries",
+        "title": "Evictions",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 43},
+        "targets": [{
+          "expr": "{container=\"zebu-redis-prod\"} |~ \"evict\"",
+          "refId": "A",
+          "legendFormat": "Evictions/minute",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "cpm"
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          }
+        }
+      },
+      {
+        "id": 19,
+        "type": "row",
+        "title": "API Rate Limit Consumption",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 51},
+        "collapsed": false
+      },
+      {
+        "id": 20,
+        "type": "gauge",
+        "title": "Daily Quota Usage",
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 52},
+        "targets": [{
+          "expr": "(count_over_time({container=\"zebu-backend-prod\"} | json | event=\"Alpha Vantage API called\" [24h]) / 500) * 100",
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
+          "instant": true
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 70},
+                {"color": "red", "value": 90}
+              ]
+            }
+          }
+        },
+        "options": {
+          "showThresholdLabels": true,
+          "showThresholdMarkers": true
+        }
+      },
+      {
+        "id": 21,
+        "type": "timeseries",
+        "title": "Hourly Rate Limit Headroom",
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 52},
+        "targets": [{
+          "expr": "5 - sum(rate({container=\"zebu-backend-prod\"} | json | event=\"Alpha Vantage API called\" [1m]))",
+          "refId": "A",
+          "legendFormat": "Available calls/min",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "cpm",
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "yellow", "value": 1},
+                {"color": "green", "value": 2}
+              ]
+            }
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          }
+        }
+      },
+      {
+        "id": 22,
+        "type": "timeseries",
+        "title": "Requests Served from Stale Cache",
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 52},
+        "targets": [{
+          "expr": "sum(rate({container=\"zebu-backend-prod\"} | json | event=\"Price fetched from cache\" | level=\"warning\" [5m]))",
+          "refId": "A",
+          "legendFormat": "Stale cache requests/min",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "cpm"
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          }
+        }
+      },
+      {
+        "id": 23,
+        "type": "stat",
+        "title": "Time Until Rate Limit Reset",
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 52},
+        "targets": [{
+          "expr": "{container=\"zebu-backend-prod\"} | json | event=\"Rate limiter status\" | line_format \"{{.reset_in_seconds}}s\"",
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
+          "instant": true
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s"
+          }
+        },
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "textMode": "value"
+        }
+      },
+      {
+        "id": 24,
+        "type": "row",
+        "title": "External API Health",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 60},
+        "collapsed": false
+      },
+      {
+        "id": 25,
+        "type": "stat",
+        "title": "API Availability",
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 61},
+        "targets": [{
+          "expr": "(count_over_time({container=\"zebu-backend-prod\"} | json | event=\"Alpha Vantage API called\" [1h]) - count_over_time({container=\"zebu-backend-prod\"} | json | event=\"Alpha Vantage API called\" | level=\"error\" [1h])) / count_over_time({container=\"zebu-backend-prod\"} | json | event=\"Alpha Vantage API called\" [1h]) * 100",
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
+          "instant": true
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "decimals": 2,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "yellow", "value": 99.0},
+                {"color": "green", "value": 99.9}
+              ]
+            }
+          }
+        },
+        "options": {
+          "colorMode": "background",
+          "graphMode": "area",
+          "textMode": "value_and_name"
+        }
+      },
+      {
+        "id": 26,
+        "type": "table",
+        "title": "API Error Types",
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 61},
+        "targets": [{
+          "expr": "topk(10, count_over_time({container=\"zebu-backend-prod\"} | json | logger=\"zebu.adapters.outbound.market_data.alpha_vantage_adapter\" | level=\"error\" [6h]) by (error))",
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
+          "instant": true
+        }],
+        "fieldConfig": {
+          "defaults": {}
+        },
+        "options": {
+          "showHeader": true,
+          "sortBy": [{"displayName": "Value", "desc": true}]
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "renameByName": {
+                "error": "Error Type",
+                "Value": "Count"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 27,
+        "type": "timeseries",
+        "title": "Fallback to Database",
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 61},
+        "targets": [{
+          "expr": "sum(rate({container=\"zebu-backend-prod\"} | json | event=\"Price fetched from cache\" | source=\"database\" [5m]))",
+          "refId": "A",
+          "legendFormat": "Database fallback/min",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "cpm"
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          }
+        }
+      },
+      {
+        "id": 28,
+        "type": "row",
+        "title": "Network & Connectivity",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 69},
+        "collapsed": false
+      },
+      {
+        "id": 29,
+        "type": "timeseries",
+        "title": "Network Errors",
+        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 70},
+        "targets": [{
+          "expr": "sum(rate({container=\"zebu-backend-prod\"} | json | error =~ \".*network.*|.*timeout.*|.*connection.*\" | level=\"error\" [5m]))",
+          "refId": "A",
+          "legendFormat": "Network errors/min",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "cpm",
+            "color": {"mode": "fixed", "fixedColor": "red"}
+          }
+        },
+        "options": {
+          "legend": {
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          }
+        }
+      },
+      {
+        "id": 30,
+        "type": "stat",
+        "title": "DNS Resolution Failures",
+        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 70},
+        "targets": [{
+          "expr": "count_over_time({container=\"zebu-backend-prod\"} | json | error =~ \".*DNS.*|.*name resolution.*\" [1h])",
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
+          "instant": true
+        }],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short"
+          }
+        },
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "textMode": "value_and_name"
+        }
+      },
+      {
+        "id": 31,
+        "type": "logs",
+        "title": "SSL/TLS Errors",
+        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 70},
+        "targets": [{
+          "expr": "{container=\"zebu-backend-prod\"} | json | error =~ \".*SSL.*|.*TLS.*|.*certificate.*\"",
+          "refId": "A",
+          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
+          "maxLines": 50
+        }],
+        "options": {
+          "showTime": true,
+          "showLabels": false,
+          "wrapLogMessage": true,
+          "dedupStrategy": "none"
+        }
+      }
+    ]
+  }
+}
