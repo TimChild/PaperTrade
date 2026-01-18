@@ -26,6 +26,7 @@ from zebu.application.exceptions import (
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.ticker import Ticker
 from zebu.infrastructure.cache.price_cache import PriceCache
+from zebu.infrastructure.market_calendar import MarketCalendar
 from zebu.infrastructure.rate_limiter import RateLimiter
 
 if TYPE_CHECKING:
@@ -743,31 +744,35 @@ class AlphaVantageAdapter:
     def _get_last_trading_day(self, from_date: datetime) -> datetime:
         """Calculate the most recent trading day from a given date.
 
-        US stock market is closed on:
-        - Saturdays and Sundays
-        - Market holidays (simplified: not checking actual holiday calendar)
+        Walks backward from the given date to find the most recent day when
+        the US stock market was open (not a weekend or holiday).
 
         Args:
             from_date: Reference date (UTC)
 
         Returns:
-            Most recent date that would have market data
+            Most recent trading day at market close (21:00 UTC)
 
         Example:
-            >>> # Sunday, Jan 19
+            >>> # Sunday, Jan 19, 2026
             >>> result = self._get_last_trading_day(
             ...     datetime(2026, 1, 19, tzinfo=UTC)
             ... )
-            >>> # Returns Friday, Jan 17
+            >>> # Returns Friday, Jan 16 (MLK Day Jan 20 is a holiday)
+
+            >>> # July 5, 2024 (after July 4th holiday)
+            >>> result = self._get_last_trading_day(
+            ...     datetime(2024, 7, 5, tzinfo=UTC)
+            ... )
+            >>> # Returns July 3 (last trading day before holiday)
         """
         current_date = from_date.date()
 
-        # Walk backwards until we hit a weekday (Mon-Fri)
-        while current_date.weekday() >= 5:  # 5=Saturday, 6=Sunday
+        # Walk backwards until we hit a trading day
+        while not MarketCalendar.is_trading_day(current_date):
             current_date -= timedelta(days=1)
 
-        # Return datetime at market close (21:00 UTC = 4:00 PM ET)
-        # Construct new datetime to avoid issues with mocked datetime.replace
+        # Return at market close time (4:00 PM ET = 21:00 UTC)
         return datetime(
             current_date.year,
             current_date.month,
