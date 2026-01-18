@@ -672,6 +672,43 @@ class AlphaVantageAdapter:
         # For other intervals, return empty list if no cached data
         return []
 
+    def _get_last_trading_day(self, from_date: datetime) -> datetime:
+        """Calculate the most recent trading day from a given date.
+
+        US stock market is closed on:
+        - Saturdays and Sundays
+        - Market holidays (simplified: not checking actual holiday calendar)
+
+        Args:
+            from_date: Reference date (UTC)
+
+        Returns:
+            Most recent date that would have market data
+
+        Example:
+            >>> # Sunday, Jan 19
+            >>> last_trading = self._get_last_trading_day(datetime(2026, 1, 19, tzinfo=UTC))
+            >>> # Returns Friday, Jan 17
+        """
+        current_date = from_date.date()
+
+        # Walk backwards until we hit a weekday (Mon-Fri)
+        while current_date.weekday() >= 5:  # 5=Saturday, 6=Sunday
+            current_date -= timedelta(days=1)
+
+        # Return datetime at market close (21:00 UTC = 4:00 PM ET)
+        # Construct new datetime to avoid issues with mocked datetime.replace
+        return datetime(
+            current_date.year,
+            current_date.month,
+            current_date.day,
+            21,
+            0,
+            0,
+            0,
+            tzinfo=UTC,
+        )
+
     def _is_cache_complete(
         self,
         cached_data: list[PricePoint],
@@ -723,40 +760,62 @@ class AlphaVantageAdapter:
         if end.date() >= now.date():
             if now < market_close_today:
                 # Market hasn't closed today yet, so we can't have today's data
-                # Check if we have data through yesterday
-                yesterday = now.date() - timedelta(days=1)
-                if last_cached.date() >= yesterday:
-                    # We have data through yesterday or more recent, good enough
+                # Check if we have data through last trading day
+                # Go back one day first, then find the last trading day from there
+                yesterday = now - timedelta(days=1)
+                last_trading_day = self._get_last_trading_day(yesterday)
+
+                if last_cached >= last_trading_day:
+                    # We have data through last trading day, good enough
                     logger.debug(
-                        "Cache complete: has data through yesterday (market open)",
+                        "Cache complete: has data through last trading day",
                         last_cached=last_cached.date().isoformat(),
-                        yesterday=yesterday.isoformat(),
+                        last_trading_day=last_trading_day.date().isoformat(),
                     )
                 else:
                     logger.debug(
-                        "Cache incomplete: missing recent dates (before yesterday)",
+                        "Cache incomplete: missing recent trading days",
                         last_cached=last_cached.date().isoformat(),
-                        yesterday=yesterday.isoformat(),
+                        last_trading_day=last_trading_day.date().isoformat(),
                     )
                     return False
             else:
-                # Market has closed today, we should have today's data
-                # Allow 1-day tolerance (data might not be available immediately)
-                if last_cached < end - timedelta(days=1):
-                    logger.debug(
-                        "Cache incomplete: missing today's data (market closed)",
-                        last_cached=last_cached.date().isoformat(),
-                        requested_end=end.date().isoformat(),
-                    )
-                    return False
+                # Market has closed today
+                # Check if today is a trading day
+                if now.date().weekday() < 5:  # Weekday
+                    # We should have today's data (with 1-day tolerance)
+                    if last_cached < end - timedelta(days=1):
+                        logger.debug(
+                            "Cache incomplete: missing today's data (market closed)",
+                            last_cached=last_cached.date().isoformat(),
+                            requested_end=end.date().isoformat(),
+                        )
+                        return False
+                else:
+                    # Today is weekend, check last trading day
+                    last_trading_day = self._get_last_trading_day(now)
+                    if last_cached < last_trading_day:
+                        logger.debug(
+                            "Cache incomplete: missing last trading day data",
+                            last_cached=last_cached.date().isoformat(),
+                            last_trading_day=last_trading_day.date().isoformat(),
+                        )
+                        return False
         else:
             # Requesting historical data (end date is in the past)
+            # Check if end date is a trading day
+            if end.date().weekday() >= 5:
+                # End date is a weekend, find last trading day before it
+                expected_last_day = self._get_last_trading_day(end)
+            else:
+                expected_last_day = end
+
             # Use standard 1-day tolerance
-            if last_cached < end - timedelta(days=1):
+            if last_cached < expected_last_day - timedelta(days=1):
                 logger.debug(
                     "Cache incomplete: missing recent dates",
                     last_cached=last_cached.date().isoformat(),
-                    requested_end=end.date().isoformat(),
+                    expected_last_day=expected_last_day.date().isoformat(),
                 )
                 return False
 
