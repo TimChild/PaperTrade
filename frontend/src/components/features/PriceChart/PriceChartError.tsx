@@ -8,18 +8,20 @@ import type { ApiError, ApiErrorType } from '@/types/errors'
 interface PriceChartErrorProps {
   error: ApiError
   onRetry?: () => void
+  'data-testid'?: string
 }
 
 export function PriceChartError({
   error,
   onRetry,
+  'data-testid': dataTestId = 'price-chart-error',
 }: PriceChartErrorProps): React.JSX.Element {
   const { icon, title } = getErrorDisplay(error.type)
 
   return (
     <div
       className="flex h-64 flex-col items-center justify-center rounded-lg border border-red-300 bg-red-50 p-6 dark:border-red-800 dark:bg-red-950"
-      data-testid="price-chart-error"
+      data-testid={dataTestId}
     >
       <div className="mb-4 text-red-600 dark:text-red-400">{icon}</div>
 

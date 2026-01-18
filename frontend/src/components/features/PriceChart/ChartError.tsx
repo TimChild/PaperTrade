@@ -6,14 +6,19 @@
 interface ChartErrorProps {
   onRetry: () => void
   message?: string
+  'data-testid'?: string
 }
 
 export function ChartError({
   onRetry,
   message = 'Failed to load price history',
+  'data-testid': dataTestId = 'price-chart-error',
 }: ChartErrorProps): React.JSX.Element {
   return (
-    <div className="flex h-64 flex-col items-center justify-center rounded-lg border border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950">
+    <div
+      className="flex h-64 flex-col items-center justify-center rounded-lg border border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950"
+      data-testid={dataTestId}
+    >
       <div className="text-center">
         <p className="mb-4 text-lg font-medium text-red-800 dark:text-red-200">
           {message}

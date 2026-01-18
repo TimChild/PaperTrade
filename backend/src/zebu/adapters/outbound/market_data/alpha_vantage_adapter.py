@@ -676,15 +676,7 @@ class AlphaVantageAdapter:
                 log.warning("Rate limit exceeded")
                 # If we have partial/stale data from database, return it instead of failing
                 if db_history:
-                    log.info(
-                        "Rate limit exceeded, serving stale cached data",
-                        cached_points=len(db_history),
-                        cached_range=(
-                            f"{db_history[0].timestamp.date()} to "
-                            f"{db_history[-1].timestamp.date()}"
-                        ),
-                    )
-                    return db_history
+                    return self._serve_stale_cache(db_history, log)
                 # No cached data available at all, must fail
                 raise MarketDataUnavailableError(
                     "Rate limit exceeded. Cannot fetch historical data at this time."
@@ -696,15 +688,7 @@ class AlphaVantageAdapter:
                 log.warning("Failed to consume rate limit token")
                 # If we have partial/stale data from database, return it instead of failing
                 if db_history:
-                    log.info(
-                        "Rate limit exceeded, serving stale cached data",
-                        cached_points=len(db_history),
-                        cached_range=(
-                            f"{db_history[0].timestamp.date()} to "
-                            f"{db_history[-1].timestamp.date()}"
-                        ),
-                    )
-                    return db_history
+                    return self._serve_stale_cache(db_history, log)
                 # No cached data available at all, must fail
                 raise MarketDataUnavailableError(
                     "Rate limit exceeded. Cannot fetch historical data."
@@ -971,6 +955,34 @@ class AlphaVantageAdapter:
         else:
             # Historical data - long TTL
             return 7 * 24 * 3600  # 7 days
+
+    def _serve_stale_cache(
+        self, cached_data: list[PricePoint], log: object
+    ) -> list[PricePoint]:
+        """Serve stale cached data when rate-limited.
+
+        Helper method to log and return stale cache data with consistent formatting.
+
+        Args:
+            cached_data: List of PricePoints from database cache
+            log: Bound logger instance for contextual logging
+
+        Returns:
+            The cached data to serve to the user
+
+        Example:
+            >>> if rate_limited and db_history:
+            ...     return self._serve_stale_cache(db_history, log)
+        """
+        log.info(
+            "Rate limit exceeded, serving stale cached data",
+            cached_points=len(cached_data),
+            cached_range=(
+                f"{cached_data[0].timestamp.date()} to "
+                f"{cached_data[-1].timestamp.date()}"
+            ),
+        )
+        return cached_data
 
     async def _fetch_daily_history_from_api(self, ticker: Ticker) -> list[PricePoint]:
         """Fetch daily historical price data from Alpha Vantage API.
