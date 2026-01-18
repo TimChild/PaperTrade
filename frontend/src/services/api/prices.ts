@@ -3,6 +3,7 @@
  */
 import { apiClient } from './client'
 import type { PricePoint, PriceHistory } from '@/types/price'
+import { parseApiError } from '@/utils/priceErrors'
 
 /**
  * Fetch current price for a ticker
@@ -142,13 +143,21 @@ export async function getPriceHistory(
     }
 
     return priceHistory
-  } catch {
-    // Backend endpoint doesn't exist yet or failed
-    // Return mock data for development
-    console.warn(
-      `Price history API not available, using mock data for ${ticker}`
-    )
-    return generateMockPriceHistory(ticker, startDate, endDate)
+  } catch (error) {
+    // Parse error into ApiError type
+    const apiError = parseApiError(error, ticker)
+
+    // In development mode, show mock data with warning banner
+    if (import.meta.env.DEV) {
+      console.warn('[DEV] API error, using mock data:', apiError.message)
+      return {
+        ...generateMockPriceHistory(ticker, startDate, endDate),
+        error: apiError, // Include error in response
+      }
+    }
+
+    // In production, throw structured error for component to handle
+    throw apiError
   }
 }
 

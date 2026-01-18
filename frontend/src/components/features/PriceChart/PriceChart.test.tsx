@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { PriceChart } from '@/components/features/PriceChart/PriceChart'
 import * as pricesApi from '@/services/api/prices'
+import type { ApiError } from '@/types/errors'
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -133,5 +134,73 @@ describe('PriceChart', () => {
     await waitFor(() => {
       expect(screen.getByText('$275.50')).toBeInTheDocument()
     })
+  })
+
+  it('displays enhanced error component for API errors', async () => {
+    const apiError: ApiError = {
+      type: 'rate_limit',
+      message: 'Market data temporarily unavailable due to high demand',
+      retryAfter: 60,
+    }
+
+    vi.spyOn(pricesApi, 'getPriceHistory').mockRejectedValue(apiError)
+
+    const Wrapper = createWrapper()
+    render(<PriceChart ticker="AAPL" />, { wrapper: Wrapper })
+
+    // Wait for error state to appear
+    await waitFor(
+      () => {
+        expect(screen.getByTestId('price-chart-error')).toBeInTheDocument()
+      },
+      { timeout: 3000 }
+    )
+
+    // Check error message content
+    expect(screen.getByText('Too Many Requests')).toBeInTheDocument()
+    expect(screen.getByText(apiError.message)).toBeInTheDocument()
+  })
+
+  it('shows dev warning banner when using mock data with error', async () => {
+    // Note: Directly mutating import.meta.env works in Vitest but could be improved
+    // with proper environment mocking through Vitest config in the future
+    const originalEnv = import.meta.env.DEV
+    import.meta.env.DEV = true
+
+    const mockHistoryWithError = {
+      ticker: 'AAPL',
+      prices: [
+        {
+          ticker: { symbol: 'AAPL' },
+          price: { amount: 150, currency: 'USD' },
+          timestamp: '2024-01-01T00:00:00Z',
+          source: 'cache' as const,
+          interval: '1day' as const,
+        },
+      ],
+      source: 'mock',
+      cached: false,
+      error: {
+        type: 'server_error' as const,
+        message: 'API error',
+      },
+    }
+
+    vi.spyOn(pricesApi, 'getPriceHistory').mockResolvedValue(
+      mockHistoryWithError
+    )
+
+    const Wrapper = createWrapper()
+    render(<PriceChart ticker="AAPL" />, { wrapper: Wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('dev-warning-banner')).toBeInTheDocument()
+      expect(
+        screen.getByText(/Development Mode: Using mock data due to API error/)
+      ).toBeInTheDocument()
+    })
+
+    // Restore environment (Note: This works in Vitest, could use proper config in future)
+    import.meta.env.DEV = originalEnv
   })
 })
