@@ -14,14 +14,14 @@ export default defineConfig({
   testDir: './tests/e2e',
   /* Global setup for Clerk testing */
   globalSetup: path.resolve(__dirname, './tests/e2e/global-setup.ts'),
-  /* Run tests serially - Clerk auth for same user doesn't work well in parallel */
-  fullyParallel: false,
+  /* Run tests in parallel - now safe with shared auth state */
+  fullyParallel: true,
   /* Fail the build on CI if you accidentally left test.only in the source code. */
   forbidOnly: !!process.env.CI,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Run tests with 3 workers - Clerk can handle some parallelism */
-  workers: process.env.CI ? 3 : 3,
+  /* Opt out of parallel tests on CI */
+  workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
   reporter: 'html',
 
@@ -36,18 +36,37 @@ export default defineConfig({
 
   /* Configure projects for major browsers */
   projects: [
+    // Setup project - authenticate once and save state
+    {
+      name: 'setup',
+      testMatch: /.*\.setup\.ts/,
+    },
+
+    // Test projects - use saved authentication state
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'playwright/.auth/user.json', // Reuse auth state
+      },
+      dependencies: ['setup'], // Run setup first
     },
     // Commented out for speed - only testing on Chromium
     // {
     //   name: 'firefox',
-    //   use: { ...devices['Desktop Firefox'] },
+    //   use: {
+    //     ...devices['Desktop Firefox'],
+    //     storageState: 'playwright/.auth/user.json',
+    //   },
+    //   dependencies: ['setup'],
     // },
     // {
     //   name: 'webkit',
-    //   use: { ...devices['Desktop Safari'] },
+    //   use: {
+    //     ...devices['Desktop Safari'],
+    //     storageState: 'playwright/.auth/user.json',
+    //   },
+    //   dependencies: ['setup'],
     // },
   ],
 })

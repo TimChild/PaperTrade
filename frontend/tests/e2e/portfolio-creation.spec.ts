@@ -1,27 +1,6 @@
-import { clerk } from '@clerk/testing/playwright'
 import { test, expect } from './fixtures'
 
 test.describe('Portfolio Creation Flow', () => {
-  test.beforeEach(async ({ page }) => {
-    const email = process.env.E2E_CLERK_USER_EMAIL
-    if (!email) {
-      throw new Error('E2E_CLERK_USER_EMAIL environment variable must be set')
-    }
-
-    // Navigate to app first - Clerk needs to be loaded
-    await page.goto('/')
-    await page.waitForLoadState('networkidle')
-
-    // Sign in using email-based approach (creates sign-in token via backend API)
-    await clerk.signIn({
-      page,
-      emailAddress: email,
-    })
-
-    // Wait for authentication to complete and redirect to dashboard
-    await page.waitForURL('**/dashboard', { timeout: 10000 })
-  })
-
   test('should create portfolio and navigate to portfolio detail page', async ({ page }) => {
     // This test verifies the portfolio creation flow and navigation to the new portfolio
 

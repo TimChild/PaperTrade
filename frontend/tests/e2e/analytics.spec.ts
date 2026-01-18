@@ -1,28 +1,9 @@
-import { clerk } from '@clerk/testing/playwright'
 import { test, expect } from './fixtures'
 
 test.describe('Portfolio Analytics', () => {
   let portfolioId: string
 
   test.beforeEach(async ({ page }) => {
-    const email = process.env.E2E_CLERK_USER_EMAIL
-    if (!email) {
-      throw new Error('E2E_CLERK_USER_EMAIL environment variable must be set')
-    }
-
-    // Navigate to app first - Clerk needs to be loaded
-    await page.goto('/')
-    await page.waitForLoadState('networkidle')
-
-    // Sign in using email-based approach
-    await clerk.signIn({
-      page,
-      emailAddress: email,
-    })
-
-    // Wait for authentication to complete and redirect to dashboard
-    await page.waitForURL('**/dashboard', { timeout: 10000 })
-
     // Create a test portfolio for analytics tests
     await page.goto('/dashboard')
     await page.waitForLoadState('networkidle')

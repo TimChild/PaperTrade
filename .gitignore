@@ -243,3 +243,8 @@ docker-compose.override.yml
 
 # Playwright MCP
 .playwright-mcp/
+
+# Playwright E2E authentication state
+playwright/.auth/
+playwright-report/
+test-results/

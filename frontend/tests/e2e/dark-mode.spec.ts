@@ -1,18 +1,11 @@
-import { clerk } from '@clerk/testing/playwright'
 import { test, expect } from './fixtures'
 
 test.describe('Dark Mode Toggle', () => {
-  test.beforeEach(async ({ page }) => {
-    const email = process.env.E2E_CLERK_USER_EMAIL || 'test-e2e@zebutrader.com'
-
-    // Navigate to app and authenticate
-    await page.goto('/')
-    await page.waitForLoadState('networkidle')
-    await clerk.signIn({ page, emailAddress: email })
-    await page.waitForURL('**/dashboard', { timeout: 10000 })
-  })
-
   test('Theme toggle changes theme correctly', async ({ page }) => {
+    // Navigate to dashboard
+    await page.goto('/dashboard')
+    await page.waitForLoadState('networkidle')
+
     // Click dark mode button
     await page.getByTestId('theme-toggle-dark').click()
 
@@ -26,6 +19,10 @@ test.describe('Dark Mode Toggle', () => {
   })
 
   test('Theme persists across page reloads', async ({ page }) => {
+    // Navigate to dashboard
+    await page.goto('/dashboard')
+    await page.waitForLoadState('networkidle')
+
     // Set dark mode
     await page.getByTestId('theme-toggle-dark').click()
     await expect(page.locator('html')).toHaveClass(/dark/)
