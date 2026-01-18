@@ -10,7 +10,7 @@ stale cached data if available rather than failing completely.
 
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from typing import TYPE_CHECKING
 
@@ -607,7 +607,11 @@ class AlphaVantageAdapter:
         )
 
         # Check if Redis cache alone is complete (early return optimization)
-        if cached_history and interval == "1day" and self._is_cache_complete(cached_history, start, end):
+        if (
+            cached_history
+            and interval == "1day"
+            and self._is_cache_complete(cached_history, start, end)
+        ):
             log.info(
                 "Redis cache hit (complete)",
                 cached_points=len(cached_history),
@@ -648,7 +652,11 @@ class AlphaVantageAdapter:
         all_prices = (cached_history or []) + db_history
 
         # Check if combined data is complete (only for 1day interval)
-        if interval == "1day" and all_prices and self._is_cache_complete(all_prices, start, end):
+        if (
+            interval == "1day"
+            and all_prices
+            and self._is_cache_complete(all_prices, start, end)
+        ):
             # We have complete data from cache/database
             log.info(
                 "Complete data from cache/database",

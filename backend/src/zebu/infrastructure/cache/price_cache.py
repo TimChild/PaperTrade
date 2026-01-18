@@ -491,7 +491,9 @@ class PriceCache:
         prices = []
         for result in results:
             if result is not None:
-                json_str = result.decode("utf-8") if isinstance(result, bytes) else result
+                json_str = (
+                    result.decode("utf-8") if isinstance(result, bytes) else result
+                )
                 prices.append(self._deserialize_price(json_str))
 
         # Return None if no days were cached, otherwise return what we found

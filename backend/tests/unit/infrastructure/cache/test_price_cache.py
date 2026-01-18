@@ -723,8 +723,6 @@ class TestPriceCachePerDayStorage:
         start = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
         end = datetime(2026, 1, 5, 23, 59, 59, tzinfo=UTC)
 
-        result = await cache.get_history(
-            Ticker("TSLA"), start, end, interval="1day"
-        )
+        result = await cache.get_history(Ticker("TSLA"), start, end, interval="1day")
 
         assert result is None
