@@ -79,7 +79,9 @@ export function PortfolioCard({
             data-testid={`portfolio-card-${portfolio.id}`}
           >
             <CardHeader className="pb-3 sm:pb-4">
-              <CardTitle className="text-lg sm:text-xl pr-8">{portfolio.name}</CardTitle>
+              <CardTitle className="text-lg sm:text-xl pr-8">
+                {portfolio.name}
+              </CardTitle>
             </CardHeader>
 
             <CardContent className="space-y-3 sm:space-y-4">
@@ -110,7 +112,12 @@ export function PortfolioCard({
                   <p className="text-xs sm:text-sm text-foreground-tertiary mb-1">
                     Daily Change
                   </p>
-                  <p className={cn('text-base sm:text-value-secondary', changeColorClass)}>
+                  <p
+                    className={cn(
+                      'text-base sm:text-value-secondary',
+                      changeColorClass
+                    )}
+                  >
                     {isPositiveChange ? '+' : ''}
                     {formatCurrency(portfolio.dailyChange)}
                   </p>

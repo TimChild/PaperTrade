@@ -205,7 +205,9 @@ export function TransactionList({
                         )}
                       </div>
                     </div>
-                    <div className={`text-right flex-shrink-0 ml-2 ${colorClass}`}>
+                    <div
+                      className={`text-right flex-shrink-0 ml-2 ${colorClass}`}
+                    >
                       <p
                         className="text-base sm:text-lg font-semibold"
                         data-testid={`transaction-amount-${idx}`}

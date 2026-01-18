@@ -76,12 +76,16 @@ export function PortfolioSummaryCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg sm:text-xl lg:text-heading-md">{portfolio.name}</CardTitle>
+        <CardTitle className="text-lg sm:text-xl lg:text-heading-md">
+          {portfolio.name}
+        </CardTitle>
       </CardHeader>
 
       <CardContent className="space-y-3 sm:space-y-4">
         <div>
-          <p className="text-xs sm:text-sm text-foreground-secondary">Total Value</p>
+          <p className="text-xs sm:text-sm text-foreground-secondary">
+            Total Value
+          </p>
           <p
             className="text-xl sm:text-2xl lg:text-value-primary text-foreground-primary"
             data-testid="portfolio-total-value"
@@ -96,7 +100,9 @@ export function PortfolioSummaryCard({
         </div>
 
         <div>
-          <p className="text-xs sm:text-sm text-foreground-secondary">Daily Change</p>
+          <p className="text-xs sm:text-sm text-foreground-secondary">
+            Daily Change
+          </p>
           <div className="flex items-baseline gap-2">
             <p
               className={`text-base sm:text-lg lg:text-value-secondary ${changeColorClass}`}
@@ -116,7 +122,9 @@ export function PortfolioSummaryCard({
 
         <div className="border-t border-gray-200 pt-3 sm:pt-4 dark:border-gray-700">
           <div className="flex justify-between">
-            <p className="text-xs sm:text-sm text-foreground-secondary">Cash Balance</p>
+            <p className="text-xs sm:text-sm text-foreground-secondary">
+              Cash Balance
+            </p>
             <p
               className="text-xs sm:text-sm font-medium text-foreground-primary"
               data-testid="portfolio-cash-balance"

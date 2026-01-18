@@ -96,9 +96,9 @@
   /* Ensure minimum touch target size (44x44px) for accessibility */
   button,
   a,
-  input[type="button"],
-  input[type="submit"],
-  [role="button"] {
+  input[type='button'],
+  input[type='submit'],
+  [role='button'] {
     min-height: 44px;
   }
 

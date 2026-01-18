@@ -96,7 +96,9 @@ export function TradeForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg sm:text-xl lg:text-heading-md">Execute Trade</CardTitle>
+        <CardTitle className="text-lg sm:text-xl lg:text-heading-md">
+          Execute Trade
+        </CardTitle>
       </CardHeader>
 
       <CardContent>
@@ -130,7 +132,9 @@ export function TradeForm({
 
           {/* Symbol Input */}
           <div>
-            <Label htmlFor="ticker" className="text-sm sm:text-base">Symbol</Label>
+            <Label htmlFor="ticker" className="text-sm sm:text-base">
+              Symbol
+            </Label>
             <Input
               id="ticker"
               data-testid="trade-form-ticker-input"
@@ -146,7 +150,9 @@ export function TradeForm({
 
           {/* Quantity Input */}
           <div>
-            <Label htmlFor="quantity" className="text-sm sm:text-base">Quantity</Label>
+            <Label htmlFor="quantity" className="text-sm sm:text-base">
+              Quantity
+            </Label>
             <Input
               id="quantity"
               data-testid="trade-form-quantity-input"
@@ -187,7 +193,9 @@ export function TradeForm({
 
           {/* Price Display (Read-Only) */}
           <div>
-            <Label htmlFor="price" className="text-sm sm:text-base">Estimated Execution Price</Label>
+            <Label htmlFor="price" className="text-sm sm:text-base">
+              Estimated Execution Price
+            </Label>
             <div className="relative">
               <Input
                 id="price"
@@ -293,7 +301,9 @@ export function TradeForm({
 
             {backtestMode && (
               <div className="mt-3">
-                <Label htmlFor="backtest-date" className="text-sm sm:text-base">Trade Date</Label>
+                <Label htmlFor="backtest-date" className="text-sm sm:text-base">
+                  Trade Date
+                </Label>
                 <Input
                   id="backtest-date"
                   type="date"

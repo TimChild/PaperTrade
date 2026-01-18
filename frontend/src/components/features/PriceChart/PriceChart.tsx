@@ -46,7 +46,9 @@ export function PriceChart({
     return (
       <Card>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
-          <CardTitle className="text-lg sm:text-xl lg:text-heading-md">{ticker}</CardTitle>
+          <CardTitle className="text-lg sm:text-xl lg:text-heading-md">
+            {ticker}
+          </CardTitle>
           <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
         </CardHeader>
         <CardContent>
@@ -63,7 +65,9 @@ export function PriceChart({
       return (
         <Card>
           <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
-            <CardTitle className="text-lg sm:text-xl lg:text-heading-md">{ticker}</CardTitle>
+            <CardTitle className="text-lg sm:text-xl lg:text-heading-md">
+              {ticker}
+            </CardTitle>
             <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
           </CardHeader>
           <CardContent>
@@ -80,7 +84,9 @@ export function PriceChart({
     return (
       <Card>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
-          <CardTitle className="text-lg sm:text-xl lg:text-heading-md">{ticker}</CardTitle>
+          <CardTitle className="text-lg sm:text-xl lg:text-heading-md">
+            {ticker}
+          </CardTitle>
           <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
         </CardHeader>
         <CardContent>
@@ -95,7 +101,9 @@ export function PriceChart({
     return (
       <Card>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
-          <CardTitle className="text-lg sm:text-xl lg:text-heading-md">{ticker}</CardTitle>
+          <CardTitle className="text-lg sm:text-xl lg:text-heading-md">
+            {ticker}
+          </CardTitle>
           <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
         </CardHeader>
         <CardContent>
@@ -127,7 +135,9 @@ export function PriceChart({
     return (
       <Card>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
-          <CardTitle className="text-lg sm:text-xl lg:text-heading-md">{ticker}</CardTitle>
+          <CardTitle className="text-lg sm:text-xl lg:text-heading-md">
+            {ticker}
+          </CardTitle>
           <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
         </CardHeader>
         <CardContent>
@@ -150,7 +160,9 @@ export function PriceChart({
     <Card>
       {/* Header */}
       <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
-        <CardTitle className="text-lg sm:text-xl lg:text-heading-md">{ticker}</CardTitle>
+        <CardTitle className="text-lg sm:text-xl lg:text-heading-md">
+          {ticker}
+        </CardTitle>
         <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
       </CardHeader>
 
@@ -173,7 +185,11 @@ export function PriceChart({
         />
 
         {/* Chart */}
-        <ResponsiveContainer width="100%" height={chartHeight} className="sm:h-[300px] lg:h-[350px]">
+        <ResponsiveContainer
+          width="100%"
+          height={chartHeight}
+          className="sm:h-[300px] lg:h-[350px]"
+        >
           <LineChart data={chartData}>
             <CartesianGrid
               strokeDasharray="3 3"

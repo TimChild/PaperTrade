@@ -149,7 +149,8 @@ export function HoldingsTable({
 
                   // Check if we're using real-time price or fallback
                   const usingFallback = !(
-                    'usingRealTimePrice' in holding && holding.usingRealTimePrice
+                    'usingRealTimePrice' in holding &&
+                    holding.usingRealTimePrice
                   )
 
                   return (
