@@ -36,7 +36,11 @@ def mock_price_repository() -> MagicMock:
 @pytest.fixture
 def mock_price_cache() -> MagicMock:
     """Provide mock price cache."""
-    return MagicMock()
+    cache = MagicMock()
+    # Mock get_history to return None (cache miss) by default
+    cache.get_history = AsyncMock(return_value=None)
+    cache.set_history = AsyncMock()
+    return cache
 
 
 @pytest.fixture
@@ -556,3 +560,351 @@ class TestDecimalPrecisionRounding:
         assert point.low.amount == Decimal("148.12")  # 148.1234 → 148.12
         assert point.close.amount == Decimal("151.57")  # 151.5678 → 151.57
         assert point.price.amount == Decimal("151.57")  # Same as close
+
+
+class TestHistoryCachingTTL:
+    """Tests for TTL calculation for price history caching."""
+
+    async def test_ttl_short_for_recent_data(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+    ) -> None:
+        """Should return short TTL (1 hour) for data including today."""
+        from datetime import UTC, datetime
+
+        ticker = Ticker("AAPL")
+        now = datetime.now(UTC)
+
+        # Create price points including today
+        prices = [
+            create_price_point(ticker, now.replace(hour=21, minute=0, second=0))
+        ]
+
+        ttl = alpha_vantage_adapter._calculate_history_ttl(prices)
+
+        # Should be 1 hour (3600 seconds)
+        assert ttl == 3600
+
+    async def test_ttl_medium_for_yesterday_data(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+    ) -> None:
+        """Should return medium TTL (4 hours) for yesterday's data."""
+        from datetime import UTC, datetime, timedelta
+
+        ticker = Ticker("AAPL")
+        now = datetime.now(UTC)
+        yesterday = now - timedelta(days=1)
+
+        # Create price points for yesterday
+        prices = [
+            create_price_point(
+                ticker, yesterday.replace(hour=21, minute=0, second=0)
+            )
+        ]
+
+        ttl = alpha_vantage_adapter._calculate_history_ttl(prices)
+
+        # Should be 4 hours (14400 seconds)
+        assert ttl == 4 * 3600
+
+    async def test_ttl_long_for_historical_data(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+    ) -> None:
+        """Should return long TTL (7 days) for historical data."""
+        from datetime import UTC, datetime, timedelta
+
+        ticker = Ticker("AAPL")
+        now = datetime.now(UTC)
+        week_ago = now - timedelta(days=7)
+
+        # Create price points from a week ago
+        prices = [
+            create_price_point(ticker, week_ago.replace(hour=21, minute=0, second=0))
+        ]
+
+        ttl = alpha_vantage_adapter._calculate_history_ttl(prices)
+
+        # Should be 7 days (604800 seconds)
+        assert ttl == 7 * 24 * 3600
+
+    async def test_ttl_empty_list_returns_short(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+    ) -> None:
+        """Should return short TTL for empty price list."""
+        ttl = alpha_vantage_adapter._calculate_history_ttl([])
+
+        # Should default to 1 hour
+        assert ttl == 3600
+
+
+class TestCacheCompletenessMarketHours:
+    """Tests for improved cache completeness with market hours awareness."""
+
+    async def test_cache_complete_with_data_through_yesterday_market_open(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+    ) -> None:
+        """Should return True when requesting today but market is open.
+
+        If market hasn't closed and we have data through yesterday, that's complete.
+        """
+        from datetime import UTC, datetime, timedelta
+        from unittest.mock import patch
+
+        ticker = Ticker("AAPL")
+
+        # Mock current time to be 3:00 PM UTC (before market close at 9:00 PM UTC)
+        mock_now = datetime(2026, 1, 18, 15, 0, 0, tzinfo=UTC)
+
+        with patch("zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime") as mock_datetime:
+            mock_datetime.now.return_value = mock_now
+            mock_datetime.side_effect = lambda *args, **kwargs: datetime(*args, **kwargs)
+
+            # Request data through today
+            start = datetime(2026, 1, 10, 0, 0, 0, tzinfo=UTC)
+            end = datetime(2026, 1, 18, 23, 59, 59, tzinfo=UTC)
+
+            # Cache has data through yesterday (Jan 17)
+            cached_data = [
+                create_price_point(
+                    ticker, datetime(2026, 1, 10, 21, 0, 0, tzinfo=UTC)
+                ),
+                create_price_point(
+                    ticker, datetime(2026, 1, 13, 21, 0, 0, tzinfo=UTC)
+                ),
+                create_price_point(
+                    ticker, datetime(2026, 1, 14, 21, 0, 0, tzinfo=UTC)
+                ),
+                create_price_point(
+                    ticker, datetime(2026, 1, 15, 21, 0, 0, tzinfo=UTC)
+                ),
+                create_price_point(
+                    ticker, datetime(2026, 1, 16, 21, 0, 0, tzinfo=UTC)
+                ),
+                create_price_point(
+                    ticker, datetime(2026, 1, 17, 21, 0, 0, tzinfo=UTC)
+                ),  # Yesterday
+            ]
+
+            # Should be considered complete
+            result = alpha_vantage_adapter._is_cache_complete(
+                cached_data, start, end
+            )
+
+            assert result is True
+
+    async def test_cache_incomplete_when_missing_yesterday_market_open(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+    ) -> None:
+        """Should return False when market is open and missing yesterday's data."""
+        from datetime import UTC, datetime
+        from unittest.mock import patch
+
+        ticker = Ticker("AAPL")
+
+        # Mock current time to be 3:00 PM UTC (before market close)
+        mock_now = datetime(2026, 1, 18, 15, 0, 0, tzinfo=UTC)
+
+        with patch("zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime") as mock_datetime:
+            mock_datetime.now.return_value = mock_now
+            mock_datetime.side_effect = lambda *args, **kwargs: datetime(*args, **kwargs)
+
+            start = datetime(2026, 1, 10, 0, 0, 0, tzinfo=UTC)
+            end = datetime(2026, 1, 18, 23, 59, 59, tzinfo=UTC)
+
+            # Cache only has data through Jan 15 (missing 16, 17)
+            cached_data = [
+                create_price_point(
+                    ticker, datetime(2026, 1, 10, 21, 0, 0, tzinfo=UTC)
+                ),
+                create_price_point(
+                    ticker, datetime(2026, 1, 13, 21, 0, 0, tzinfo=UTC)
+                ),
+                create_price_point(
+                    ticker, datetime(2026, 1, 14, 21, 0, 0, tzinfo=UTC)
+                ),
+                create_price_point(
+                    ticker, datetime(2026, 1, 15, 21, 0, 0, tzinfo=UTC)
+                ),
+            ]
+
+            # Should be incomplete (missing yesterday)
+            result = alpha_vantage_adapter._is_cache_complete(
+                cached_data, start, end
+            )
+
+            assert result is False
+
+    async def test_historical_cache_complete_without_today(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+    ) -> None:
+        """Should return True for historical data (not including today).
+
+        When requesting data from the past only, standard 1-day tolerance applies.
+        """
+        ticker = Ticker("AAPL")
+
+        # Request historical range (not including today)
+        start = datetime(2026, 1, 10, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 1, 16, 23, 59, 59, tzinfo=UTC)
+
+        # Cache has data through Jan 16
+        cached_data = [
+            create_price_point(ticker, datetime(2026, 1, 10, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 13, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 14, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 15, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 16, 21, 0, 0, tzinfo=UTC)),
+        ]
+
+        # Should be complete (historical data)
+        result = alpha_vantage_adapter._is_cache_complete(cached_data, start, end)
+
+        assert result is True
+
+
+class TestRedisCachingIntegration:
+    """Tests for Redis caching integration in get_price_history."""
+
+    async def test_get_price_history_uses_redis_cache(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_price_cache: MagicMock,
+        mock_price_repository: MagicMock,
+        mock_rate_limiter: MagicMock,
+    ) -> None:
+        """Should check Redis cache first and return if complete."""
+        ticker = Ticker("AAPL")
+        start = datetime(2026, 1, 10, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 1, 17, 23, 59, 59, tzinfo=UTC)
+
+        # Redis has complete cached data
+        cached_data = [
+            create_price_point(ticker, datetime(2026, 1, 10, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 13, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 14, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 15, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 16, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 17, 21, 0, 0, tzinfo=UTC)),
+        ]
+        mock_price_cache.get_history = AsyncMock(return_value=cached_data)
+
+        # Act
+        result = await alpha_vantage_adapter.get_price_history(
+            ticker, start, end, "1day"
+        )
+
+        # Assert
+        assert result == cached_data
+        # Redis cache was checked
+        mock_price_cache.get_history.assert_called_once()
+        # Database was NOT queried
+        mock_price_repository.get_price_history.assert_not_called()
+        # API was NOT called
+        mock_rate_limiter.consume_token.assert_not_called()
+
+    async def test_get_price_history_warms_redis_from_db(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_price_cache: MagicMock,
+        mock_price_repository: MagicMock,
+        mock_rate_limiter: MagicMock,
+    ) -> None:
+        """Should warm Redis cache when database has complete data."""
+        ticker = Ticker("AAPL")
+        start = datetime(2026, 1, 10, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 1, 17, 23, 59, 59, tzinfo=UTC)
+
+        # Redis cache miss
+        mock_price_cache.get_history = AsyncMock(return_value=None)
+
+        # Database has complete data
+        db_data = [
+            create_price_point(ticker, datetime(2026, 1, 10, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 13, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 14, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 15, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 16, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 17, 21, 0, 0, tzinfo=UTC)),
+        ]
+        mock_price_repository.get_price_history = AsyncMock(return_value=db_data)
+        mock_price_cache.set_history = AsyncMock()
+
+        # Act
+        result = await alpha_vantage_adapter.get_price_history(
+            ticker, start, end, "1day"
+        )
+
+        # Assert
+        assert result == db_data
+        # Database was queried
+        mock_price_repository.get_price_history.assert_called_once()
+        # Redis was warmed with database data
+        mock_price_cache.set_history.assert_called_once()
+        # API was NOT called
+        mock_rate_limiter.consume_token.assert_not_called()
+
+    async def test_get_price_history_stores_api_results_in_redis(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_price_cache: MagicMock,
+        mock_price_repository: MagicMock,
+        mock_rate_limiter: MagicMock,
+        mock_http_client: MagicMock,
+    ) -> None:
+        """Should store API results in both Redis and database."""
+        ticker = Ticker("AAPL")
+        start = datetime(2026, 1, 10, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 1, 17, 23, 59, 59, tzinfo=UTC)
+
+        # Redis cache miss
+        mock_price_cache.get_history = AsyncMock(return_value=None)
+
+        # Database cache miss
+        mock_price_repository.get_price_history = AsyncMock(return_value=[])
+        mock_price_repository.upsert_price = AsyncMock()  # Mock database storage
+
+        # Mock API response
+        api_response_data = {
+            "Meta Data": {"2. Symbol": "AAPL"},
+            "Time Series (Daily)": {
+                "2026-01-17": {
+                    "1. open": "150.00",
+                    "2. high": "152.00",
+                    "3. low": "148.00",
+                    "4. close": "151.00",
+                    "5. volume": "1000000",
+                },
+                "2026-01-16": {
+                    "1. open": "149.00",
+                    "2. high": "151.00",
+                    "3. low": "147.00",
+                    "4. close": "150.00",
+                    "5. volume": "1000000",
+                },
+            },
+        }
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = api_response_data
+        mock_http_client.get = AsyncMock(return_value=mock_response)
+        mock_price_cache.set_history = AsyncMock()
+
+        # Act
+        result = await alpha_vantage_adapter.get_price_history(
+            ticker, start, end, "1day"
+        )
+
+        # Assert
+        assert len(result) > 0
+        # API was called
+        mock_rate_limiter.consume_token.assert_called_once()
+        # Data was stored in database (via _fetch_daily_history_from_api)
+        assert mock_price_repository.upsert_price.called
+        # Data was stored in Redis
+        mock_price_cache.set_history.assert_called_once()
