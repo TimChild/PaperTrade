@@ -138,9 +138,19 @@ async def get_current_user(
     Raises:
         HTTPException: 401 if authentication fails
     """
+    import logging
+
+    logger = logging.getLogger(__name__)
+    logger.info(
+        f"Authenticating user with auth adapter: {auth.__class__.__name__}"
+    )
+
     try:
-        return await auth.verify_token(credentials.credentials)
+        user = await auth.verify_token(credentials.credentials)
+        logger.info(f"Authentication successful for user: {user.id}")
+        return user
     except InvalidTokenError as e:
+        logger.warning(f"Authentication failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=f"Invalid authentication credentials: {str(e)}",
