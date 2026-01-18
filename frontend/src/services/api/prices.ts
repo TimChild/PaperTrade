@@ -109,7 +109,6 @@ export async function getHistoricalPrice(
   }
 }
 
-
 /**
  * Batch fetch prices for multiple tickers
  * Uses the /prices/batch endpoint for efficient single-request fetching

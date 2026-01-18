@@ -101,10 +101,9 @@ describe('useHistoricalPriceQuery', () => {
       }
     )
 
-    await waitFor(
-      () => expect(result.current.isError).toBe(true),
-      { timeout: 5000 }
-    )
+    await waitFor(() => expect(result.current.isError).toBe(true), {
+      timeout: 5000,
+    })
 
     // Should retry up to 2 times (initial + 2 retries = 3 total calls)
     expect(pricesApi.getHistoricalPrice).toHaveBeenCalledTimes(3)
