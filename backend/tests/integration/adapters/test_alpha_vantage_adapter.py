@@ -8,10 +8,15 @@ These tests verify the full integration of the Alpha Vantage adapter including:
 
 We use the `respx` library to mock HTTP responses for httpx, which works seamlessly
 with async code and is more reliable than VCR cassettes for CI/CD environments.
+
+Note: These tests use the real AlphaVantageAdapter which includes weekend/holiday
+logic. To ensure tests pass regardless of when they run, we mock datetime to
+simulate weekday behavior (Friday, Jan 16, 2026).
 """
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from unittest.mock import patch
 
 import httpx
 import pytest
@@ -28,6 +33,39 @@ from zebu.application.exceptions import (
 from zebu.domain.value_objects.ticker import Ticker
 from zebu.infrastructure.cache.price_cache import PriceCache
 from zebu.infrastructure.rate_limiter import RateLimiter
+
+
+@pytest.fixture
+def mock_weekday():
+    """Mock current time as a weekday (Friday, Jan 16, 2026).
+
+    This ensures integration tests pass regardless of when they run.
+    Without this, tests would fail on weekends when the weekend price
+    fetching logic activates.
+    """
+    friday = datetime(2026, 1, 16, 15, 0, 0, tzinfo=UTC)
+    with patch(
+        "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
+    ) as mock_dt:
+        # Create a class that behaves like datetime module
+        class MockDatetime:
+            @staticmethod
+            def now(tz=None):
+                if tz:
+                    return friday
+                return friday.replace(tzinfo=None)
+
+            # Pass through all other datetime class methods
+            def __getattr__(self, name):
+                return getattr(datetime, name)
+
+        # Replace the mock with our custom class
+        mock_dt_instance = MockDatetime()
+        # Allow datetime() constructor calls
+        mock_dt.side_effect = lambda *args, **kwargs: datetime(*args, **kwargs)
+        mock_dt.now = mock_dt_instance.now
+
+        yield mock_dt
 
 
 @pytest.fixture
@@ -84,6 +122,7 @@ class TestAlphaVantageAdapterCacheMiss:
     async def test_get_current_price_aapl(
         self,
         adapter: AlphaVantageAdapter,
+        mock_weekday,  # Mock as Friday to avoid weekend logic
     ) -> None:
         """Test fetching AAPL price from API (cache miss)."""
         # Mock Alpha Vantage API response
@@ -114,6 +153,7 @@ class TestAlphaVantageAdapterCacheMiss:
     async def test_get_current_price_tsla(
         self,
         adapter: AlphaVantageAdapter,
+        mock_weekday,  # Mock as Friday to avoid weekend logic
     ) -> None:
         """Test fetching TSLA price from API (cache miss)."""
         respx.get("https://www.alphavantage.co/query").mock(
@@ -139,6 +179,7 @@ class TestAlphaVantageAdapterCacheMiss:
     async def test_get_current_price_invalid_ticker(
         self,
         adapter: AlphaVantageAdapter,
+        mock_weekday,  # Mock as Friday to avoid weekend logic
     ) -> None:
         """Test fetching price for invalid ticker raises TickerNotFoundError."""
         # Alpha Vantage returns empty Global Quote for invalid tickers
@@ -164,52 +205,62 @@ class TestAlphaVantageAdapterCacheHit:
         self,
         adapter: AlphaVantageAdapter,
         price_cache: PriceCache,
+        mock_weekday,  # Mock as Friday to avoid weekend logic
     ) -> None:
         """Test that second request hits cache (no API call)."""
-        from datetime import date
+        from unittest.mock import patch as mock_patch
 
-        # Use today's date to ensure price is fresh (not stale)
-        today = date.today().isoformat()
+        # Use the mocked Friday date (2026-01-16) to ensure price is fresh
+        friday = datetime(2026, 1, 16, 15, 0, 0, tzinfo=UTC)
+        friday_date = "2026-01-16"
 
-        mock_route = respx.get("https://www.alphavantage.co/query").mock(
-            return_value=httpx.Response(
-                200,
-                json={
-                    "Global Quote": {
-                        "01. symbol": "AAPL",
-                        "05. price": "194.50",
-                        "07. latest trading day": today,
-                    }
-                },
+        # Patch datetime in both alpha_vantage_adapter and price_point modules
+        with mock_patch("zebu.application.dtos.price_point.datetime") as price_point_dt:
+            price_point_dt.now.return_value = friday
+            price_point_dt.side_effect = lambda *args, **kwargs: datetime(
+                *args, **kwargs
             )
-        )
 
-        # First call - populates cache
-        price1 = await adapter.get_current_price(Ticker("AAPL"))
-        assert price1.source == "alpha_vantage"
-        assert mock_route.called
+            mock_route = respx.get("https://www.alphavantage.co/query").mock(
+                return_value=httpx.Response(
+                    200,
+                    json={
+                        "Global Quote": {
+                            "01. symbol": "AAPL",
+                            "05. price": "194.50",
+                            "07. latest trading day": friday_date,
+                        }
+                    },
+                )
+            )
 
-        # Verify cache was populated (with original alpha_vantage source)
-        cached = await price_cache.get(Ticker("AAPL"))
-        assert cached is not None
-        assert cached.source == "alpha_vantage"  # Cached value has original source
+            # First call - populates cache
+            price1 = await adapter.get_current_price(Ticker("AAPL"))
+            assert price1.source == "alpha_vantage"
+            assert mock_route.called
 
-        # Reset mock call count
-        initial_call_count = len(mock_route.calls)
+            # Verify cache was populated (with original alpha_vantage source)
+            cached = await price_cache.get(Ticker("AAPL"))
+            assert cached is not None
+            assert cached.source == "alpha_vantage"
 
-        # Second call - hits cache (no new HTTP request)
-        price2 = await adapter.get_current_price(Ticker("AAPL"))
-        assert price2.source == "cache"  # Returned value has source changed to "cache"
-        assert price2.ticker == price1.ticker
-        assert price2.price == price1.price
-        # Verify no additional API calls were made
-        assert len(mock_route.calls) == initial_call_count
+            # Reset mock call count
+            initial_call_count = len(mock_route.calls)
+
+            # Second call - hits cache (no new HTTP request)
+            price2 = await adapter.get_current_price(Ticker("AAPL"))
+            assert price2.source == "cache"
+            assert price2.ticker == price1.ticker
+            assert price2.price == price1.price
+            # Verify no additional API calls were made
+            assert len(mock_route.calls) == initial_call_count
 
     @respx.mock
     async def test_get_current_price_stale_cache_refresh(
         self,
         adapter: AlphaVantageAdapter,
         price_cache: PriceCache,
+        mock_weekday,  # Mock as Friday to avoid weekend logic
     ) -> None:
         """Test that stale cache triggers API refresh."""
         from zebu.application.dtos.price_point import PricePoint
@@ -281,6 +332,7 @@ class TestAlphaVantageAdapterRateLimiting:
         self,
         adapter: AlphaVantageAdapter,
         rate_limiter: RateLimiter,
+        mock_weekday,  # Mock as Friday to avoid weekend logic
     ) -> None:
         """Test that rate limiting without cached data raises error."""
         # Exhaust rate limiter
@@ -382,6 +434,7 @@ class TestAlphaVantageAdapterPerformance:
     async def test_cache_hit_performance(
         self,
         adapter: AlphaVantageAdapter,
+        mock_weekday,  # Mock as Friday to avoid weekend logic
     ) -> None:
         """Test that cache hits are fast (<100ms)."""
         import time

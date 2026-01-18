@@ -259,7 +259,9 @@ class AlphaVantageAdapter:
             logger.info(
                 "Markets closed, using last trading day prices for batch",
                 current_date=now.date().isoformat(),
-                last_trading_day=last_trading_day.date().isoformat() if last_trading_day else None,
+                last_trading_day=last_trading_day.date().isoformat()
+                if last_trading_day
+                else None,
                 ticker_count=len(tickers),
             )
 
@@ -295,7 +297,9 @@ class AlphaVantageAdapter:
                         db_uncached.append(ticker)
                     else:
                         # Valid price - warm the cache and add to results
-                        ttl = 7200 if not is_trading_day else 3600  # Longer TTL on weekends
+                        ttl = (
+                            7200 if not is_trading_day else 3600
+                        )  # Longer TTL on weekends
                         await self.price_cache.set(db_price, ttl=ttl)
                         result[ticker] = db_price.with_source("database")
                 else:
