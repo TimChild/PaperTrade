@@ -606,8 +606,16 @@ class AlphaVantageAdapter:
             ticker, start, end, interval
         )
 
+        # Check if Redis cache alone is complete (early return optimization)
+        if cached_history and interval == "1day" and self._is_cache_complete(cached_history, start, end):
+            log.info(
+                "Redis cache hit (complete)",
+                cached_points=len(cached_history),
+                source="redis",
+            )
+            return cached_history
+
         # Calculate which days we have cached
-        cached_dates: set[date] = set()
         if cached_history:
             cached_dates = {p.timestamp.date() for p in cached_history}
             log.info(
@@ -625,9 +633,7 @@ class AlphaVantageAdapter:
         db_history = await self.price_repository.get_price_history(
             ticker, start, end, interval
         )
-        db_dates: set[date] = set()
         if db_history:
-            db_dates = {p.timestamp.date() for p in db_history}
             first_date = db_history[0].timestamp.date()
             last_date = db_history[-1].timestamp.date()
             log.info(
@@ -640,118 +646,110 @@ class AlphaVantageAdapter:
 
         # Combine cached + database prices
         all_prices = (cached_history or []) + db_history
-        all_dates = cached_dates | db_dates
 
-        # Tier 3: Fetch from API if still missing days
+        # Check if combined data is complete (only for 1day interval)
+        if interval == "1day" and all_prices and self._is_cache_complete(all_prices, start, end):
+            # We have complete data from cache/database
+            log.info(
+                "Complete data from cache/database",
+                total_points=len(all_prices),
+                source="redis+database" if cached_history else "database",
+            )
+            # Warm Redis cache with database data if needed
+            if db_history and not cached_history:
+                ttl = self._calculate_history_ttl(db_history)
+                await self.price_cache.set_history(
+                    ticker, start, end, db_history, interval, ttl=ttl
+                )
+            return sorted(all_prices, key=lambda p: p.timestamp)
+
+        # Tier 3: Fetch from API if data is incomplete
         # Only support daily data fetching for now (Alpha Vantage free tier)
         if interval == "1day":
-            # Calculate expected days in range
-            expected_days: set[date] = set()
-            current = start.date()
-            end_date = end.date()
-            while current <= end_date:
-                expected_days.add(current)
-                current += timedelta(days=1)
+            log.info(
+                "Incomplete data, fetching from API",
+                have_points=len(all_prices),
+                reason="cache_incomplete",
+            )
 
-            missing_days = expected_days - all_dates
-
-            if missing_days:
-                log.info(
-                    "Missing days detected",
-                    missing_count=len(missing_days),
-                    total_expected=len(expected_days),
+            # Check rate limiting before API call
+            if not await self.rate_limiter.can_make_request():
+                log.warning(
+                    "Rate limit exceeded, returning partial data",
+                    have_points=len(all_prices),
+                )
+                # Return partial data if we have any
+                if all_prices:
+                    return sorted(all_prices, key=lambda p: p.timestamp)
+                raise MarketDataUnavailableError(
+                    "Rate limit exceeded. Cannot fetch historical data at this time."
                 )
 
-                # Check rate limiting before API call
-                if not await self.rate_limiter.can_make_request():
-                    log.warning(
-                        "Rate limit exceeded, returning partial data",
-                        have_days=len(all_dates),
-                        missing_days=len(missing_days),
-                    )
-                    # Return partial data if we have any
-                    if all_prices:
-                        filtered = [
-                            p
-                            for p in all_prices
-                            if start <= p.timestamp.replace(tzinfo=UTC) <= end
-                        ]
-                        return sorted(filtered, key=lambda p: p.timestamp)
-                    raise MarketDataUnavailableError(
-                        "Rate limit exceeded. Cannot fetch historical data at this time."
-                    )
+            # Consume rate limit token
+            consumed = await self.rate_limiter.consume_token()
+            if not consumed:
+                log.warning("Failed to consume rate limit token")
+                # Return partial data if we have any
+                if all_prices:
+                    return sorted(all_prices, key=lambda p: p.timestamp)
+                raise MarketDataUnavailableError(
+                    "Rate limit exceeded. Cannot fetch historical data."
+                )
 
-                # Consume rate limit token
-                consumed = await self.rate_limiter.consume_token()
-                if not consumed:
-                    log.warning("Failed to consume rate limit token")
-                    # Return partial data if we have any
-                    if all_prices:
-                        filtered = [
-                            p
-                            for p in all_prices
-                            if start <= p.timestamp.replace(tzinfo=UTC) <= end
-                        ]
-                        return sorted(filtered, key=lambda p: p.timestamp)
-                    raise MarketDataUnavailableError(
-                        "Rate limit exceeded. Cannot fetch historical data."
+            # Fetch from API
+            try:
+                api_history = await self._fetch_daily_history_from_api(ticker)
+
+                log.info(
+                    "Alpha Vantage API fetch successful",
+                    total_points_fetched=len(api_history),
+                    fetched_range=(
+                        f"{api_history[0].timestamp.date()} to "
+                        f"{api_history[-1].timestamp.date()}"
                     )
+                    if api_history
+                    else "none",
+                )
 
-                # Fetch from API
-                try:
-                    api_history = await self._fetch_daily_history_from_api(ticker)
-
+                # Store ALL fetched days in Redis (individually) and database
+                if api_history:
+                    ttl = self._calculate_history_ttl(api_history)
+                    await self.price_cache.set_history(
+                        ticker, start, end, api_history, interval, ttl=ttl
+                    )
                     log.info(
-                        "Alpha Vantage API fetch successful",
-                        total_points_fetched=len(api_history),
-                        fetched_range=(
-                            f"{api_history[0].timestamp.date()} to "
-                            f"{api_history[-1].timestamp.date()}"
-                        )
-                        if api_history
-                        else "none",
+                        "Stored API data in Redis cache",
+                        points_cached=len(api_history),
+                        ttl=ttl,
                     )
 
-                    # Store ALL fetched days in Redis (individually)
-                    if api_history:
-                        ttl = self._calculate_history_ttl(api_history)
-                        await self.price_cache.set_history(
-                            ticker, start, end, api_history, interval, ttl=ttl
-                        )
-                        log.info(
-                            "Stored API data in Redis cache",
-                            points_cached=len(api_history),
-                            ttl=ttl,
-                        )
+                    # Store in PostgreSQL
+                    for price_point in api_history:
+                        await self.price_repository.upsert_price(price_point)
 
-                        # Store in PostgreSQL
-                        for price_point in api_history:
-                            await self.price_repository.upsert_price(price_point)
+                # Combine all sources and filter to requested range
+                all_prices = all_prices + api_history
+                filtered = [
+                    p
+                    for p in all_prices
+                    if start <= p.timestamp.replace(tzinfo=UTC) <= end
+                ]
+                return sorted(filtered, key=lambda p: p.timestamp)
 
-                    # Combine all sources
-                    all_prices = all_prices + api_history
+            except Exception as e:
+                log.error(
+                    "Alpha Vantage API fetch failed",
+                    error=str(e),
+                    exc_info=True,
+                )
+                # Return partial data if we have any
+                if all_prices:
+                    return sorted(all_prices, key=lambda p: p.timestamp)
+                return []
 
-                except Exception as e:
-                    log.error(
-                        "Alpha Vantage API fetch failed",
-                        error=str(e),
-                        exc_info=True,
-                    )
-                    # Return partial data if we have any
-                    if all_prices:
-                        filtered = [
-                            p
-                            for p in all_prices
-                            if start <= p.timestamp.replace(tzinfo=UTC) <= end
-                        ]
-                        return sorted(filtered, key=lambda p: p.timestamp)
-                    return []
-
-        # Filter to requested range and sort
-        filtered = [
-            p for p in all_prices if start <= p.timestamp.replace(tzinfo=UTC) <= end
-        ]
-        return sorted(filtered, key=lambda p: p.timestamp)
+        # For other intervals (non-1day), we don't support API fetching
+        # Return empty list if data is incomplete
+        return []
 
     def _get_last_trading_day(self, from_date: datetime) -> datetime:
         """Calculate the most recent trading day from a given date.
