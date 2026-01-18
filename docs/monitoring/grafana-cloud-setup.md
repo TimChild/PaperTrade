@@ -11,7 +11,7 @@ Zebu uses **Grafana Cloud Free Tier** for:
 
 **Free Tier Limits**:
 - 50GB logs/month
-- 10,000 metric series  
+- 10,000 metric series
 - 14-day retention
 
 **Estimated Usage**: ~100MB/day (well within limits)
@@ -61,15 +61,16 @@ Download the installation script:
 
 ```bash
 cd /tmp
-wget https://raw.githubusercontent.com/TimChild/PaperTrade/main/scripts/monitoring/install-promtail.sh
+curl -o install-promtail.sh https://raw.githubusercontent.com/TimChild/PaperTrade/main/scripts/monitoring/install-promtail.sh
+chmod +x install-promtail.sh
 ```
 
 Set environment variables with your Grafana Cloud credentials:
 
 ```bash
-export LOKI_URL='https://logs-prod-us-central1.grafana.net'
-export LOKI_USERNAME='YOUR_INSTANCE_ID'
-export LOKI_API_KEY='YOUR_API_KEY'
+export LOKI_URL='https://logs-prod-042.grafana.net'  # Your Grafana Cloud Loki URL
+export LOKI_USERNAME='1456248'  # Your instance ID
+export LOKI_API_KEY='glc_...'  # Your API token
 ```
 
 Run the installation script:
@@ -77,6 +78,8 @@ Run the installation script:
 ```bash
 sudo -E bash install-promtail.sh
 ```
+
+**Note**: The script uses `curl` instead of `wget` and static file paths instead of Docker API for better compatibility.
 
 The script will:
 - Download Promtail v2.9.3
@@ -246,21 +249,21 @@ You should receive an alert notification within 5-6 minutes (5 min for condition
    ```bash
    sudo journalctl -u promtail -n 100
    ```
-   
+
    Look for authentication errors, network issues, or permission problems.
 
 3. **Verify Docker socket access**:
    ```bash
    ls -l /var/run/docker.sock
    ```
-   
+
    Promtail needs read access to the Docker socket.
 
 4. **Check container names match**:
    ```bash
    docker ps --format "{{.Names}}"
    ```
-   
+
    Ensure container names match the regex patterns in `/etc/promtail/config.yml`.
 
 ### Logs Appearing But Not Parsed
@@ -269,7 +272,7 @@ You should receive an alert notification within 5-6 minutes (5 min for condition
    ```bash
    docker logs zebu-backend-prod --tail 10
    ```
-   
+
    Logs should be valid JSON like:
    ```json
    {"event": "Request started", "level": "info", "timestamp": "2026-01-17T..."}

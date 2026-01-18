@@ -1,6 +1,6 @@
 # Zebu Development Progress
 
-**Last Updated**: January 14, 2026
+**Last Updated**: January 17, 2026
 
 ## Current Status
 
@@ -13,8 +13,60 @@
 | Phase 3b: Authentication | ✅ Complete | Clerk integration |
 | Phase 3c: Analytics | ✅ Complete | 489+ tests, Charts & Insights |
 | **UX Polish** | ✅ **Complete** | Real-time prices, Charts working |
-| **Code Quality** | ✅ **Exceptional** | 0 ESLint suppressions, 742 tests |
+| **Code Quality** | ✅ **Exceptional** | 0 ESLint suppressions, 746 tests |
+| **Production Deployment** | ✅ **Live** | zebutrader.com with SSL |
 | Infrastructure | ✅ Production-Ready | Docker, CI/CD, E2E testing |
+
+### Recent Work (Jan 18, 2026)
+- ✅ **Production Infrastructure Improvements** (PRs #144, #145, #146, #147):
+  - **PR #144**: Market Holiday Calendar
+    - MarketCalendar class with 10 US market holidays + Easter algorithm
+    - Extends weekend cache fix to prevent API calls on holidays
+    - Observation rules (holiday on weekend → observes Monday/Friday)
+    - 25 new tests covering edge cases, holiday calculations
+  - **PR #145**: Grafana Cloud Monitoring
+    - Promtail agent for log shipping (systemd service)
+    - 3 production dashboards (Overview, Backend, Frontend)
+    - 5 critical alerts (Error Rate, Response Time, API limits, CPU, Memory)
+    - LogQL queries for real-time observability
+  - **PR #146**: Mobile Responsive Layout
+    - Mobile-first design (320px-2560px breakpoints)
+    - Tailwind responsive utilities (sm, md, lg, xl)
+    - Touch targets (44x44px minimum), responsive tables/forms
+    - Hamburger navigation, improved mobile UX
+  - **PR #147**: E2E Test Infrastructure Fix
+    - Fixed Clerk authentication rate limiting (5 calls/min)
+    - Shared auth state via Playwright setup project
+    - Reduced Clerk API calls from ~14 to 1-2 per test run
+    - E2E tests now reliable both locally and in CI
+  - **Total**: 796 tests passing (571 backend, 225 frontend)
+
+### Previous Work (Jan 17, 2026)
+- ✅ **Production Deployment Complete**:
+  - Domain: zebutrader.com configured with Let's Encrypt SSL
+  - NPMplus reverse proxy handling HTTPS/HTTP forwarding
+  - Clerk production keys deployed (live authentication)
+  - Backend + Frontend deployed to Proxmox VM (192.168.4.112)
+
+- ✅ **Critical Caching Bug Fixes** (PRs #141, #142, #143):
+  - **PR #141**: Redis caching layer for price history
+    - 3-tier caching (Redis → PostgreSQL → Alpha Vantage API)
+    - Smart TTL calculation (1hr recent, 4hr yesterday, 7 days historical)
+    - ~99% reduction in API calls (protects 5/min, 500/day rate limit)
+  - **PR #142**: Frontend error handling improvements
+    - Typed error system (ApiError with rate_limit, server_error, network_error types)
+    - Contextual error UI component (PriceChartError with retry buttons)
+    - Dev mode warnings prevent silent mock data fallback
+  - **PR #143**: Weekend cache validation fix
+    - Added `_get_last_trading_day()` helper (walks backward to find weekday)
+    - Fixed cache validation to use trading days instead of calendar days
+    - Prevents wasteful API calls on weekends/Mondays
+    - 12 new tests covering weekend scenarios, 746 total tests passing
+
+- ✅ **Quality Scores**: All PRs achieved 9.5-10/10 rating
+  - Architecture compliance, complete type hints, comprehensive tests
+  - Zero linting errors, excellent documentation
+  - Autonomous review workflow with CI validation
 
 ### Recent Work (Jan 14, 2026)
 - ✅ **Strategic Planning Session**:
@@ -101,13 +153,17 @@
 - Agents instructed to verify fixes via Playwright before PR completion
 
 ### Next Steps
-- 🏠 **Domain & SSL Setup**: Configure custom domain and SSL certificates (requires local network access)
-- 📊 **Monitoring Setup**: Deploy monitoring infrastructure ($9/month budget stack or self-hosted)
+- 📊 **Monitoring Setup**: Deploy monitoring infrastructure
+  - Options: Grafana Cloud Free (14-day retention) or Self-hosted stack
   - See [monitoring analysis](docs/planning/research/monitoring-solutions-analysis.md)
+  - Backend already has structlog JSON logging ready
 - 👥 **Structured Beta Testing**: Organize formal beta user testing (5-10 users)
+- 🔄 **Optimize Caching**: Consider implementing market holiday calendar
+  - Current: Handles weekends, not holidays (acceptable for MVP)
+  - Future: Full NYSE/NASDAQ holiday calendar support
 - 📈 **Phase 4 Planning**: Gather user feedback to prioritize advanced features
 
-**Current State**: Waiting on local network access for domain/SSL configuration. All development infrastructure complete and validated.
+**Current State**: Production system live at zebutrader.com with weekend-aware caching. Ready for beta users!
 
 ## Phase 3 Summary
 
@@ -240,11 +296,12 @@ For detailed phase completion information and implementation details from Decemb
 
 | Metric | Value |
 |--------|-------|
-| Total Tests | 545 backend + 197 frontend = **742 tests** |
+| Total Tests | 571 backend + 225 frontend = **796 tests** |
 | Backend Coverage | 81%+ |
 | Frontend ESLint Suppressions | **0** (exceptional!) |
 | Architecture Compliance | 10/10 Clean Architecture |
 | Vulnerabilities | 0 (npm audit clean) |
+| Production Status | ✅ **Live at zebutrader.com** |
 
 ---
 

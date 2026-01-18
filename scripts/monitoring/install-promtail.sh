@@ -1,6 +1,6 @@
 #!/bin/bash
 # Promtail Installation Script for Zebu Production Monitoring
-# 
+#
 # This script installs and configures Promtail to ship logs from Docker containers
 # to Grafana Cloud Loki for centralized log aggregation and monitoring.
 #
@@ -68,10 +68,16 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
+# Install unzip if not available
+if ! command -v unzip &> /dev/null; then
+    log_info "Installing unzip..."
+    apt-get update -qq && apt-get install -y unzip
+fi
+
 # Download Promtail
 log_info "Downloading Promtail v${PROMTAIL_VERSION}..."
 cd /tmp
-wget -q "https://github.com/grafana/loki/releases/download/v${PROMTAIL_VERSION}/promtail-linux-amd64.zip"
+curl -L -o promtail-linux-amd64.zip "https://github.com/grafana/loki/releases/download/v${PROMTAIL_VERSION}/promtail-linux-amd64.zip"
 
 # Extract and install
 log_info "Installing Promtail binary..."
@@ -115,23 +121,24 @@ clients:
 scrape_configs:
   # Zebu Backend - JSON Structured Logs
   - job_name: zebu-backend
-    docker_sd_configs:
-      - host: unix:///var/run/docker.sock
-        refresh_interval: 5s
-    relabel_configs:
-      # Only scrape containers matching the backend pattern
-      - source_labels: ['__meta_docker_container_name']
-        regex: '/(zebu-backend-prod|zebu_backend.*)'
-        action: keep
-      # Add container name as label
-      - source_labels: ['__meta_docker_container_name']
-        target_label: container
-        replacement: 'zebu-backend-prod'
-      # Add log stream type
-      - source_labels: ['__meta_docker_container_log_stream']
-        target_label: stream
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: zebu-backend
+          container: zebu-backend-prod
+          __path__: /var/lib/docker/containers/*/*.log
     pipeline_stages:
-      # Parse JSON logs
+      # Parse Docker JSON log format
+      - json:
+          expressions:
+            log: log
+            stream: stream
+            time: time
+      # Extract the actual log content
+      - output:
+          source: log
+      # Parse application JSON logs
       - json:
           expressions:
             level: level
@@ -145,6 +152,7 @@ scrape_configs:
             duration_ms: duration_ms
             duration_seconds: duration_seconds
             status_code: status_code
+          source: log
       # Extract level and logger as labels
       - labels:
           level:
@@ -156,50 +164,33 @@ scrape_configs:
 
   # Zebu Frontend - Nginx Access Logs
   - job_name: zebu-frontend
-    docker_sd_configs:
-      - host: unix:///var/run/docker.sock
-        refresh_interval: 5s
-    relabel_configs:
-      - source_labels: ['__meta_docker_container_name']
-        regex: '/(zebu-frontend-prod|zebu_frontend.*)'
-        action: keep
-      - source_labels: ['__meta_docker_container_name']
-        target_label: container
-        replacement: 'zebu-frontend-prod'
-    pipeline_stages:
-      # Parse nginx access log format
-      - regex:
-          expression: '^(?P<remote_addr>[\w\.]+) - (?P<remote_user>[^ ]*) \[(?P<time_local>.*)\] "(?P<method>[^ ]*) (?P<path>[^ ]*) (?P<protocol>[^ ]*)" (?P<status>[\d]+) (?P<bytes_sent>[\d]+)'
-      # Extract method and status as labels
-      - labels:
-          method:
-          status:
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: zebu-frontend
+          container: zebu-frontend-prod
+          __path__: /var/lib/docker/containers/*/*.log
 
   # PostgreSQL Database Logs
   - job_name: zebu-postgres
-    docker_sd_configs:
-      - host: unix:///var/run/docker.sock
-        refresh_interval: 5s
-    relabel_configs:
-      - source_labels: ['__meta_docker_container_name']
-        regex: '/(zebu-postgres-prod|zebu_postgres.*|postgres)'
-        action: keep
-      - source_labels: ['__meta_docker_container_name']
-        target_label: container
-        replacement: 'zebu-postgres-prod'
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: zebu-postgres
+          container: zebu-postgres-prod
+          __path__: /var/lib/docker/containers/*/*.log
 
   # Redis Cache Logs
   - job_name: zebu-redis
-    docker_sd_configs:
-      - host: unix:///var/run/docker.sock
-        refresh_interval: 5s
-    relabel_configs:
-      - source_labels: ['__meta_docker_container_name']
-        regex: '/(zebu-redis-prod|zebu_redis.*|redis)'
-        action: keep
-      - source_labels: ['__meta_docker_container_name']
-        target_label: container
-        replacement: 'zebu-redis-prod'
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: zebu-redis
+          container: zebu-redis-prod
+          __path__: /var/lib/docker/containers/*/*.log
 EOF
 
 # Substitute environment variables in config
