@@ -21,15 +21,14 @@ Weekend observation rules:
 """
 
 from datetime import date, timedelta
-from typing import Set
 
 
 class MarketCalendar:
     """Calendar of US stock market holidays and trading days.
-    
+
     This class provides methods to determine when US stock markets (NYSE/NASDAQ)
     are open for trading. Markets are closed on weekends and official holidays.
-    
+
     Example:
         >>> from datetime import date
         >>> calendar = MarketCalendar()
@@ -45,16 +44,16 @@ class MarketCalendar:
     @staticmethod
     def _calculate_easter(year: int) -> date:
         """Calculate Easter Sunday using Computus algorithm (Anonymous Gregorian).
-        
+
         This algorithm computes the date of Easter Sunday for any Gregorian
         calendar year. Easter is used to calculate Good Friday (2 days before).
-        
+
         Args:
             year: Year to calculate Easter for
-            
+
         Returns:
             Date of Easter Sunday for the given year
-            
+
         Example:
             >>> MarketCalendar._calculate_easter(2024)
             datetime.date(2024, 3, 31)
@@ -80,19 +79,19 @@ class MarketCalendar:
     @staticmethod
     def _get_nth_weekday(year: int, month: int, weekday: int, n: int) -> date:
         """Get the nth occurrence of a weekday in a month.
-        
+
         This is used to calculate floating holidays like MLK Day (3rd Monday in
         January) or Memorial Day (last Monday in May).
-        
+
         Args:
             year: Year
             month: Month (1-12)
             weekday: Day of week (0=Monday, 6=Sunday)
             n: Which occurrence (1=first, 2=second, 3=third, 4=fourth, -1=last)
-        
+
         Returns:
             Date of the nth occurrence of the weekday
-            
+
         Example:
             >>> # Get 3rd Monday in January 2024
             >>> MarketCalendar._get_nth_weekday(2024, 1, 0, 3)
@@ -123,16 +122,16 @@ class MarketCalendar:
     @classmethod
     def _get_observed_date(cls, holiday_date: date) -> date:
         """Get the observed date for a holiday.
-        
+
         If a holiday falls on a weekend, the market observes it on the nearest
         weekday according to standard US federal holiday rules.
-        
+
         Args:
             holiday_date: The actual date of the holiday
-            
+
         Returns:
             The date when the market will be closed for this holiday
-            
+
         Example:
             >>> # Christmas 2021 fell on Saturday
             >>> MarketCalendar._get_observed_date(date(2021, 12, 25))
@@ -148,19 +147,19 @@ class MarketCalendar:
         return holiday_date
 
     @classmethod
-    def get_market_holidays(cls, year: int) -> Set[date]:
+    def get_market_holidays(cls, year: int) -> set[date]:
         """Get all market holidays for a given year.
-        
+
         Returns the set of dates when US stock markets (NYSE/NASDAQ) are closed
         for holidays. This includes all 10 standard market holidays with weekend
         observation rules applied.
-        
+
         Args:
             year: Year to get holidays for
-            
+
         Returns:
             Set of dates when US stock markets are closed
-            
+
         Example:
             >>> holidays = MarketCalendar.get_market_holidays(2024)
             >>> date(2024, 7, 4) in holidays  # Independence Day
@@ -207,15 +206,15 @@ class MarketCalendar:
     @classmethod
     def is_trading_day(cls, check_date: date) -> bool:
         """Check if a given date is a trading day.
-        
+
         A trading day is any weekday (Monday-Friday) that is not a market holiday.
-        
+
         Args:
             check_date: Date to check
-            
+
         Returns:
             True if market is open, False if weekend or holiday
-            
+
         Example:
             >>> # Regular weekday
             >>> MarketCalendar.is_trading_day(date(2024, 6, 12))

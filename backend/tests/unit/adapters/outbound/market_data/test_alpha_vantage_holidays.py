@@ -94,7 +94,7 @@ class TestGetLastTradingDayWithHolidays:
         # Thursday, July 4, 2024, 10:00 AM (Independence Day - holiday)
         thursday = datetime(2024, 7, 4, 10, 0, 0, tzinfo=UTC)
         result = alpha_vantage_adapter._get_last_trading_day(thursday)
-        
+
         # Should return Wednesday, July 3 (last trading day before holiday)
         assert result.date().day == 3
         assert result.date().month == 7
@@ -107,7 +107,7 @@ class TestGetLastTradingDayWithHolidays:
         # Wednesday, Dec 25, 2024, 10:00 AM (Christmas - holiday)
         wednesday = datetime(2024, 12, 25, 10, 0, 0, tzinfo=UTC)
         result = alpha_vantage_adapter._get_last_trading_day(wednesday)
-        
+
         # Should return Tuesday, Dec 24 (last trading day before holiday)
         assert result.date().day == 24
         assert result.date().month == 12
@@ -121,7 +121,7 @@ class TestGetLastTradingDayWithHolidays:
         # July 5 is a Friday, which is a regular trading day
         friday = datetime(2024, 7, 5, 10, 0, 0, tzinfo=UTC)
         result = alpha_vantage_adapter._get_last_trading_day(friday)
-        
+
         # Should return Friday, July 5 (it's a regular trading day)
         assert result.date().day == 5
         assert result.date().month == 7
@@ -135,7 +135,7 @@ class TestGetLastTradingDayWithHolidays:
         # Dec 26 is a Thursday, which is a regular trading day
         thursday = datetime(2024, 12, 26, 10, 0, 0, tzinfo=UTC)
         result = alpha_vantage_adapter._get_last_trading_day(thursday)
-        
+
         # Should return Thursday, Dec 26 (it's a regular trading day)
         assert result.date().day == 26
         assert result.date().month == 12
@@ -148,7 +148,7 @@ class TestGetLastTradingDayWithHolidays:
         # Thursday, Nov 28, 2024 (Thanksgiving)
         thanksgiving = datetime(2024, 11, 28, 10, 0, 0, tzinfo=UTC)
         result = alpha_vantage_adapter._get_last_trading_day(thanksgiving)
-        
+
         # Should return Wednesday, Nov 27
         assert result.date().day == 27
         assert result.date().month == 11
@@ -161,7 +161,7 @@ class TestGetLastTradingDayWithHolidays:
         # Monday, Jan 15, 2024 (MLK Day)
         mlk_day = datetime(2024, 1, 15, 10, 0, 0, tzinfo=UTC)
         result = alpha_vantage_adapter._get_last_trading_day(mlk_day)
-        
+
         # Should return Friday, Jan 12
         assert result.date().day == 12
         assert result.date().month == 1
@@ -175,7 +175,7 @@ class TestGetLastTradingDayWithHolidays:
         # This is a Monday holiday, so last trading day is Friday Jan 17
         mlk_2025 = datetime(2025, 1, 20, 10, 0, 0, tzinfo=UTC)
         result = alpha_vantage_adapter._get_last_trading_day(mlk_2025)
-        
+
         # Should return Friday, Jan 17
         assert result.date().day == 17
         assert result.date().month == 1
@@ -189,7 +189,7 @@ class TestGetLastTradingDayWithHolidays:
         # July 4 is Saturday, observed Friday July 3
         sunday = datetime(2026, 7, 5, 10, 0, 0, tzinfo=UTC)
         result = alpha_vantage_adapter._get_last_trading_day(sunday)
-        
+
         # Should return Thursday, July 2 (last trading day before observed holiday)
         assert result.date().day == 2
         assert result.date().month == 7
@@ -204,10 +204,10 @@ class TestCacheCompleteAfterHolidays:
     ) -> None:
         """Should accept July 3rd data as complete when requesting on July 5th."""
         ticker = Ticker("AAPL")
-        
+
         # Friday, July 5, 2024, 10:00 AM (after July 4th holiday)
         mock_now = datetime(2024, 7, 5, 10, 0, 0, tzinfo=UTC)
-        
+
         with patch(
             "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
         ) as mock_datetime:
@@ -215,11 +215,11 @@ class TestCacheCompleteAfterHolidays:
             mock_datetime.side_effect = lambda *args, **kwargs: datetime(
                 *args, **kwargs
             )
-            
+
             # Request data through Friday (July 5)
             start = datetime(2024, 6, 28, 0, 0, 0, tzinfo=UTC)
             end = datetime(2024, 7, 5, 23, 59, 59, tzinfo=UTC)
-            
+
             # Cache has data through July 3 (last trading day before holiday)
             cached_data = [
                 create_price_point(ticker, datetime(2024, 6, 28, 21, 0, 0, tzinfo=UTC)),
@@ -229,10 +229,10 @@ class TestCacheCompleteAfterHolidays:
                     ticker, datetime(2024, 7, 3, 21, 0, 0, tzinfo=UTC)
                 ),  # Last trading day
             ]
-            
+
             # Should be complete (market closed July 4, not open yet on July 5)
             result = alpha_vantage_adapter._is_cache_complete(cached_data, start, end)
-            
+
             assert result is True
 
     def test_cache_complete_after_christmas_holiday(
@@ -240,10 +240,10 @@ class TestCacheCompleteAfterHolidays:
     ) -> None:
         """Should accept Dec 24 data as complete when requesting on Dec 26."""
         ticker = Ticker("AAPL")
-        
+
         # Thursday, Dec 26, 2024, 10:00 AM (after Christmas)
         mock_now = datetime(2024, 12, 26, 10, 0, 0, tzinfo=UTC)
-        
+
         with patch(
             "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
         ) as mock_datetime:
@@ -251,25 +251,33 @@ class TestCacheCompleteAfterHolidays:
             mock_datetime.side_effect = lambda *args, **kwargs: datetime(
                 *args, **kwargs
             )
-            
+
             # Request data through Dec 26
             start = datetime(2024, 12, 18, 0, 0, 0, tzinfo=UTC)
             end = datetime(2024, 12, 26, 23, 59, 59, tzinfo=UTC)
-            
+
             # Cache has data through Dec 24 (last trading day before Christmas)
             cached_data = [
-                create_price_point(ticker, datetime(2024, 12, 18, 21, 0, 0, tzinfo=UTC)),
-                create_price_point(ticker, datetime(2024, 12, 19, 21, 0, 0, tzinfo=UTC)),
-                create_price_point(ticker, datetime(2024, 12, 20, 21, 0, 0, tzinfo=UTC)),
-                create_price_point(ticker, datetime(2024, 12, 23, 21, 0, 0, tzinfo=UTC)),
+                create_price_point(
+                    ticker, datetime(2024, 12, 18, 21, 0, 0, tzinfo=UTC)
+                ),
+                create_price_point(
+                    ticker, datetime(2024, 12, 19, 21, 0, 0, tzinfo=UTC)
+                ),
+                create_price_point(
+                    ticker, datetime(2024, 12, 20, 21, 0, 0, tzinfo=UTC)
+                ),
+                create_price_point(
+                    ticker, datetime(2024, 12, 23, 21, 0, 0, tzinfo=UTC)
+                ),
                 create_price_point(
                     ticker, datetime(2024, 12, 24, 21, 0, 0, tzinfo=UTC)
                 ),  # Last trading day
             ]
-            
+
             # Should be complete (market closed Dec 25, not open yet on Dec 26)
             result = alpha_vantage_adapter._is_cache_complete(cached_data, start, end)
-            
+
             assert result is True
 
     def test_cache_complete_after_thanksgiving_long_weekend(
@@ -277,11 +285,11 @@ class TestCacheCompleteAfterHolidays:
     ) -> None:
         """Should accept Wed data as complete on Monday after Thanksgiving weekend."""
         ticker = Ticker("AAPL")
-        
+
         # Monday, Dec 2, 2024, 9:00 AM (after Thanksgiving weekend)
         # Thanksgiving was Nov 28 (Thursday)
         mock_now = datetime(2024, 12, 2, 9, 0, 0, tzinfo=UTC)
-        
+
         with patch(
             "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
         ) as mock_datetime:
@@ -289,18 +297,29 @@ class TestCacheCompleteAfterHolidays:
             mock_datetime.side_effect = lambda *args, **kwargs: datetime(
                 *args, **kwargs
             )
-            
+
             # Request data through Monday Dec 2
             start = datetime(2024, 11, 20, 0, 0, 0, tzinfo=UTC)
             end = datetime(2024, 12, 2, 23, 59, 59, tzinfo=UTC)
-            
-            # Cache has data through Nov 27 (Wed before Thanksgiving) and Nov 29 (Black Friday)
+
+            # Cache has data through Nov 27 (Wed before Thanksgiving)
+            # and Nov 29 (Black Friday)
             cached_data = [
-                create_price_point(ticker, datetime(2024, 11, 20, 21, 0, 0, tzinfo=UTC)),
-                create_price_point(ticker, datetime(2024, 11, 21, 21, 0, 0, tzinfo=UTC)),
-                create_price_point(ticker, datetime(2024, 11, 22, 21, 0, 0, tzinfo=UTC)),
-                create_price_point(ticker, datetime(2024, 11, 25, 21, 0, 0, tzinfo=UTC)),
-                create_price_point(ticker, datetime(2024, 11, 26, 21, 0, 0, tzinfo=UTC)),
+                create_price_point(
+                    ticker, datetime(2024, 11, 20, 21, 0, 0, tzinfo=UTC)
+                ),
+                create_price_point(
+                    ticker, datetime(2024, 11, 21, 21, 0, 0, tzinfo=UTC)
+                ),
+                create_price_point(
+                    ticker, datetime(2024, 11, 22, 21, 0, 0, tzinfo=UTC)
+                ),
+                create_price_point(
+                    ticker, datetime(2024, 11, 25, 21, 0, 0, tzinfo=UTC)
+                ),
+                create_price_point(
+                    ticker, datetime(2024, 11, 26, 21, 0, 0, tzinfo=UTC)
+                ),
                 create_price_point(
                     ticker, datetime(2024, 11, 27, 21, 0, 0, tzinfo=UTC)
                 ),  # Wed before Thanksgiving
@@ -308,10 +327,10 @@ class TestCacheCompleteAfterHolidays:
                     ticker, datetime(2024, 11, 29, 21, 0, 0, tzinfo=UTC)
                 ),  # Black Friday (market open)
             ]
-            
+
             # Should be complete (market hasn't closed on Monday Dec 2 yet)
             result = alpha_vantage_adapter._is_cache_complete(cached_data, start, end)
-            
+
             assert result is True
 
     def test_cache_complete_after_mlk_weekend(
@@ -319,10 +338,10 @@ class TestCacheCompleteAfterHolidays:
     ) -> None:
         """Should accept Friday data as complete on Tuesday after MLK Day weekend."""
         ticker = Ticker("AAPL")
-        
+
         # Tuesday, Jan 16, 2024, 9:00 AM (after MLK Day Monday Jan 15)
         mock_now = datetime(2024, 1, 16, 9, 0, 0, tzinfo=UTC)
-        
+
         with patch(
             "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
         ) as mock_datetime:
@@ -330,11 +349,11 @@ class TestCacheCompleteAfterHolidays:
             mock_datetime.side_effect = lambda *args, **kwargs: datetime(
                 *args, **kwargs
             )
-            
+
             # Request data through Tuesday Jan 16
             start = datetime(2024, 1, 8, 0, 0, 0, tzinfo=UTC)
             end = datetime(2024, 1, 16, 23, 59, 59, tzinfo=UTC)
-            
+
             # Cache has data through Friday Jan 12 (before MLK Day)
             cached_data = [
                 create_price_point(ticker, datetime(2024, 1, 8, 21, 0, 0, tzinfo=UTC)),
@@ -345,10 +364,10 @@ class TestCacheCompleteAfterHolidays:
                     ticker, datetime(2024, 1, 12, 21, 0, 0, tzinfo=UTC)
                 ),  # Friday before MLK Day
             ]
-            
+
             # Should be complete (market hasn't closed on Tuesday yet)
             result = alpha_vantage_adapter._is_cache_complete(cached_data, start, end)
-            
+
             assert result is True
 
     def test_cache_incomplete_on_wednesday_missing_tuesday_after_holiday(
@@ -356,10 +375,10 @@ class TestCacheCompleteAfterHolidays:
     ) -> None:
         """Should reject old data on Wednesday when missing Tuesday after holiday."""
         ticker = Ticker("AAPL")
-        
+
         # Wednesday, Jan 17, 2024, 9:00 AM
         mock_now = datetime(2024, 1, 17, 9, 0, 0, tzinfo=UTC)
-        
+
         with patch(
             "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
         ) as mock_datetime:
@@ -367,11 +386,11 @@ class TestCacheCompleteAfterHolidays:
             mock_datetime.side_effect = lambda *args, **kwargs: datetime(
                 *args, **kwargs
             )
-            
+
             # Request data through Wednesday Jan 17
             start = datetime(2024, 1, 8, 0, 0, 0, tzinfo=UTC)
             end = datetime(2024, 1, 17, 23, 59, 59, tzinfo=UTC)
-            
+
             # Cache only has data through Friday Jan 12 (missing Tuesday Jan 16)
             cached_data = [
                 create_price_point(ticker, datetime(2024, 1, 8, 21, 0, 0, tzinfo=UTC)),
@@ -380,10 +399,10 @@ class TestCacheCompleteAfterHolidays:
                 create_price_point(ticker, datetime(2024, 1, 11, 21, 0, 0, tzinfo=UTC)),
                 create_price_point(ticker, datetime(2024, 1, 12, 21, 0, 0, tzinfo=UTC)),
             ]
-            
+
             # Should be incomplete (missing Tuesday, the last trading day)
             result = alpha_vantage_adapter._is_cache_complete(cached_data, start, end)
-            
+
             assert result is False
 
 
@@ -397,14 +416,14 @@ class TestHolidayNoRepeatedAPICalls:
         mock_rate_limiter: MagicMock,
     ) -> None:
         """Test that requests after July 4th don't cause API calls.
-        
+
         Scenario:
         1. Cache has data through July 3 (last trading day)
         2. Make request on July 5 through July 5
         3. Should return cached data without API call
         """
         ticker = Ticker("AAPL")
-        
+
         # Setup: July 3 data in cache (via PostgreSQL)
         july_data = [
             create_price_point(ticker, datetime(2024, 6, 28, 21, 0, 0, tzinfo=UTC)),
@@ -413,10 +432,10 @@ class TestHolidayNoRepeatedAPICalls:
             create_price_point(ticker, datetime(2024, 7, 3, 21, 0, 0, tzinfo=UTC)),
         ]
         mock_price_repository.get_price_history = AsyncMock(return_value=july_data)
-        
+
         # Simulate Friday, July 5, 10:00 AM
         mock_now = datetime(2024, 7, 5, 10, 0, 0, tzinfo=UTC)
-        
+
         with patch(
             "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
         ) as mock_datetime:
@@ -424,18 +443,18 @@ class TestHolidayNoRepeatedAPICalls:
             mock_datetime.side_effect = lambda *args, **kwargs: datetime(
                 *args, **kwargs
             )
-            
+
             # Request data
             result = await alpha_vantage_adapter.get_price_history(
                 ticker,
                 start=datetime(2024, 6, 28, tzinfo=UTC),
                 end=datetime(2024, 7, 5, tzinfo=UTC),
             )
-            
+
             # Should return July 3 data
             assert len(result) == 4
             assert result[-1].timestamp.date().day == 3
-            
+
             # Verify no API call was made
             mock_rate_limiter.consume_token.assert_not_called()
 
@@ -447,7 +466,7 @@ class TestHolidayNoRepeatedAPICalls:
     ) -> None:
         """Test that requests after Christmas don't cause API calls."""
         ticker = Ticker("AAPL")
-        
+
         # Setup: Dec 24 data in cache
         december_data = [
             create_price_point(ticker, datetime(2024, 12, 18, 21, 0, 0, tzinfo=UTC)),
@@ -457,10 +476,10 @@ class TestHolidayNoRepeatedAPICalls:
             create_price_point(ticker, datetime(2024, 12, 24, 21, 0, 0, tzinfo=UTC)),
         ]
         mock_price_repository.get_price_history = AsyncMock(return_value=december_data)
-        
+
         # Simulate Thursday, Dec 26, 10:00 AM
         mock_now = datetime(2024, 12, 26, 10, 0, 0, tzinfo=UTC)
-        
+
         with patch(
             "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
         ) as mock_datetime:
@@ -468,18 +487,18 @@ class TestHolidayNoRepeatedAPICalls:
             mock_datetime.side_effect = lambda *args, **kwargs: datetime(
                 *args, **kwargs
             )
-            
+
             # Request data
             result = await alpha_vantage_adapter.get_price_history(
                 ticker,
                 start=datetime(2024, 12, 18, tzinfo=UTC),
                 end=datetime(2024, 12, 26, tzinfo=UTC),
             )
-            
+
             # Should return Dec 24 data
             assert len(result) == 5
             assert result[-1].timestamp.date().day == 24
-            
+
             # Verify no API call was made
             mock_rate_limiter.consume_token.assert_not_called()
 
@@ -491,7 +510,7 @@ class TestHolidayNoRepeatedAPICalls:
     ) -> None:
         """Test that requests after Thanksgiving weekend don't cause API calls."""
         ticker = Ticker("AAPL")
-        
+
         # Setup: Data through Nov 29 (Black Friday - market open)
         november_data = [
             create_price_point(ticker, datetime(2024, 11, 20, 21, 0, 0, tzinfo=UTC)),
@@ -503,10 +522,10 @@ class TestHolidayNoRepeatedAPICalls:
             create_price_point(ticker, datetime(2024, 11, 29, 21, 0, 0, tzinfo=UTC)),
         ]
         mock_price_repository.get_price_history = AsyncMock(return_value=november_data)
-        
+
         # Simulate Monday, Dec 2, 9:00 AM
         mock_now = datetime(2024, 12, 2, 9, 0, 0, tzinfo=UTC)
-        
+
         with patch(
             "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
         ) as mock_datetime:
@@ -514,17 +533,17 @@ class TestHolidayNoRepeatedAPICalls:
             mock_datetime.side_effect = lambda *args, **kwargs: datetime(
                 *args, **kwargs
             )
-            
+
             # Request data
             result = await alpha_vantage_adapter.get_price_history(
                 ticker,
                 start=datetime(2024, 11, 20, tzinfo=UTC),
                 end=datetime(2024, 12, 2, tzinfo=UTC),
             )
-            
+
             # Should return data through Nov 29
             assert len(result) == 7
             assert result[-1].timestamp.date().day == 29
-            
+
             # Verify no API call was made
             mock_rate_limiter.consume_token.assert_not_called()

@@ -9,8 +9,6 @@ Tests the US stock market holiday calendar implementation, including:
 
 from datetime import date
 
-import pytest
-
 from zebu.infrastructure.market_calendar import MarketCalendar
 
 
@@ -395,7 +393,7 @@ class TestEdgeCases:
 
     def test_day_after_thanksgiving_black_friday(self) -> None:
         """Black Friday (day after Thanksgiving) should be a trading day.
-        
+
         Note: Markets close early on Black Friday, but we treat it as a
         full trading day for cache validation purposes.
         """
@@ -404,7 +402,7 @@ class TestEdgeCases:
 
     def test_christmas_eve_is_trading_day(self) -> None:
         """Christmas Eve should be a trading day (early close but open).
-        
+
         Note: Markets close early on Christmas Eve, but we treat it as a
         full trading day for cache validation purposes.
         """
@@ -421,7 +419,7 @@ class TestEdgeCases:
         holidays_2024 = MarketCalendar.get_market_holidays(2024)
         holidays_2025 = MarketCalendar.get_market_holidays(2025)
         holidays_2026 = MarketCalendar.get_market_holidays(2026)
-        
+
         # Each year should have exactly 10 holidays
         assert len(holidays_2024) == 10
         assert len(holidays_2025) == 10
