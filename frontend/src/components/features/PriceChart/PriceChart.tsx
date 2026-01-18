@@ -153,9 +153,6 @@ export function PriceChart({
   const changePercent = firstPrice !== 0 ? (change / firstPrice) * 100 : 0
   const isPositive = change >= 0
 
-  // Responsive chart height
-  const chartHeight = 250 // Will be adjusted via CSS and viewport
-
   return (
     <Card>
       {/* Header */}
@@ -185,11 +182,7 @@ export function PriceChart({
         />
 
         {/* Chart */}
-        <ResponsiveContainer
-          width="100%"
-          height={chartHeight}
-          className="sm:h-[300px] lg:h-[350px]"
-        >
+        <ResponsiveContainer width="100%" height={250}>
           <LineChart data={chartData}>
             <CartesianGrid
               strokeDasharray="3 3"

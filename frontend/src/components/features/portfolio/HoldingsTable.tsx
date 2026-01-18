@@ -89,6 +89,7 @@ export function HoldingsTable({
   return (
     <Card>
       <CardContent className="p-0">
+        {/* Horizontal scroll container that breaks out of card padding on mobile for full-width scrolling */}
         <div className="overflow-x-auto -mx-4 sm:mx-0">
           <div className="inline-block min-w-full align-middle">
             <table data-testid="holdings-table" className="min-w-full">
