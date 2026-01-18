@@ -41,17 +41,17 @@ async def get_current_price(
     current_time: datetime | None = None  # NEW: For testing
 ) -> PricePoint:
     """Get the most recent available price for a ticker.
-    
+
     Args:
         ticker: Stock ticker symbol to get price for
         current_time: Current time (defaults to now, used for testing)
-    
+
     Returns:
         PricePoint with latest available price
     """
     # Use provided time or default to now
     now = current_time or datetime.now(UTC)
-    
+
     # Tier 1: Check Redis cache
     cached = await self.price_cache.get(ticker)
     if cached and not cached.is_stale(max_age=timedelta(hours=1)):
@@ -81,11 +81,11 @@ async def get_batch_prices(
     current_time: datetime | None = None  # NEW: For testing
 ) -> dict[Ticker, PricePoint]:
     """Get current prices for multiple tickers.
-    
+
     Args:
         tickers: List of stock ticker symbols
         current_time: Current time (defaults to now, used for testing)
-    
+
     Returns:
         Dictionary mapping tickers to their price points
     """
@@ -134,7 +134,7 @@ def test_get_current_price(client, db, mock_weekday):  # Add mock_weekday fixtur
     """Test getting current price for a ticker (weekday behavior)."""
     # Setup: Insert test data
     # ...existing setup...
-    
+
     response = client.get("/api/v1/prices/AAPL")
     assert response.status_code == 200
     # ...existing assertions...
@@ -144,7 +144,7 @@ def test_get_current_price_weekend(client, db, mock_weekend):  # NEW TEST
     """Test getting current price on weekend returns cached price."""
     # Setup: Insert Friday's price into database
     # ...setup...
-    
+
     response = client.get("/api/v1/prices/AAPL")
     assert response.status_code == 200
     data = response.json()
@@ -167,15 +167,15 @@ If the preferred approach doesn't work for some reason:
 def mock_datetime_for_integration_tests(monkeypatch):
     """Auto-mock datetime to Friday for all integration tests."""
     friday = datetime(2026, 1, 16, 15, 0, 0, tzinfo=UTC)
-    
+
     class MockDateTime:
         @staticmethod
         def now(tz=None):
             return friday if tz == UTC else friday.replace(tzinfo=None)
-        
+
         def __call__(self, *args, **kwargs):
             return datetime(*args, **kwargs)
-    
+
     monkeypatch.setattr('zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime', MockDateTime())
 ```
 
@@ -190,14 +190,14 @@ def test_price_fetching_weekday_vs_weekend(client, db):
     """Verify different behavior on weekdays vs weekends."""
     # Setup: Insert Friday's cached price
     # ...
-    
+
     # Test 1: Weekday (Friday) - should attempt API fetch
     with patch('zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime') as mock_dt:
         mock_dt.now.return_value = datetime(2026, 1, 16, 15, 0, 0, tzinfo=UTC)  # Friday
         response = client.get("/api/v1/prices/AAPL")
         assert response.status_code == 200
         # Should fetch from API (or cached if fresh)
-    
+
     # Test 2: Weekend (Sunday) - should use cached price, no API call
     with patch('zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime') as mock_dt:
         mock_dt.now.return_value = datetime(2026, 1, 18, 15, 0, 0, tzinfo=UTC)  # Sunday
@@ -214,7 +214,7 @@ def test_batch_prices_weekend(client, db, mock_weekend):
     """Batch prices should work on weekends."""
     # Setup: Insert cached prices for multiple tickers
     # ...
-    
+
     response = client.get("/api/v1/prices/batch?tickers=AAPL,MSFT")
     assert response.status_code == 200
     data = response.json()
