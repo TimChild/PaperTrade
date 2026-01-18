@@ -49,6 +49,23 @@ class RedisClient(Protocol):
         """Get TTL for key in seconds."""
         ...
 
+    async def scan(
+        self,
+        cursor: int = 0,
+        match: str | None = None,
+        count: int | None = None,
+    ) -> tuple[int, list[str]]:
+        """Scan keys incrementally.
+        
+        Returns:
+            Tuple of (next_cursor, list_of_keys)
+        """
+        ...
+
+    async def keys(self, pattern: str) -> list[str]:
+        """Get keys matching pattern."""
+        ...
+
 
 class PriceCache:
     """Redis-based cache for stock price data.
@@ -391,6 +408,194 @@ class PriceCache:
 
         return price_points
 
+    def _parse_dates_from_key(self, key: str) -> tuple[datetime, datetime] | None:
+        """Parse start and end dates from cache key.
+
+        Args:
+            key: Cache key in format "prefix:TICKER:history:START_DATE:END_DATE:interval"
+
+        Returns:
+            Tuple of (start_datetime, end_datetime) or None if parsing fails
+
+        Example:
+            >>> key = "papertrade:price:AAPL:history:2025-12-01:2025-12-31:1day"
+            >>> start, end = self._parse_dates_from_key(key)
+        """
+        try:
+            # Split key and extract date parts
+            # Format: {prefix}:{ticker}:history:{start_date}:{end_date}:{interval}
+            parts = key.split(":")
+            # Need at least: prefix, ticker, "history", start, end, interval = 6 parts
+            if len(parts) < 6:
+                return None
+
+            # Find "history" marker
+            history_idx = -1
+            for i, part in enumerate(parts):
+                if part == "history":
+                    history_idx = i
+                    break
+
+            if history_idx == -1 or history_idx + 3 > len(parts):
+                return None
+
+            # Extract dates: they come after "history"
+            start_date_str = parts[history_idx + 1]
+            end_date_str = parts[history_idx + 2]
+
+            # Parse ISO date strings to datetime objects
+            # The keys use date format (YYYY-MM-DD), not full datetime
+            from datetime import UTC
+
+            start_date = datetime.fromisoformat(start_date_str)
+            end_date = datetime.fromisoformat(end_date_str)
+
+            # Set to start/end of day for proper range comparison
+            start_datetime = start_date.replace(hour=0, minute=0, second=0, tzinfo=UTC)
+            end_datetime = end_date.replace(
+                hour=23, minute=59, second=59, tzinfo=UTC
+            )
+
+            return (start_datetime, end_datetime)
+
+        except (ValueError, IndexError, AttributeError):
+            # Malformed key - return None to skip it
+            return None
+
+    def _is_range_subset(
+        self,
+        requested_start: datetime,
+        requested_end: datetime,
+        cached_start: datetime,
+        cached_end: datetime,
+    ) -> bool:
+        """Check if requested range is subset of cached range.
+
+        Args:
+            requested_start: Start of requested range
+            requested_end: End of requested range
+            cached_start: Start of cached range
+            cached_end: End of cached range
+
+        Returns:
+            True if requested range is fully contained within cached range
+
+        Example:
+            >>> # Cached: Jan 1-31, Requested: Jan 25-31
+            >>> self._is_range_subset(
+            ...     datetime(2026, 1, 25),
+            ...     datetime(2026, 1, 31),
+            ...     datetime(2026, 1, 1),
+            ...     datetime(2026, 1, 31)
+            ... )
+            True
+        """
+        return cached_start <= requested_start and cached_end >= requested_end
+
+    def _filter_to_range(
+        self,
+        price_points: list[PricePoint],
+        start: datetime,
+        end: datetime,
+    ) -> list[PricePoint]:
+        """Filter price points to requested date range.
+
+        Args:
+            price_points: List of PricePoints to filter
+            start: Start of requested range (inclusive)
+            end: End of requested range (inclusive)
+
+        Returns:
+            Filtered list of PricePoints within the requested range
+
+        Example:
+            >>> # Filter month of data to just one week
+            >>> filtered = self._filter_to_range(month_data, week_start, week_end)
+        """
+        from datetime import UTC
+
+        return [
+            p
+            for p in price_points
+            if start <= p.timestamp.replace(tzinfo=UTC) <= end
+        ]
+
+    async def _find_broader_cached_ranges(
+        self,
+        ticker: Ticker,
+        start: datetime,
+        end: datetime,
+        interval: str,
+    ) -> list[PricePoint] | None:
+        """Search for cached ranges that contain the requested range.
+
+        Uses SCAN to iterate through cache keys matching the ticker and interval,
+        looking for a broader range that fully contains the requested range.
+
+        Args:
+            ticker: Stock ticker
+            start: Start of requested range
+            end: End of requested range
+            interval: Price interval type
+
+        Returns:
+            Filtered PricePoints from broader cached range, or None if not found
+
+        Example:
+            >>> # Looking for Jan 25-31, might find cached Jan 1-31
+            >>> result = await self._find_broader_cached_ranges(
+            ...     Ticker("AAPL"),
+            ...     datetime(2026, 1, 25),
+            ...     datetime(2026, 1, 31),
+            ...     "1day"
+            ... )
+        """
+        pattern = f"{self.key_prefix}:{ticker.symbol}:history:*:*:{interval}"
+
+        cursor = 0
+        while True:
+            # Use SCAN for non-blocking iteration
+            cursor, keys = await self.redis.scan(cursor, match=pattern, count=100)
+
+            for key in keys:
+                # Decode bytes to string if needed
+                key_str = key.decode("utf-8") if isinstance(key, bytes) else key
+
+                # Parse dates from key
+                parsed = self._parse_dates_from_key(key_str)
+                if not parsed:
+                    continue  # Skip malformed keys
+
+                cached_start, cached_end = parsed
+
+                # Check if this cached range contains our requested range
+                if self._is_range_subset(start, end, cached_start, cached_end):
+                    # Found a broader range! Get the data
+                    value = await self.redis.get(key_str)
+                    if value:
+                        try:
+                            json_str = (
+                                value.decode("utf-8")
+                                if isinstance(value, bytes)
+                                else value
+                            )
+                            cached_data = self._deserialize_history(json_str)
+
+                            # Filter to requested range and return
+                            filtered = self._filter_to_range(cached_data, start, end)
+                            if filtered:
+                                return filtered
+                        except (ValueError, json.JSONDecodeError):
+                            # Corrupted data - skip this cache entry
+                            continue
+
+            # Check if scan is complete
+            if cursor == 0:
+                break
+
+        # No suitable cached range found
+        return None
+
     async def get_history(
         self,
         ticker: Ticker,
@@ -400,6 +605,14 @@ class PriceCache:
     ) -> list[PricePoint] | None:
         """Get cached price history for date range.
 
+        Implements subset cache matching: if exact range not found, searches for
+        broader cached ranges that contain the requested range and filters them.
+
+        Strategy:
+        1. Try exact match (fast path - no SCAN needed)
+        2. If miss, search for broader cached ranges using SCAN
+        3. Filter broader range to requested subset
+
         Args:
             ticker: Stock ticker to get history for
             start: Start of time range (inclusive)
@@ -407,29 +620,36 @@ class PriceCache:
             interval: Price interval type (default: "1day")
 
         Returns:
-            Cached list of PricePoints if exists, None if cache miss
+            Cached list of PricePoints if exists (exact or filtered), None if cache miss
 
         Raises:
             ValueError: If cached data is corrupted
 
         Example:
+            >>> # Exact match
             >>> history = await cache.get_history(
             ...     Ticker("AAPL"),
             ...     datetime(2025, 12, 1, tzinfo=UTC),
             ...     datetime(2026, 1, 17, tzinfo=UTC)
             ... )
-            >>> if history is None:
-            ...     # Cache miss, fetch from database or API
+            >>> # Subset match (Jan 25-31 found within cached Jan 1-31)
+            >>> week = await cache.get_history(
+            ...     Ticker("AAPL"),
+            ...     datetime(2026, 1, 25, tzinfo=UTC),
+            ...     datetime(2026, 1, 31, tzinfo=UTC)
+            ... )
         """
+        # 1. Try exact match (fast path)
         key = self._get_history_key(ticker, start, end, interval)
         value = await self.redis.get(key)
 
-        if value is None:
-            return None
+        if value is not None:
+            # Exact match found
+            json_str = value.decode("utf-8") if isinstance(value, bytes) else value
+            return self._deserialize_history(json_str)
 
-        # Deserialize from JSON
-        json_str = value.decode("utf-8") if isinstance(value, bytes) else value
-        return self._deserialize_history(json_str)
+        # 2. Exact match failed - search for broader cached ranges
+        return await self._find_broader_cached_ranges(ticker, start, end, interval)
 
     async def set_history(
         self,

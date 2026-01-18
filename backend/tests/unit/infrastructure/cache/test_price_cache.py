@@ -493,3 +493,335 @@ class TestPriceCacheHistoryMethods:
         # Should NOT exist for second range
         result2 = await cache.get_history(Ticker("AAPL"), start2, end2)
         assert result2 is None
+
+
+class TestPriceCacheSubsetMatching:
+    """Tests for subset cache matching (Task 155)."""
+
+    @pytest.fixture
+    def month_history(self) -> list[PricePoint]:
+        """Provide a full month of price history for testing."""
+        from datetime import timedelta
+
+        base_date = datetime(2026, 1, 1, 21, 0, 0, tzinfo=UTC)
+        history = []
+
+        # Generate 31 days of data (Jan 1-31)
+        for day in range(31):
+            price = Decimal("150.00") + Decimal(str(day))
+            history.append(
+                PricePoint(
+                    ticker=Ticker("AAPL"),
+                    price=Money(price, "USD"),
+                    timestamp=base_date + timedelta(days=day),
+                    source="alpha_vantage",
+                    interval="1day",
+                    open=Money(price - Decimal("1.00"), "USD"),
+                    high=Money(price + Decimal("2.00"), "USD"),
+                    low=Money(price - Decimal("2.00"), "USD"),
+                    close=Money(price, "USD"),
+                    volume=1000000 + (day * 10000),
+                )
+            )
+
+        return history
+
+    async def test_exact_match_still_works(
+        self,
+        redis: fakeredis.FakeRedis,  # type: ignore[type-arg]
+        month_history: list[PricePoint],
+    ) -> None:
+        """Test that exact cache key matches still work (fast path regression test)."""
+        cache = PriceCache(redis, "test:price")
+
+        # Cache full month
+        start = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+
+        await cache.set_history(Ticker("AAPL"), start, end, month_history)
+
+        # Request exact same range
+        result = await cache.get_history(Ticker("AAPL"), start, end)
+
+        assert result is not None
+        assert len(result) == 31
+        assert result[0].timestamp == month_history[0].timestamp
+        assert result[-1].timestamp == month_history[-1].timestamp
+
+    async def test_subset_match_finds_broader_range(
+        self,
+        redis: fakeredis.FakeRedis,  # type: ignore[type-arg]
+        month_history: list[PricePoint],
+    ) -> None:
+        """Test that subset requests find broader cached ranges."""
+        cache = PriceCache(redis, "test:price")
+
+        # Cache full month (Jan 1-31)
+        month_start = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
+        month_end = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+        await cache.set_history(Ticker("AAPL"), month_start, month_end, month_history)
+
+        # Request subset: last week (Jan 25-31)
+        week_start = datetime(2026, 1, 25, 0, 0, 0, tzinfo=UTC)
+        week_end = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+
+        result = await cache.get_history(Ticker("AAPL"), week_start, week_end)
+
+        # Should find the broader month range and filter it
+        assert result is not None
+        assert len(result) == 7  # 7 days (Jan 25-31)
+        assert result[0].timestamp.date().day == 25
+        assert result[-1].timestamp.date().day == 31
+
+    async def test_subset_match_one_day_from_month(
+        self,
+        redis: fakeredis.FakeRedis,  # type: ignore[type-arg]
+        month_history: list[PricePoint],
+    ) -> None:
+        """Test that single day requests find broader cached ranges."""
+        cache = PriceCache(redis, "test:price")
+
+        # Cache full month (Jan 1-31)
+        month_start = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
+        month_end = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+        await cache.set_history(Ticker("AAPL"), month_start, month_end, month_history)
+
+        # Request single day (Jan 31)
+        day_start = datetime(2026, 1, 31, 0, 0, 0, tzinfo=UTC)
+        day_end = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+
+        result = await cache.get_history(Ticker("AAPL"), day_start, day_end)
+
+        # Should find the month and filter to single day
+        assert result is not None
+        assert len(result) == 1
+        assert result[0].timestamp.date().day == 31
+
+    async def test_no_overlap_returns_none(
+        self,
+        redis: fakeredis.FakeRedis,  # type: ignore[type-arg]
+        month_history: list[PricePoint],
+    ) -> None:
+        """Test that non-overlapping ranges return None."""
+        cache = PriceCache(redis, "test:price")
+
+        # Cache January
+        jan_start = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
+        jan_end = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+        await cache.set_history(Ticker("AAPL"), jan_start, jan_end, month_history)
+
+        # Request February (no overlap)
+        feb_start = datetime(2026, 2, 1, 0, 0, 0, tzinfo=UTC)
+        feb_end = datetime(2026, 2, 28, 23, 59, 59, tzinfo=UTC)
+
+        result = await cache.get_history(Ticker("AAPL"), feb_start, feb_end)
+
+        # Should return None (trigger API call)
+        assert result is None
+
+    async def test_partial_overlap_returns_none(
+        self,
+        redis: fakeredis.FakeRedis,  # type: ignore[type-arg]
+        month_history: list[PricePoint],
+    ) -> None:
+        """Test that partial overlaps return None (incomplete data)."""
+        cache = PriceCache(redis, "test:price")
+
+        # Cache January
+        jan_start = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
+        jan_end = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+        await cache.set_history(Ticker("AAPL"), jan_start, jan_end, month_history)
+
+        # Request range that extends beyond cache (Jan 25 - Feb 5)
+        extended_start = datetime(2026, 1, 25, 0, 0, 0, tzinfo=UTC)
+        extended_end = datetime(2026, 2, 5, 23, 59, 59, tzinfo=UTC)
+
+        result = await cache.get_history(Ticker("AAPL"), extended_start, extended_end)
+
+        # Should return None (not a complete subset)
+        assert result is None
+
+    async def test_multiple_cached_ranges_picks_match(
+        self,
+        redis: fakeredis.FakeRedis,  # type: ignore[type-arg]
+        month_history: list[PricePoint],
+    ) -> None:
+        """Test that with multiple overlapping caches, any valid match works."""
+        cache = PriceCache(redis, "test:price")
+
+        # Cache full month (Jan 1-31)
+        month_start = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
+        month_end = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+        await cache.set_history(Ticker("AAPL"), month_start, month_end, month_history)
+
+        # Cache two weeks (Jan 15-31) - overlaps with month
+        two_weeks = [p for p in month_history if p.timestamp.date().day >= 15]
+        two_weeks_start = datetime(2026, 1, 15, 0, 0, 0, tzinfo=UTC)
+        two_weeks_end = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+        await cache.set_history(
+            Ticker("AAPL"), two_weeks_start, two_weeks_end, two_weeks
+        )
+
+        # Request one week (Jan 25-31) - subset of both
+        week_start = datetime(2026, 1, 25, 0, 0, 0, tzinfo=UTC)
+        week_end = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+
+        result = await cache.get_history(Ticker("AAPL"), week_start, week_end)
+
+        # Should find one of the broader ranges and filter it
+        assert result is not None
+        assert len(result) == 7  # 7 days
+        assert result[0].timestamp.date().day == 25
+        assert result[-1].timestamp.date().day == 31
+
+    async def test_different_intervals_isolated(
+        self,
+        redis: fakeredis.FakeRedis,  # type: ignore[type-arg]
+        month_history: list[PricePoint],
+    ) -> None:
+        """Test that different intervals don't match in subset search."""
+        cache = PriceCache(redis, "test:price")
+
+        # Cache month with 1day interval
+        month_start = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
+        month_end = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+        await cache.set_history(
+            Ticker("AAPL"), month_start, month_end, month_history, interval="1day"
+        )
+
+        # Request week with 1hour interval
+        week_start = datetime(2026, 1, 25, 0, 0, 0, tzinfo=UTC)
+        week_end = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+
+        result = await cache.get_history(
+            Ticker("AAPL"), week_start, week_end, interval="1hour"
+        )
+
+        # Should NOT find the 1day cache (different interval)
+        assert result is None
+
+    async def test_different_tickers_isolated(
+        self,
+        redis: fakeredis.FakeRedis,  # type: ignore[type-arg]
+        month_history: list[PricePoint],
+    ) -> None:
+        """Test that different tickers don't match in subset search."""
+        cache = PriceCache(redis, "test:price")
+
+        # Cache AAPL month
+        month_start = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
+        month_end = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+        await cache.set_history(Ticker("AAPL"), month_start, month_end, month_history)
+
+        # Request TSLA week
+        week_start = datetime(2026, 1, 25, 0, 0, 0, tzinfo=UTC)
+        week_end = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+
+        result = await cache.get_history(Ticker("TSLA"), week_start, week_end)
+
+        # Should NOT find AAPL cache (different ticker)
+        assert result is None
+
+    async def test_empty_filtered_result_continues_search(
+        self,
+        redis: fakeredis.FakeRedis,  # type: ignore[type-arg]
+    ) -> None:
+        """Test that empty filtered results trigger continued search."""
+        cache = PriceCache(redis, "test:price")
+
+        # Cache month but with NO data (edge case)
+        month_start = datetime(2026, 1, 1, 0, 0, 0, tzinfo=UTC)
+        month_end = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+        await cache.set_history(Ticker("AAPL"), month_start, month_end, [])
+
+        # Request week
+        week_start = datetime(2026, 1, 25, 0, 0, 0, tzinfo=UTC)
+        week_end = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+
+        result = await cache.get_history(Ticker("AAPL"), week_start, week_end)
+
+        # Should return None (empty data doesn't help)
+        assert result is None
+
+    async def test_parse_dates_from_key_valid(
+        self,
+        redis: fakeredis.FakeRedis,  # type: ignore[type-arg]
+    ) -> None:
+        """Test parsing dates from valid cache keys."""
+        cache = PriceCache(redis, "test:price")
+
+        key = "test:price:AAPL:history:2026-01-01:2026-01-31:1day"
+        result = cache._parse_dates_from_key(key)
+
+        assert result is not None
+        start, end = result
+        assert start.date() == datetime(2026, 1, 1).date()
+        assert end.date() == datetime(2026, 1, 31).date()
+
+    async def test_parse_dates_from_key_invalid(
+        self,
+        redis: fakeredis.FakeRedis,  # type: ignore[type-arg]
+    ) -> None:
+        """Test parsing dates from malformed keys returns None."""
+        cache = PriceCache(redis, "test:price")
+
+        # Malformed keys
+        assert cache._parse_dates_from_key("invalid:key") is None
+        assert cache._parse_dates_from_key("test:price:AAPL") is None
+        assert cache._parse_dates_from_key("test:price:AAPL:invalid:format") is None
+
+    async def test_is_range_subset_true(
+        self,
+        redis: fakeredis.FakeRedis,  # type: ignore[type-arg]
+    ) -> None:
+        """Test subset detection returns True for valid subsets."""
+        cache = PriceCache(redis, "test:price")
+
+        # Requested range is subset of cached range
+        assert (
+            cache._is_range_subset(
+                datetime(2026, 1, 25, tzinfo=UTC),
+                datetime(2026, 1, 31, tzinfo=UTC),
+                datetime(2026, 1, 1, tzinfo=UTC),
+                datetime(2026, 1, 31, tzinfo=UTC),
+            )
+            is True
+        )
+
+    async def test_is_range_subset_false(
+        self,
+        redis: fakeredis.FakeRedis,  # type: ignore[type-arg]
+    ) -> None:
+        """Test subset detection returns False for non-subsets."""
+        cache = PriceCache(redis, "test:price")
+
+        # Requested range extends beyond cached range
+        assert (
+            cache._is_range_subset(
+                datetime(2026, 1, 25, tzinfo=UTC),
+                datetime(2026, 2, 5, tzinfo=UTC),  # Extends into Feb
+                datetime(2026, 1, 1, tzinfo=UTC),
+                datetime(2026, 1, 31, tzinfo=UTC),
+            )
+            is False
+        )
+
+    async def test_filter_to_range(
+        self,
+        redis: fakeredis.FakeRedis,  # type: ignore[type-arg]
+        month_history: list[PricePoint],
+    ) -> None:
+        """Test filtering price points to specific range."""
+        cache = PriceCache(redis, "test:price")
+
+        # Filter month to last week
+        week_start = datetime(2026, 1, 25, 0, 0, 0, tzinfo=UTC)
+        week_end = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)
+
+        result = cache._filter_to_range(month_history, week_start, week_end)
+
+        assert len(result) == 7
+        assert all(week_start <= p.timestamp <= week_end for p in result)
+        assert result[0].timestamp.date().day == 25
+        assert result[-1].timestamp.date().day == 31
+
