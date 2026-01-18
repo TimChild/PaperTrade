@@ -373,3 +373,69 @@ def test_get_batch_prices_includes_metadata(
     assert aapl_price["ticker"] == "AAPL"
     assert aapl_price["currency"] == "USD"
     assert aapl_price["source"] == "database"
+
+
+# Weekend behavior tests
+# Note: These tests use InMemoryAdapter which doesn't have actual weekend logic,
+# but they verify the API contract would work correctly if the adapter
+# implements weekend handling (as AlphaVantageAdapter does)
+
+
+def test_get_current_price_returns_valid_response_structure(
+    client: TestClient,
+) -> None:
+    """Test current price endpoint returns correct structure.
+
+    This validates the response format that would be returned on weekends
+    when the adapter serves cached prices from the last trading day.
+    """
+    response = client.get("/api/v1/prices/AAPL")
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # Verify all required fields exist
+    required_fields = ["ticker", "price", "currency", "timestamp", "source", "is_stale"]
+    for field in required_fields:
+        assert field in data, f"Missing required field: {field}"
+
+    # Verify types
+    assert isinstance(data["ticker"], str)
+    assert isinstance(data["price"], str)
+    assert isinstance(data["currency"], str)
+    assert isinstance(data["timestamp"], str)
+    assert isinstance(data["source"], str)
+    assert isinstance(data["is_stale"], bool)
+
+
+def test_get_batch_prices_returns_valid_response_structure(
+    client: TestClient,
+) -> None:
+    """Test batch prices endpoint returns correct structure.
+
+    This validates the response format that would be returned on weekends
+    when the adapter serves cached prices from the last trading day.
+    """
+    response = client.get("/api/v1/prices/batch?tickers=AAPL,GOOGL")
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # Verify top-level structure
+    assert "prices" in data
+    assert "requested" in data
+    assert "returned" in data
+
+    assert isinstance(data["prices"], dict)
+    assert isinstance(data["requested"], int)
+    assert isinstance(data["returned"], int)
+
+    # Verify each price entry has correct structure
+    for ticker, price_data in data["prices"].items():
+        assert isinstance(ticker, str)
+        assert "ticker" in price_data
+        assert "price" in price_data
+        assert "currency" in price_data
+        assert "timestamp" in price_data
+        assert "source" in price_data
+        assert "is_stale" in price_data
