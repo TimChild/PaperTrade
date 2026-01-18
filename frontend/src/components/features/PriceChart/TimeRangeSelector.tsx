@@ -15,7 +15,10 @@ export function TimeRangeSelector({
   onChange,
 }: TimeRangeSelectorProps): React.JSX.Element {
   return (
-    <div className="flex gap-1 rounded-lg border border-gray-300 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
+    <div
+      className="flex gap-1 rounded-lg border border-gray-300 bg-white p-1 dark:border-gray-700 dark:bg-gray-800"
+      data-testid="time-range-selector"
+    >
       {TIME_RANGES.map((range) => (
         <button
           key={range}
@@ -30,6 +33,7 @@ export function TimeRangeSelector({
           `}
           aria-label={`Show ${range} price history`}
           aria-pressed={selected === range}
+          data-testid={`time-range-${range}`}
         >
           {range}
         </button>

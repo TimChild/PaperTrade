@@ -44,7 +44,7 @@ export function PriceChart({
   // Loading state
   if (isLoading) {
     return (
-      <Card>
+      <Card data-testid={`price-chart-${ticker}`}>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
           <CardTitle className="text-lg sm:text-xl lg:text-heading-md">
             {ticker}
@@ -63,7 +63,7 @@ export function PriceChart({
     // Use enhanced error component if it's an ApiError
     if (isApiError(error)) {
       return (
-        <Card>
+        <Card data-testid={`price-chart-${ticker}`}>
           <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
             <CardTitle className="text-lg sm:text-xl lg:text-heading-md">
               {ticker}
@@ -74,6 +74,7 @@ export function PriceChart({
             <PriceChartError
               error={error as ApiError}
               onRetry={() => refetch()}
+              data-testid="price-chart-error"
             />
           </CardContent>
         </Card>
@@ -82,7 +83,7 @@ export function PriceChart({
 
     // Fallback to old error component for non-API errors
     return (
-      <Card>
+      <Card data-testid={`price-chart-${ticker}`}>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
           <CardTitle className="text-lg sm:text-xl lg:text-heading-md">
             {ticker}
@@ -90,7 +91,7 @@ export function PriceChart({
           <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
         </CardHeader>
         <CardContent>
-          <ChartError onRetry={() => refetch()} />
+          <ChartError onRetry={() => refetch()} data-testid="price-chart-error" />
         </CardContent>
       </Card>
     )
@@ -99,7 +100,7 @@ export function PriceChart({
   // No data state
   if (!data || data.prices.length === 0) {
     return (
-      <Card>
+      <Card data-testid={`price-chart-${ticker}`}>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
           <CardTitle className="text-lg sm:text-xl lg:text-heading-md">
             {ticker}
@@ -154,7 +155,7 @@ export function PriceChart({
   const isPositive = change >= 0
 
   return (
-    <Card>
+    <Card data-testid={`price-chart-${ticker}`}>
       {/* Header */}
       <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
         <CardTitle className="text-lg sm:text-xl lg:text-heading-md">
