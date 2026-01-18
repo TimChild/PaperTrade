@@ -63,6 +63,20 @@ export function TradeForm({
   // Derive display price directly from priceData
   const displayPrice = priceData?.price?.amount?.toFixed(2) ?? '--'
 
+  // Memoize formatted date string to avoid creating new Date objects on every render
+  const formattedBacktestDate = useMemo(() => {
+    if (!backtestDate) return ''
+    return new Date(backtestDate).toLocaleDateString()
+  }, [backtestDate])
+
+  // Memoize formatted price timestamp
+  const formattedPriceTimestamp = useMemo(() => {
+    if (!priceData) return ''
+    return backtestMode
+      ? new Date(priceData.timestamp).toLocaleDateString()
+      : new Date(priceData.timestamp).toLocaleTimeString()
+  }, [priceData, backtestMode])
+
   // Find holding for the current ticker when SELL is selected
   const currentHolding = useMemo(() => {
     if (action === 'SELL' && ticker.trim()) {
@@ -279,8 +293,8 @@ export function TradeForm({
                 data-testid="trade-form-price-error"
               >
                 Unable to fetch price for {debouncedTicker}
-                {backtestMode && backtestDate
-                  ? ` at ${new Date(backtestDate).toLocaleDateString()}`
+                {backtestMode && formattedBacktestDate
+                  ? ` at ${formattedBacktestDate}`
                   : ''}
               </p>
             )}
@@ -291,12 +305,12 @@ export function TradeForm({
                   ? debouncedTicker && isPriceLoading
                     ? 'Fetching historical price...'
                     : debouncedTicker && priceData
-                      ? `Historical price from ${new Date(priceData.timestamp).toLocaleDateString()}`
+                      ? `Historical price from ${formattedPriceTimestamp}`
                       : 'Enter a ticker symbol and date to see historical price'
                   : debouncedTicker && isPriceLoading
                     ? 'Fetching current price...'
                     : debouncedTicker && priceData
-                      ? `Live market price (as of ${new Date(priceData.timestamp).toLocaleTimeString()})`
+                      ? `Live market price (as of ${formattedPriceTimestamp})`
                       : 'Enter a ticker symbol to see current price'}
               </p>
             )}
@@ -367,9 +381,9 @@ export function TradeForm({
                 {priceData?.price?.amount
                   ? ` at ~$${priceData.price.amount.toFixed(2)}`
                   : ''}
-                {backtestMode && backtestDate && (
+                {backtestMode && formattedBacktestDate && (
                   <span className="ml-2 text-amber-600 dark:text-amber-400">
-                    (Backtest: {new Date(backtestDate).toLocaleDateString()})
+                    (Backtest: {formattedBacktestDate})
                   </span>
                 )}
               </p>

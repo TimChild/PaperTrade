@@ -36,7 +36,10 @@ export async function getCurrentPrice(ticker: string): Promise<PricePoint> {
 
 /**
  * Check if historical price data exists for a ticker at a specific date
- * Used by backtest mode to verify data availability
+ * Used by backtest mode to verify data availability before executing trades
+ * 
+ * Note: Currently not used in frontend, but reserved for future enhancement
+ * where we want to check data availability before attempting to fetch.
  */
 export async function checkHistoricalPrice(
   ticker: string,
@@ -92,6 +95,17 @@ export async function getHistoricalPrice(
 
   // Return first (and should be only) price point
   const priceData = response.data.prices[0]
+  
+  // Validate interval value with type guard
+  type ValidInterval = '1day' | 'real-time' | '1hour' | '5min' | '1min'
+  const validIntervals: readonly ValidInterval[] = ['1day', 'real-time', '1hour', '5min', '1min'] as const
+  const isValidInterval = (value: string): value is ValidInterval => 
+    validIntervals.includes(value as ValidInterval)
+  
+  const interval = isValidInterval(priceData.interval)
+    ? priceData.interval
+    : '1day' // Default to 1day for historical data
+  
   return {
     ticker: { symbol: priceData.ticker },
     price: {
@@ -100,12 +114,7 @@ export async function getHistoricalPrice(
     },
     timestamp: priceData.timestamp,
     source: priceData.source as 'alpha_vantage' | 'cache' | 'database',
-    interval: priceData.interval as
-      | '1day'
-      | 'real-time'
-      | '1hour'
-      | '5min'
-      | '1min',
+    interval,
   }
 }
 

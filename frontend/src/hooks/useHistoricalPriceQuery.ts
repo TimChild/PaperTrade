@@ -29,7 +29,5 @@ export function useHistoricalPriceQuery(ticker: string, date: string) {
       return failureCount < 2
     },
     enabled: Boolean(ticker) && Boolean(date),
-    // Don't keep previous data on error for historical queries
-    placeholderData: undefined,
   })
 }
