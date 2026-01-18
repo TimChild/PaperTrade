@@ -90,21 +90,21 @@ class TestGetLastTradingDay:
     def test_get_last_trading_day_weekday(
         self, alpha_vantage_adapter: AlphaVantageAdapter
     ) -> None:
-        """Should return same day for weekdays (Mon-Fri)."""
-        # Monday
-        monday = datetime(2026, 1, 19, 10, 0, 0, tzinfo=UTC)
+        """Should return same day for weekdays (Mon-Fri) that are not holidays."""
+        # Monday, June 2, 2026 (not a holiday)
+        monday = datetime(2026, 6, 1, 10, 0, 0, tzinfo=UTC)
         result = alpha_vantage_adapter._get_last_trading_day(monday)
         assert result.date() == monday.date()
         assert result.hour == 21
         assert result.minute == 0
 
-        # Wednesday
-        wednesday = datetime(2026, 1, 21, 15, 30, 0, tzinfo=UTC)
+        # Wednesday, June 3, 2026 (not a holiday)
+        wednesday = datetime(2026, 6, 3, 15, 30, 0, tzinfo=UTC)
         result = alpha_vantage_adapter._get_last_trading_day(wednesday)
         assert result.date() == wednesday.date()
 
-        # Friday
-        friday = datetime(2026, 1, 23, 9, 0, 0, tzinfo=UTC)
+        # Friday, June 5, 2026 (not a holiday)
+        friday = datetime(2026, 6, 5, 9, 0, 0, tzinfo=UTC)
         result = alpha_vantage_adapter._get_last_trading_day(friday)
         assert result.date() == friday.date()
 
@@ -132,10 +132,11 @@ class TestGetLastTradingDay:
     def test_get_last_trading_day_monday_morning(
         self, alpha_vantage_adapter: AlphaVantageAdapter
     ) -> None:
-        """Should return Monday for Monday morning."""
-        monday_morning = datetime(2026, 1, 19, 9, 0, 0, tzinfo=UTC)
+        """Should return Monday for Monday morning (non-holiday)."""
+        # Monday, June 1, 2026 (not a holiday)
+        monday_morning = datetime(2026, 6, 1, 9, 0, 0, tzinfo=UTC)
         result = alpha_vantage_adapter._get_last_trading_day(monday_morning)
-        # Monday is a weekday, so should return Monday
+        # Monday is a weekday and not a holiday, so should return Monday
         assert result.date().weekday() == 0  # Monday
         assert result.date() == monday_morning.date()
 
