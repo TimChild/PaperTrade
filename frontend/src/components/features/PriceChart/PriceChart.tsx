@@ -17,8 +17,11 @@ import { TimeRangeSelector } from './TimeRangeSelector'
 import { PriceStats } from './PriceStats'
 import { ChartSkeleton } from './ChartSkeleton'
 import { ChartError } from './ChartError'
+import { PriceChartError } from './PriceChartError'
 import type { TimeRange } from '@/types/price'
+import type { ApiError } from '@/types/errors'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { isApiError } from '@/utils/priceErrors'
 
 interface PriceChartProps {
   ticker: string
@@ -55,6 +58,26 @@ export function PriceChart({
 
   // Error state
   if (error) {
+    // Use enhanced error component if it's an ApiError
+    if (isApiError(error)) {
+      return (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-heading-md">{ticker}</CardTitle>
+            <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
+          </CardHeader>
+          <CardContent>
+            <PriceChartError
+              error={error as ApiError}
+              ticker={ticker}
+              onRetry={() => refetch()}
+            />
+          </CardContent>
+        </Card>
+      )
+    }
+
+    // Fallback to old error component for non-API errors
     return (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -84,6 +107,9 @@ export function PriceChart({
       </Card>
     )
   }
+
+  // Development mode: Show warning banner if using mock data due to API error
+  const showDevWarning = import.meta.env.DEV && data.error
 
   // Format data for chart
   const chartData: ChartDataPoint[] = data.prices.map((point) => ({
@@ -127,6 +153,16 @@ export function PriceChart({
       </CardHeader>
 
       <CardContent>
+        {/* Development Mode Warning Banner */}
+        {showDevWarning && (
+          <div
+            className="mb-4 rounded-lg border border-yellow-400 bg-yellow-100 px-4 py-2 text-sm text-yellow-800 dark:border-yellow-600 dark:bg-yellow-950 dark:text-yellow-200"
+            data-testid="dev-warning-banner"
+          >
+            ⚠️ Development Mode: Using mock data due to API error
+          </div>
+        )}
+
         {/* Price Statistics */}
         <PriceStats
           currentPrice={lastPrice}

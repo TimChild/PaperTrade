@@ -2,6 +2,7 @@
  * Price-related types for market data
  * These types match the backend PricePoint DTO structure
  */
+import type { ApiError } from './errors'
 
 /**
  * Ticker object matching backend structure
@@ -50,4 +51,5 @@ export interface PriceHistory {
   prices: PricePoint[]
   source: string
   cached: boolean
+  error?: ApiError // Optional error info (for dev mode with mock data)
 }

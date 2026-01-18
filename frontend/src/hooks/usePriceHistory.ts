@@ -4,6 +4,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { getPriceHistory } from '@/services/api/prices'
 import type { TimeRange } from '@/types/price'
+import { isApiError } from '@/utils/priceErrors'
 
 /**
  * Calculate date range based on time range selector
@@ -52,6 +53,13 @@ export function usePriceHistory(ticker: string, range: TimeRange) {
     queryFn: () => getPriceHistory(ticker, start, end),
     staleTime: 5 * 60 * 1000, // 5 minutes
     enabled: Boolean(ticker), // Only run if we have a ticker
-    retry: 1, // Retry once if failed
+    retry: (failureCount, error) => {
+      // Don't retry 404s (ticker not found)
+      if (isApiError(error) && error.type === 'not_found') {
+        return false
+      }
+      // Retry network errors and server errors once
+      return failureCount < 1
+    },
   })
 }
