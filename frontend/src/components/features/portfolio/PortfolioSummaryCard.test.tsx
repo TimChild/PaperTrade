@@ -43,9 +43,9 @@ describe('PortfolioSummaryCard', () => {
     render(<PortfolioSummaryCard portfolio={mockPortfolio} />, {
       wrapper: Wrapper,
     })
-    // With no holdings, total value equals cash balance
-    const totalValueElement = screen.getByText('Total Value').nextElementSibling
-    expect(totalValueElement).toHaveTextContent('$25,000.00')
+    // Backend-calculated total value should be displayed
+    const totalValueElement = screen.getByTestId('portfolio-total-value')
+    expect(totalValueElement).toHaveTextContent('$156,750.00')
   })
 
   it('displays daily change with positive formatting', () => {
@@ -75,6 +75,29 @@ describe('PortfolioSummaryCard', () => {
       }
     )
     expect(screen.queryByText('Test Portfolio')).not.toBeInTheDocument()
+  })
+
+  it('displays holdings value calculated from total minus cash', () => {
+    const Wrapper = createWrapper()
+    render(<PortfolioSummaryCard portfolio={mockPortfolio} />, {
+      wrapper: Wrapper,
+    })
+    // Holdings value = totalValue - cashBalance = 156750 - 25000 = 131750
+    expect(screen.getByText('Holdings Value')).toBeInTheDocument()
+    const holdingsValueText = screen.getByText('$131,750.00')
+    expect(holdingsValueText).toBeInTheDocument()
+  })
+
+  it('does not display holdings value section when holdings value is zero', () => {
+    const Wrapper = createWrapper()
+    const portfolioWithNoHoldings = {
+      ...mockPortfolio,
+      totalValue: 25000, // Same as cash balance
+    }
+    render(<PortfolioSummaryCard portfolio={portfolioWithNoHoldings} />, {
+      wrapper: Wrapper,
+    })
+    expect(screen.queryByText('Holdings Value')).not.toBeInTheDocument()
   })
 
   it('displays negative change correctly', () => {

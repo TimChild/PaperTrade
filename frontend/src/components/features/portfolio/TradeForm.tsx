@@ -3,6 +3,7 @@ import type { TradeRequest } from '@/services/api/types'
 import type { Holding } from '@/types/portfolio'
 import { useDebounce } from '@/hooks/useDebounce'
 import { usePriceQuery } from '@/hooks/usePriceQuery'
+import { useHistoricalPriceQuery } from '@/hooks/useHistoricalPriceQuery'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -35,15 +36,46 @@ export function TradeForm({
   // Debounce ticker input to avoid excessive API calls
   const debouncedTicker = useDebounce(ticker.trim().toUpperCase(), 500)
 
-  // Fetch current price for the debounced ticker (only when not in backtest mode)
+  // Fetch current price for the debounced ticker (when NOT in backtest mode)
   const {
-    data: priceData,
-    isLoading: isPriceLoading,
-    error: priceError,
+    data: currentPriceData,
+    isLoading: isCurrentPriceLoading,
+    error: currentPriceError,
   } = usePriceQuery(backtestMode ? '' : debouncedTicker)
+
+  // Fetch historical price when in backtest mode
+  const {
+    data: historicalPriceData,
+    isLoading: isHistoricalPriceLoading,
+    error: historicalPriceError,
+  } = useHistoricalPriceQuery(
+    backtestMode ? debouncedTicker : '',
+    backtestMode ? backtestDate : ''
+  )
+
+  // Select the appropriate price data based on mode
+  const priceData = backtestMode ? historicalPriceData : currentPriceData
+  const isPriceLoading = backtestMode
+    ? isHistoricalPriceLoading
+    : isCurrentPriceLoading
+  const priceError = backtestMode ? historicalPriceError : currentPriceError
 
   // Derive display price directly from priceData
   const displayPrice = priceData?.price?.amount?.toFixed(2) ?? '--'
+
+  // Memoize formatted date string to avoid creating new Date objects on every render
+  const formattedBacktestDate = useMemo(() => {
+    if (!backtestDate) return ''
+    return new Date(backtestDate).toLocaleDateString()
+  }, [backtestDate])
+
+  // Memoize formatted price timestamp
+  const formattedPriceTimestamp = useMemo(() => {
+    if (!priceData) return ''
+    return backtestMode
+      ? new Date(priceData.timestamp).toLocaleDateString()
+      : new Date(priceData.timestamp).toLocaleTimeString()
+  }, [priceData, backtestMode])
 
   // Find holding for the current ticker when SELL is selected
   const currentHolding = useMemo(() => {
@@ -206,7 +238,7 @@ export function TradeForm({
                 className="cursor-not-allowed bg-gray-50 dark:bg-gray-900"
               />
               {/* Loading spinner */}
-              {isPriceLoading && debouncedTicker && !backtestMode && (
+              {isPriceLoading && debouncedTicker && (
                 <div
                   className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"
                   data-testid="trade-form-price-loading"
@@ -234,47 +266,51 @@ export function TradeForm({
                 </div>
               )}
               {/* Success checkmark */}
-              {priceData &&
-                !isPriceLoading &&
-                debouncedTicker &&
-                !backtestMode && (
-                  <div
-                    className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"
-                    data-testid="trade-form-price-success"
+              {priceData && !isPriceLoading && debouncedTicker && (
+                <div
+                  className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3"
+                  data-testid="trade-form-price-success"
+                >
+                  <svg
+                    className="h-5 w-5 text-positive"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
                   >
-                    <svg
-                      className="h-5 w-5 text-positive"
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                )}
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+              )}
             </div>
             {/* Error message for invalid ticker */}
-            {priceError && debouncedTicker && !backtestMode && (
+            {priceError && debouncedTicker && (
               <p
                 className="mt-1 text-xs text-negative"
                 data-testid="trade-form-price-error"
               >
                 Unable to fetch price for {debouncedTicker}
+                {backtestMode && formattedBacktestDate
+                  ? ` at ${formattedBacktestDate}`
+                  : ''}
               </p>
             )}
             {/* Info message */}
             {!priceError && (
               <p className="mt-1 text-xs text-foreground-tertiary">
                 {backtestMode && backtestDate
-                  ? 'Trade will execute with historical price from selected date'
+                  ? debouncedTicker && isPriceLoading
+                    ? 'Fetching historical price...'
+                    : debouncedTicker && priceData
+                      ? `Historical price from ${formattedPriceTimestamp}`
+                      : 'Enter a ticker symbol and date to see historical price'
                   : debouncedTicker && isPriceLoading
                     ? 'Fetching current price...'
                     : debouncedTicker && priceData
-                      ? `Live market price (as of ${new Date(priceData.timestamp).toLocaleTimeString()})`
+                      ? `Live market price (as of ${formattedPriceTimestamp})`
                       : 'Enter a ticker symbol to see current price'}
               </p>
             )}
@@ -345,9 +381,9 @@ export function TradeForm({
                 {priceData?.price?.amount
                   ? ` at ~$${priceData.price.amount.toFixed(2)}`
                   : ''}
-                {backtestMode && backtestDate && (
+                {backtestMode && formattedBacktestDate && (
                   <span className="ml-2 text-amber-600 dark:text-amber-400">
-                    (Backtest: {new Date(backtestDate).toLocaleDateString()})
+                    (Backtest: {formattedBacktestDate})
                   </span>
                 )}
               </p>
