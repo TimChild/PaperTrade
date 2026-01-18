@@ -1,551 +1,812 @@
 {
-  "dashboard": {
-    "title": "Zebu - Trading Activity",
-    "tags": ["zebu", "production", "trading"],
-    "timezone": "browser",
-    "editable": true,
-    "refresh": "1m",
-    "time": {
-      "from": "now-24h",
-      "to": "now"
-    },
-    "templating": {
-      "list": [
-        {
-          "name": "time_bucket",
-          "type": "interval",
-          "current": {
+  "title": "Zebu - Trading Activity",
+  "tags": [
+    "zebu",
+    "production",
+    "trading"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "refresh": "1m",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "time_bucket",
+        "type": "interval",
+        "current": {
+          "value": "5m"
+        },
+        "hide": 0,
+        "label": "Aggregation Interval",
+        "query": "1m,5m,15m,1h",
+        "options": [
+          {
+            "text": "1m",
+            "value": "1m"
+          },
+          {
+            "text": "5m",
             "value": "5m"
           },
-          "hide": 0,
-          "label": "Aggregation Interval",
-          "query": "1m,5m,15m,1h",
-          "options": [
-            {"text": "1m", "value": "1m"},
-            {"text": "5m", "value": "5m"},
-            {"text": "15m", "value": "15m"},
-            {"text": "1h", "value": "1h"}
-          ]
-        },
-        {
-          "name": "ticker",
-          "type": "query",
-          "current": {
-            "value": "all"
-          },
-          "hide": 0,
-          "label": "Ticker",
-          "query": "all",
-          "includeAll": true
-        },
-        {
-          "name": "action",
-          "type": "custom",
-          "current": {
-            "value": "all"
-          },
-          "hide": 0,
-          "label": "Action",
-          "query": "all,BUY,SELL",
-          "options": [
-            {"text": "All", "value": "all"},
-            {"text": "BUY", "value": "BUY"},
-            {"text": "SELL", "value": "SELL"}
-          ]
-        }
-      ]
-    },
-    "panels": [
-      {
-        "id": 1,
-        "type": "row",
-        "title": "Trading Volume",
-        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0},
-        "collapsed": false
-      },
-      {
-        "id": 2,
-        "type": "stat",
-        "title": "Trades Executed (24h)",
-        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 1},
-        "targets": [{
-          "expr": "count_over_time({container=\"zebu-backend-prod\"} | json | event=\"Trade executed\" [24h])",
-          "refId": "A",
-          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
-          "instant": true
-        }],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "short"
-          }
-        },
-        "options": {
-          "colorMode": "value",
-          "graphMode": "area",
-          "textMode": "value_and_name",
-          "reduceOptions": {
-            "calcs": ["lastNotNull"]
-          }
-        }
-      },
-      {
-        "id": 3,
-        "type": "timeseries",
-        "title": "Trade Volume Over Time",
-        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 1},
-        "targets": [{
-          "expr": "sum(rate({container=\"zebu-backend-prod\"} | json | event=\"Trade executed\" [5m]))",
-          "refId": "A",
-          "legendFormat": "Trades per Minute",
-          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
-        }],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "cpm",
-            "custom": {
-              "fillOpacity": 20,
-              "lineWidth": 2
-            }
-          }
-        },
-        "options": {
-          "legend": {
-            "displayMode": "list",
-            "placement": "bottom",
-            "showLegend": true
-          }
-        }
-      },
-      {
-        "id": 4,
-        "type": "timeseries",
-        "title": "Trades by Action (Buy vs Sell)",
-        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 1},
-        "targets": [
           {
-            "expr": "sum(rate({container=\"zebu-backend-prod\"} | json | event=\"Trade executed\" | action=\"BUY\" [5m]))",
-            "refId": "A",
-            "legendFormat": "Buy",
-            "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
+            "text": "15m",
+            "value": "15m"
           },
           {
-            "expr": "sum(rate({container=\"zebu-backend-prod\"} | json | event=\"Trade executed\" | action=\"SELL\" [5m]))",
-            "refId": "B",
-            "legendFormat": "Sell",
-            "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
-          }
-        ],
-        "fieldConfig": {
-          "defaults": {
-            "custom": {
-              "fillOpacity": 20,
-              "lineWidth": 2,
-              "stacking": {
-                "mode": "normal"
-              }
-            }
-          },
-          "overrides": [
-            {
-              "matcher": {"id": "byName", "options": "Buy"},
-              "properties": [{
-                "id": "color",
-                "value": {"mode": "fixed", "fixedColor": "green"}
-              }]
-            },
-            {
-              "matcher": {"id": "byName", "options": "Sell"},
-              "properties": [{
-                "id": "color",
-                "value": {"mode": "fixed", "fixedColor": "red"}
-              }]
-            }
-          ]
-        },
-        "options": {
-          "legend": {
-            "displayMode": "list",
-            "placement": "bottom",
-            "showLegend": true
-          }
-        }
-      },
-      {
-        "id": 5,
-        "type": "row",
-        "title": "Popular Tickers",
-        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 9},
-        "collapsed": false
-      },
-      {
-        "id": 6,
-        "type": "barchart",
-        "title": "Top 10 Traded Tickers",
-        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 10},
-        "targets": [{
-          "expr": "topk(10, sum by (ticker) (count_over_time({container=\"zebu-backend-prod\"} | json | event=\"Trade executed\" [24h])))",
-          "refId": "A",
-          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
-          "instant": true
-        }],
-        "fieldConfig": {
-          "defaults": {}
-        },
-        "options": {
-          "orientation": "horizontal",
-          "barWidth": 0.8,
-          "groupWidth": 0.7,
-          "showValue": "auto",
-          "legend": {
-            "displayMode": "hidden"
-          }
-        }
-      },
-      {
-        "id": 7,
-        "type": "timeseries",
-        "title": "Trade Volume by Ticker (Time Series)",
-        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 10},
-        "targets": [{
-          "expr": "sum by (ticker) (rate({container=\"zebu-backend-prod\"} | json | event=\"Trade executed\" [5m]))",
-          "refId": "A",
-          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
-        }],
-        "fieldConfig": {
-          "defaults": {
-            "custom": {
-              "lineWidth": 2
-            }
-          }
-        },
-        "options": {
-          "legend": {
-            "displayMode": "table",
-            "placement": "right",
-            "showLegend": true
-          }
-        }
-      },
-      {
-        "id": 8,
-        "type": "stat",
-        "title": "Unique Tickers Traded",
-        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 10},
-        "targets": [{
-          "expr": "count(count by (ticker) (count_over_time({container=\"zebu-backend-prod\"} | json | event=\"Trade executed\" [24h])))",
-          "refId": "A",
-          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
-          "instant": true
-        }],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "short"
-          }
-        },
-        "options": {
-          "colorMode": "value",
-          "graphMode": "none",
-          "textMode": "value_and_name"
-        }
-      },
-      {
-        "id": 9,
-        "type": "row",
-        "title": "Portfolio Operations",
-        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 18},
-        "collapsed": false
-      },
-      {
-        "id": 10,
-        "type": "timeseries",
-        "title": "New Portfolios Created",
-        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 19},
-        "targets": [{
-          "expr": "sum(rate({container=\"zebu-backend-prod\"} | json | event=\"Portfolio created\" [1h]))",
-          "refId": "A",
-          "legendFormat": "Portfolios/hour",
-          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
-        }],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "cph",
-            "custom": {
-              "drawStyle": "bars",
-              "barAlignment": 0
-            }
-          }
-        },
-        "options": {
-          "legend": {
-            "displayMode": "list",
-            "placement": "bottom",
-            "showLegend": true
-          }
-        }
-      },
-      {
-        "id": 11,
-        "type": "stat",
-        "title": "Active Portfolios",
-        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 19},
-        "targets": [{
-          "expr": "count(count by (portfolio_id) (count_over_time({container=\"zebu-backend-prod\"} | json | event=\"Trade executed\" [24h])))",
-          "refId": "A",
-          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
-          "instant": true
-        }],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "short"
-          }
-        },
-        "options": {
-          "colorMode": "value",
-          "graphMode": "area",
-          "textMode": "value_and_name"
-        }
-      },
-      {
-        "id": 12,
-        "type": "timeseries",
-        "title": "Portfolio Value Calculations",
-        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 19},
-        "targets": [{
-          "expr": "sum(rate({container=\"zebu-backend-prod\"} | json | event=\"Portfolio value calculated\" [5m]))",
-          "refId": "A",
-          "legendFormat": "Calculations/minute",
-          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
-        }],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "cpm"
-          }
-        },
-        "options": {
-          "legend": {
-            "displayMode": "list",
-            "placement": "bottom",
-            "showLegend": true
-          }
-        }
-      },
-      {
-        "id": 13,
-        "type": "row",
-        "title": "Trade Performance",
-        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 27},
-        "collapsed": false
-      },
-      {
-        "id": 14,
-        "type": "timeseries",
-        "title": "Average Trade Execution Time",
-        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 28},
-        "targets": [{
-          "expr": "avg_over_time({container=\"zebu-backend-prod\"} | json | event=\"Trade executed\" | unwrap duration_ms [5m])",
-          "refId": "A",
-          "legendFormat": "Avg Execution Time",
-          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
-        }],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "ms",
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {"color": "green", "value": null},
-                {"color": "yellow", "value": 500},
-                {"color": "red", "value": 1000}
-              ]
-            }
-          }
-        },
-        "options": {
-          "legend": {
-            "displayMode": "list",
-            "placement": "bottom",
-            "showLegend": true
-          }
-        }
-      },
-      {
-        "id": 15,
-        "type": "timeseries",
-        "title": "Failed Trades",
-        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 28},
-        "targets": [{
-          "expr": "sum(rate({container=\"zebu-backend-prod\"} | json | event=\"Trade execution failed\" [5m]))",
-          "refId": "A",
-          "legendFormat": "Failures/minute",
-          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
-        }],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "cpm",
-            "color": {"mode": "fixed", "fixedColor": "red"}
-          }
-        },
-        "options": {
-          "legend": {
-            "displayMode": "list",
-            "placement": "bottom",
-            "showLegend": true
-          }
-        }
-      },
-      {
-        "id": 16,
-        "type": "table",
-        "title": "Trade Failure Reasons",
-        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 28},
-        "targets": [{
-          "expr": "topk(10, count_over_time({container=\"zebu-backend-prod\"} | json | event=\"Trade execution failed\" [24h]) by (error))",
-          "refId": "A",
-          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
-          "instant": true
-        }],
-        "fieldConfig": {
-          "defaults": {}
-        },
-        "options": {
-          "showHeader": true,
-          "sortBy": [{"displayName": "Value", "desc": true}]
-        },
-        "transformations": [
-          {
-            "id": "organize",
-            "options": {
-              "renameByName": {
-                "error": "Error Reason",
-                "Value": "Count"
-              }
-            }
+            "text": "1h",
+            "value": "1h"
           }
         ]
       },
       {
-        "id": 17,
-        "type": "row",
-        "title": "User Activity",
-        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 36},
-        "collapsed": false
+        "name": "ticker",
+        "type": "query",
+        "current": {
+          "value": "all"
+        },
+        "hide": 0,
+        "label": "Ticker",
+        "query": "all",
+        "includeAll": true
       },
       {
-        "id": 18,
-        "type": "timeseries",
-        "title": "Active Users (Unique Sessions)",
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 37},
-        "targets": [{
-          "expr": "count(count by (correlation_id) (count_over_time({container=\"zebu-backend-prod\"} | json [5m])))",
+        "name": "action",
+        "type": "custom",
+        "current": {
+          "value": "all"
+        },
+        "hide": 0,
+        "label": "Action",
+        "query": "all,BUY,SELL",
+        "options": [
+          {
+            "text": "All",
+            "value": "all"
+          },
+          {
+            "text": "BUY",
+            "value": "BUY"
+          },
+          {
+            "text": "SELL",
+            "value": "SELL"
+          }
+        ]
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "row",
+      "title": "Trading Volume",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "collapsed": false
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Trades Executed (24h)",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "count_over_time({container=\"zebu-backend-prod\"} | json | event=\"Trade executed\" [24h])",
           "refId": "A",
-          "legendFormat": "Active Users",
-          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
-        }],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "short"
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value_and_name",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Trade Volume Over Time",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "sum(rate({container=\"zebu-backend-prod\"} | json | event=\"Trade executed\" [5m]))",
+          "refId": "A",
+          "legendFormat": "Trades per Minute",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cpm",
+          "custom": {
+            "fillOpacity": 20,
+            "lineWidth": 2
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "Trades by Action (Buy vs Sell)",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 1
+      },
+      "targets": [
+        {
+          "expr": "sum(rate({container=\"zebu-backend-prod\"} | json | event=\"Trade executed\" | action=\"BUY\" [5m]))",
+          "refId": "A",
+          "legendFormat": "Buy",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
           }
         },
-        "options": {
-          "legend": {
-            "displayMode": "list",
-            "placement": "bottom",
-            "showLegend": true
+        {
+          "expr": "sum(rate({container=\"zebu-backend-prod\"} | json | event=\"Trade executed\" | action=\"SELL\" [5m]))",
+          "refId": "B",
+          "legendFormat": "Sell",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
           }
         }
-      },
-      {
-        "id": 19,
-        "type": "heatmap",
-        "title": "Request Pattern by Hour",
-        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 37},
-        "targets": [{
-          "expr": "sum by (hour) (count_over_time({container=\"zebu-backend-prod\"} | json [1h]))",
-          "refId": "A",
-          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
-        }],
-        "options": {
-          "calculate": true,
-          "color": {
-            "mode": "scheme",
-            "scheme": "Spectral",
-            "steps": 128
-          }
-        }
-      },
-      {
-        "id": 20,
-        "type": "row",
-        "title": "Trading Patterns",
-        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 45},
-        "collapsed": false
-      },
-      {
-        "id": 21,
-        "type": "histogram",
-        "title": "Trade Size Distribution",
-        "gridPos": {"h": 8, "w": 8, "x": 0, "y": 46},
-        "targets": [{
-          "expr": "{container=\"zebu-backend-prod\"} | json | event=\"Trade executed\" | unwrap quantity",
-          "refId": "A",
-          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
-        }],
-        "options": {
-          "bucketSize": 10
-        }
-      },
-      {
-        "id": 22,
-        "type": "timeseries",
-        "title": "Average Trade Value",
-        "gridPos": {"h": 8, "w": 8, "x": 8, "y": 46},
-        "targets": [{
-          "expr": "avg_over_time({container=\"zebu-backend-prod\"} | json | event=\"Trade executed\" | unwrap price [1h])",
-          "refId": "A",
-          "legendFormat": "Avg Trade Value",
-          "datasource": {"type": "loki", "uid": "${DS_LOKI}"}
-        }],
-        "fieldConfig": {
-          "defaults": {
-            "unit": "currencyUSD",
-            "custom": {
-              "fillOpacity": 20,
-              "lineWidth": 2
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "fillOpacity": 20,
+            "lineWidth": 2,
+            "stacking": {
+              "mode": "normal"
             }
           }
         },
-        "options": {
-          "legend": {
-            "displayMode": "list",
-            "placement": "bottom",
-            "showLegend": true
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Buy"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "green"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Sell"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "red"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "row",
+      "title": "Popular Tickers",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "collapsed": false
+    },
+    {
+      "id": 6,
+      "type": "barchart",
+      "title": "Top 10 Traded Tickers",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 10
+      },
+      "targets": [
+        {
+          "expr": "topk(10, sum by (ticker) (count_over_time({container=\"zebu-backend-prod\"} | json | event=\"Trade executed\" [24h])))",
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {}
+      },
+      "options": {
+        "orientation": "horizontal",
+        "barWidth": 0.8,
+        "groupWidth": 0.7,
+        "showValue": "auto",
+        "legend": {
+          "displayMode": "hidden"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Trade Volume by Ticker (Time Series)",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 10
+      },
+      "targets": [
+        {
+          "expr": "sum by (ticker) (rate({container=\"zebu-backend-prod\"} | json | event=\"Trade executed\" [5m]))",
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineWidth": 2
           }
         }
       },
-      {
-        "id": 23,
-        "type": "piechart",
-        "title": "Market Cap Preference",
-        "gridPos": {"h": 8, "w": 8, "x": 16, "y": 46},
-        "targets": [{
-          "expr": "sum by (market_cap_category) (count_over_time({container=\"zebu-backend-prod\"} | json | event=\"Trade executed\" [24h]))",
-          "refId": "A",
-          "datasource": {"type": "loki", "uid": "${DS_LOKI}"},
-          "instant": true
-        }],
-        "fieldConfig": {
-          "defaults": {}
-        },
-        "options": {
-          "legend": {
-            "displayMode": "list",
-            "placement": "right",
-            "showLegend": true
-          },
-          "pieType": "pie",
-          "displayLabels": ["percent"]
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "showLegend": true
         }
       }
-    ]
-  }
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Unique Tickers Traded",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 10
+      },
+      "targets": [
+        {
+          "expr": "count(count by (ticker) (count_over_time({container=\"zebu-backend-prod\"} | json | event=\"Trade executed\" [24h])))",
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 9,
+      "type": "row",
+      "title": "Portfolio Operations",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 18
+      },
+      "collapsed": false
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "New Portfolios Created",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 19
+      },
+      "targets": [
+        {
+          "expr": "sum(rate({container=\"zebu-backend-prod\"} | json | event=\"Portfolio created\" [1h]))",
+          "refId": "A",
+          "legendFormat": "Portfolios/hour",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cph",
+          "custom": {
+            "drawStyle": "bars",
+            "barAlignment": 0
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Active Portfolios",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 19
+      },
+      "targets": [
+        {
+          "expr": "count(count by (portfolio_id) (count_over_time({container=\"zebu-backend-prod\"} | json | event=\"Trade executed\" [24h])))",
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value_and_name"
+      }
+    },
+    {
+      "id": 12,
+      "type": "timeseries",
+      "title": "Portfolio Value Calculations",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 19
+      },
+      "targets": [
+        {
+          "expr": "sum(rate({container=\"zebu-backend-prod\"} | json | event=\"Portfolio value calculated\" [5m]))",
+          "refId": "A",
+          "legendFormat": "Calculations/minute",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cpm"
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 13,
+      "type": "row",
+      "title": "Trade Performance",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "collapsed": false
+    },
+    {
+      "id": 14,
+      "type": "timeseries",
+      "title": "Average Trade Execution Time",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 28
+      },
+      "targets": [
+        {
+          "expr": "avg_over_time({container=\"zebu-backend-prod\"} | json | event=\"Trade executed\" | unwrap duration_ms [5m])",
+          "refId": "A",
+          "legendFormat": "Avg Execution Time",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 500
+              },
+              {
+                "color": "red",
+                "value": 1000
+              }
+            ]
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 15,
+      "type": "timeseries",
+      "title": "Failed Trades",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 28
+      },
+      "targets": [
+        {
+          "expr": "sum(rate({container=\"zebu-backend-prod\"} | json | event=\"Trade execution failed\" [5m]))",
+          "refId": "A",
+          "legendFormat": "Failures/minute",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "cpm",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "red"
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 16,
+      "type": "table",
+      "title": "Trade Failure Reasons",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 28
+      },
+      "targets": [
+        {
+          "expr": "topk(10, count_over_time({container=\"zebu-backend-prod\"} | json | event=\"Trade execution failed\" [24h]) by (error))",
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {}
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Value",
+            "desc": true
+          }
+        ]
+      },
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "renameByName": {
+              "error": "Error Reason",
+              "Value": "Count"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "type": "row",
+      "title": "User Activity",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 36
+      },
+      "collapsed": false
+    },
+    {
+      "id": 18,
+      "type": "timeseries",
+      "title": "Active Users (Unique Sessions)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 37
+      },
+      "targets": [
+        {
+          "expr": "count(count by (correlation_id) (count_over_time({container=\"zebu-backend-prod\"} | json [5m])))",
+          "refId": "A",
+          "legendFormat": "Active Users",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short"
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 19,
+      "type": "heatmap",
+      "title": "Request Pattern by Hour",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 37
+      },
+      "targets": [
+        {
+          "expr": "sum by (hour) (count_over_time({container=\"zebu-backend-prod\"} | json [1h]))",
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          }
+        }
+      ],
+      "options": {
+        "calculate": true,
+        "color": {
+          "mode": "scheme",
+          "scheme": "Spectral",
+          "steps": 128
+        }
+      }
+    },
+    {
+      "id": 20,
+      "type": "row",
+      "title": "Trading Patterns",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 45
+      },
+      "collapsed": false
+    },
+    {
+      "id": 21,
+      "type": "histogram",
+      "title": "Trade Size Distribution",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 46
+      },
+      "targets": [
+        {
+          "expr": "{container=\"zebu-backend-prod\"} | json | event=\"Trade executed\" | unwrap quantity",
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          }
+        }
+      ],
+      "options": {
+        "bucketSize": 10
+      }
+    },
+    {
+      "id": 22,
+      "type": "timeseries",
+      "title": "Average Trade Value",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 46
+      },
+      "targets": [
+        {
+          "expr": "avg_over_time({container=\"zebu-backend-prod\"} | json | event=\"Trade executed\" | unwrap price [1h])",
+          "refId": "A",
+          "legendFormat": "Avg Trade Value",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyUSD",
+          "custom": {
+            "fillOpacity": 20,
+            "lineWidth": 2
+          }
+        }
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      }
+    },
+    {
+      "id": 23,
+      "type": "piechart",
+      "title": "Market Cap Preference",
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 46
+      },
+      "targets": [
+        {
+          "expr": "sum by (market_cap_category) (count_over_time({container=\"zebu-backend-prod\"} | json | event=\"Trade executed\" [24h]))",
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "${DS_LOKI}"
+          },
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {}
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "right",
+          "showLegend": true
+        },
+        "pieType": "pie",
+        "displayLabels": [
+          "percent"
+        ]
+      }
+    }
+  ]
 }
