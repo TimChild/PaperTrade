@@ -4,15 +4,17 @@
  */
 import { useState } from 'react'
 import {
-  LineChart,
   Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Scatter,
+  ComposedChart,
 } from 'recharts'
 import { usePriceHistory } from '@/hooks/usePriceHistory'
+import { useTransactions } from '@/hooks/useTransactions'
 import { TimeRangeSelector } from './TimeRangeSelector'
 import { PriceStats } from './PriceStats'
 import { ChartSkeleton } from './ChartSkeleton'
@@ -26,6 +28,7 @@ import { isApiError } from '@/utils/priceErrors'
 interface PriceChartProps {
   ticker: string
   initialTimeRange?: TimeRange
+  portfolioId?: string
 }
 
 interface ChartDataPoint {
@@ -34,12 +37,24 @@ interface ChartDataPoint {
   fullDate: string
 }
 
+interface TradeMarker {
+  time: string
+  price: number
+  action: 'BUY' | 'SELL'
+  quantity: number
+  fullDate: string
+}
+
 export function PriceChart({
   ticker,
   initialTimeRange = '1M',
+  portfolioId,
 }: PriceChartProps): React.JSX.Element {
   const [timeRange, setTimeRange] = useState<TimeRange>(initialTimeRange)
   const { data, isLoading, error, refetch } = usePriceHistory(ticker, timeRange)
+  
+  // Fetch transactions only if portfolioId is provided
+  const { data: transactionsData } = useTransactions(portfolioId || '')
 
   // Loading state
   if (isLoading) {
@@ -125,6 +140,37 @@ export function PriceChart({
     fullDate: new Date(point.timestamp).toLocaleString(),
   }))
 
+  // Filter and format trade markers for this ticker
+  const tradeMarkers: TradeMarker[] = []
+  if (transactionsData?.transactions) {
+    for (const transaction of transactionsData.transactions) {
+      // Only include BUY/SELL transactions for this ticker
+      if (
+        transaction.ticker === ticker &&
+        (transaction.transaction_type === 'BUY' ||
+          transaction.transaction_type === 'SELL')
+      ) {
+        const price = transaction.price_per_share
+          ? parseFloat(transaction.price_per_share)
+          : 0
+        const quantity = transaction.quantity
+          ? parseFloat(transaction.quantity)
+          : 0
+
+        // Only add marker if we have valid price data
+        if (price > 0 && quantity > 0) {
+          tradeMarkers.push({
+            time: formatDateForAxis(transaction.timestamp, timeRange),
+            price,
+            action: transaction.transaction_type as 'BUY' | 'SELL',
+            quantity,
+            fullDate: new Date(transaction.timestamp).toLocaleString(),
+          })
+        }
+      }
+    }
+  }
+
   // Calculate price change
   // Safe to access [0] and [length-1] because we already checked for empty array above
   const firstPrice = data.prices[0]!.price.amount
@@ -183,7 +229,7 @@ export function PriceChart({
 
         {/* Chart */}
         <ResponsiveContainer width="100%" height={250}>
-          <LineChart data={chartData}>
+          <ComposedChart data={chartData}>
             <CartesianGrid
               strokeDasharray="3 3"
               stroke="hsl(var(--foreground) / 0.1)"
@@ -211,11 +257,20 @@ export function PriceChart({
                 borderRadius: '8px',
                 color: 'hsl(var(--foreground))',
               }}
-              formatter={(value: number | undefined) =>
-                value !== undefined
+              formatter={(value: number | undefined, name: string, props: { payload?: TradeMarker | ChartDataPoint }) => {
+                // Check if this is a trade marker
+                if (props.payload && 'action' in props.payload) {
+                  const marker = props.payload as TradeMarker
+                  return [
+                    `${marker.action} ${marker.quantity} ${marker.quantity === 1 ? 'share' : 'shares'} at $${marker.price.toFixed(2)}`,
+                    'Trade',
+                  ]
+                }
+                // Regular price point
+                return value !== undefined
                   ? [`$${value.toFixed(2)}`, 'Price']
                   : ['N/A', 'Price']
-              }
+              }}
               labelFormatter={(label, payload) =>
                 payload?.[0]?.payload.fullDate || label
               }
@@ -230,7 +285,52 @@ export function PriceChart({
               dot={false}
               activeDot={{ r: 6 }}
             />
-          </LineChart>
+            {/* Trade markers */}
+            {tradeMarkers.length > 0 && (
+              <Scatter
+                name="Trades"
+                data={tradeMarkers}
+                fill="#10b981"
+                shape={(props: { cx?: number; cy?: number; payload?: TradeMarker }) => {
+                  const { cx, cy, payload } = props
+                  if (cx === undefined || cy === undefined || !payload) {
+                    return null
+                  }
+                  
+                  const isBuy = payload.action === 'BUY'
+                  const color = isBuy ? '#10b981' : '#ef4444'
+                  const size = 8
+                  
+                  if (isBuy) {
+                    // Circle for BUY
+                    return (
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={size}
+                        fill={color}
+                        stroke="#fff"
+                        strokeWidth={2}
+                        data-testid={`trade-marker-buy-${payload.fullDate}`}
+                      />
+                    )
+                  } else {
+                    // Triangle for SELL
+                    const points = `${cx},${cy - size} ${cx + size},${cy + size} ${cx - size},${cy + size}`
+                    return (
+                      <polygon
+                        points={points}
+                        fill={color}
+                        stroke="#fff"
+                        strokeWidth={2}
+                        data-testid={`trade-marker-sell-${payload.fullDate}`}
+                      />
+                    )
+                  }
+                }}
+              />
+            )}
+          </ComposedChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>

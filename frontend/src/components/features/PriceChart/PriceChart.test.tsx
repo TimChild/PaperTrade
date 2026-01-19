@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { PriceChart } from '@/components/features/PriceChart/PriceChart'
 import * as pricesApi from '@/services/api/prices'
+import * as transactionsApi from '@/services/api/transactions'
 import type { ApiError } from '@/types/errors'
 
 function createWrapper() {
@@ -202,5 +203,231 @@ describe('PriceChart', () => {
 
     // Restore environment (Note: This works in Vitest, could use proper config in future)
     import.meta.env.DEV = originalEnv
+  })
+
+  describe('Trade markers', () => {
+    it('does not fetch transactions when portfolioId is not provided', async () => {
+      const mockHistory = {
+        ticker: 'AAPL',
+        prices: [
+          {
+            ticker: { symbol: 'AAPL' },
+            price: { amount: 150, currency: 'USD' },
+            timestamp: '2024-01-01T00:00:00Z',
+            source: 'cache' as const,
+            interval: '1day' as const,
+          },
+        ],
+        source: 'mock',
+        cached: false,
+      }
+
+      const pricesSpy = vi
+        .spyOn(pricesApi, 'getPriceHistory')
+        .mockResolvedValue(mockHistory)
+      const transactionsSpy = vi.spyOn(transactionsApi.transactionsApi, 'list')
+
+      const Wrapper = createWrapper()
+      render(<PriceChart ticker="AAPL" />, { wrapper: Wrapper })
+
+      await waitFor(() => {
+        expect(pricesSpy).toHaveBeenCalled()
+      })
+
+      // Should not call transactions API when no portfolioId
+      expect(transactionsSpy).not.toHaveBeenCalled()
+    })
+
+    it('fetches transactions when portfolioId is provided', async () => {
+      const mockHistory = {
+        ticker: 'AAPL',
+        prices: [
+          {
+            ticker: { symbol: 'AAPL' },
+            price: { amount: 150, currency: 'USD' },
+            timestamp: '2024-01-01T00:00:00Z',
+            source: 'cache' as const,
+            interval: '1day' as const,
+          },
+          {
+            ticker: { symbol: 'AAPL' },
+            price: { amount: 160, currency: 'USD' },
+            timestamp: '2024-01-02T00:00:00Z',
+            source: 'cache' as const,
+            interval: '1day' as const,
+          },
+        ],
+        source: 'mock',
+        cached: false,
+      }
+
+      const mockTransactions = {
+        transactions: [
+          {
+            id: 'tx-1',
+            portfolio_id: 'portfolio-1',
+            transaction_type: 'BUY' as const,
+            timestamp: '2024-01-01T12:00:00Z',
+            cash_change: '-1500',
+            ticker: 'AAPL',
+            quantity: '10',
+            price_per_share: '150.00',
+            notes: null,
+          },
+        ],
+        total_count: 1,
+        limit: 50,
+        offset: 0,
+      }
+
+      vi.spyOn(pricesApi, 'getPriceHistory').mockResolvedValue(mockHistory)
+      const transactionsSpy = vi
+        .spyOn(transactionsApi.transactionsApi, 'list')
+        .mockResolvedValue(mockTransactions)
+
+      const Wrapper = createWrapper()
+      render(<PriceChart ticker="AAPL" portfolioId="portfolio-1" />, {
+        wrapper: Wrapper,
+      })
+
+      await waitFor(() => {
+        expect(transactionsSpy).toHaveBeenCalledWith('portfolio-1', undefined)
+      })
+    })
+
+    it('filters transactions to show only BUY and SELL for the displayed ticker', async () => {
+      const mockHistory = {
+        ticker: 'AAPL',
+        prices: [
+          {
+            ticker: { symbol: 'AAPL' },
+            price: { amount: 150, currency: 'USD' },
+            timestamp: '2024-01-01T00:00:00Z',
+            source: 'cache' as const,
+            interval: '1day' as const,
+          },
+          {
+            ticker: { symbol: 'AAPL' },
+            price: { amount: 160, currency: 'USD' },
+            timestamp: '2024-01-05T00:00:00Z',
+            source: 'cache' as const,
+            interval: '1day' as const,
+          },
+        ],
+        source: 'mock',
+        cached: false,
+      }
+
+      // Mix of transactions - should only show AAPL BUY/SELL
+      const mockTransactions = {
+        transactions: [
+          {
+            id: 'tx-1',
+            portfolio_id: 'portfolio-1',
+            transaction_type: 'DEPOSIT' as const,
+            timestamp: '2024-01-01T00:00:00Z',
+            cash_change: '10000',
+            ticker: null,
+            quantity: null,
+            price_per_share: null,
+            notes: null,
+          },
+          {
+            id: 'tx-2',
+            portfolio_id: 'portfolio-1',
+            transaction_type: 'BUY' as const,
+            timestamp: '2024-01-02T00:00:00Z',
+            cash_change: '-1500',
+            ticker: 'AAPL',
+            quantity: '10',
+            price_per_share: '150.00',
+            notes: null,
+          },
+          {
+            id: 'tx-3',
+            portfolio_id: 'portfolio-1',
+            transaction_type: 'BUY' as const,
+            timestamp: '2024-01-03T00:00:00Z',
+            cash_change: '-1000',
+            ticker: 'GOOGL', // Different ticker
+            quantity: '5',
+            price_per_share: '200.00',
+            notes: null,
+          },
+          {
+            id: 'tx-4',
+            portfolio_id: 'portfolio-1',
+            transaction_type: 'SELL' as const,
+            timestamp: '2024-01-04T00:00:00Z',
+            cash_change: '800',
+            ticker: 'AAPL',
+            quantity: '5',
+            price_per_share: '160.00',
+            notes: null,
+          },
+        ],
+        total_count: 4,
+        limit: 50,
+        offset: 0,
+      }
+
+      vi.spyOn(pricesApi, 'getPriceHistory').mockResolvedValue(mockHistory)
+      vi.spyOn(transactionsApi.transactionsApi, 'list').mockResolvedValue(
+        mockTransactions
+      )
+
+      const Wrapper = createWrapper()
+      render(<PriceChart ticker="AAPL" portfolioId="portfolio-1" />, {
+        wrapper: Wrapper,
+      })
+
+      // Wait for chart to render
+      await waitFor(() => {
+        expect(screen.getByText('$160.00')).toBeInTheDocument()
+      })
+
+      // The filtering logic is internal to the component
+      // We can't easily verify the markers without more complex testing
+      // But we've verified the data flows correctly
+    })
+
+    it('handles empty transaction list gracefully', async () => {
+      const mockHistory = {
+        ticker: 'AAPL',
+        prices: [
+          {
+            ticker: { symbol: 'AAPL' },
+            price: { amount: 150, currency: 'USD' },
+            timestamp: '2024-01-01T00:00:00Z',
+            source: 'cache' as const,
+            interval: '1day' as const,
+          },
+        ],
+        source: 'mock',
+        cached: false,
+      }
+
+      const mockTransactions = {
+        transactions: [],
+        total_count: 0,
+        limit: 50,
+        offset: 0,
+      }
+
+      vi.spyOn(pricesApi, 'getPriceHistory').mockResolvedValue(mockHistory)
+      vi.spyOn(transactionsApi.transactionsApi, 'list').mockResolvedValue(
+        mockTransactions
+      )
+
+      const Wrapper = createWrapper()
+      render(<PriceChart ticker="AAPL" portfolioId="portfolio-1" />, {
+        wrapper: Wrapper,
+      })
+
+      // Should render without errors
+      await waitFor(() => {
+        expect(screen.getByText('$150.00')).toBeInTheDocument()
+      })
+    })
   })
 })

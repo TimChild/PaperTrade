@@ -186,6 +186,7 @@ export function PortfolioDetail(): React.JSX.Element {
                       key={holding.ticker}
                       ticker={holding.ticker}
                       initialTimeRange="1M"
+                      portfolioId={portfolioId}
                     />
                   ))}
                 </div>
