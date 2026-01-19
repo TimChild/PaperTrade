@@ -86,6 +86,11 @@ class TestAlphaVantageAdapterCacheMiss:
         adapter: AlphaVantageAdapter,
     ) -> None:
         """Test fetching AAPL price from API (cache miss)."""
+        # Mock datetime to return a trading day (Monday, Jan 13, 2026)
+        from unittest.mock import patch
+
+        mock_now = datetime(2026, 1, 13, 10, 0, 0, tzinfo=UTC)
+
         # Mock Alpha Vantage API response
         respx.get("https://www.alphavantage.co/query").mock(
             return_value=httpx.Response(
@@ -100,7 +105,15 @@ class TestAlphaVantageAdapterCacheMiss:
             )
         )
 
-        price = await adapter.get_current_price(Ticker("AAPL"))
+        with patch(
+            "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
+        ) as mock_datetime:
+            mock_datetime.now.return_value = mock_now
+            mock_datetime.side_effect = lambda *args, **kwargs: datetime(
+                *args, **kwargs
+            )
+
+            price = await adapter.get_current_price(Ticker("AAPL"))
 
         # Verify basic properties
         assert price.ticker.symbol == "AAPL"
@@ -116,6 +129,11 @@ class TestAlphaVantageAdapterCacheMiss:
         adapter: AlphaVantageAdapter,
     ) -> None:
         """Test fetching TSLA price from API (cache miss)."""
+        # Mock datetime to return a trading day (Monday, Jan 13, 2026)
+        from unittest.mock import patch
+
+        mock_now = datetime(2026, 1, 13, 10, 0, 0, tzinfo=UTC)
+
         respx.get("https://www.alphavantage.co/query").mock(
             return_value=httpx.Response(
                 200,
@@ -129,7 +147,15 @@ class TestAlphaVantageAdapterCacheMiss:
             )
         )
 
-        price = await adapter.get_current_price(Ticker("TSLA"))
+        with patch(
+            "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
+        ) as mock_datetime:
+            mock_datetime.now.return_value = mock_now
+            mock_datetime.side_effect = lambda *args, **kwargs: datetime(
+                *args, **kwargs
+            )
+
+            price = await adapter.get_current_price(Ticker("TSLA"))
 
         assert price.ticker.symbol == "TSLA"
         assert price.price.amount == Decimal("383.75")
@@ -141,6 +167,11 @@ class TestAlphaVantageAdapterCacheMiss:
         adapter: AlphaVantageAdapter,
     ) -> None:
         """Test fetching price for invalid ticker raises TickerNotFoundError."""
+        # Mock datetime to return a trading day (Monday, Jan 13, 2026)
+        from unittest.mock import patch
+
+        mock_now = datetime(2026, 1, 13, 10, 0, 0, tzinfo=UTC)
+
         # Alpha Vantage returns empty Global Quote for invalid tickers
         respx.get("https://www.alphavantage.co/query").mock(
             return_value=httpx.Response(
@@ -149,8 +180,16 @@ class TestAlphaVantageAdapterCacheMiss:
             )
         )
 
-        with pytest.raises(TickerNotFoundError) as exc_info:
-            await adapter.get_current_price(Ticker("XXXXX"))
+        with patch(
+            "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
+        ) as mock_datetime:
+            mock_datetime.now.return_value = mock_now
+            mock_datetime.side_effect = lambda *args, **kwargs: datetime(
+                *args, **kwargs
+            )
+
+            with pytest.raises(TickerNotFoundError) as exc_info:
+                await adapter.get_current_price(Ticker("XXXXX"))
 
         # Check that error message mentions ticker
         assert exc_info.value.ticker == "XXXXX"
@@ -167,6 +206,11 @@ class TestAlphaVantageAdapterCacheHit:
     ) -> None:
         """Test that second request hits cache (no API call)."""
         from datetime import date
+        from unittest.mock import patch
+
+        # Mock datetime to return a trading day (Monday, Jan 13, 2026)
+        # Use the same time for both calls to ensure cache doesn't expire
+        mock_now = datetime(2026, 1, 13, 10, 0, 0, tzinfo=UTC)
 
         # Use today's date to ensure price is fresh (not stale)
         today = date.today().isoformat()
@@ -184,26 +228,44 @@ class TestAlphaVantageAdapterCacheHit:
             )
         )
 
-        # First call - populates cache
-        price1 = await adapter.get_current_price(Ticker("AAPL"))
-        assert price1.source == "alpha_vantage"
-        assert mock_route.called
+        # Patch datetime in both adapter and price_point modules
+        with (
+            patch(
+                "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
+            ) as mock_datetime_adapter,
+            patch("zebu.application.dtos.price_point.datetime") as mock_datetime_price,
+        ):
+            mock_datetime_adapter.now.return_value = mock_now
+            mock_datetime_adapter.side_effect = lambda *args, **kwargs: datetime(
+                *args, **kwargs
+            )
+            mock_datetime_price.now.return_value = mock_now
+            mock_datetime_price.side_effect = lambda *args, **kwargs: datetime(
+                *args, **kwargs
+            )
 
-        # Verify cache was populated (with original alpha_vantage source)
-        cached = await price_cache.get(Ticker("AAPL"))
-        assert cached is not None
-        assert cached.source == "alpha_vantage"  # Cached value has original source
+            # First call - populates cache
+            price1 = await adapter.get_current_price(Ticker("AAPL"))
+            assert price1.source == "alpha_vantage"
+            assert mock_route.called
 
-        # Reset mock call count
-        initial_call_count = len(mock_route.calls)
+            # Verify cache was populated (with original alpha_vantage source)
+            cached = await price_cache.get(Ticker("AAPL"))
+            assert cached is not None
+            assert cached.source == "alpha_vantage"  # Cached value has original source
 
-        # Second call - hits cache (no new HTTP request)
-        price2 = await adapter.get_current_price(Ticker("AAPL"))
-        assert price2.source == "cache"  # Returned value has source changed to "cache"
-        assert price2.ticker == price1.ticker
-        assert price2.price == price1.price
-        # Verify no additional API calls were made
-        assert len(mock_route.calls) == initial_call_count
+            # Reset mock call count
+            initial_call_count = len(mock_route.calls)
+
+            # Second call - hits cache (no new HTTP request)
+            price2 = await adapter.get_current_price(Ticker("AAPL"))
+            assert (
+                price2.source == "cache"
+            )  # Returned value has source changed to "cache"
+            assert price2.ticker == price1.ticker
+            assert price2.price == price1.price
+            # Verify no additional API calls were made
+            assert len(mock_route.calls) == initial_call_count
 
     @respx.mock
     async def test_get_current_price_stale_cache_refresh(
@@ -212,8 +274,13 @@ class TestAlphaVantageAdapterCacheHit:
         price_cache: PriceCache,
     ) -> None:
         """Test that stale cache triggers API refresh."""
+        from unittest.mock import patch
+
         from zebu.application.dtos.price_point import PricePoint
         from zebu.domain.value_objects.money import Money
+
+        # Mock datetime to return a trading day (Monday, Jan 13, 2026)
+        mock_now = datetime(2026, 1, 13, 10, 0, 0, tzinfo=UTC)
 
         # Manually insert stale price (2 hours old)
         stale_price = PricePoint(
@@ -239,8 +306,17 @@ class TestAlphaVantageAdapterCacheHit:
             )
         )
 
-        # Request should fetch fresh data from API (not serve stale cache)
-        price = await adapter.get_current_price(Ticker("AAPL"))
+        with patch(
+            "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
+        ) as mock_datetime:
+            mock_datetime.now.return_value = mock_now
+            mock_datetime.side_effect = lambda *args, **kwargs: datetime(
+                *args, **kwargs
+            )
+
+            # Request should fetch fresh data from API (not serve stale cache)
+            price = await adapter.get_current_price(Ticker("AAPL"))
+
         assert price.price.amount == Decimal("194.50")
         assert price.source == "alpha_vantage"
 
@@ -255,8 +331,13 @@ class TestAlphaVantageAdapterRateLimiting:
         rate_limiter: RateLimiter,
     ) -> None:
         """Test that rate limiting serves stale cached data when available."""
+        from unittest.mock import patch
+
         from zebu.application.dtos.price_point import PricePoint
         from zebu.domain.value_objects.money import Money
+
+        # Mock datetime to return a trading day (Monday, Jan 13, 2026)
+        mock_now = datetime(2026, 1, 13, 10, 0, 0, tzinfo=UTC)
 
         # Manually insert stale price
         stale_price = PricePoint(
@@ -272,8 +353,17 @@ class TestAlphaVantageAdapterRateLimiting:
         for _ in range(5):
             await rate_limiter.consume_token()
 
-        # Should serve stale cache when rate limited
-        price = await adapter.get_current_price(Ticker("AAPL"))
+        with patch(
+            "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
+        ) as mock_datetime:
+            mock_datetime.now.return_value = mock_now
+            mock_datetime.side_effect = lambda *args, **kwargs: datetime(
+                *args, **kwargs
+            )
+
+            # Should serve stale cache when rate limited
+            price = await adapter.get_current_price(Ticker("AAPL"))
+
         assert price.source == "cache"
         assert price.price.amount == Decimal("100.00")
 
@@ -283,13 +373,26 @@ class TestAlphaVantageAdapterRateLimiting:
         rate_limiter: RateLimiter,
     ) -> None:
         """Test that rate limiting without cached data raises error."""
+        from unittest.mock import patch
+
+        # Mock datetime to return a trading day (Monday, Jan 13, 2026)
+        mock_now = datetime(2026, 1, 13, 10, 0, 0, tzinfo=UTC)
+
         # Exhaust rate limiter
         for _ in range(5):
             await rate_limiter.consume_token()
 
-        # Should raise error when rate limited and no cache
-        with pytest.raises(MarketDataUnavailableError) as exc_info:
-            await adapter.get_current_price(Ticker("AAPL"))
+        with patch(
+            "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
+        ) as mock_datetime:
+            mock_datetime.now.return_value = mock_now
+            mock_datetime.side_effect = lambda *args, **kwargs: datetime(
+                *args, **kwargs
+            )
+
+            # Should raise error when rate limited and no cache
+            with pytest.raises(MarketDataUnavailableError) as exc_info:
+                await adapter.get_current_price(Ticker("AAPL"))
 
         assert "Rate limit exceeded" in str(exc_info.value)
 
@@ -385,6 +488,10 @@ class TestAlphaVantageAdapterPerformance:
     ) -> None:
         """Test that cache hits are fast (<100ms)."""
         import time
+        from unittest.mock import patch
+
+        # Mock datetime to return a trading day (Monday, Jan 13, 2026)
+        mock_now = datetime(2026, 1, 13, 10, 0, 0, tzinfo=UTC)
 
         respx.get("https://www.alphavantage.co/query").mock(
             return_value=httpx.Response(
@@ -399,13 +506,21 @@ class TestAlphaVantageAdapterPerformance:
             )
         )
 
-        # First call - populate cache
-        await adapter.get_current_price(Ticker("AAPL"))
+        with patch(
+            "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
+        ) as mock_datetime:
+            mock_datetime.now.return_value = mock_now
+            mock_datetime.side_effect = lambda *args, **kwargs: datetime(
+                *args, **kwargs
+            )
 
-        # Second call - should be fast (cache hit)
-        start = time.time()
-        await adapter.get_current_price(Ticker("AAPL"))
-        elapsed = time.time() - start
+            # First call - populate cache
+            await adapter.get_current_price(Ticker("AAPL"))
+
+            # Second call - should be fast (cache hit)
+            start = time.time()
+            await adapter.get_current_price(Ticker("AAPL"))
+            elapsed = time.time() - start
 
         # Cache hit should be very fast (well under 100ms)
         # Using 100ms threshold

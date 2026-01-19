@@ -117,8 +117,9 @@ class AlphaVantageAdapter:
         Implements tiered caching strategy:
         1. Check Redis cache (return if fresh)
         2. Check PostgreSQL (return if reasonably fresh)
-        3. Fetch from Alpha Vantage API (if rate limit allows)
-        4. Serve stale cached data if rate limited
+        3. Weekend/Holiday: Get last trading day's cached price
+        4. Fetch from Alpha Vantage API (if rate limit allows)
+        5. Serve stale cached data if rate limited
 
         Args:
             ticker: Stock ticker symbol to get price for
@@ -149,6 +150,34 @@ class AlphaVantageAdapter:
                 # Warm the cache with database price
                 await self.price_cache.set(db_price, ttl=3600)
                 return db_price.with_source("database")
+
+        # Weekend/Holiday check - serve last trading day's cached price
+        now = datetime.now(UTC)
+        if not MarketCalendar.is_trading_day(now.date()):
+            last_trading_day = self._get_last_trading_day(now)
+
+            if self.price_repository:
+                historical_price = await self.price_repository.get_price_at(
+                    ticker, last_trading_day
+                )
+                if historical_price:
+                    # Cache with longer TTL on weekends (2 hours)
+                    await self.price_cache.set(historical_price, ttl=7200)
+                    logger.info(
+                        "Markets closed, using cached price from last trading day",
+                        ticker=ticker.symbol,
+                        current_date=now.date(),
+                        last_trading_day=last_trading_day.date(),
+                    )
+                    return historical_price.with_source("database")
+
+            # No cached data - log and continue to API fetch
+            # Alpha Vantage returns last trading day's close on weekends anyway
+            logger.info(
+                "Markets closed but no cached price, will fetch from API",
+                ticker=ticker.symbol,
+                current_date=now.date(),
+            )
 
         # Tier 3: Fetch from Alpha Vantage API
         if not await self.rate_limiter.can_make_request():
@@ -198,8 +227,10 @@ class AlphaVantageAdapter:
 
         This method optimizes price fetching by:
         1. Checking cache for all tickers first
-        2. Only fetching uncached tickers from API (one by one)
-        3. Returning partial results if some tickers fail
+        2. Checking database for uncached tickers
+        3. Weekend/Holiday: Get last trading day's cached prices
+        4. Only fetching uncached tickers from API (one by one)
+        5. Returning partial results if some tickers fail
 
         Note: Alpha Vantage free tier doesn't have a true batch API, so we fetch
         uncached tickers sequentially. However, we still get the benefit of:
@@ -249,6 +280,42 @@ class AlphaVantageAdapter:
                 else:
                     db_uncached.append(ticker)
             uncached_tickers = db_uncached
+
+        # Weekend/Holiday check - serve last trading day's cached prices
+        now = datetime.now(UTC)
+        if not MarketCalendar.is_trading_day(now.date()) and uncached_tickers:
+            last_trading_day = self._get_last_trading_day(now)
+
+            if self.price_repository:
+                # Fetch all uncached tickers from last trading day
+                for ticker in uncached_tickers[:]:  # Copy list to allow modification
+                    historical_price = await self.price_repository.get_price_at(
+                        ticker, last_trading_day
+                    )
+                    if historical_price:
+                        # Cache with longer TTL on weekends (2 hours)
+                        await self.price_cache.set(historical_price, ttl=7200)
+                        result[ticker] = historical_price.with_source("database")
+                        uncached_tickers.remove(ticker)
+
+                # Log if we found prices for some tickers on last trading day
+                if len(result) > 0 and len(uncached_tickers) < len(tickers):
+                    logger.info(
+                        "Markets closed, using cached prices from last trading day",
+                        current_date=now.date(),
+                        last_trading_day=last_trading_day.date(),
+                        tickers_found=len(result),
+                        tickers_remaining=len(uncached_tickers),
+                    )
+
+            # For any remaining uncached tickers, log and continue to API fetch
+            # Alpha Vantage returns last trading day's close on weekends anyway
+            if uncached_tickers:
+                logger.info(
+                    "Markets closed but no cached prices, will fetch from API",
+                    uncached_tickers=[t.symbol for t in uncached_tickers],
+                    current_date=now.date(),
+                )
 
         # Step 3: Fetch remaining uncached tickers from API
         # Note: We fetch sequentially to respect rate limits
