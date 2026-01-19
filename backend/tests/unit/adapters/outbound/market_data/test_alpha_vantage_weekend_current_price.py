@@ -216,13 +216,15 @@ class TestGetCurrentPriceWeekend:
             # Verify API was NOT called
             mock_rate_limiter.consume_token.assert_not_called()
 
-    async def test_weekend_no_cached_data_raises_error(
+    async def test_weekend_no_cached_data_fetches_from_api(
         self,
         alpha_vantage_adapter: AlphaVantageAdapter,
         mock_price_repository: MagicMock,
         mock_price_cache: MagicMock,
+        mock_rate_limiter: MagicMock,
+        mock_http_client: MagicMock,
     ) -> None:
-        """Should raise error when no cached data available on weekend."""
+        """Should fetch from API when no cached data available on weekend."""
         ticker = Ticker("AAPL")
 
         # Sunday, Jan 19, 2026, 10:00 AM
@@ -231,6 +233,18 @@ class TestGetCurrentPriceWeekend:
         # No cached data available
         mock_price_repository.get_latest_price = AsyncMock(return_value=None)
         mock_price_repository.get_price_at = AsyncMock(return_value=None)
+        mock_price_repository.upsert_price = AsyncMock()
+
+        # Mock API response (Alpha Vantage returns Friday's close on weekends)
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "Global Quote": {
+                "01. symbol": "AAPL",
+                "05. price": "259.96",
+            }
+        }
+        mock_http_client.get = AsyncMock(return_value=mock_response)
 
         with patch(
             "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
@@ -240,12 +254,16 @@ class TestGetCurrentPriceWeekend:
                 *args, **kwargs
             )
 
-            # Act & Assert
-            with pytest.raises(MarketDataUnavailableError) as exc_info:
-                await alpha_vantage_adapter.get_current_price(ticker)
+            # Act
+            result = await alpha_vantage_adapter.get_current_price(ticker)
 
-            assert "Markets are closed" in str(exc_info.value)
-            assert ticker.symbol in str(exc_info.value)
+            # Assert - should fetch from API
+            assert result.price.amount == Decimal("259.96")
+            assert result.source == "alpha_vantage"
+
+            # Verify API WAS called
+            mock_rate_limiter.consume_token.assert_called_once()
+            mock_http_client.get.assert_called_once()
 
     async def test_trading_day_fetches_from_api(
         self,
@@ -364,14 +382,15 @@ class TestGetBatchPricesWeekend:
             # Verify API was NOT called
             mock_rate_limiter.consume_token.assert_not_called()
 
-    async def test_sunday_returns_partial_results_when_some_tickers_missing(
+    async def test_sunday_fetches_uncached_tickers_from_api(
         self,
         alpha_vantage_adapter: AlphaVantageAdapter,
         mock_price_repository: MagicMock,
         mock_price_cache: MagicMock,
         mock_rate_limiter: MagicMock,
+        mock_http_client: MagicMock,
     ) -> None:
-        """Should return partial results when some tickers have no cached data."""
+        """Should fetch from API for tickers without cached data on weekend."""
         tickers = [Ticker("AAPL"), Ticker("MSFT"), Ticker("TSLA")]
 
         # Sunday, Jan 19, 2026, 10:00 AM
@@ -390,6 +409,7 @@ class TestGetBatchPricesWeekend:
         )
 
         mock_price_repository.get_latest_price = AsyncMock(return_value=None)
+        mock_price_repository.upsert_price = AsyncMock()
 
         # Mock get_price_at to return None for TSLA ticker
         async def mock_get_price_at(
@@ -404,6 +424,17 @@ class TestGetBatchPricesWeekend:
 
         mock_price_repository.get_price_at = AsyncMock(side_effect=mock_get_price_at)
 
+        # Mock API response for TSLA
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "Global Quote": {
+                "01. symbol": "TSLA",
+                "05. price": "350.00",
+            }
+        }
+        mock_http_client.get = AsyncMock(return_value=mock_response)
+
         with patch(
             "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
         ) as mock_datetime:
@@ -415,14 +446,22 @@ class TestGetBatchPricesWeekend:
             # Act
             result = await alpha_vantage_adapter.get_batch_prices(tickers)
 
-            # Assert
-            assert len(result) == 2
+            # Assert - should get all 3 tickers
+            assert len(result) == 3
             assert Ticker("AAPL") in result
             assert Ticker("MSFT") in result
-            assert Ticker("TSLA") not in result
+            assert Ticker("TSLA") in result
 
-            # Verify API was NOT called
-            mock_rate_limiter.consume_token.assert_not_called()
+            # AAPL and MSFT from cache
+            assert result[Ticker("AAPL")].source == "database"
+            assert result[Ticker("MSFT")].source == "database"
+
+            # TSLA from API
+            assert result[Ticker("TSLA")].source == "alpha_vantage"
+            assert result[Ticker("TSLA")].price.amount == Decimal("350.00")
+
+            # Verify API WAS called (for TSLA)
+            mock_rate_limiter.consume_token.assert_called_once()
 
     async def test_trading_day_fetches_from_api_for_uncached_tickers(
         self,

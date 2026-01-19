@@ -164,16 +164,19 @@ class AlphaVantageAdapter:
                     # Cache with longer TTL on weekends (2 hours)
                     await self.price_cache.set(historical_price, ttl=7200)
                     logger.info(
-                        "Markets closed, using last trading day price",
+                        "Markets closed, using cached price from last trading day",
                         ticker=ticker.symbol,
                         current_date=now.date(),
                         last_trading_day=last_trading_day.date(),
                     )
                     return historical_price.with_source("database")
 
-            # No cached data available - raise error with helpful message
-            raise MarketDataUnavailableError(
-                f"Markets are closed and no cached price available for {ticker.symbol}"
+            # No cached data - log and continue to API fetch
+            # Alpha Vantage returns last trading day's close on weekends anyway
+            logger.info(
+                "Markets closed but no cached price, will fetch from API",
+                ticker=ticker.symbol,
+                current_date=now.date(),
             )
 
         # Tier 3: Fetch from Alpha Vantage API
@@ -296,26 +299,23 @@ class AlphaVantageAdapter:
                         uncached_tickers.remove(ticker)
 
                 # Log if we found prices for some tickers on last trading day
-                if uncached_tickers != tickers:
+                if len(result) > 0 and len(uncached_tickers) < len(tickers):
                     logger.info(
-                        "Markets closed, using last trading day prices",
+                        "Markets closed, using cached prices from last trading day",
                         current_date=now.date(),
                         last_trading_day=last_trading_day.date(),
                         tickers_found=len(result),
                         tickers_remaining=len(uncached_tickers),
                     )
 
-            # For any remaining uncached tickers, log that no cached data is available
-            # but don't fail - just exclude them from results
-            for ticker in uncached_tickers:
-                logger.warning(
-                    "Markets closed and no cached price available",
-                    ticker=ticker.symbol,
+            # For any remaining uncached tickers, log and continue to API fetch
+            # Alpha Vantage returns last trading day's close on weekends anyway
+            if uncached_tickers:
+                logger.info(
+                    "Markets closed but no cached prices for some tickers, will fetch from API",
+                    uncached_tickers=[t.symbol for t in uncached_tickers],
                     current_date=now.date(),
                 )
-
-            # Return what we found (may be partial)
-            return result
 
         # Step 3: Fetch remaining uncached tickers from API
         # Note: We fetch sequentially to respect rate limits
