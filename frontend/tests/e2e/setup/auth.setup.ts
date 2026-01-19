@@ -10,9 +10,19 @@ setup('authenticate', async ({ page }) => {
                   process.env.VITE_E2E_TEST_MODE?.toLowerCase() === 'true'
   
   if (e2eMode) {
-    console.log('E2E_TEST_MODE enabled - skipping Clerk authentication (using static tokens)')
-    // In E2E mode, we don't need to authenticate with Clerk
-    // The backend accepts any token via InMemoryAuthAdapter
+    console.log('E2E_TEST_MODE enabled - navigating directly to dashboard (using static tokens)')
+    
+    // Navigate directly to dashboard - backend accepts static token via InMemoryAuthAdapter
+    await page.goto('/dashboard')
+    await page.waitForLoadState('networkidle')
+    
+    // Verify we're on the dashboard
+    await expect(page.getByText('Portfolio Dashboard')).toBeVisible()
+    
+    // Save authentication state
+    await page.context().storageState({ path: authFile })
+    
+    console.log('✓ E2E authentication state saved to', authFile)
     return
   }
 
