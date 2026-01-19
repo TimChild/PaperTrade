@@ -34,14 +34,6 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
 
-  /* Set environment variables for E2E tests */
-  // These are available to the test runner and the web app via import.meta.env
-  // webServer configuration below will pass these to the dev server
-  env: {
-    VITE_E2E_TEST_MODE: 'true',
-    E2E_TEST_MODE: 'true',
-  },
-
   /* Configure projects for major browsers */
   projects: [
     // Setup project - authenticate once and save state

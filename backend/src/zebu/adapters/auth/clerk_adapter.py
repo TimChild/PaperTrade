@@ -66,12 +66,6 @@ class ClerkAuthAdapter(AuthPort):
             InvalidTokenError: If token is invalid, expired, or verification fails
         """
         try:
-            # Log token preview for debugging (first/last 10 chars only)
-            token_preview = (
-                f"{token[:10]}...{token[-10:]}" if len(token) > 20 else "[short-token]"
-            )
-            logger.info(f"Verifying token: {token_preview}, length: {len(token)}")
-
             # Create a request object with the token
             request = SimpleRequest(token)
 
@@ -81,11 +75,7 @@ class ClerkAuthAdapter(AuthPort):
                 request=request, options=AuthenticateRequestOptions()
             )
 
-            logger.info(
-                f"Clerk auth status: {request_state.status}, "
-                f"reason: {request_state.reason}, "
-                f"message: {request_state.message}"
-            )
+            logger.info(f"Clerk auth status: {request_state.status}")
 
             # Check if authentication was successful
             if request_state.status != AuthStatus.SIGNED_IN:

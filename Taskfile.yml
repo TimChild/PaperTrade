@@ -90,9 +90,6 @@ tasks:
     deps:
       - docker:up:all  # Ensure full stack is running
     env:
-      # Enable E2E test mode - uses static test tokens instead of real Clerk auth
-      E2E_TEST_MODE: "true"
-      VITE_E2E_TEST_MODE: "true"
       # Load environment variables from .env file in repository root
       # These are required for Clerk authentication in E2E tests
       CLERK_SECRET_KEY:
@@ -103,10 +100,8 @@ tasks:
         sh: grep "^VITE_CLERK_PUBLISHABLE_KEY=" ../.env | cut -d= -f2- || echo ""
       E2E_CLERK_USER_EMAIL:
         sh: grep "^E2E_CLERK_USER_EMAIL=" ../.env | cut -d= -f2- || echo ""
-      E2E_CLERK_USER_ID:
-        sh: grep "^E2E_CLERK_USER_ID=" ../.env | cut -d= -f2- || echo "user_e2e_test"
     cmds:
-      - echo "Running E2E tests in test mode (using static auth tokens)..."
+      - echo "Running E2E tests..."
       - npm run test:e2e
     preconditions:
       - sh: test -f package.json
@@ -118,9 +113,6 @@ tasks:
     deps:
       - docker:up:all  # Ensure full stack is running
     env:
-      # Enable E2E test mode - uses static test tokens instead of real Clerk auth
-      E2E_TEST_MODE: "true"
-      VITE_E2E_TEST_MODE: "true"
       # Load environment variables from .env file in repository root
       CLERK_SECRET_KEY:
         sh: grep "^CLERK_SECRET_KEY=" ../.env | cut -d= -f2- || echo ""
@@ -130,10 +122,8 @@ tasks:
         sh: grep "^VITE_CLERK_PUBLISHABLE_KEY=" ../.env | cut -d= -f2- || echo ""
       E2E_CLERK_USER_EMAIL:
         sh: grep "^E2E_CLERK_USER_EMAIL=" ../.env | cut -d= -f2- || echo ""
-      E2E_CLERK_USER_ID:
-        sh: grep "^E2E_CLERK_USER_ID=" ../.env | cut -d= -f2- || echo "user_e2e_test"
     cmds:
-      - echo "Running E2E tests with UI in test mode (using static auth tokens)..."
+      - echo "Running E2E tests with UI..."
       - npm run test:e2e:ui
     preconditions:
       - sh: test -f package.json

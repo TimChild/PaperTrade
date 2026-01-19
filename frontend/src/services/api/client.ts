@@ -11,12 +11,6 @@ const API_BASE_URL =
     ? '/api/v1'
     : 'http://localhost:8000/api/v1')
 
-// E2E test mode detection
-// In E2E tests, we use a static token that the backend's InMemoryAuthAdapter
-// will accept in permissive mode
-const isE2EMode = import.meta.env.VITE_E2E_TEST_MODE === 'true'
-const E2E_TEST_TOKEN = 'e2e-test-token'
-
 // Global token setter for Clerk authentication
 // This will be called from AuthProvider which has access to Clerk's useAuth
 let tokenGetter: (() => Promise<string | null>) | null = null
@@ -36,45 +30,16 @@ export const apiClient = axios.create({
 // Request interceptor to add authentication token
 apiClient.interceptors.request.use(
   async (config) => {
-    // In E2E test mode, always use a static test token
-    if (isE2EMode) {
-      config.headers.Authorization = `Bearer ${E2E_TEST_TOKEN}`
-      console.log(`[API Client] E2E mode: Using static test token for ${config.method?.toUpperCase()} ${config.url}`)
-      return config
-    }
-
     // Get token from Clerk if tokenGetter is set
     if (tokenGetter) {
       try {
         const token = await tokenGetter()
         if (token) {
           config.headers.Authorization = `Bearer ${token}`
-          // Log token retrieval success for debugging (first/last 10 chars only)
-          const tokenPreview = token.length > 20 
-            ? `${token.substring(0, 10)}...${token.substring(token.length - 10)}`
-            : '[short-token]'
-          console.log(`[API Client] Token retrieved for ${config.method?.toUpperCase()} ${config.url}: ${tokenPreview}`)
-        } else {
-          console.error(
-            `[API Client] CRITICAL: No token available for ${config.method?.toUpperCase()} ${config.url}. ` +
-            'This will result in 401 Unauthorized. ' +
-            'Check that Clerk is properly initialized and user is signed in.'
-          )
-          // Don't set Authorization header - this will cause 401
-          // which is better than sending an invalid token
         }
       } catch (error) {
-        console.error(
-          `[API Client] CRITICAL: Failed to get auth token for ${config.method?.toUpperCase()} ${config.url}:`,
-          error
-        )
-        // Don't set Authorization header
+        console.error('Failed to get auth token:', error)
       }
-    } else {
-      console.warn(
-        `[API Client] WARNING: No tokenGetter set for ${config.method?.toUpperCase()} ${config.url}. ` +
-        'Authentication will fail. Check that AuthProvider is mounted.'
-      )
     }
     return config
   },
