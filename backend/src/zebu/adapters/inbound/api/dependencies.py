@@ -234,6 +234,9 @@ async def get_market_data(session: SessionDep) -> MarketDataPort:
     The core adapter infrastructure is created once and reused, but the price
     repository is created per-request using the provided session.
 
+    In E2E test mode, the market hours check is skipped to allow tests to
+    run on weekends/holidays without historical data seeded.
+
     Args:
         session: Database session from dependency injection
 
@@ -256,6 +259,9 @@ async def get_market_data(session: SessionDep) -> MarketDataPort:
     # Get rate limits from environment or use defaults
     calls_per_minute = int(os.getenv("ALPHA_VANTAGE_RATE_LIMIT_PER_MIN", "5"))
     calls_per_day = int(os.getenv("ALPHA_VANTAGE_RATE_LIMIT_PER_DAY", "500"))
+
+    # Check for E2E test mode to skip market hours check
+    e2e_mode = os.getenv("E2E_TEST_MODE", "").lower() in ("true", "1", "yes")
 
     # Create Redis client (singleton)
     if _redis_client is None:
@@ -294,6 +300,7 @@ async def get_market_data(session: SessionDep) -> MarketDataPort:
         http_client=_http_client,
         api_key=alpha_vantage_api_key,
         price_repository=price_repository,
+        skip_market_hours_check=e2e_mode,  # Skip check in E2E mode
     )
 
 
