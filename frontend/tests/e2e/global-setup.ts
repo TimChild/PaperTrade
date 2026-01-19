@@ -4,11 +4,25 @@ import axios from 'axios'
  * Global setup for Playwright E2E tests.
  * This runs once before all tests.
  *
- * Creates a Clerk testing token using direct API call with axios.
+ * In E2E test mode (E2E_TEST_MODE=true), skips Clerk token creation and uses
+ * static test tokens instead. Otherwise, creates a Clerk testing token using
+ * direct API call with axios.
+ *
  * NOTE: Using axios instead of @clerk/backend SDK due to compatibility issues
  * with the SDK's testing token endpoint in version 2.29.0.
  */
 export default async function globalSetup() {
+  // Check if running in E2E test mode (static tokens)
+  const e2eMode =
+    process.env.E2E_TEST_MODE?.toLowerCase() === 'true' ||
+    process.env.VITE_E2E_TEST_MODE?.toLowerCase() === 'true'
+
+  if (e2eMode) {
+    console.log('E2E_TEST_MODE enabled - skipping Clerk token setup (using static tokens)')
+    console.log('Tests will use static "e2e-test-token" for authentication')
+    return
+  }
+
   // Clerk requires CLERK_PUBLISHABLE_KEY (not VITE_CLERK_PUBLISHABLE_KEY)
   // Set it from VITE_CLERK_PUBLISHABLE_KEY if not already set
   if (!process.env.CLERK_PUBLISHABLE_KEY && process.env.VITE_CLERK_PUBLISHABLE_KEY) {
