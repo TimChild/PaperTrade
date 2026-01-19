@@ -18,6 +18,17 @@
 | Infrastructure | ✅ Production-Ready | Docker, CI/CD, E2E testing |
 
 ### Recent Work (Jan 18, 2026)
+- ✅ **Weekend/Holiday Price Handling** (PR #158, Task #162):
+  - **Problem Solved**: Users got "Ticker not found" errors on weekends/holidays
+  - **Solution**: Intelligent price fetching with weekend awareness + API fallback
+  - **Weekend Detection**: Checks `MarketCalendar.is_trading_day()` in price fetch flow
+  - **Cache Priority**: Returns cached price from last trading day when available (2hr TTL)
+  - **API Fallback**: Falls back to API if no cache (handles first-time weekend visitors)
+  - **E2E Tests Fixed**: Tests now work on weekends with empty database
+  - **Implementation**: Clean architecture, no test-specific code paths
+  - **Testing**: 510 new weekend tests, 56 total market data adapter tests
+  - **Quality**: 682 backend tests passing, 84% coverage, 0 lint issues
+
 - ✅ **Cache Architecture Refactor** (PR #150):
   - **Strategic Decision**: Per-day caching over subset matching (evaluation: 9.5/10 vs 6.5/10)
   - **Architecture Win**: Redis model now matches database model (per-day granularity)
