@@ -916,8 +916,16 @@ class AlphaVantageAdapter:
         # Market closes at 4:00 PM ET = 21:00 UTC
         market_close_today = now.replace(hour=21, minute=0, second=0, microsecond=0)
 
-        # If requesting data through today and market hasn't closed yet
+        # If requesting data through today or future dates
         if end.date() >= now.date():
+            # First, adjust end date if it's a weekend/non-trading day
+            # This handles requests like "give me data through this Saturday"
+            # where the last available data is Friday
+            if not MarketCalendar.is_trading_day(end.date()):
+                expected_end = self._get_last_trading_day(end)
+            else:
+                expected_end = end
+
             if now < market_close_today:
                 # Market hasn't closed today yet, so we can't have today's data
                 # Check if we have data through last trading day
@@ -944,11 +952,13 @@ class AlphaVantageAdapter:
                 # Check if today is a trading day
                 if now.date().weekday() < 5:  # Weekday
                     # We should have today's data (with 1-day tolerance)
-                    if last_cached < end - timedelta(days=1):
+                    # Use expected_end which accounts for weekend end dates
+                    if last_cached < expected_end - timedelta(days=1):
                         logger.debug(
                             "Cache incomplete: missing today's data (market closed)",
                             last_cached=last_cached.date().isoformat(),
                             requested_end=end.date().isoformat(),
+                            expected_end=expected_end.date().isoformat(),
                         )
                         return False
                 else:
