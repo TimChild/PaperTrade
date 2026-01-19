@@ -366,13 +366,27 @@ class TestHistoricalRequestsWithWeekendEndDates:
 
         # Cache has data through Friday (Jan 30 - last trading day before Sat Jan 31)
         cached_data = [
-            create_price_point(ticker, datetime(2026, 1, 20, 21, 0, 0, tzinfo=UTC)),  # Tue
-            create_price_point(ticker, datetime(2026, 1, 21, 21, 0, 0, tzinfo=UTC)),  # Wed
-            create_price_point(ticker, datetime(2026, 1, 22, 21, 0, 0, tzinfo=UTC)),  # Thu
-            create_price_point(ticker, datetime(2026, 1, 23, 21, 0, 0, tzinfo=UTC)),  # Fri
-            create_price_point(ticker, datetime(2026, 1, 27, 21, 0, 0, tzinfo=UTC)),  # Tue
-            create_price_point(ticker, datetime(2026, 1, 28, 21, 0, 0, tzinfo=UTC)),  # Wed
-            create_price_point(ticker, datetime(2026, 1, 29, 21, 0, 0, tzinfo=UTC)),  # Thu
+            create_price_point(
+                ticker, datetime(2026, 1, 20, 21, 0, 0, tzinfo=UTC)
+            ),  # Tue
+            create_price_point(
+                ticker, datetime(2026, 1, 21, 21, 0, 0, tzinfo=UTC)
+            ),  # Wed
+            create_price_point(
+                ticker, datetime(2026, 1, 22, 21, 0, 0, tzinfo=UTC)
+            ),  # Thu
+            create_price_point(
+                ticker, datetime(2026, 1, 23, 21, 0, 0, tzinfo=UTC)
+            ),  # Fri
+            create_price_point(
+                ticker, datetime(2026, 1, 27, 21, 0, 0, tzinfo=UTC)
+            ),  # Tue
+            create_price_point(
+                ticker, datetime(2026, 1, 28, 21, 0, 0, tzinfo=UTC)
+            ),  # Wed
+            create_price_point(
+                ticker, datetime(2026, 1, 29, 21, 0, 0, tzinfo=UTC)
+            ),  # Thu
             create_price_point(
                 ticker, datetime(2026, 1, 30, 21, 0, 0, tzinfo=UTC)
             ),  # Fri (last trading day before weekend)
@@ -395,13 +409,27 @@ class TestHistoricalRequestsWithWeekendEndDates:
 
         # Cache has data through Friday (Jan 30 - last trading day before Sun Feb 1)
         cached_data = [
-            create_price_point(ticker, datetime(2026, 1, 20, 21, 0, 0, tzinfo=UTC)),  # Tue
-            create_price_point(ticker, datetime(2026, 1, 21, 21, 0, 0, tzinfo=UTC)),  # Wed
-            create_price_point(ticker, datetime(2026, 1, 22, 21, 0, 0, tzinfo=UTC)),  # Thu
-            create_price_point(ticker, datetime(2026, 1, 23, 21, 0, 0, tzinfo=UTC)),  # Fri
-            create_price_point(ticker, datetime(2026, 1, 27, 21, 0, 0, tzinfo=UTC)),  # Tue
-            create_price_point(ticker, datetime(2026, 1, 28, 21, 0, 0, tzinfo=UTC)),  # Wed
-            create_price_point(ticker, datetime(2026, 1, 29, 21, 0, 0, tzinfo=UTC)),  # Thu
+            create_price_point(
+                ticker, datetime(2026, 1, 20, 21, 0, 0, tzinfo=UTC)
+            ),  # Tue
+            create_price_point(
+                ticker, datetime(2026, 1, 21, 21, 0, 0, tzinfo=UTC)
+            ),  # Wed
+            create_price_point(
+                ticker, datetime(2026, 1, 22, 21, 0, 0, tzinfo=UTC)
+            ),  # Thu
+            create_price_point(
+                ticker, datetime(2026, 1, 23, 21, 0, 0, tzinfo=UTC)
+            ),  # Fri
+            create_price_point(
+                ticker, datetime(2026, 1, 27, 21, 0, 0, tzinfo=UTC)
+            ),  # Tue
+            create_price_point(
+                ticker, datetime(2026, 1, 28, 21, 0, 0, tzinfo=UTC)
+            ),  # Wed
+            create_price_point(
+                ticker, datetime(2026, 1, 29, 21, 0, 0, tzinfo=UTC)
+            ),  # Thu
             create_price_point(
                 ticker, datetime(2026, 1, 30, 21, 0, 0, tzinfo=UTC)
             ),  # Fri (last trading day before weekend)
