@@ -62,7 +62,7 @@ export function PortfolioCard({
       onDelete?.(portfolio.id)
       setShowDeleteConfirm(false)
     } catch (error) {
-      toasts.portfolioDeletionError()
+      toasts.portfolioDeleteError()
       console.error('Delete portfolio error:', error)
     }
   }

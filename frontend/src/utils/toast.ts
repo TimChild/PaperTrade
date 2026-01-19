@@ -74,7 +74,7 @@ export const toasts = {
   /**
    * Show error toast for portfolio deletion failure
    */
-  portfolioDeletionError: (): void => {
+  portfolioDeleteError: (): void => {
     toast.error('Failed to delete portfolio. Please try again.')
   },
 }

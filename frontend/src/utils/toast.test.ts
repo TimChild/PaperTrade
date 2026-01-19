@@ -114,9 +114,9 @@ describe('toast utilities', () => {
     })
   })
 
-  describe('portfolioDeletionError', () => {
+  describe('portfolioDeleteError', () => {
     it('shows error toast for deletion failure', () => {
-      toasts.portfolioDeletionError()
+      toasts.portfolioDeleteError()
 
       expect(toast.error).toHaveBeenCalledWith(
         'Failed to delete portfolio. Please try again.'
