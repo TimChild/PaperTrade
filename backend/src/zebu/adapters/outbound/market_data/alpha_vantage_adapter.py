@@ -89,6 +89,7 @@ class AlphaVantageAdapter:
         timeout: float = 5.0,
         max_retries: int = 3,
         price_repository: PriceRepository | None = None,
+        skip_market_hours_check: bool = False,
     ) -> None:
         """Initialize Alpha Vantage adapter.
 
@@ -101,6 +102,7 @@ class AlphaVantageAdapter:
             timeout: Request timeout in seconds (default: 5.0)
             max_retries: Maximum retry attempts (default: 3)
             price_repository: Optional price repository for Tier 2 caching
+            skip_market_hours_check: Skip weekend/holiday checks (for E2E tests)
         """
         self.rate_limiter = rate_limiter
         self.price_cache = price_cache
@@ -110,6 +112,7 @@ class AlphaVantageAdapter:
         self.timeout = timeout
         self.max_retries = max_retries
         self.price_repository = price_repository
+        self.skip_market_hours_check = skip_market_hours_check
 
     async def get_current_price(self, ticker: Ticker) -> PricePoint:
         """Get the most recent available price for a ticker.
@@ -152,8 +155,9 @@ class AlphaVantageAdapter:
                 return db_price.with_source("database")
 
         # Weekend/Holiday Check - Don't fetch from API if markets are closed
+        # Skip this check in E2E test mode
         now = datetime.now(UTC)
-        if not MarketCalendar.is_trading_day(now.date()):
+        if not self.skip_market_hours_check and not MarketCalendar.is_trading_day(now.date()):
             # Markets are closed - get last trading day's cached price
             last_trading_day = self._get_last_trading_day(now)
 
@@ -251,8 +255,11 @@ class AlphaVantageAdapter:
             return result
 
         # Check if today is a trading day
+        # Skip this check in E2E test mode
         now = datetime.now(UTC)
-        is_trading_day = MarketCalendar.is_trading_day(now.date())
+        is_trading_day = (
+            self.skip_market_hours_check or MarketCalendar.is_trading_day(now.date())
+        )
         last_trading_day = None if is_trading_day else self._get_last_trading_day(now)
 
         if not is_trading_day:

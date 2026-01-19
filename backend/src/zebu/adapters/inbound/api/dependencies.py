@@ -257,6 +257,9 @@ async def get_market_data(session: SessionDep) -> MarketDataPort:
     calls_per_minute = int(os.getenv("ALPHA_VANTAGE_RATE_LIMIT_PER_MIN", "5"))
     calls_per_day = int(os.getenv("ALPHA_VANTAGE_RATE_LIMIT_PER_DAY", "500"))
 
+    # Check for E2E test mode (skip market hours check for E2E tests)
+    e2e_mode = os.getenv("E2E_TEST_MODE", "").lower() in ("true", "1", "yes")
+
     # Create Redis client (singleton)
     if _redis_client is None:
         _redis_client = await Redis.from_url(
@@ -294,6 +297,7 @@ async def get_market_data(session: SessionDep) -> MarketDataPort:
         http_client=_http_client,
         api_key=alpha_vantage_api_key,
         price_repository=price_repository,
+        skip_market_hours_check=e2e_mode,
     )
 
 

@@ -9,6 +9,15 @@ import axios from 'axios'
  * with the SDK's testing token endpoint in version 2.29.0.
  */
 export default async function globalSetup() {
+  // Check if E2E test mode is enabled
+  const e2eMode = process.env.E2E_TEST_MODE?.toLowerCase() === 'true' ||
+                  process.env.VITE_E2E_TEST_MODE?.toLowerCase() === 'true'
+  
+  if (e2eMode) {
+    console.log('E2E_TEST_MODE enabled - skipping Clerk setup (using static tokens)')
+    return
+  }
+
   // Clerk requires CLERK_PUBLISHABLE_KEY (not VITE_CLERK_PUBLISHABLE_KEY)
   // Set it from VITE_CLERK_PUBLISHABLE_KEY if not already set
   if (!process.env.CLERK_PUBLISHABLE_KEY && process.env.VITE_CLERK_PUBLISHABLE_KEY) {
