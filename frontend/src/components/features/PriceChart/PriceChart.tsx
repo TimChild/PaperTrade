@@ -26,6 +26,15 @@ import type { ApiError } from '@/types/errors'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { isApiError } from '@/utils/priceErrors'
 
+// Trade marker colors
+const TRADE_COLORS = {
+  BUY: '#10b981', // green-500
+  SELL: '#ef4444', // red-500
+} as const
+
+// Scatter plot configuration
+const SCATTER_DOT_SIZE = 64 // Size for scatter plot dots (Recharts ZAxis range)
+
 interface PriceChartProps {
   ticker: string
   initialTimeRange?: TimeRange
@@ -65,7 +74,7 @@ export function PriceChart({
 }: PriceChartProps): React.JSX.Element {
   const [timeRange, setTimeRange] = useState<TimeRange>(initialTimeRange)
   const { data, isLoading, error, refetch } = usePriceHistory(ticker, timeRange)
-  
+
   // Fetch transactions if portfolioId is provided
   const { data: transactionsData } = useTransactions(
     portfolioId || '',
@@ -75,7 +84,7 @@ export function PriceChart({
   // Filter and map transactions to trade markers
   const tradeMarkers = useMemo(() => {
     if (!transactionsData || !portfolioId) return []
-    
+
     return transactionsData.transactions
       .filter(
         (t) =>
@@ -84,13 +93,15 @@ export function PriceChart({
           t.price_per_share !== null &&
           t.price_per_share !== undefined
       )
-      .map((t): TradeMarker => ({
-        timestamp: t.timestamp,
-        price: parseFloat(t.price_per_share!),
-        action: t.transaction_type as 'BUY' | 'SELL',
-        quantity: t.quantity || '0',
-        fullDate: new Date(t.timestamp).toLocaleString(),
-      }))
+      .map(
+        (t): TradeMarker => ({
+          timestamp: t.timestamp,
+          price: parseFloat(t.price_per_share!),
+          action: t.transaction_type as 'BUY' | 'SELL',
+          quantity: t.quantity || '0',
+          fullDate: new Date(t.timestamp).toLocaleString(),
+        })
+      )
   }, [transactionsData, portfolioId, ticker])
 
   // Loading state
@@ -265,7 +276,7 @@ export function PriceChart({
               className="sm:text-xs"
               tickFormatter={(value) => `$${value.toFixed(0)}`}
             />
-            <ZAxis range={[64, 64]} />
+            <ZAxis range={[SCATTER_DOT_SIZE, SCATTER_DOT_SIZE]} />
             <Tooltip
               contentStyle={{
                 backgroundColor: 'hsl(var(--background))',
@@ -297,13 +308,15 @@ export function PriceChart({
               <Scatter
                 name="Trades"
                 data={formattedTradeMarkers}
-                fill="#10b981"
+                fill={TRADE_COLORS.BUY}
                 shape={(props: unknown) => {
+                  // Recharts passes unknown props, so we need to cast
+                  // Safe because we control the data structure
                   const { cx, cy, payload } = props as ScatterShapeProps
                   const isBuy = payload.action === 'BUY'
-                  const color = isBuy ? '#10b981' : '#ef4444'
+                  const color = isBuy ? TRADE_COLORS.BUY : TRADE_COLORS.SELL
                   const size = 8
-                  
+
                   return (
                     <g>
                       <circle
