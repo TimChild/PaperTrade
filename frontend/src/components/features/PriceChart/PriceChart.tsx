@@ -52,7 +52,7 @@ export function PriceChart({
 }: PriceChartProps): React.JSX.Element {
   const [timeRange, setTimeRange] = useState<TimeRange>(initialTimeRange)
   const { data, isLoading, error, refetch } = usePriceHistory(ticker, timeRange)
-  
+
   // Fetch transactions only if portfolioId is provided
   const { data: transactionsData } = useTransactions(portfolioId || '')
 
@@ -257,16 +257,7 @@ export function PriceChart({
                 borderRadius: '8px',
                 color: 'hsl(var(--foreground))',
               }}
-              formatter={(value: number | undefined, name: string, props: { payload?: TradeMarker | ChartDataPoint }) => {
-                // Check if this is a trade marker
-                if (props.payload && 'action' in props.payload) {
-                  const marker = props.payload as TradeMarker
-                  return [
-                    `${marker.action} ${marker.quantity} ${marker.quantity === 1 ? 'share' : 'shares'} at $${marker.price.toFixed(2)}`,
-                    'Trade',
-                  ]
-                }
-                // Regular price point
+              formatter={(value: number | undefined) => {
                 return value !== undefined
                   ? [`$${value.toFixed(2)}`, 'Price']
                   : ['N/A', 'Price']
@@ -291,16 +282,18 @@ export function PriceChart({
                 name="Trades"
                 data={tradeMarkers}
                 fill="#10b981"
-                shape={(props: { cx?: number; cy?: number; payload?: TradeMarker }) => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                shape={(props: any) => {
+                  // Recharts ScatterCustomizedShape type is complex, using any for simplicity
                   const { cx, cy, payload } = props
                   if (cx === undefined || cy === undefined || !payload) {
-                    return null
+                    return <></>
                   }
-                  
+
                   const isBuy = payload.action === 'BUY'
                   const color = isBuy ? '#10b981' : '#ef4444'
                   const size = 8
-                  
+
                   if (isBuy) {
                     // Circle for BUY
                     return (
