@@ -6,16 +6,16 @@ Minor improvements, tech debt, and enhancements that don't block main developmen
 
 ## Active Backlog
 
-### 🔴 Critical Issues
+### � In Progress
 
-1. **Task 161: Portfolio Creation Timeout** - CRITICAL
-   - **Problem**: POST /api/v1/portfolios times out (>10s), never reaches backend successfully
-   - **Impact**: All E2E tests fail (15/22 tests), portfolio creation broken
-   - **Evidence**: Backend logs show "Clerk auth status: AuthStatus.SIGNED_OUT" for POST requests
-   - **Scope**: Issue exists on main branch, not related to recent changes
-   - **Status**: Investigating - created agent_tasks/161_investigate-portfolio-creation-timeout.md
-   - **Note**: GET requests work fine (<1s), suggests authentication issue specific to POST
-   - **Found**: E2E testing during weekend price fix validation (2026-01-18)
+1. **Task 162: Weekend/Holiday Price Handling** - HIGH PRIORITY
+   - **Problem**: Users get "Ticker not found" errors on weekends instead of cached prices
+   - **Solution**: Backend serves last trading day's cached prices when markets closed
+   - **Approach**: Date-aware E2E tests (test real behavior, no test-specific code paths)
+   - **Status**: In progress - agent_tasks/162_weekend-price-handling-clean.md
+   - **PR**: https://github.com/TimChild/PaperTrade/pull/158
+   - **Note**: Clean implementation without test bypasses or mock authentication
+   - **Started**: 2026-01-18
 
 ## Monitoring & Observability
 
