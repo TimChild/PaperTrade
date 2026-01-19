@@ -364,22 +364,35 @@ class TestHistoricalRequestsWithWeekendEndDates:
         start = datetime(2026, 1, 20, 0, 0, 0, tzinfo=UTC)
         end = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)  # Saturday
 
-        # Cache has data through Friday (Jan 30 - day before Saturday)
+        # Cache has data through Friday (Jan 30 - last trading day before Sat Jan 31)
         cached_data = [
-            create_price_point(ticker, datetime(2026, 1, 20, 21, 0, 0, tzinfo=UTC)),
-            create_price_point(ticker, datetime(2026, 1, 21, 21, 0, 0, tzinfo=UTC)),
-            create_price_point(ticker, datetime(2026, 1, 22, 21, 0, 0, tzinfo=UTC)),
-            create_price_point(ticker, datetime(2026, 1, 23, 21, 0, 0, tzinfo=UTC)),
-            create_price_point(ticker, datetime(2026, 1, 24, 21, 0, 0, tzinfo=UTC)),
-            create_price_point(ticker, datetime(2026, 1, 27, 21, 0, 0, tzinfo=UTC)),
-            create_price_point(ticker, datetime(2026, 1, 28, 21, 0, 0, tzinfo=UTC)),
-            create_price_point(ticker, datetime(2026, 1, 29, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(
+                ticker, datetime(2026, 1, 20, 21, 0, 0, tzinfo=UTC)
+            ),  # Tue
+            create_price_point(
+                ticker, datetime(2026, 1, 21, 21, 0, 0, tzinfo=UTC)
+            ),  # Wed
+            create_price_point(
+                ticker, datetime(2026, 1, 22, 21, 0, 0, tzinfo=UTC)
+            ),  # Thu
+            create_price_point(
+                ticker, datetime(2026, 1, 23, 21, 0, 0, tzinfo=UTC)
+            ),  # Fri
+            create_price_point(
+                ticker, datetime(2026, 1, 27, 21, 0, 0, tzinfo=UTC)
+            ),  # Tue
+            create_price_point(
+                ticker, datetime(2026, 1, 28, 21, 0, 0, tzinfo=UTC)
+            ),  # Wed
+            create_price_point(
+                ticker, datetime(2026, 1, 29, 21, 0, 0, tzinfo=UTC)
+            ),  # Thu
             create_price_point(
                 ticker, datetime(2026, 1, 30, 21, 0, 0, tzinfo=UTC)
-            ),  # Friday (last trading day before Saturday)
+            ),  # Fri (last trading day before weekend)
         ]
 
-        # Should be complete (Friday is last trading day before Saturday)
+        # Should be complete (Friday Jan 30 is last trading day before Saturday Jan 31)
         result = alpha_vantage_adapter._is_cache_complete(cached_data, start, end)
 
         assert result is True
@@ -394,22 +407,35 @@ class TestHistoricalRequestsWithWeekendEndDates:
         start = datetime(2026, 1, 20, 0, 0, 0, tzinfo=UTC)
         end = datetime(2026, 2, 1, 23, 59, 59, tzinfo=UTC)  # Sunday
 
-        # Cache has data through Friday (Jan 30 - last trading day before Sunday)
+        # Cache has data through Friday (Jan 30 - last trading day before Sun Feb 1)
         cached_data = [
-            create_price_point(ticker, datetime(2026, 1, 20, 21, 0, 0, tzinfo=UTC)),
-            create_price_point(ticker, datetime(2026, 1, 21, 21, 0, 0, tzinfo=UTC)),
-            create_price_point(ticker, datetime(2026, 1, 22, 21, 0, 0, tzinfo=UTC)),
-            create_price_point(ticker, datetime(2026, 1, 23, 21, 0, 0, tzinfo=UTC)),
-            create_price_point(ticker, datetime(2026, 1, 24, 21, 0, 0, tzinfo=UTC)),
-            create_price_point(ticker, datetime(2026, 1, 27, 21, 0, 0, tzinfo=UTC)),
-            create_price_point(ticker, datetime(2026, 1, 28, 21, 0, 0, tzinfo=UTC)),
-            create_price_point(ticker, datetime(2026, 1, 29, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(
+                ticker, datetime(2026, 1, 20, 21, 0, 0, tzinfo=UTC)
+            ),  # Tue
+            create_price_point(
+                ticker, datetime(2026, 1, 21, 21, 0, 0, tzinfo=UTC)
+            ),  # Wed
+            create_price_point(
+                ticker, datetime(2026, 1, 22, 21, 0, 0, tzinfo=UTC)
+            ),  # Thu
+            create_price_point(
+                ticker, datetime(2026, 1, 23, 21, 0, 0, tzinfo=UTC)
+            ),  # Fri
+            create_price_point(
+                ticker, datetime(2026, 1, 27, 21, 0, 0, tzinfo=UTC)
+            ),  # Tue
+            create_price_point(
+                ticker, datetime(2026, 1, 28, 21, 0, 0, tzinfo=UTC)
+            ),  # Wed
+            create_price_point(
+                ticker, datetime(2026, 1, 29, 21, 0, 0, tzinfo=UTC)
+            ),  # Thu
             create_price_point(
                 ticker, datetime(2026, 1, 30, 21, 0, 0, tzinfo=UTC)
-            ),  # Friday (last trading day before Sunday)
+            ),  # Fri (last trading day before weekend)
         ]
 
-        # Should be complete (Friday is last trading day before Sunday)
+        # Should be complete (Friday Jan 30 is last trading day before Sunday Feb 1)
         result = alpha_vantage_adapter._is_cache_complete(cached_data, start, end)
 
         assert result is True
