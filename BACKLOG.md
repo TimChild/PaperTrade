@@ -110,7 +110,7 @@ These improve the analytics/insights capabilities:
 
 1. **Stacked Area Chart - Portfolio Composition Over Time** - ~4-6 hours
    - **Problem**: Current analytics show total value over time (line chart) and current composition (pie chart), but not composition over time
-   - **Current State**: 
+   - **Current State**:
      - ✅ Backend: Daily snapshots already capture `total_value`, `cash_balance`, `holdings_value` per day
      - ✅ Backend: `PerformanceChart` shows total portfolio value over time
      - ✅ Backend: `CompositionChart` shows current asset allocation (pie chart)
@@ -130,7 +130,7 @@ These improve the analytics/insights capabilities:
    - **Note**: This is a bigger change requiring schema migration
 
 2. **Calculate Portfolio Value Over Time in Backend** - ✅ **ALREADY IMPLEMENTED**
-   - **Current State**: 
+   - **Current State**:
      - ✅ Backend has `PortfolioSnapshot` entity (daily snapshots)
      - ✅ Daily job runs at midnight UTC (`calculate_daily_snapshots`)
      - ✅ Snapshots stored in PostgreSQL
@@ -180,7 +180,7 @@ These improve the analytics/insights capabilities:
 1. **Admin Authentication TODOs** - ~2-4 hours
    - **Found**: 6 TODO comments in `analytics.py` endpoints
    - **Issue**: Analytics endpoints marked "Admin only" but no auth check implemented
-   - **Endpoints**: 
+   - **Endpoints**:
      - `/analytics/backtest` - Admin-only backtesting
      - `/analytics/recalculate/{portfolio_id}` - Manual snapshot recalculation
      - `/analytics/recalculate-all` - Batch recalculation

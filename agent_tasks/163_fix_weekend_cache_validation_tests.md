@@ -1,7 +1,7 @@
 # Task 163: Fix Weekend Cache Validation Tests
 
-**Agent**: backend-swe  
-**Priority**: HIGH (blocking CI)  
+**Agent**: backend-swe
+**Priority**: HIGH (blocking CI)
 **Estimated Effort**: 30-60 minutes
 
 ## Objective
