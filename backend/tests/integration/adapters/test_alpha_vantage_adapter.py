@@ -229,11 +229,12 @@ class TestAlphaVantageAdapterCacheHit:
         )
 
         # Patch datetime in both adapter and price_point modules
-        with patch(
-            "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
-        ) as mock_datetime_adapter, patch(
-            "zebu.application.dtos.price_point.datetime"
-        ) as mock_datetime_price:
+        with (
+            patch(
+                "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
+            ) as mock_datetime_adapter,
+            patch("zebu.application.dtos.price_point.datetime") as mock_datetime_price,
+        ):
             mock_datetime_adapter.now.return_value = mock_now
             mock_datetime_adapter.side_effect = lambda *args, **kwargs: datetime(
                 *args, **kwargs
@@ -258,7 +259,9 @@ class TestAlphaVantageAdapterCacheHit:
 
             # Second call - hits cache (no new HTTP request)
             price2 = await adapter.get_current_price(Ticker("AAPL"))
-            assert price2.source == "cache"  # Returned value has source changed to "cache"
+            assert (
+                price2.source == "cache"
+            )  # Returned value has source changed to "cache"
             assert price2.ticker == price1.ticker
             assert price2.price == price1.price
             # Verify no additional API calls were made
@@ -272,6 +275,7 @@ class TestAlphaVantageAdapterCacheHit:
     ) -> None:
         """Test that stale cache triggers API refresh."""
         from unittest.mock import patch
+
         from zebu.application.dtos.price_point import PricePoint
         from zebu.domain.value_objects.money import Money
 
@@ -328,6 +332,7 @@ class TestAlphaVantageAdapterRateLimiting:
     ) -> None:
         """Test that rate limiting serves stale cached data when available."""
         from unittest.mock import patch
+
         from zebu.application.dtos.price_point import PricePoint
         from zebu.domain.value_objects.money import Money
 

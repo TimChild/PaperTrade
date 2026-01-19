@@ -312,7 +312,7 @@ class AlphaVantageAdapter:
             # Alpha Vantage returns last trading day's close on weekends anyway
             if uncached_tickers:
                 logger.info(
-                    "Markets closed but no cached prices for some tickers, will fetch from API",
+                    "Markets closed but no cached prices, will fetch from API",
                     uncached_tickers=[t.symbol for t in uncached_tickers],
                     current_date=now.date(),
                 )

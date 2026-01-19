@@ -14,7 +14,6 @@ from zebu.adapters.outbound.market_data.alpha_vantage_adapter import (
     AlphaVantageAdapter,
 )
 from zebu.application.dtos.price_point import PricePoint
-from zebu.application.exceptions import MarketDataUnavailableError
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.ticker import Ticker
 
@@ -25,9 +24,7 @@ def mock_rate_limiter() -> MagicMock:
     limiter = MagicMock()
     limiter.can_make_request = AsyncMock(return_value=True)
     limiter.consume_token = AsyncMock(return_value=True)
-    limiter.get_remaining_tokens = AsyncMock(
-        return_value={"minute": 5, "day": 500}
-    )
+    limiter.get_remaining_tokens = AsyncMock(return_value={"minute": 5, "day": 500})
     return limiter
 
 
