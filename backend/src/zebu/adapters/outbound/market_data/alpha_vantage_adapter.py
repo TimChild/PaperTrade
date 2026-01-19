@@ -916,8 +916,10 @@ class AlphaVantageAdapter:
         # Market closes at 4:00 PM ET = 21:00 UTC
         market_close_today = now.replace(hour=21, minute=0, second=0, microsecond=0)
 
-        # If requesting data through today and market hasn't closed yet
+        # If requesting data through today or future dates
         if end.date() >= now.date():
+            # For future dates, we can't have data beyond today
+            # So check if we have data through last available trading day
             if now < market_close_today:
                 # Market hasn't closed today yet, so we can't have today's data
                 # Check if we have data through last trading day

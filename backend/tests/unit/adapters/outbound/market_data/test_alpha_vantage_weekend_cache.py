@@ -364,16 +364,19 @@ class TestHistoricalRequestsWithWeekendEndDates:
         start = datetime(2026, 1, 20, 0, 0, 0, tzinfo=UTC)
         end = datetime(2026, 1, 31, 23, 59, 59, tzinfo=UTC)  # Saturday
 
-        # Cache has data through Friday (Jan 17)
+        # Cache has data through Friday (Jan 30 - day before Saturday)
         cached_data = [
-            create_price_point(ticker, datetime(2026, 1, 10, 21, 0, 0, tzinfo=UTC)),
-            create_price_point(ticker, datetime(2026, 1, 13, 21, 0, 0, tzinfo=UTC)),
-            create_price_point(ticker, datetime(2026, 1, 14, 21, 0, 0, tzinfo=UTC)),
-            create_price_point(ticker, datetime(2026, 1, 15, 21, 0, 0, tzinfo=UTC)),
-            create_price_point(ticker, datetime(2026, 1, 16, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 20, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 21, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 22, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 23, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 24, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 27, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 28, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 29, 21, 0, 0, tzinfo=UTC)),
             create_price_point(
-                ticker, datetime(2026, 1, 17, 21, 0, 0, tzinfo=UTC)
-            ),  # Friday
+                ticker, datetime(2026, 1, 30, 21, 0, 0, tzinfo=UTC)
+            ),  # Friday (last trading day before Saturday)
         ]
 
         # Should be complete (Friday is last trading day before Saturday)
@@ -391,16 +394,19 @@ class TestHistoricalRequestsWithWeekendEndDates:
         start = datetime(2026, 1, 20, 0, 0, 0, tzinfo=UTC)
         end = datetime(2026, 2, 1, 23, 59, 59, tzinfo=UTC)  # Sunday
 
-        # Cache has data through Friday (Jan 17)
+        # Cache has data through Friday (Jan 30 - last trading day before Sunday)
         cached_data = [
-            create_price_point(ticker, datetime(2026, 1, 10, 21, 0, 0, tzinfo=UTC)),
-            create_price_point(ticker, datetime(2026, 1, 13, 21, 0, 0, tzinfo=UTC)),
-            create_price_point(ticker, datetime(2026, 1, 14, 21, 0, 0, tzinfo=UTC)),
-            create_price_point(ticker, datetime(2026, 1, 15, 21, 0, 0, tzinfo=UTC)),
-            create_price_point(ticker, datetime(2026, 1, 16, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 20, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 21, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 22, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 23, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 24, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 27, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 28, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 29, 21, 0, 0, tzinfo=UTC)),
             create_price_point(
-                ticker, datetime(2026, 1, 17, 21, 0, 0, tzinfo=UTC)
-            ),  # Friday
+                ticker, datetime(2026, 1, 30, 21, 0, 0, tzinfo=UTC)
+            ),  # Friday (last trading day before Sunday)
         ]
 
         # Should be complete (Friday is last trading day before Sunday)
