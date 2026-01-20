@@ -33,7 +33,8 @@ const TRADE_COLORS = {
 } as const
 
 // Scatter plot configuration
-const SCATTER_DOT_SIZE = 64 // Size for scatter plot dots (Recharts ZAxis range)
+const SCATTER_Z_AXIS_SIZE = 64 // Recharts ZAxis range for scatter plot
+const TRADE_MARKER_RADIUS = 8 // Visual radius of trade marker circles (px)
 
 interface PriceChartProps {
   ticker: string
@@ -276,7 +277,7 @@ export function PriceChart({
               className="sm:text-xs"
               tickFormatter={(value) => `$${value.toFixed(0)}`}
             />
-            <ZAxis range={[SCATTER_DOT_SIZE, SCATTER_DOT_SIZE]} />
+            <ZAxis range={[SCATTER_Z_AXIS_SIZE, SCATTER_Z_AXIS_SIZE]} />
             <Tooltip
               contentStyle={{
                 backgroundColor: 'hsl(var(--background))',
@@ -315,14 +316,13 @@ export function PriceChart({
                   const { cx, cy, payload } = props as ScatterShapeProps
                   const isBuy = payload.action === 'BUY'
                   const color = isBuy ? TRADE_COLORS.BUY : TRADE_COLORS.SELL
-                  const size = 8
 
                   return (
                     <g>
                       <circle
                         cx={cx}
                         cy={cy}
-                        r={size}
+                        r={TRADE_MARKER_RADIUS}
                         fill={color}
                         stroke="#fff"
                         strokeWidth={2}
