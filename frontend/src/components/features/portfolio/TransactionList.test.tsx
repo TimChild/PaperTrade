@@ -38,7 +38,9 @@ describe('TransactionList', () => {
     it('should render transaction list', () => {
       render(<TransactionList transactions={mockTransactions} />)
 
-      expect(screen.getByTestId('transaction-history-table')).toBeInTheDocument()
+      expect(
+        screen.getByTestId('transaction-history-table')
+      ).toBeInTheDocument()
       expect(screen.getAllByTestId(/transaction-row-/)).toHaveLength(3)
     })
 
@@ -108,15 +110,21 @@ describe('TransactionList', () => {
 
   describe('search functionality', () => {
     it('should show search input when showSearch is true', () => {
-      render(<TransactionList transactions={mockTransactions} showSearch={true} />)
+      render(
+        <TransactionList transactions={mockTransactions} showSearch={true} />
+      )
 
       expect(screen.getByTestId('transaction-search-input')).toBeInTheDocument()
     })
 
     it('should not show search input when showSearch is false', () => {
-      render(<TransactionList transactions={mockTransactions} showSearch={false} />)
+      render(
+        <TransactionList transactions={mockTransactions} showSearch={false} />
+      )
 
-      expect(screen.queryByTestId('transaction-search-input')).not.toBeInTheDocument()
+      expect(
+        screen.queryByTestId('transaction-search-input')
+      ).not.toBeInTheDocument()
     })
   })
 
@@ -125,23 +133,35 @@ describe('TransactionList', () => {
       render(<TransactionList transactions={mockTransactions} />)
 
       expect(screen.getByTestId('transaction-type-0')).toHaveTextContent('Buy')
-      expect(screen.getByTestId('transaction-type-1')).toHaveTextContent('Deposit')
+      expect(screen.getByTestId('transaction-type-1')).toHaveTextContent(
+        'Deposit'
+      )
       expect(screen.getByTestId('transaction-type-2')).toHaveTextContent('Sell')
     })
 
     it('should display ticker for trade transactions', () => {
       render(<TransactionList transactions={mockTransactions} />)
 
-      expect(screen.getByTestId('transaction-symbol-0')).toHaveTextContent('AAPL')
-      expect(screen.getByTestId('transaction-symbol-2')).toHaveTextContent('MSFT')
+      expect(screen.getByTestId('transaction-symbol-0')).toHaveTextContent(
+        'AAPL'
+      )
+      expect(screen.getByTestId('transaction-symbol-2')).toHaveTextContent(
+        'MSFT'
+      )
     })
 
     it('should display transaction amount', () => {
       render(<TransactionList transactions={mockTransactions} />)
 
-      expect(screen.getByTestId('transaction-amount-0')).toHaveTextContent('$1,000.00')
-      expect(screen.getByTestId('transaction-amount-1')).toHaveTextContent('+$5,000.00')
-      expect(screen.getByTestId('transaction-amount-2')).toHaveTextContent('$500.00')
+      expect(screen.getByTestId('transaction-amount-0')).toHaveTextContent(
+        '$1,000.00'
+      )
+      expect(screen.getByTestId('transaction-amount-1')).toHaveTextContent(
+        '+$5,000.00'
+      )
+      expect(screen.getByTestId('transaction-amount-2')).toHaveTextContent(
+        '$500.00'
+      )
     })
   })
 })

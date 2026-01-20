@@ -118,31 +118,12 @@ export function useExecuteTrade(portfolioId: string) {
       const newTransactionId = response.transaction_id
 
       // After transactions are refetched, mark the new one
-      queryClient.invalidateQueries({
-        queryKey: ['portfolio', portfolioId, 'transactions'],
-      }).then(() => {
-        // Update the transaction list to mark the new transaction
-        queryClient.setQueryData<{
-          transactions: Array<{ id: string; isNew?: boolean }>
-          total_count: number
-          limit: number
-          offset: number
-        }>(
-          ['portfolio', portfolioId, 'transactions', undefined],
-          (oldData) => {
-            if (!oldData) return oldData
-
-            return {
-              ...oldData,
-              transactions: oldData.transactions.map((tx) =>
-                tx.id === newTransactionId ? { ...tx, isNew: true } : tx
-              ),
-            }
-          }
-        )
-
-        // Remove the highlight after 3 seconds
-        setTimeout(() => {
+      queryClient
+        .invalidateQueries({
+          queryKey: ['portfolio', portfolioId, 'transactions'],
+        })
+        .then(() => {
+          // Update the transaction list to mark the new transaction
           queryClient.setQueryData<{
             transactions: Array<{ id: string; isNew?: boolean }>
             total_count: number
@@ -156,13 +137,34 @@ export function useExecuteTrade(portfolioId: string) {
               return {
                 ...oldData,
                 transactions: oldData.transactions.map((tx) =>
-                  tx.id === newTransactionId ? { ...tx, isNew: false } : tx
+                  tx.id === newTransactionId ? { ...tx, isNew: true } : tx
                 ),
               }
             }
           )
-        }, 3000)
-      })
+
+          // Remove the highlight after 3 seconds
+          setTimeout(() => {
+            queryClient.setQueryData<{
+              transactions: Array<{ id: string; isNew?: boolean }>
+              total_count: number
+              limit: number
+              offset: number
+            }>(
+              ['portfolio', portfolioId, 'transactions', undefined],
+              (oldData) => {
+                if (!oldData) return oldData
+
+                return {
+                  ...oldData,
+                  transactions: oldData.transactions.map((tx) =>
+                    tx.id === newTransactionId ? { ...tx, isNew: false } : tx
+                  ),
+                }
+              }
+            )
+          }, 3000)
+        })
     },
   })
 }
