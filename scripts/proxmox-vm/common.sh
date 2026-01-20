@@ -273,4 +273,7 @@ display_config() {
         echo "  Gateway:           $PROXMOX_VM_GATEWAY"
     fi
     echo "  App Directory:     $APP_DIR"
+    if [ -n "${VERSION:-}" ]; then
+        echo "  Deploy Version:    $VERSION"
+    fi
 }

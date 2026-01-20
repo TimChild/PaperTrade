@@ -639,7 +639,7 @@ tasks:
       - bash scripts/proxmox-vm/create-vm.sh
 
   proxmox-vm:deploy:
-    desc: "Deploy Zebu to Proxmox VM"
+    desc: "Deploy Zebu to Proxmox VM (use VERSION=v1.0.0 to deploy specific tag)"
     cmds:
       - bash scripts/proxmox-vm/deploy.sh
 

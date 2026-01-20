@@ -107,16 +107,40 @@ main() {
     # Deploy application code via git
     log_step "Deploying application code via git..."
 
-    # Get current branch
-    local current_branch
-    current_branch=$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD)
+    # Determine what to deploy (VERSION env var takes precedence)
+    local deploy_ref="${VERSION:-}"
+    
+    if [ -z "$deploy_ref" ]; then
+        # No VERSION specified - use current branch
+        deploy_ref=$(git -C "$REPO_ROOT" rev-parse --abbrev-ref HEAD)
+        log_info "No VERSION specified - deploying current branch: $deploy_ref"
+    else
+        log_info "Deploying specified version: $deploy_ref"
+    fi
 
     # Check if repository exists on VM
     if ssh "$VM_DEFAULT_USER@$vm_ip" "test -d $APP_DIR/.git"; then
-        log_info "Repository exists - pulling latest changes..."
+        log_info "Repository exists - fetching and checking out $deploy_ref..."
 
-        # Pull latest changes
-        ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && git fetch origin && git checkout $current_branch && git pull origin $current_branch"
+        # Fetch all refs (branches, tags)
+        ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && git fetch origin --tags"
+
+        # Checkout the specified ref (branch, tag, or commit)
+        # For tags, just checkout directly
+        # For branches, checkout and pull
+        if ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && git rev-parse --verify 'refs/tags/$deploy_ref' &>/dev/null"; then
+            # It's a tag
+            log_info "Detected tag reference"
+            ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && git checkout tags/$deploy_ref"
+        elif ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && git rev-parse --verify 'origin/$deploy_ref' &>/dev/null"; then
+            # It's a branch
+            log_info "Detected branch reference"
+            ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && git checkout $deploy_ref && git pull origin $deploy_ref"
+        else
+            # Try as commit SHA or other ref
+            log_info "Attempting checkout as commit or other ref"
+            ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && git checkout $deploy_ref"
+        fi
 
         # Show deployed version
         local deployed_version
@@ -126,9 +150,22 @@ main() {
         log_info "Cloning repository for first deployment..."
 
         # Clone repository (use HTTPS to avoid SSH key requirements)
-        ssh "$VM_DEFAULT_USER@$vm_ip" "git clone https://github.com/TimChild/PaperTrade.git $APP_DIR && cd $APP_DIR && git checkout $current_branch"
+        ssh "$VM_DEFAULT_USER@$vm_ip" "git clone https://github.com/TimChild/PaperTrade.git $APP_DIR"
 
-        log_success "Repository cloned"
+        # Checkout the specified ref
+        log_info "Checking out $deploy_ref..."
+        if ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && git rev-parse --verify 'refs/tags/$deploy_ref' &>/dev/null"; then
+            # It's a tag
+            ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && git checkout tags/$deploy_ref"
+        elif ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && git rev-parse --verify 'origin/$deploy_ref' &>/dev/null"; then
+            # It's a branch
+            ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && git checkout $deploy_ref"
+        else
+            # Try as commit or other ref
+            ssh "$VM_DEFAULT_USER@$vm_ip" "cd $APP_DIR && git checkout $deploy_ref"
+        fi
+
+        log_success "Repository cloned and checked out"
     fi
 
     # Check if .env already exists on VM (preserve existing secrets)
