@@ -4,6 +4,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCreatePortfolio } from '@/hooks/usePortfolio'
+import { toasts } from '@/utils/toast'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -52,6 +53,9 @@ export function CreatePortfolioForm({
         initial_deposit: depositAmount.toFixed(2),
         currency: 'USD',
       })
+
+      // Show success toast
+      toasts.portfolioCreated(name.trim())
 
       if (onSuccess) {
         onSuccess(result.portfolio_id)

@@ -1,6 +1,5 @@
 import { useParams, Link } from 'react-router-dom'
 import { useRef, useState } from 'react'
-import toast from 'react-hot-toast'
 import {
   usePortfolio,
   usePortfolioBalance,
@@ -21,6 +20,7 @@ import {
   adaptTransaction,
 } from '@/utils/adapters'
 import { formatTradeError } from '@/utils/errorFormatters'
+import { toasts } from '@/utils/toast'
 import type { TradeRequest } from '@/services/api/types'
 
 export function PortfolioDetail(): React.JSX.Element {
@@ -62,18 +62,19 @@ export function PortfolioDetail(): React.JSX.Element {
     executeTrade.mutate(trade, {
       onSuccess: () => {
         // Show success toast with trade details
-        const action = trade.action === 'BUY' ? 'Bought' : 'Sold'
         const quantity = parseFloat(trade.quantity)
-        toast.success(
-          `${action} ${quantity} ${quantity === 1 ? 'share' : 'shares'} of ${trade.ticker}`
-        )
+        if (trade.action === 'BUY') {
+          toasts.tradeBuy(trade.ticker, quantity)
+        } else {
+          toasts.tradeSell(trade.ticker, quantity)
+        }
         // Reset quick sell state
         setQuickSellState({ action: 'BUY', ticker: '', quantity: '' })
       },
       onError: (error) => {
         console.error(`[TradeSubmit Error] Portfolio ID: ${portfolioId}`, error)
         const errorMessage = formatTradeError(error)
-        toast.error(errorMessage)
+        toasts.tradeError(errorMessage)
       },
     })
   }

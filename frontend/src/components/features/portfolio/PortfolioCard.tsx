@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import toast from 'react-hot-toast'
 import type { Portfolio } from '@/types/portfolio'
 import { formatCurrency } from '@/utils/formatters'
+import { toasts } from '@/utils/toast'
 import { useDeletePortfolio } from '@/hooks/usePortfolio'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
@@ -58,11 +58,11 @@ export function PortfolioCard({
   const handleDeleteConfirm = async () => {
     try {
       await deleteMutation.mutateAsync(portfolio.id)
-      toast.success('Portfolio deleted successfully')
+      toasts.portfolioDeleted()
       onDelete?.(portfolio.id)
       setShowDeleteConfirm(false)
     } catch (error) {
-      toast.error('Failed to delete portfolio. Please try again.')
+      toasts.portfolioDeleteError()
       console.error('Delete portfolio error:', error)
     }
   }
