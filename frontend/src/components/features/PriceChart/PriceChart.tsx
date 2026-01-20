@@ -2,17 +2,20 @@
  * Price chart component for displaying historical stock prices
  * Uses Recharts for rendering and TanStack Query for data fetching
  */
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
-  LineChart,
+  ComposedChart,
   Line,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Scatter,
+  ZAxis,
 } from 'recharts'
 import { usePriceHistory } from '@/hooks/usePriceHistory'
+import { useTransactions } from '@/hooks/useTransactions'
 import { TimeRangeSelector } from './TimeRangeSelector'
 import { PriceStats } from './PriceStats'
 import { ChartSkeleton } from './ChartSkeleton'
@@ -23,9 +26,20 @@ import type { ApiError } from '@/types/errors'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { isApiError } from '@/utils/priceErrors'
 
+// Trade marker colors
+const TRADE_COLORS = {
+  BUY: '#10b981', // green-500
+  SELL: '#ef4444', // red-500
+} as const
+
+// Scatter plot configuration
+const SCATTER_Z_AXIS_SIZE = 64 // Recharts ZAxis range for scatter plot
+const TRADE_MARKER_RADIUS = 8 // Visual radius of trade marker circles (px)
+
 interface PriceChartProps {
   ticker: string
   initialTimeRange?: TimeRange
+  portfolioId?: string
 }
 
 interface ChartDataPoint {
@@ -34,12 +48,62 @@ interface ChartDataPoint {
   fullDate: string
 }
 
+interface TradeMarker {
+  timestamp: string
+  price: number
+  action: 'BUY' | 'SELL'
+  quantity: string
+  fullDate: string
+}
+
+interface ScatterShapeProps {
+  cx: number
+  cy: number
+  payload: {
+    time: string
+    price: number
+    action: 'BUY' | 'SELL'
+    quantity: string
+    fullDate: string
+  }
+}
+
 export function PriceChart({
   ticker,
   initialTimeRange = '1M',
+  portfolioId,
 }: PriceChartProps): React.JSX.Element {
   const [timeRange, setTimeRange] = useState<TimeRange>(initialTimeRange)
   const { data, isLoading, error, refetch } = usePriceHistory(ticker, timeRange)
+
+  // Fetch transactions if portfolioId is provided
+  const { data: transactionsData } = useTransactions(
+    portfolioId || '',
+    undefined
+  )
+
+  // Filter and map transactions to trade markers
+  const tradeMarkers = useMemo(() => {
+    if (!transactionsData || !portfolioId) return []
+
+    return transactionsData.transactions
+      .filter(
+        (t) =>
+          t.ticker === ticker &&
+          (t.transaction_type === 'BUY' || t.transaction_type === 'SELL') &&
+          t.price_per_share !== null &&
+          t.price_per_share !== undefined
+      )
+      .map(
+        (t): TradeMarker => ({
+          timestamp: t.timestamp,
+          price: parseFloat(t.price_per_share!),
+          action: t.transaction_type as 'BUY' | 'SELL',
+          quantity: t.quantity || '0',
+          fullDate: new Date(t.timestamp).toLocaleString(),
+        })
+      )
+  }, [transactionsData, portfolioId, ticker])
 
   // Loading state
   if (isLoading) {
@@ -125,6 +189,15 @@ export function PriceChart({
     fullDate: new Date(point.timestamp).toLocaleString(),
   }))
 
+  // Format trade markers to match chart time format
+  const formattedTradeMarkers = tradeMarkers.map((marker) => ({
+    time: formatDateForAxis(marker.timestamp, timeRange),
+    price: marker.price,
+    action: marker.action,
+    quantity: marker.quantity,
+    fullDate: marker.fullDate,
+  }))
+
   // Calculate price change
   // Safe to access [0] and [length-1] because we already checked for empty array above
   const firstPrice = data.prices[0]!.price.amount
@@ -183,7 +256,7 @@ export function PriceChart({
 
         {/* Chart */}
         <ResponsiveContainer width="100%" height={250}>
-          <LineChart data={chartData}>
+          <ComposedChart data={chartData}>
             <CartesianGrid
               strokeDasharray="3 3"
               stroke="hsl(var(--foreground) / 0.1)"
@@ -204,6 +277,7 @@ export function PriceChart({
               className="sm:text-xs"
               tickFormatter={(value) => `$${value.toFixed(0)}`}
             />
+            <ZAxis range={[SCATTER_Z_AXIS_SIZE, SCATTER_Z_AXIS_SIZE]} />
             <Tooltip
               contentStyle={{
                 backgroundColor: 'hsl(var(--background))',
@@ -230,7 +304,35 @@ export function PriceChart({
               dot={false}
               activeDot={{ r: 6 }}
             />
-          </LineChart>
+            {/* Trade markers - only show if portfolioId is provided */}
+            {portfolioId && formattedTradeMarkers.length > 0 && (
+              <Scatter
+                name="Trades"
+                data={formattedTradeMarkers}
+                fill={TRADE_COLORS.BUY}
+                shape={(props: unknown) => {
+                  // Recharts passes unknown props, so we need to cast
+                  // Safe because we control the data structure
+                  const { cx, cy, payload } = props as ScatterShapeProps
+                  const isBuy = payload.action === 'BUY'
+                  const color = isBuy ? TRADE_COLORS.BUY : TRADE_COLORS.SELL
+
+                  return (
+                    <g>
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={TRADE_MARKER_RADIUS}
+                        fill={color}
+                        stroke="#fff"
+                        strokeWidth={2}
+                      />
+                    </g>
+                  )
+                }}
+              />
+            )}
+          </ComposedChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>
