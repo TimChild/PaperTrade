@@ -96,6 +96,14 @@ export function useWithdraw(portfolioId: string) {
   })
 }
 
+// Type for transaction list query data
+type TransactionListQueryData = {
+  transactions: Array<{ id: string; isNew?: boolean }>
+  total_count: number
+  limit: number
+  offset: number
+}
+
 /**
  * Hook to execute a trade (buy or sell)
  */
@@ -116,55 +124,46 @@ export function useExecuteTrade(portfolioId: string) {
 
       // Mark the new transaction for highlighting
       const newTransactionId = response.transaction_id
+      const transactionQueryKey = ['portfolio', portfolioId, 'transactions', undefined]
 
-      // After transactions are refetched, mark the new one
-      queryClient
-        .invalidateQueries({
-          queryKey: ['portfolio', portfolioId, 'transactions'],
-        })
-        .then(() => {
-          // Update the transaction list to mark the new transaction
-          queryClient.setQueryData<{
-            transactions: Array<{ id: string; isNew?: boolean }>
-            total_count: number
-            limit: number
-            offset: number
-          }>(
-            ['portfolio', portfolioId, 'transactions', undefined],
+      // Use refetchQueries to ensure data is available before marking
+      queryClient.refetchQueries({
+        queryKey: ['portfolio', portfolioId, 'transactions'],
+      }).then(() => {
+        // Update the transaction list to mark the new transaction
+        queryClient.setQueryData<TransactionListQueryData>(
+          transactionQueryKey,
+          (oldData) => {
+            if (!oldData) return oldData
+
+            return {
+              ...oldData,
+              transactions: oldData.transactions.map((tx) =>
+                tx.id === newTransactionId ? { ...tx, isNew: true } : tx
+              ),
+            }
+          }
+        )
+
+        // Remove the highlight after 3 seconds
+        // Note: This runs in the mutation context, not component lifecycle,
+        // so it doesn't need cleanup as the mutation is fire-and-forget
+        setTimeout(() => {
+          queryClient.setQueryData<TransactionListQueryData>(
+            transactionQueryKey,
             (oldData) => {
               if (!oldData) return oldData
 
               return {
                 ...oldData,
                 transactions: oldData.transactions.map((tx) =>
-                  tx.id === newTransactionId ? { ...tx, isNew: true } : tx
+                  tx.id === newTransactionId ? { ...tx, isNew: false } : tx
                 ),
               }
             }
           )
-
-          // Remove the highlight after 3 seconds
-          setTimeout(() => {
-            queryClient.setQueryData<{
-              transactions: Array<{ id: string; isNew?: boolean }>
-              total_count: number
-              limit: number
-              offset: number
-            }>(
-              ['portfolio', portfolioId, 'transactions', undefined],
-              (oldData) => {
-                if (!oldData) return oldData
-
-                return {
-                  ...oldData,
-                  transactions: oldData.transactions.map((tx) =>
-                    tx.id === newTransactionId ? { ...tx, isNew: false } : tx
-                  ),
-                }
-              }
-            )
-          }, 3000)
-        })
+        }, 3000)
+      })
     },
   })
 }
