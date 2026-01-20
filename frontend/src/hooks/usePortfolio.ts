@@ -105,15 +105,63 @@ export function useExecuteTrade(portfolioId: string) {
   return useMutation({
     mutationFn: (data: TradeRequest) =>
       portfoliosApi.executeTrade(portfolioId, data),
-    onSuccess: () => {
+    onSuccess: (response) => {
+      // Invalidate all related queries to refetch fresh data
       queryClient.invalidateQueries({
         queryKey: ['portfolio', portfolioId, 'balance'],
       })
       queryClient.invalidateQueries({
         queryKey: ['portfolio', portfolioId, 'holdings'],
       })
+
+      // Mark the new transaction for highlighting
+      const newTransactionId = response.transaction_id
+
+      // After transactions are refetched, mark the new one
       queryClient.invalidateQueries({
         queryKey: ['portfolio', portfolioId, 'transactions'],
+      }).then(() => {
+        // Update the transaction list to mark the new transaction
+        queryClient.setQueryData<{
+          transactions: Array<{ id: string; isNew?: boolean }>
+          total_count: number
+          limit: number
+          offset: number
+        }>(
+          ['portfolio', portfolioId, 'transactions', undefined],
+          (oldData) => {
+            if (!oldData) return oldData
+
+            return {
+              ...oldData,
+              transactions: oldData.transactions.map((tx) =>
+                tx.id === newTransactionId ? { ...tx, isNew: true } : tx
+              ),
+            }
+          }
+        )
+
+        // Remove the highlight after 3 seconds
+        setTimeout(() => {
+          queryClient.setQueryData<{
+            transactions: Array<{ id: string; isNew?: boolean }>
+            total_count: number
+            limit: number
+            offset: number
+          }>(
+            ['portfolio', portfolioId, 'transactions', undefined],
+            (oldData) => {
+              if (!oldData) return oldData
+
+              return {
+                ...oldData,
+                transactions: oldData.transactions.map((tx) =>
+                  tx.id === newTransactionId ? { ...tx, isNew: false } : tx
+                ),
+              }
+            }
+          )
+        }, 3000)
       })
     },
   })

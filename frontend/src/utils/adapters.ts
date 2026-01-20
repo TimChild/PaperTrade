@@ -65,7 +65,7 @@ export function adaptHolding(dto: HoldingDTO): Holding {
 /**
  * Convert backend TransactionDTO to frontend Transaction type
  */
-export function adaptTransaction(dto: TransactionDTO): Transaction {
+export function adaptTransaction(dto: TransactionDTO & { isNew?: boolean }): Transaction {
   // Map backend transaction_type to frontend type
   let type: Transaction['type']
   switch (dto.transaction_type) {
@@ -97,5 +97,6 @@ export function adaptTransaction(dto: TransactionDTO): Transaction {
       : undefined,
     timestamp: dto.timestamp,
     notes: dto.notes || undefined,
+    isNew: dto.isNew, // Preserve the isNew flag
   }
 }

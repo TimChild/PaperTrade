@@ -151,16 +151,22 @@ export function TransactionList({
             <div
               className="divide-y divide-gray-200 dark:divide-gray-700"
               data-testid="transaction-history-table"
+              aria-live="polite"
+              aria-relevant="additions"
             >
               {displayTransactions.map((transaction, idx) => {
                 const colorClass = getTransactionColorClass(transaction.type)
                 const isPositive = transaction.amount > 0
+                const highlightClass = transaction.isNew ? 'highlight-new' : ''
 
                 return (
                   <div
                     key={transaction.id}
                     data-testid={`transaction-row-${idx}`}
-                    className="flex items-center justify-between p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                    className={`flex items-center justify-between p-3 sm:p-4 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${highlightClass}`}
+                    aria-label={
+                      transaction.isNew ? 'New transaction added' : undefined
+                    }
                   >
                     <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
                       <span

@@ -33,6 +33,7 @@ export interface Transaction {
   pricePerShare?: number
   timestamp: string
   notes?: string
+  isNew?: boolean // Flag for highlighting new transactions
 }
 
 export interface TradeRequest {
