@@ -295,29 +295,56 @@ task proxmox-vm:restart
 
 ### Updating Deployments (Redeployment)
 
-The deployment uses **git pull** to update code on subsequent deployments. This means:
-- Only changed files are transferred (efficient)
-- Full git history is available on the VM
-- Easy to rollback to previous commits if needed
+The deployment script supports deploying specific versions using the `VERSION` environment variable. This allows you to deploy:
+- **Git tags** (e.g., `v1.0.0`)
+- **Branches** (e.g., `main`, `feature/new-feature`)
+- **Commit SHAs** (e.g., `abc123def`)
 
-**To deploy code changes:**
+**To deploy the latest code from current branch:**
 
 ```bash
 task proxmox-vm:deploy
 ```
 
-This will:
-1. Pull latest changes from the current branch via git
-2. Rebuild Docker images (only rebuilds changed layers)
-3. Restart services with zero-downtime strategy
-4. **Preserve** existing secrets (`.env` file not overwritten)
+**To deploy a specific version:**
+
+```bash
+# Deploy a specific git tag
+VERSION=v1.0.0 task proxmox-vm:deploy
+
+# Deploy a specific branch
+VERSION=main task proxmox-vm:deploy
+VERSION=feature/new-feature task proxmox-vm:deploy
+
+# Deploy a specific commit
+VERSION=abc123def task proxmox-vm:deploy
+```
+
+The deployment script automatically detects whether the VERSION is a tag, branch, or commit and handles it appropriately.
+
+**What happens during deployment:**
+
+When `VERSION` is specified:
+1. Fetch all refs (tags and branches) from origin
+2. Detect ref type (tag, branch, or commit)
+3. Checkout the specified version
+4. For branches: also pull latest changes
+5. For tags/commits: checkout directly (detached HEAD)
+6. Rebuild Docker images (only rebuilds changed layers)
+7. Restart services with zero-downtime strategy
+8. **Preserve** existing secrets (`.env` file not overwritten)
+
+When `VERSION` is not specified (default behavior):
+1. Use the currently checked out branch locally
+2. Pull latest changes from that branch via git
+3. Rebuild and restart as above
 
 **What happens during redeployment:**
-- If repository exists on VM → `git pull origin <current-branch>`
-- If repository doesn't exist → `git clone` (first deployment only)
+- If repository exists on VM → fetch and checkout specified version
+- If repository doesn't exist → clone and checkout specified version (first deployment only)
 - Shows deployed git version after update
 - Existing `.env` file is preserved (secrets not changed)
-- Only `.env` is backed up to `.env.backup` as a safety measure
+- `.env` is backed up to `.env.backup` as a safety measure
 
 **Manual git operations on VM:**
 
@@ -353,10 +380,13 @@ docker compose -f docker-compose.prod.yml up -d
 ```
 
 **Best Practices:**
-- Always deploy from a clean git state (no uncommitted changes locally)
-- Use tagged releases for production deployments
+- **Use VERSION parameter for production**: `VERSION=v1.0.0 task proxmox-vm:deploy`
+- Use semantic versioning for tags (e.g., `v1.0.0`, `v1.1.0`)
+- Deploy from tagged releases in production (ensures reproducibility)
 - Test in staging before deploying to production
-- Keep track of deployed versions with `git describe --always`
+- Always deploy from a clean git state (no uncommitted changes locally)
+- Keep track of deployed versions with `task proxmox-vm:status`
+- Document deployment versions in your changelog
 
 ### VM Management
 
@@ -609,6 +639,7 @@ jobs:
         env:
           PROXMOX_HOST: ${{ secrets.PROXMOX_HOST }}
           PROXMOX_VM_ID: ${{ secrets.PROXMOX_VM_ID }}
+          VERSION: ${{ github.ref_name }}  # Deploys the git tag that triggered the workflow
         run: |
           task proxmox-vm:deploy
 
@@ -632,15 +663,27 @@ For CI/CD deployment, configure these secrets in your repository:
 
 ### Non-Interactive Execution
 
-Scripts support non-interactive execution:
+Scripts support non-interactive execution for CI/CD:
 
 ```bash
-# Deploy without prompts (useful for CI/CD)
+# Deploy without prompts (default: current branch)
 task proxmox-vm:deploy
+
+# Deploy specific version in CI/CD
+VERSION=v1.0.0 task proxmox-vm:deploy
+
+# Deploy git tag from GitHub Actions trigger
+VERSION=${{ github.ref_name }} task proxmox-vm:deploy
 
 # Destroy VM with force flag (skip confirmation)
 bash scripts/proxmox-vm/destroy.sh force
 ```
+
+**CI/CD Best Practices:**
+- Use `VERSION` parameter to deploy specific tags
+- Set `VERSION=${{ github.ref_name }}` in GitHub Actions when deploying from tags
+- Test deployments in a staging environment first
+- Keep deployment logs for troubleshooting
 
 ---
 

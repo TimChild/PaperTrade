@@ -24,6 +24,9 @@ task proxmox-vm:create
 # 3. Deploy application
 task proxmox-vm:deploy
 
+# 3a. Deploy specific version (tag, branch, or commit)
+VERSION=v1.0.0 task proxmox-vm:deploy
+
 # 4. Check status
 task proxmox-vm:status
 ```
@@ -39,6 +42,7 @@ Key variables:
 - `PROXMOX_VM_CORES` - CPU cores (default: `4`)
 - `PROXMOX_VM_MEMORY` - RAM in MB (default: `8192`)
 - `PROXMOX_VM_DISK_SIZE` - Disk in GB (default: `50`)
+- `VERSION` - Git tag, branch, or commit to deploy (optional, defaults to current branch)
 
 ## Architecture
 
@@ -56,6 +60,27 @@ These scripts implement a production-ready VM-based deployment:
 - **Error handling** - Fail fast with clear error messages
 - **Colored output** - Visual feedback for operations
 - **Secrets preservation** - Maintains secrets across redeployments
+
+## Deployment Options
+
+The deployment script supports deploying different versions using the `VERSION` environment variable:
+
+```bash
+# Deploy current branch (default behavior)
+task proxmox-vm:deploy
+
+# Deploy a specific git tag
+VERSION=v1.0.0 task proxmox-vm:deploy
+
+# Deploy a specific branch
+VERSION=main task proxmox-vm:deploy
+VERSION=feature/new-feature task proxmox-vm:deploy
+
+# Deploy a specific commit
+VERSION=abc123def task proxmox-vm:deploy
+```
+
+The script automatically detects whether the VERSION is a tag, branch, or commit SHA and handles it appropriately.
 
 ## Common Functions (common.sh)
 
