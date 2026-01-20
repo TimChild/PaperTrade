@@ -66,7 +66,7 @@ export const toasts = {
    * Show error toast for trade failure
    */
   tradeError: (message: string): void => {
-    toast.error(`Trade failed: ${message}`)
+    toast.error(message)
   },
 
   /**

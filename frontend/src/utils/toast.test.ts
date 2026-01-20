@@ -133,9 +133,7 @@ describe('toast utilities', () => {
     it('shows error toast with message', () => {
       toasts.tradeError('Insufficient funds')
 
-      expect(toast.error).toHaveBeenCalledWith(
-        'Trade failed: Insufficient funds'
-      )
+      expect(toast.error).toHaveBeenCalledWith('Insufficient funds')
     })
   })
 
