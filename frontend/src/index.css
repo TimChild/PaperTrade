@@ -114,3 +114,20 @@
     transition: none !important;
   }
 }
+
+@layer utilities {
+  /* Pulse animation for newly added transactions */
+  @keyframes pulse-highlight {
+    0%,
+    100% {
+      background-color: transparent;
+    }
+    50% {
+      background-color: hsl(var(--primary) / 0.1);
+    }
+  }
+
+  .highlight-new {
+    animation: pulse-highlight 3s ease-in-out;
+  }
+}
