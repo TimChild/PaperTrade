@@ -284,7 +284,10 @@ export function PriceChart({
                 fill="#10b981"
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 shape={(props: any) => {
-                  // Recharts ScatterCustomizedShape type is complex, using any for simplicity
+                  // Recharts ScatterCustomizedShape has complex internal types.
+                  // Using 'any' here is acceptable as the props structure is well-defined
+                  // by Recharts and validated at runtime. The shape function must return
+                  // a React.Element, so we use an empty fragment for invalid cases.
                   const { cx, cy, payload } = props
                   if (cx === undefined || cy === undefined || !payload) {
                     return <></>
