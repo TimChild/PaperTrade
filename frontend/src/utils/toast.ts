@@ -5,41 +5,49 @@
 import toast from 'react-hot-toast'
 import { formatCurrency } from './formatters'
 
+/**
+ * Helper function to format trade toast message
+ */
+function formatTradeMessage(
+  action: 'Bought' | 'Sold',
+  ticker: string,
+  quantity: number,
+  price?: number
+): string {
+  const shares = quantity === 1 ? 'share' : 'shares'
+  let message = `${action} ${quantity} ${shares} of ${ticker}`
+
+  if (price && price > 0) {
+    const total = quantity * price
+    message += `\n${formatCurrency(price)} per share • Total: ${formatCurrency(total)}`
+  }
+
+  return message
+}
+
 export const toasts = {
   /**
    * Show success toast for BUY trade
    */
   tradeBuy: (ticker: string, quantity: number, price?: number): void => {
-    const shares = quantity === 1 ? 'share' : 'shares'
-    let message = `Bought ${quantity} ${shares} of ${ticker}`
-
-    if (price && price > 0) {
-      const total = quantity * price
-      message += `\n${formatCurrency(price)} per share • Total: ${formatCurrency(total)}`
-    }
-
-    toast.success(message)
+    toast.success(formatTradeMessage('Bought', ticker, quantity, price))
   },
 
   /**
    * Show success toast for SELL trade
    */
   tradeSell: (ticker: string, quantity: number, price?: number): void => {
-    const shares = quantity === 1 ? 'share' : 'shares'
-    let message = `Sold ${quantity} ${shares} of ${ticker}`
-
-    if (price && price > 0) {
-      const total = quantity * price
-      message += `\n${formatCurrency(price)} per share • Total: ${formatCurrency(total)}`
-    }
-
-    toast.success(message)
+    toast.success(formatTradeMessage('Sold', ticker, quantity, price))
   },
 
   /**
    * Show success toast for deposit
    */
   deposit: (amount: number): void => {
+    if (!Number.isFinite(amount) || amount <= 0) {
+      console.error('Invalid deposit amount:', amount)
+      return
+    }
     toast.success(`Deposited ${formatCurrency(amount)}`)
   },
 
@@ -47,6 +55,10 @@ export const toasts = {
    * Show success toast for withdrawal
    */
   withdraw: (amount: number): void => {
+    if (!Number.isFinite(amount) || amount <= 0) {
+      console.error('Invalid withdrawal amount:', amount)
+      return
+    }
     toast.success(`Withdrew ${formatCurrency(amount)}`)
   },
 

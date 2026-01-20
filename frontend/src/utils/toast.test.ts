@@ -74,6 +74,33 @@ describe('toast utilities', () => {
 
       expect(toast.success).toHaveBeenCalledWith('Deposited $1,000.50')
     })
+
+    it('does not show toast for invalid amount (NaN)', () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      toasts.deposit(NaN)
+
+      expect(toast.success).not.toHaveBeenCalled()
+      expect(consoleSpy).toHaveBeenCalledWith('Invalid deposit amount:', NaN)
+      consoleSpy.mockRestore()
+    })
+
+    it('does not show toast for negative amount', () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      toasts.deposit(-100)
+
+      expect(toast.success).not.toHaveBeenCalled()
+      expect(consoleSpy).toHaveBeenCalledWith('Invalid deposit amount:', -100)
+      consoleSpy.mockRestore()
+    })
+
+    it('does not show toast for zero amount', () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      toasts.deposit(0)
+
+      expect(toast.success).not.toHaveBeenCalled()
+      expect(consoleSpy).toHaveBeenCalledWith('Invalid deposit amount:', 0)
+      consoleSpy.mockRestore()
+    })
   })
 
   describe('withdraw', () => {
@@ -81,6 +108,24 @@ describe('toast utilities', () => {
       toasts.withdraw(500.75)
 
       expect(toast.success).toHaveBeenCalledWith('Withdrew $500.75')
+    })
+
+    it('does not show toast for invalid amount (NaN)', () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      toasts.withdraw(NaN)
+
+      expect(toast.success).not.toHaveBeenCalled()
+      expect(consoleSpy).toHaveBeenCalledWith('Invalid withdrawal amount:', NaN)
+      consoleSpy.mockRestore()
+    })
+
+    it('does not show toast for negative amount', () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      toasts.withdraw(-50)
+
+      expect(toast.success).not.toHaveBeenCalled()
+      expect(consoleSpy).toHaveBeenCalledWith('Invalid withdrawal amount:', -50)
+      consoleSpy.mockRestore()
     })
   })
 
