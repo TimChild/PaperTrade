@@ -54,15 +54,15 @@ export function CreatePortfolioForm({
         currency: 'USD',
       })
 
-      // Show success toast
-      toasts.portfolioCreated(name.trim())
-
       if (onSuccess) {
         onSuccess(result.portfolio_id)
       } else {
         // Navigate to the new portfolio by default
         navigate(`/portfolio/${result.portfolio_id}`)
       }
+
+      // Show success toast after navigation to ensure it appears on the new page
+      toasts.portfolioCreated(name.trim())
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Failed to create portfolio'
