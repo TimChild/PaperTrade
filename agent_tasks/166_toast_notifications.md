@@ -1,7 +1,7 @@
 # Task 166: Toast Notifications for Trade Actions
 
-**Agent**: frontend-swe  
-**Priority**: HIGH (UX Polish - Phase 4a)  
+**Agent**: frontend-swe
+**Priority**: HIGH (UX Polish - Phase 4a)
 **Estimated Effort**: 1 hour
 
 ## Objective
@@ -185,7 +185,7 @@ jest.mock('react-hot-toast');
 
 test('shows success toast for BUY trade', () => {
   toasts.tradeBuy('AAPL', 10, '150.25');
-  
+
   expect(toast.success).toHaveBeenCalledWith(
     'Bought 10 shares of AAPL at $150.25',
     expect.objectContaining({

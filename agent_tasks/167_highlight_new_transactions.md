@@ -1,7 +1,7 @@
 # Task 167: Highlight New Transactions
 
-**Agent**: frontend-swe  
-**Priority**: HIGH (UX Polish - Phase 4a)  
+**Agent**: frontend-swe
+**Priority**: HIGH (UX Polish - Phase 4a)
 **Estimated Effort**: 30 minutes
 
 ## Objective
@@ -45,23 +45,23 @@ const [lastTransactionId, setLastTransactionId] = useState<string | null>(null);
 useEffect(() => {
   if (transactions && transactions.length > 0) {
     const newestTransaction = transactions[0]; // Assuming sorted by date DESC
-    
+
     // If this is a new transaction (not the one we last saw)
     if (newestTransaction.id !== lastTransactionId) {
       setLastTransactionId(newestTransaction.id);
-      
+
       // Remove highlight after 3 seconds
       const timer = setTimeout(() => {
         setLastTransactionId(null);
       }, 3000);
-      
+
       return () => clearTimeout(timer);
     }
   }
 }, [transactions]);
 
 // In table row render
-<tr 
+<tr
   className={transaction.id === lastTransactionId ? 'highlight-new' : ''}
   data-testid={`transaction-${transaction.id}`}
 >
@@ -82,12 +82,12 @@ const { mutate: executeTrade } = useMutation({
         ...old.transactions
       ]
     }));
-    
+
     // Remove flag after 3 seconds
     setTimeout(() => {
       queryClient.setQueryData(['transactions', portfolioId], (old) => ({
         ...old,
-        transactions: old.transactions.map(t => 
+        transactions: old.transactions.map(t =>
           t.id === newTransaction.id ? { ...t, isNew: false } : t
         )
       }));
@@ -136,17 +136,17 @@ const { mutate: executeTrade } = useMutation({
 ```tsx
 test('highlights new transaction for 3 seconds', async () => {
   const { rerender } = render(<TransactionHistory portfolioId="123" />);
-  
+
   // Initial state - no highlight
   expect(screen.queryByClassName('highlight-new')).not.toBeInTheDocument();
-  
+
   // Add new transaction
   // ... trigger trade execution
-  
+
   // Should be highlighted
   const newRow = await screen.findByTestId('transaction-abc');
   expect(newRow).toHaveClass('highlight-new');
-  
+
   // After 3 seconds, should NOT be highlighted
   await waitFor(() => {
     expect(newRow).not.toHaveClass('highlight-new');
@@ -155,7 +155,7 @@ test('highlights new transaction for 3 seconds', async () => {
 
 test('does not highlight on initial page load', () => {
   render(<TransactionHistory portfolioId="123" />);
-  
+
   const rows = screen.getAllByRole('row');
   rows.forEach(row => {
     expect(row).not.toHaveClass('highlight-new');

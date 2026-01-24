@@ -1,7 +1,7 @@
 # Task 165: Real-Time Stock Prices in Holdings Table
 
-**Agent**: frontend-swe  
-**Priority**: HIGH (UX Polish - Phase 4a)  
+**Agent**: frontend-swe
+**Priority**: HIGH (UX Polish - Phase 4a)
 **Estimated Effort**: 1-2 hours
 
 ## Objective

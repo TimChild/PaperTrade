@@ -1,7 +1,7 @@
 # Task 164: Show Purchase Points on Stock Price Charts
 
-**Agent**: frontend-swe  
-**Priority**: HIGH (UX Polish - Phase 4a)  
+**Agent**: frontend-swe
+**Priority**: HIGH (UX Polish - Phase 4a)
 **Estimated Effort**: 2-3 hours
 
 ## Objective
@@ -46,7 +46,7 @@ const tickerTrades = transactions?.filter(
 <ScatterChart>
   {/* Existing price line chart */}
   <Line ... />
-  
+
   {/* Trade markers */}
   <Scatter
     name="Trades"
