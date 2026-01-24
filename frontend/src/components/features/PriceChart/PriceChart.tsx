@@ -211,8 +211,10 @@ export function PriceChart({
   // Handle edge case of empty prices (should not happen due to earlier validation)
   const minPrice = allPrices.length > 0 ? Math.min(...allPrices) : 0
   const maxPrice = allPrices.length > 0 ? Math.max(...allPrices) : 100
-  const padding =
-    (maxPrice - minPrice) * CHART_PADDING_PERCENTAGE || CHART_MIN_PADDING
+  const padding = Math.max(
+    (maxPrice - minPrice) * CHART_PADDING_PERCENTAGE,
+    CHART_MIN_PADDING
+  )
 
   // Calculate price change
   // Safe to access [0] and [length-1] because we already checked for empty array above
