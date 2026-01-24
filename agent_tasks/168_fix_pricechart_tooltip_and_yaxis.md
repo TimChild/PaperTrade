@@ -57,12 +57,12 @@ Add proper type guards to handle both number and string values:
 ```tsx
 formatter={(value: unknown) => {
   // Handle both Line data (numbers) and Scatter data (might be strings)
-  const numValue = typeof value === 'number' 
-    ? value 
-    : typeof value === 'string' 
-      ? parseFloat(value) 
+  const numValue = typeof value === 'number'
+    ? value
+    : typeof value === 'string'
+      ? parseFloat(value)
       : NaN;
-  
+
   return !Number.isNaN(numValue)
     ? [`$${numValue.toFixed(2)}`, 'Price']
     : ['N/A', 'Price'];

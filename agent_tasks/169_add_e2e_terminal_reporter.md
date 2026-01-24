@@ -1,7 +1,7 @@
 # Task 169: Add Terminal Reporter for E2E Tests
 
-**Agent**: frontend-swe  
-**Priority**: MEDIUM (Developer Experience)  
+**Agent**: frontend-swe
+**Priority**: MEDIUM (Developer Experience)
 **Estimated Effort**: 30 minutes
 
 ## Objective
@@ -25,7 +25,7 @@ reporter: 'html',
 Use conditional reporter configuration based on environment:
 
 ```typescript
-reporter: process.env.CI 
+reporter: process.env.CI
   ? [['list'], ['html']]  // CI: terminal output + HTML artifact
   : 'html',               // Local: HTML UI only
 ```
@@ -45,8 +45,8 @@ reporter: process.env.CI
 
 ## Benefits
 
-✅ **CI/Automation**: Terminal output shows pass/fail status immediately  
-✅ **Local Development**: HTML UI still available via `npm run test:e2e:ui` or manually opening `playwright-report/index.html`  
+✅ **CI/Automation**: Terminal output shows pass/fail status immediately
+✅ **Local Development**: HTML UI still available via `npm run test:e2e:ui` or manually opening `playwright-report/index.html`
 ✅ **Best of Both**: Terminal for quick feedback, HTML for detailed debugging
 
 ## Implementation
@@ -68,7 +68,7 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  
+
   /* Reporter configuration - terminal in CI, HTML for local */
   reporter: process.env.CI
     ? [
@@ -125,11 +125,11 @@ CI=1 task test:e2e
 
 # Output should look like:
 # Running 14 tests using 1 worker
-# 
+#
 #   ✓  auth.setup.ts:5:5 › authenticate (2s)
 #   ✓  dashboard.spec.ts:10:5 › should display portfolios (1s)
 #   ...
-# 
+#
 # 14 passed (15s)
 ```
 
