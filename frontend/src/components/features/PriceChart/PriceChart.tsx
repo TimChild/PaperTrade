@@ -36,6 +36,10 @@ const TRADE_COLORS = {
 const SCATTER_Z_AXIS_SIZE = 64 // Recharts ZAxis range for scatter plot
 const TRADE_MARKER_RADIUS = 8 // Visual radius of trade marker circles (px)
 
+// Chart padding configuration
+const CHART_PADDING_PERCENTAGE = 0.1 // 10% padding around min/max values
+const CHART_MIN_PADDING = 5 // Minimum padding in dollars if range is too small
+
 interface PriceChartProps {
   ticker: string
   initialTimeRange?: TimeRange
@@ -198,6 +202,20 @@ export function PriceChart({
     fullDate: marker.fullDate,
   }))
 
+  // Calculate Y-axis domain from both chart data and trade markers
+  const allPrices = [
+    ...chartData.map((d) => d.price),
+    ...formattedTradeMarkers.map((m) => m.price),
+  ]
+
+  // Handle edge case of empty prices (should not happen due to earlier validation)
+  const minPrice = allPrices.length > 0 ? Math.min(...allPrices) : 0
+  const maxPrice = allPrices.length > 0 ? Math.max(...allPrices) : 100
+  const padding = Math.max(
+    (maxPrice - minPrice) * CHART_PADDING_PERCENTAGE,
+    CHART_MIN_PADDING
+  )
+
   // Calculate price change
   // Safe to access [0] and [length-1] because we already checked for empty array above
   const firstPrice = data.prices[0]!.price.amount
@@ -271,7 +289,7 @@ export function PriceChart({
               height={60}
             />
             <YAxis
-              domain={['dataMin - 5', 'dataMax + 5']}
+              domain={[minPrice - padding, maxPrice + padding]}
               stroke="hsl(var(--foreground) / 0.5)"
               style={{ fontSize: '10px' }}
               className="sm:text-xs"
@@ -285,11 +303,19 @@ export function PriceChart({
                 borderRadius: '8px',
                 color: 'hsl(var(--foreground))',
               }}
-              formatter={(value: number | undefined) =>
-                value !== undefined
-                  ? [`$${value.toFixed(2)}`, 'Price']
+              formatter={(value: unknown) => {
+                // Handle both Line data (numbers) and Scatter data (might be strings)
+                const numValue =
+                  typeof value === 'number'
+                    ? value
+                    : typeof value === 'string'
+                      ? parseFloat(value)
+                      : NaN
+
+                return !Number.isNaN(numValue)
+                  ? [`$${numValue.toFixed(2)}`, 'Price']
                   : ['N/A', 'Price']
-              }
+              }}
               labelFormatter={(label, payload) =>
                 payload?.[0]?.payload.fullDate || label
               }
