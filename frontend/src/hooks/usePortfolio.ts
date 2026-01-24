@@ -124,31 +124,20 @@ export function useExecuteTrade(portfolioId: string) {
 
       // Mark the new transaction for highlighting
       const newTransactionId = response.transaction_id
-      const transactionQueryKey = ['portfolio', portfolioId, 'transactions', undefined]
+      const transactionQueryKey = [
+        'portfolio',
+        portfolioId,
+        'transactions',
+        undefined,
+      ]
 
       // Use refetchQueries to ensure data is available before marking
-      queryClient.refetchQueries({
-        queryKey: ['portfolio', portfolioId, 'transactions'],
-      }).then(() => {
-        // Update the transaction list to mark the new transaction
-        queryClient.setQueryData<TransactionListQueryData>(
-          transactionQueryKey,
-          (oldData) => {
-            if (!oldData) return oldData
-
-            return {
-              ...oldData,
-              transactions: oldData.transactions.map((tx) =>
-                tx.id === newTransactionId ? { ...tx, isNew: true } : tx
-              ),
-            }
-          }
-        )
-
-        // Remove the highlight after 3 seconds
-        // Note: This runs in the mutation context, not component lifecycle,
-        // so it doesn't need cleanup as the mutation is fire-and-forget
-        setTimeout(() => {
+      queryClient
+        .refetchQueries({
+          queryKey: ['portfolio', portfolioId, 'transactions'],
+        })
+        .then(() => {
+          // Update the transaction list to mark the new transaction
           queryClient.setQueryData<TransactionListQueryData>(
             transactionQueryKey,
             (oldData) => {
@@ -157,13 +146,31 @@ export function useExecuteTrade(portfolioId: string) {
               return {
                 ...oldData,
                 transactions: oldData.transactions.map((tx) =>
-                  tx.id === newTransactionId ? { ...tx, isNew: false } : tx
+                  tx.id === newTransactionId ? { ...tx, isNew: true } : tx
                 ),
               }
             }
           )
-        }, 3000)
-      })
+
+          // Remove the highlight after 3 seconds
+          // Note: This runs in the mutation context, not component lifecycle,
+          // so it doesn't need cleanup as the mutation is fire-and-forget
+          setTimeout(() => {
+            queryClient.setQueryData<TransactionListQueryData>(
+              transactionQueryKey,
+              (oldData) => {
+                if (!oldData) return oldData
+
+                return {
+                  ...oldData,
+                  transactions: oldData.transactions.map((tx) =>
+                    tx.id === newTransactionId ? { ...tx, isNew: false } : tx
+                  ),
+                }
+              }
+            )
+          }, 3000)
+        })
     },
   })
 }
