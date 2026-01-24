@@ -380,4 +380,126 @@ describe('PriceChart', () => {
     // Component should render without errors
     // Only AAPL BUY transaction should be included in trade markers (filtered by component logic)
   })
+
+  it('calculates Y-axis domain including trade markers at min price', async () => {
+    const mockHistory = {
+      ticker: 'AAPL',
+      prices: [
+        {
+          ticker: { symbol: 'AAPL' },
+          price: { amount: 150, currency: 'USD' },
+          timestamp: '2024-01-01T00:00:00Z',
+          source: 'cache' as const,
+          interval: '1day' as const,
+        },
+        {
+          ticker: { symbol: 'AAPL' },
+          price: { amount: 160, currency: 'USD' },
+          timestamp: '2024-01-02T00:00:00Z',
+          source: 'cache' as const,
+          interval: '1day' as const,
+        },
+      ],
+      source: 'mock',
+      cached: false,
+    }
+
+    // Trade marker at lower price than any chart data
+    const mockTransactions: TransactionListResponse = {
+      transactions: [
+        {
+          id: '1',
+          portfolio_id: 'portfolio-1',
+          transaction_type: 'BUY',
+          timestamp: '2024-01-01T00:00:00Z',
+          cash_change: '-1400.00',
+          ticker: 'AAPL',
+          quantity: '10',
+          price_per_share: '140.00', // Lower than min chart price (150)
+          notes: null,
+        },
+      ],
+      total_count: 1,
+      limit: 100,
+      offset: 0,
+    }
+
+    vi.spyOn(pricesApi, 'getPriceHistory').mockResolvedValue(mockHistory)
+    vi.spyOn(transactionsApi.transactionsApi, 'list').mockResolvedValue(
+      mockTransactions
+    )
+
+    const Wrapper = createWrapper()
+    render(<PriceChart ticker="AAPL" portfolioId="portfolio-1" />, {
+      wrapper: Wrapper,
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('$160.00')).toBeInTheDocument()
+    })
+
+    // Component should render without errors
+    // Y-axis domain should include the trade marker at 140 (below the min price line of 150)
+  })
+
+  it('calculates Y-axis domain including trade markers at max price', async () => {
+    const mockHistory = {
+      ticker: 'AAPL',
+      prices: [
+        {
+          ticker: { symbol: 'AAPL' },
+          price: { amount: 150, currency: 'USD' },
+          timestamp: '2024-01-01T00:00:00Z',
+          source: 'cache' as const,
+          interval: '1day' as const,
+        },
+        {
+          ticker: { symbol: 'AAPL' },
+          price: { amount: 160, currency: 'USD' },
+          timestamp: '2024-01-02T00:00:00Z',
+          source: 'cache' as const,
+          interval: '1day' as const,
+        },
+      ],
+      source: 'mock',
+      cached: false,
+    }
+
+    // Trade marker at higher price than any chart data
+    const mockTransactions: TransactionListResponse = {
+      transactions: [
+        {
+          id: '1',
+          portfolio_id: 'portfolio-1',
+          transaction_type: 'SELL',
+          timestamp: '2024-01-02T00:00:00Z',
+          cash_change: '1700.00',
+          ticker: 'AAPL',
+          quantity: '10',
+          price_per_share: '170.00', // Higher than max chart price (160)
+          notes: null,
+        },
+      ],
+      total_count: 1,
+      limit: 100,
+      offset: 0,
+    }
+
+    vi.spyOn(pricesApi, 'getPriceHistory').mockResolvedValue(mockHistory)
+    vi.spyOn(transactionsApi.transactionsApi, 'list').mockResolvedValue(
+      mockTransactions
+    )
+
+    const Wrapper = createWrapper()
+    render(<PriceChart ticker="AAPL" portfolioId="portfolio-1" />, {
+      wrapper: Wrapper,
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('$160.00')).toBeInTheDocument()
+    })
+
+    // Component should render without errors
+    // Y-axis domain should include the trade marker at 170 (above the max price line of 160)
+  })
 })

@@ -198,6 +198,15 @@ export function PriceChart({
     fullDate: marker.fullDate,
   }))
 
+  // Calculate Y-axis domain from both chart data and trade markers
+  const allPrices = [
+    ...chartData.map((d) => d.price),
+    ...formattedTradeMarkers.map((m) => m.price),
+  ]
+  const minPrice = Math.min(...allPrices)
+  const maxPrice = Math.max(...allPrices)
+  const padding = (maxPrice - minPrice) * 0.1 || 5 // 10% padding or $5 min
+
   // Calculate price change
   // Safe to access [0] and [length-1] because we already checked for empty array above
   const firstPrice = data.prices[0]!.price.amount
@@ -271,7 +280,7 @@ export function PriceChart({
               height={60}
             />
             <YAxis
-              domain={['dataMin - 5', 'dataMax + 5']}
+              domain={[minPrice - padding, maxPrice + padding]}
               stroke="hsl(var(--foreground) / 0.5)"
               style={{ fontSize: '10px' }}
               className="sm:text-xs"
@@ -285,11 +294,19 @@ export function PriceChart({
                 borderRadius: '8px',
                 color: 'hsl(var(--foreground))',
               }}
-              formatter={(value: number | undefined) =>
-                value !== undefined
-                  ? [`$${value.toFixed(2)}`, 'Price']
+              formatter={(value: unknown) => {
+                // Handle both Line data (numbers) and Scatter data (might be strings)
+                const numValue =
+                  typeof value === 'number'
+                    ? value
+                    : typeof value === 'string'
+                      ? parseFloat(value)
+                      : NaN
+
+                return !Number.isNaN(numValue)
+                  ? [`$${numValue.toFixed(2)}`, 'Price']
                   : ['N/A', 'Price']
-              }
+              }}
               labelFormatter={(label, payload) =>
                 payload?.[0]?.payload.fullDate || label
               }
