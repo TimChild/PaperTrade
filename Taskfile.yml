@@ -85,35 +85,34 @@ tasks:
         msg: "Frontend not found. Run 'task setup:frontend' first."
 
   test:e2e:
-    desc: "Run end-to-end tests with Playwright (pass args after --: task test:e2e -- --grep 'test name')"
-    dir: "{{.FRONTEND_DIR}}"
-    deps:
-      - docker:up:all  # Ensure full stack is running
+    desc: "Run E2E tests in Docker container (pass args after --: task test:e2e -- --grep 'test name')"
+    dir: "{{.ROOT_DIR}}"
     env:
-      # Load environment variables from .env file in repository root
-      # These are required for Clerk authentication in E2E tests
       CLERK_SECRET_KEY:
-        sh: grep "^CLERK_SECRET_KEY=" ../.env | cut -d= -f2- || echo ""
+        sh: grep "^CLERK_SECRET_KEY=" .env | cut -d= -f2- || echo ""
       CLERK_PUBLISHABLE_KEY:
-        sh: grep "^CLERK_PUBLISHABLE_KEY=" ../.env | cut -d= -f2- || echo ""
+        sh: grep "^CLERK_PUBLISHABLE_KEY=" .env | cut -d= -f2- || echo ""
       VITE_CLERK_PUBLISHABLE_KEY:
-        sh: grep "^VITE_CLERK_PUBLISHABLE_KEY=" ../.env | cut -d= -f2- || echo ""
+        sh: grep "^VITE_CLERK_PUBLISHABLE_KEY=" .env | cut -d= -f2- || echo ""
       E2E_CLERK_USER_EMAIL:
-        sh: grep "^E2E_CLERK_USER_EMAIL=" ../.env | cut -d= -f2- || echo ""
+        sh: grep "^E2E_CLERK_USER_EMAIL=" .env | cut -d= -f2- || echo ""
     cmds:
-      - echo "Running E2E tests..."
-      - npm run test:e2e -- {{.CLI_ARGS}}
+      - echo "Building E2E test container..."
+      - docker compose --profile e2e build e2e-tests
+      - echo "Starting E2E test environment..."
+      - docker compose --profile e2e run --rm e2e-tests npx playwright test {{.CLI_ARGS}}
+      - echo "Cleaning up E2E containers..."
+      - docker compose --profile e2e down
     preconditions:
-      - sh: test -f package.json
-        msg: "Frontend not found"
+      - sh: test -f .env
+        msg: ".env file not found. Copy .env.example and configure."
 
   test:e2e:ui:
-    desc: "Run E2E tests with Playwright UI"
+    desc: "Run E2E tests with Playwright UI (runs locally, not in Docker)"
     dir: "{{.FRONTEND_DIR}}"
     deps:
       - docker:up:all  # Ensure full stack is running
     env:
-      # Load environment variables from .env file in repository root
       CLERK_SECRET_KEY:
         sh: grep "^CLERK_SECRET_KEY=" ../.env | cut -d= -f2- || echo ""
       CLERK_PUBLISHABLE_KEY:
@@ -123,7 +122,7 @@ tasks:
       E2E_CLERK_USER_EMAIL:
         sh: grep "^E2E_CLERK_USER_EMAIL=" ../.env | cut -d= -f2- || echo ""
     cmds:
-      - echo "Running E2E tests with UI..."
+      - echo "Running E2E tests with UI (localhost)..."
       - npm run test:e2e:ui
     preconditions:
       - sh: test -f package.json
