@@ -12,6 +12,21 @@ export const test = base.extend({
     // Set up Clerk testing token for this page
     await setupClerkTestingToken({ page })
 
+    // Capture browser console messages for debugging
+    page.on('console', (msg) => {
+      const type = msg.type()
+      const text = msg.text()
+      // Only log our debug messages (those with brackets)
+      if (text.includes('[') && (type === 'log' || type === 'error' || type === 'warn')) {
+        console.log(`[BROWSER ${type.toUpperCase()}]`, text)
+      }
+    })
+
+    // Capture page errors
+    page.on('pageerror', (error) => {
+      console.error('[BROWSER ERROR]', error.message)
+    })
+
     // Use the page in the test (this is Playwright's use(), not a React hook)
     // eslint-disable-next-line react-hooks/rules-of-hooks
     await use(page)
