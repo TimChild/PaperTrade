@@ -4,6 +4,24 @@ test.describe('Portfolio Creation Flow', () => {
   test('should create portfolio and navigate to portfolio detail page', async ({ page }) => {
     // This test verifies the portfolio creation flow and navigation to the new portfolio
 
+    // Monitor network requests to see if portfolio creation succeeds
+    let portfolioCreationResponse: any = null
+    page.on('response', async (response) => {
+      if (response.url().includes('/api/portfolios') && response.request().method() === 'POST') {
+        const status = response.status()
+        console.log('[TEST] Portfolio creation API response status:', status)
+        if (status === 201 || status === 200) {
+          try {
+            const body = await response.json()
+            portfolioCreationResponse = body
+            console.log('[TEST] Portfolio created with ID:', body.portfolio_id)
+          } catch (e) {
+            console.log('[TEST] Could not parse response body')
+          }
+        }
+      }
+    })
+
     // 1. Navigate to dashboard
     await page.goto('/dashboard')
     await page.waitForLoadState('networkidle')
@@ -28,8 +46,9 @@ test.describe('Portfolio Creation Flow', () => {
     await page.getByTestId('submit-portfolio-form-btn').click()
 
     // Wait a moment for the submission to process
-    await page.waitForTimeout(1000)
+    await page.waitForTimeout(2000)
     console.log('[TEST] URL after submit:', page.url())
+    console.log('[TEST] Portfolio response:', portfolioCreationResponse ? 'Received' : 'Not received')
 
     // Check for any error messages
     const errorElements = await page.locator('[role="alert"]').all()
@@ -38,6 +57,8 @@ test.describe('Portfolio Creation Flow', () => {
         const text = await error.textContent()
         console.log('[TEST] Error message found:', text)
       }
+    } else {
+      console.log('[TEST] No error messages displayed')
     }
 
     // 5. Should navigate to the new portfolio's detail page
