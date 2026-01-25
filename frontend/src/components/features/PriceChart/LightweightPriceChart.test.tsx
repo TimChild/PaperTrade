@@ -3,8 +3,27 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { LightweightPriceChart } from './LightweightPriceChart'
 import { ThemeProvider } from '@/contexts/ThemeContext'
-import type { ApiError } from '@/types/errors'
 import * as pricesApi from '@/services/api/prices'
+
+// Mock lightweight-charts to avoid JSDOM issues
+vi.mock('lightweight-charts', () => ({
+  createChart: vi.fn(() => ({
+    addSeries: vi.fn(() => ({
+      setData: vi.fn(),
+    })),
+    applyOptions: vi.fn(),
+    remove: vi.fn(),
+    timeScale: vi.fn(() => ({
+      fitContent: vi.fn(),
+    })),
+  })),
+  createSeriesMarkers: vi.fn(() => ({
+    setMarkers: vi.fn(),
+  })),
+  ColorType: { Solid: 0 },
+  LineStyle: { Dashed: 0 },
+  LineSeries: 'LineSeries',
+}))
 
 function createWrapper() {
   const queryClient = new QueryClient({

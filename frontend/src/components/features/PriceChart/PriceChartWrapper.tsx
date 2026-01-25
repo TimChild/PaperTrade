@@ -24,12 +24,14 @@ export function PriceChartWrapper({
   defaultImplementation = 'recharts',
   showToggle = true,
 }: PriceChartWrapperProps): React.JSX.Element {
-  const [implementation, setImplementation] = useState<'recharts' | 'lightweight'>(
-    defaultImplementation
-  )
+  const [implementation, setImplementation] = useState<
+    'recharts' | 'lightweight'
+  >(defaultImplementation)
 
   const toggleImplementation = () => {
-    setImplementation((prev) => (prev === 'recharts' ? 'lightweight' : 'recharts'))
+    setImplementation((prev) =>
+      prev === 'recharts' ? 'lightweight' : 'recharts'
+    )
   }
 
   return (
@@ -41,7 +43,9 @@ export function PriceChartWrapper({
             <div className="text-sm text-foreground-secondary">
               Chart Implementation:{' '}
               <span className="font-medium text-foreground">
-                {implementation === 'recharts' ? 'Recharts' : 'TradingView Lightweight Charts'}
+                {implementation === 'recharts'
+                  ? 'Recharts'
+                  : 'TradingView Lightweight Charts'}
               </span>
             </div>
             <Button
@@ -50,7 +54,10 @@ export function PriceChartWrapper({
               onClick={toggleImplementation}
               data-testid="chart-implementation-toggle"
             >
-              Switch to {implementation === 'recharts' ? 'Lightweight Charts' : 'Recharts'}
+              Switch to{' '}
+              {implementation === 'recharts'
+                ? 'Lightweight Charts'
+                : 'Recharts'}
             </Button>
           </div>
         </Card>

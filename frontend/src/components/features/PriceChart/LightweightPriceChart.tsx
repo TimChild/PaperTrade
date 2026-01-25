@@ -155,6 +155,7 @@ export function LightweightPriceChart({
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
         textColor: isDark ? '#999999' : '#666666',
+        attributionLogo: true, // TradingView attribution requirement
       },
       grid: {
         vertLines: {
