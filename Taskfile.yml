@@ -85,7 +85,7 @@ tasks:
         msg: "Frontend not found. Run 'task setup:frontend' first."
 
   test:e2e:
-    desc: "Run end-to-end tests with Playwright"
+    desc: "Run end-to-end tests with Playwright (pass args after --: task test:e2e -- --grep 'test name')"
     dir: "{{.FRONTEND_DIR}}"
     deps:
       - docker:up:all  # Ensure full stack is running
@@ -102,7 +102,7 @@ tasks:
         sh: grep "^E2E_CLERK_USER_EMAIL=" ../.env | cut -d= -f2- || echo ""
     cmds:
       - echo "Running E2E tests..."
-      - npm run test:e2e
+      - npm run test:e2e -- {{.CLI_ARGS}}
     preconditions:
       - sh: test -f package.json
         msg: "Frontend not found"
