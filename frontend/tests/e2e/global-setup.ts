@@ -25,6 +25,10 @@ export default async function globalSetup() {
 
   // Step 1: Validate environment BEFORE creating Clerk token
   console.log('\n📋 Step 1: Validating environment (pre-token checks)...')
+
+  // Set debug flag for E2E tests
+  process.env.VITE_E2E_DEBUG = 'true'
+
   const preValidation = await validateEnvironment()
   if (!preValidation) {
     throw new Error('❌ Pre-token environment validation failed. Check output above for details.')

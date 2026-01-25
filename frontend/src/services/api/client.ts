@@ -12,11 +12,22 @@ const API_BASE_URL =
     : 'http://localhost:8000/api/v1')
 
 // Debug logging helper for E2E tests
-const isE2ETest = typeof window !== 'undefined' && window.location.search.includes('e2e-debug')
-const isPlaywrightTest = import.meta.env.MODE === 'test' || typeof process !== 'undefined' && process.env.PLAYWRIGHT_TEST
+// Enable debug logging if:
+// 1. URL has e2e-debug parameter
+// 2. Running in Playwright test environment
+// 3. VITE_E2E_DEBUG environment variable is set
+const isE2ETest =
+  (typeof window !== 'undefined' && window.location.search.includes('e2e-debug')) ||
+  import.meta.env.VITE_E2E_DEBUG === 'true'
+const isPlaywrightTest =
+  import.meta.env.MODE === 'test' ||
+  (typeof process !== 'undefined' && process.env.PLAYWRIGHT_TEST)
+
+// Always log in E2E environment for debugging
+const shouldDebugLog = isE2ETest || isPlaywrightTest
 
 function debugLog(message: string, ...args: unknown[]): void {
-  if (isE2ETest || isPlaywrightTest) {
+  if (shouldDebugLog) {
     console.log(`[API Client Debug] ${message}`, ...args)
   }
 }
