@@ -887,11 +887,22 @@ class AlphaVantageAdapter:
         at different times), this method ensures only one entry per day is returned.
         It prefers the market close entry (21:00:00 UTC) over intraday cache entries.
 
+        This method should ONLY be called for daily interval data
+        (interval='1day'). For intraday intervals (1hour, 5min, etc.),
+        multiple entries per day are expected and should NOT be deduplicated.
+
         Args:
-            prices: List of price points to deduplicate
+            prices: List of price points to deduplicate. Should all have
+                interval='1day'.
 
         Returns:
-            List of deduplicated price points, sorted chronologically
+            List of deduplicated price points, sorted chronologically, with one entry
+            per trading day.
+
+        Note:
+            This method does not validate that all price points have the same interval.
+            The caller is responsible for ensuring this method is only called with
+            daily interval data.
 
         Example:
             >>> # Three entries for Jan 20, 2026:
@@ -903,6 +914,10 @@ class AlphaVantageAdapter:
             >>> # Returns only the 21:00:00 entry
         """
         from datetime import date
+
+        # Early return for empty list
+        if not prices:
+            return []
 
         # Group by date, preferring market close time (21:00:00 UTC)
         by_date: dict[date, PricePoint] = {}
