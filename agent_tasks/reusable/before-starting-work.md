@@ -42,7 +42,7 @@ Understand existing patterns, tests, and code organization.
 
 Familiarize yourself with:
 - `docs/planning/project_plan.md` - Development roadmap
-- `docs/planning/project_strategy.md` - Technical strategy
+- `docs/planning/architecture-strategy.md` - Technical strategy
 - `PROGRESS.md` - Current status
 - `.github/copilot-instructions.md` - General guidelines
 

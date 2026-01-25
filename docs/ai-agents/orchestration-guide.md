@@ -198,7 +198,7 @@ task lint           # Run linters
 | `PROGRESS.md` | **Current status**, recent work, next steps |
 | `.github/copilot-instructions.md` | Agent guidelines, MCP setup |
 | `docs/planning/project_plan.md` | Development phases |
-| `docs/planning/project_strategy.md` | Architecture decisions |
+| `docs/planning/architecture-strategy.md` | Architecture decisions |
 | `agent_tasks/*.md` | Task definitions |
 | `.github/agents/*.md` | Role-specific agent instructions |
 | `Taskfile.yml` | Commands (`task --list`) |

@@ -164,7 +164,7 @@ Infrastructure → External concerns (DB, API, cache)
 - **Test behavior, not implementation**: Test what the system does
 - **High cohesion, loose coupling**: Related things together, minimal dependencies
 
-See [project_strategy.md](project_strategy.md) for detailed architecture documentation.
+See [docs/planning/architecture-strategy.md](docs/planning/architecture-strategy.md) for detailed architecture documentation.
 
 ### Forbidden Dependencies
 
@@ -318,7 +318,7 @@ Full task list: `task --list`
 ## Getting Help
 
 - **Documentation**: Start with [README.md](README.md)
-- **Architecture**: See [project_strategy.md](project_strategy.md)
+- **Architecture**: See [docs/planning/architecture-strategy.md](docs/planning/architecture-strategy.md)
 - **Current Status**: Check [PROGRESS.md](PROGRESS.md)
 - **Agent Orchestration**: See [docs/ai-agents/orchestration-guide.md](docs/ai-agents/orchestration-guide.md) for AI agent workflow
 - **Issues**: Browse [GitHub Issues](https://github.com/TimChild/PaperTrade/issues)

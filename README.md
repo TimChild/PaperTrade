@@ -15,7 +15,7 @@ A stock market emulation platform for practicing trading strategies without risk
 - **[User Guide](docs/USER_GUIDE.md)** - Step-by-step instructions for using Zebu
 
 **Developers & Contributors:**
-- **[Feature Status Matrix](docs/planning/feature-status.md)** - Complete feature implementation status
+- **[Feature Status Matrix](docs/planning/features.md)** - Complete feature implementation status
 - **[Technical Boundaries](docs/architecture/technical-boundaries.md)** - Known limitations and edge cases
 
 **Deployment & Operations:**
@@ -579,7 +579,7 @@ See [project_plan.md](docs/planning/project_plan.md) for detailed development ph
 
 We welcome contributions! Please:
 1. Read the [copilot instructions](.github/copilot-instructions.md) for coding standards
-2. Check the [project strategy](docs/planning/project_strategy.md) for architectural guidance
+2. Check the [project strategy](docs/planning/architecture-strategy.md) for architectural guidance
 3. Follow our PR template when submitting changes
 
 ## License

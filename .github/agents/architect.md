@@ -209,7 +209,7 @@ Follow the plan exactly:
 - [ ] Data flows match architecture diagrams
 - [ ] No deviations from architecture plan without explicit approval
 ## Related Documentation
-- See `project_strategy.md` for overall technical strategy
+- See `docs/planning/architecture-strategy.md` for overall technical strategy
 - See `project_plan.md` for development phases
 - See `docs/reference/external-resources.md` for external references
 - Follow progress documentation requirements in `.github/copilot-instructions.md`

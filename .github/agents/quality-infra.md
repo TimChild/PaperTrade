@@ -295,5 +295,5 @@ Use `task quality:backend` and `task quality:frontend` for comprehensive checks.
 
 ## Related Documentation
 - See `.github/copilot-instructions.md` for general guidelines
-- See `project_strategy.md` for technical strategy
+- See `docs/planning/architecture-strategy.md` for technical strategy
 - See individual agent docs for their quality expectations

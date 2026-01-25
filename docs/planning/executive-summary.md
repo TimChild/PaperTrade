@@ -110,7 +110,7 @@ See [USER_GUIDE.md](./USER_GUIDE.md) for detailed instructions.
 - **CI/CD**: GitHub Actions with automated testing and deployment
 - **Docker**: Full-stack containerization for local development
 
-See [FEATURE_STATUS.md](./FEATURE_STATUS.md) for implementation details and [TECHNICAL_BOUNDARIES.md](./TECHNICAL_BOUNDARIES.md) for known limitations.
+See [features.md](./features.md) for implementation details and [TECHNICAL_BOUNDARIES.md](./TECHNICAL_BOUNDARIES.md) for known limitations.
 
 ## Performance Metrics
 
