@@ -136,7 +136,7 @@
 
 | Feature | Status | Details | Phase | Notes |
 |---------|--------|---------|-------|-------|
-| **Backtesting** | ⚠️ Limited | Basic historical date selection | Phase 3c | Advanced features in Phase 5 |
+| **Backtesting** | ⚠️ Limited | Basic historical portfolio viewing | Phase 3c (Basic) | Advanced automation in Phase 5 |
 | **Algorithmic Trading** | ❌ Not Implemented | Automated trade execution | Phase 5 | Complex feature |
 | **Strategy Builder** | ❌ Not Implemented | Visual strategy creator | Phase 5 | Advanced UI |
 | **Paper Trading Leagues** | ❌ Not Implemented | Compete with other users | Future | Social feature |

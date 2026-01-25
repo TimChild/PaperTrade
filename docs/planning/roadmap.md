@@ -348,7 +348,7 @@ A: Yes! Both BUY and SELL orders are fully functional (Phase 3a complete).
 A: No! Zebu is a **simulation** with virtual money. Use it to learn, then trade for real elsewhere.
 
 **Q: Will there be a mobile app?**
-A: Not in 2026. The web app works on mobile browsers. Phase 4a will improve mobile experience. Native apps maybe 2027+.
+A: Not in 2026. The web app works on mobile browsers. Phase 4a will improve mobile experience. Native apps are planned for 2027+.
 
 **Q: Can I import my real brokerage trades?**
 A: Not yet. Planned for future (CSV import). For now, manually re-create trades.
@@ -360,7 +360,7 @@ A: Yes! Clerk authentication (Phase 3b complete) ensures data privacy with indus
 A: We use Alpha Vantage API (real market data). Free tier has 15-20 min delays. Paid tier is real-time.
 
 **Q: Can I test my strategy from 2020?**
-A: Basic backtesting is available in Phase 3c. Advanced backtesting features coming in Phase 5.
+A: Yes! Basic backtesting capabilities are available now (Phase 3c). Advanced backtesting features with automated strategy testing are coming in Phase 5.
 
 **Q: Will this always be free?**
 A: Core features will always be free. We may add premium features (real-time data, advanced analytics) for a small fee in the future.

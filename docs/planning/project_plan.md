@@ -3,9 +3,9 @@
 **Status**: Historical Document - See `roadmap.md` for Current Plans
 
 **Note**: This is the **original project plan** from December 2025. For current roadmap and feature status:
-- **Current Roadmap**: See `roadmap.md` (high-level vision & timeline)
-- **Feature Status**: See `features.md` (detailed feature matrix)
-- **Architecture Strategy**: See `architecture-strategy.md` (technical decisions)
+- **Current Roadmap**: See `./roadmap.md` (high-level vision & timeline)
+- **Feature Status**: See `./features.md` (detailed feature matrix)
+- **Architecture Strategy**: See `./architecture-strategy.md` (technical decisions)
 
 Phases 1-3 are complete. Phase 4 has been refined based on learnings. This document is preserved for historical context.
 
