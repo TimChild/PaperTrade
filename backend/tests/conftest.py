@@ -84,11 +84,15 @@ def client(test_engine: AsyncEngine) -> TestClient:
 
         Seeds the adapter with default test prices for common tickers.
 
+        Prices are seeded at a timestamp 1 minute in the past to ensure
+        queries for "current" or "recent" times will find them using the
+        "at or before" timestamp semantics.
+
         Args:
             session: Database session from dependency injection (not used
                      for in-memory adapter)
         """
-        from datetime import UTC, datetime
+        from datetime import UTC, datetime, timedelta
         from decimal import Decimal
 
         from zebu.application.dtos.price_point import PricePoint
@@ -97,26 +101,30 @@ def client(test_engine: AsyncEngine) -> TestClient:
 
         adapter = InMemoryMarketDataAdapter()
 
+        # Seed prices 1 minute in the past so queries for "now" will find them
+        # This works with the "at or before" semantics of get_price_at()
+        seed_time = datetime.now(UTC) - timedelta(minutes=1)
+
         # Seed with default test prices
         test_prices = [
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("150.00"), "USD"),
-                timestamp=datetime.now(UTC),
+                timestamp=seed_time,
                 source="database",
                 interval="real-time",
             ),
             PricePoint(
                 ticker=Ticker("GOOGL"),
                 price=Money(Decimal("2800.00"), "USD"),
-                timestamp=datetime.now(UTC),
+                timestamp=seed_time,
                 source="database",
                 interval="real-time",
             ),
             PricePoint(
                 ticker=Ticker("MSFT"),
                 price=Money(Decimal("380.00"), "USD"),
-                timestamp=datetime.now(UTC),
+                timestamp=seed_time,
                 source="database",
                 interval="real-time",
             ),
