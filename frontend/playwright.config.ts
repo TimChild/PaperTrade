@@ -31,7 +31,8 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:5173',
+    // Use environment variable for base URL (defaults to localhost for local dev)
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:5173',
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
@@ -50,7 +51,8 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        storageState: 'playwright/.auth/user.json', // Reuse auth state
+        // Use saved auth state from setup
+        storageState: path.resolve(__dirname, './playwright/.auth/user.json'),
       },
       dependencies: ['setup'], // Run setup first
     },
