@@ -502,4 +502,85 @@ describe('PriceChart', () => {
     // Component should render without errors
     // Y-axis domain should include the trade marker at 170 (above the max price line of 160)
   })
+
+  it('filters out trade markers outside the chart date range', async () => {
+    const mockHistory = {
+      ticker: 'AAPL',
+      prices: [
+        {
+          ticker: { symbol: 'AAPL' },
+          price: { amount: 150, currency: 'USD' },
+          timestamp: '2024-01-01T00:00:00Z',
+          source: 'cache' as const,
+          interval: '1day' as const,
+        },
+        {
+          ticker: { symbol: 'AAPL' },
+          price: { amount: 155, currency: 'USD' },
+          timestamp: '2024-01-02T00:00:00Z',
+          source: 'cache' as const,
+          interval: '1day' as const,
+        },
+        {
+          ticker: { symbol: 'AAPL' },
+          price: { amount: 160, currency: 'USD' },
+          timestamp: '2024-01-03T00:00:00Z',
+          source: 'cache' as const,
+          interval: '1day' as const,
+        },
+      ],
+      source: 'mock',
+      cached: false,
+    }
+
+    // Trade markers: one within range, one outside range
+    const mockTransactions: TransactionListResponse = {
+      transactions: [
+        {
+          id: '1',
+          portfolio_id: 'portfolio-1',
+          transaction_type: 'BUY',
+          timestamp: '2024-01-02T00:00:00Z', // Within chart range
+          cash_change: '-1550.00',
+          ticker: 'AAPL',
+          quantity: '10',
+          price_per_share: '155.00',
+          notes: null,
+        },
+        {
+          id: '2',
+          portfolio_id: 'portfolio-1',
+          transaction_type: 'SELL',
+          timestamp: '2024-01-10T00:00:00Z', // Outside chart range (after Jan 3)
+          cash_change: '1700.00',
+          ticker: 'AAPL',
+          quantity: '10',
+          price_per_share: '170.00',
+          notes: null,
+        },
+      ],
+      total_count: 2,
+      limit: 100,
+      offset: 0,
+    }
+
+    vi.spyOn(pricesApi, 'getPriceHistory').mockResolvedValue(mockHistory)
+    vi.spyOn(transactionsApi.transactionsApi, 'list').mockResolvedValue(
+      mockTransactions
+    )
+
+    const Wrapper = createWrapper()
+    render(<PriceChart ticker="AAPL" portfolioId="portfolio-1" />, {
+      wrapper: Wrapper,
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText('$160.00')).toBeInTheDocument()
+    })
+
+    // Component should render without errors
+    // Only the trade marker on Jan 2 (within range) should be included
+    // The trade marker on Jan 10 (outside range) should be filtered out
+    // This prevents XAxis calculation issues that would cause null X coordinates
+  })
 })

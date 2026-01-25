@@ -194,13 +194,18 @@ export function PriceChart({
   }))
 
   // Format trade markers to match chart time format
-  const formattedTradeMarkers = tradeMarkers.map((marker) => ({
-    time: formatDateForAxis(marker.timestamp, timeRange),
-    price: marker.price,
-    action: marker.action,
-    quantity: marker.quantity,
-    fullDate: marker.fullDate,
-  }))
+  // Filter to only include markers whose time values exist in chartData
+  // This prevents Recharts XAxis calculation issues when markers fall outside chart range
+  const validTimeValues = new Set(chartData.map((d) => d.time))
+  const formattedTradeMarkers = tradeMarkers
+    .map((marker) => ({
+      time: formatDateForAxis(marker.timestamp, timeRange),
+      price: marker.price,
+      action: marker.action,
+      quantity: marker.quantity,
+      fullDate: marker.fullDate,
+    }))
+    .filter((marker) => validTimeValues.has(marker.time))
 
   // Calculate Y-axis domain from both chart data and trade markers
   const allPrices = [
