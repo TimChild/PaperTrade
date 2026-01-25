@@ -5,10 +5,10 @@ Post-consolidation cleanup to organize completed work and archive obsolete tasks
 ## Files Moved
 
 ### Documentation → Progress Docs
-- `CONSOLIDATION_PLAN.md` → `agent_progress_docs/125_consolidation-plan.md`
+- `CONSOLIDATION_PLAN.md` → `agent_tasks/progress/125_consolidation-plan.md`
   - Rationale: Was a working plan, now completed - belongs with other progress docs
 
-- `CONSOLIDATION_NOTES.md` → `agent_progress_docs/118_docker-compose-consolidation-notes.md`
+- `CONSOLIDATION_NOTES.md` → `agent_tasks/progress/118_docker-compose-consolidation-notes.md`
   - Rationale: Specific to PR #118 Docker consolidation work
   - Renamed to clarify it's about Docker compose, not environment validation
 
@@ -40,7 +40,7 @@ Post-consolidation cleanup to organize completed work and archive obsolete tasks
 
 ## What Wasn't Touched
 
-- **orchestrator_procedures/**: Reviewed, no updates needed
+- **docs/ai-agents/procedures/**: Reviewed, no updates needed
   - References to "health check" are general concepts, not specific old commands
   - All procedures reference current task commands (already updated)
 

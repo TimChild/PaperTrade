@@ -130,7 +130,7 @@
 **Agent**: Architect
 **Review Score**: Exceptional - comprehensive Phase 2 design
 
-See full architecture in `architecture_plans/20251228_phase2-market-data/`
+See full architecture in `docs/architecture/20251228_phase2-market-data/`
 
 #### Key Design Decisions
 
@@ -344,7 +344,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 - Currency-safe arithmetic
 - Type-safe with strict Pyright compliance
 
-**Progress Doc**: [2025-12-28_17-10-14_domain-layer-implementation.md](agent_progress_docs/2025-12-28_17-10-14_domain-layer-implementation.md)
+**Progress Doc**: [2025-12-28_17-10-14_domain-layer-implementation.md](agent_tasks/progress/2025-12-28_17-10-14_domain-layer-implementation.md)
 
 ---
 
@@ -360,7 +360,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 - Business rule validation (insufficient funds/shares)
 - 90%+ test coverage with mocked repositories
 
-**Progress Doc**: [2025-12-28_20-46-30_application-layer-implementation.md](agent_progress_docs/2025-12-28_20-46-30_application-layer-implementation.md)
+**Progress Doc**: [2025-12-28_20-46-30_application-layer-implementation.md](agent_tasks/progress/2025-12-28_20-46-30_application-layer-implementation.md)
 
 ---
 
@@ -373,7 +373,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 - Improved Portfolio immutability documentation
 - Clarified business rule validation strategy
 
-**Progress Doc**: [2025-12-28_20-52-40_domain-layer-refinements-task-008.md](agent_progress_docs/2025-12-28_20-52-40_domain-layer-refinements-task-008.md)
+**Progress Doc**: [2025-12-28_20-52-40_domain-layer-refinements-task-008.md](agent_tasks/progress/2025-12-28_20-52-40_domain-layer-refinements-task-008.md)
 
 ---
 
@@ -394,9 +394,9 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 - **Outbound Adapters**: SQLModel repositories (Portfolio, Transaction)
 - **Infrastructure**: Database config, dependency injection, async session management
 
-**Progress Doc**: [2025-12-28_21-38-05_adapters-layer-implementation.md](agent_progress_docs/2025-12-28_21-38-05_adapters-layer-implementation.md)
+**Progress Doc**: [2025-12-28_21-38-05_adapters-layer-implementation.md](agent_tasks/progress/2025-12-28_21-38-05_adapters-layer-implementation.md)
 
-**Review**: [2025-12-28_15-56-00_pr15-critical-review.md](agent_progress_docs/2025-12-28_15-56-00_pr15-critical-review.md)
+**Review**: [2025-12-28_15-56-00_pr15-critical-review.md](agent_tasks/progress/2025-12-28_15-56-00_pr15-critical-review.md)
 
 ---
 
@@ -419,9 +419,9 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 - **UI**: LoadingSpinner, ErrorDisplay, EmptyState components
 - **Testing Guide**: `docs/testing-integration.md` with manual workflows
 
-**Progress Doc**: [2025-12-28_22-09-48_frontend-backend-integration.md](agent_progress_docs/2025-12-28_22-09-48_frontend-backend-integration.md)
+**Progress Doc**: [2025-12-28_22-09-48_frontend-backend-integration.md](agent_tasks/progress/2025-12-28_22-09-48_frontend-backend-integration.md)
 
-**Review**: [2025-12-28_16-29-08_pr16-task009-review.md](agent_progress_docs/2025-12-28_16-29-08_pr16-task009-review.md)
+**Review**: [2025-12-28_16-29-08_pr16-task009-review.md](agent_tasks/progress/2025-12-28_16-29-08_pr16-task009-review.md)
 
 ---
 
@@ -444,9 +444,9 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 
 **Impact**: Enables reliable frontend testing without backend, unblocks Phase 2
 
-**Progress Doc**: [2025-12-28_23-31-03_fix-frontend-tests-with-msw.md](agent_progress_docs/2025-12-28_23-31-03_fix-frontend-tests-with-msw.md)
+**Progress Doc**: [2025-12-28_23-31-03_fix-frontend-tests-with-msw.md](agent_tasks/progress/2025-12-28_23-31-03_fix-frontend-tests-with-msw.md)
 
-**Review**: [2025-12-28_17-39-55_pr18-task011-msw-review.md](agent_progress_docs/2025-12-28_17-39-55_pr18-task011-msw-review.md)
+**Review**: [2025-12-28_17-39-55_pr18-task011-msw-review.md](agent_tasks/progress/2025-12-28_17-39-55_pr18-task011-msw-review.md)
 
 ---
 
@@ -471,9 +471,9 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 - Cleaner dependency tree (100 fewer packages)
 - No production impact (dev dependencies only)
 
-**Progress Doc**: [2025-12-28_23-31-02_frontend-dev-dependencies-upgrade.md](agent_progress_docs/2025-12-28_23-31-02_frontend-dev-dependencies-upgrade.md)
+**Progress Doc**: [2025-12-28_23-31-02_frontend-dev-dependencies-upgrade.md](agent_tasks/progress/2025-12-28_23-31-02_frontend-dev-dependencies-upgrade.md)
 
-**Review**: [2025-12-28_17-50-40_pr19-task012-dependencies-review.md](agent_progress_docs/2025-12-28_17-50-40_pr19-task012-dependencies-review.md)
+**Review**: [2025-12-28_17-50-40_pr19-task012-dependencies-review.md](agent_tasks/progress/2025-12-28_17-50-40_pr19-task012-dependencies-review.md)
 
 ---
 
@@ -738,7 +738,7 @@ Based on quality assessment findings, will create specific refactoring tasks for
 
 ## Decision Log
 
-See [BACKLOG.md](BACKLOG.md) for minor improvements and [architecture_plans/20251227_phase1-backend-mvp/design-decisions.md](architecture_plans/20251227_phase1-backend-mvp/design-decisions.md) for architectural decisions.
+See [BACKLOG.md](BACKLOG.md) for minor improvements and [docs/architecture/20251227_phase1-backend-mvp/design-decisions.md](docs/architecture/20251227_phase1-backend-mvp/design-decisions.md) for architectural decisions.
 
 **Key Decisions**:
 - Immutable ledger pattern for transaction history
@@ -762,8 +762,8 @@ This maximizes throughput while maintaining quality.
 
 ## Links
 
-- **Architecture Plans**: [architecture_plans/20251227_phase1-backend-mvp/](architecture_plans/20251227_phase1-backend-mvp/)
+- **Architecture Plans**: [docs/architecture/20251227_phase1-backend-mvp/](docs/architecture/20251227_phase1-backend-mvp/)
 - **Agent Tasks**: [agent_tasks/](agent_tasks/)
-- **Progress Docs**: [agent_progress_docs/](agent_progress_docs/)
+- **Progress Docs**: [agent_tasks/progress/](agent_tasks/progress/)
 - **Backlog**: [BACKLOG.md](BACKLOG.md)
 - **Orchestration Guide**: [AGENT_ORCHESTRATION.md](AGENT_ORCHESTRATION.md)

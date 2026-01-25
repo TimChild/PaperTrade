@@ -61,10 +61,10 @@ Updated 15+ files throughout the repository:
 - `docs/README.md` (complete rewrite)
 - `docs/ai-agents/orchestration-guide.md` (2 internal refs)
 - `docs/planning/future-ideas.md` (1 ref)
-- `orchestrator_procedures/README.md` (1 ref)
-- `orchestrator_procedures/run_qa_validation.md` (1 ref)
-- `orchestrator_procedures/playwright_e2e_testing.md` (1 ref)
-- `orchestrator_procedures/session_handoff.md` (1 ref)
+- `docs/ai-agents/procedures/README.md` (1 ref)
+- `docs/ai-agents/procedures/run_qa_validation.md` (1 ref)
+- `docs/ai-agents/procedures/playwright_e2e_testing.md` (1 ref)
+- `docs/ai-agents/procedures/session_handoff.md` (1 ref)
 
 ### 4. Documentation Index
 

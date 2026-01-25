@@ -32,11 +32,11 @@ See [`.github/copilot-instructions.md`](../../.github/copilot-instructions.md) f
 
 ### Agent Tasks & Progress
 - **Agent Tasks**: [`agent_tasks/`](../../agent_tasks/) - Task definitions and templates
-- **Progress Documentation**: [`agent_progress_docs/`](../../agent_progress_docs/) - PR documentation and session notes
+- **Progress Documentation**: [`agent_tasks/progress/`](../../agent_tasks/progress/) - PR documentation and session notes
 
 ### Procedures
 Testing and validation procedures for orchestrators:
-- [`orchestrator_procedures/`](../../orchestrator_procedures/) - E2E validation, QA procedures, session handoff
+- [`docs/ai-agents/procedures/`](../../docs/ai-agents/procedures/) - E2E validation, QA procedures, session handoff
 
 ## For Human Developers
 

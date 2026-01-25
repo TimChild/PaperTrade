@@ -70,7 +70,7 @@ This document outlines known technical limitations, edge cases, and architectura
 **Code References**:
 - `backend/src/zebu/adapters/inbound/api/routes.py` - No auth middleware (yet)
 - `frontend/src/lib/utils/userSession.ts` - LocalStorage user management (temporary)
-- See `architecture_plans/phase3-refined/phase3b-authentication.md` for detailed design
+- See `docs/architecture/phase3-refined/phase3b-authentication.md` for detailed design
 
 ---
 

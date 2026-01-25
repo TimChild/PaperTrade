@@ -15,7 +15,7 @@
 ## File Format
 
 ```
-agent_progress_docs/YYYY-MM-DD_HH-MM-SS_short-description.md
+agent_tasks/progress/YYYY-MM-DD_HH-MM-SS_short-description.md
 ```
 
 Get timestamp: `date "+%Y-%m-%d_%H-%M-%S"`

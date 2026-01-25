@@ -348,4 +348,4 @@ We extend built-in colors (gray-50, blue-600) with semantic names (background-pr
 - Tailwind Config: `frontend/tailwind.config.ts`
 - CSS Variables: `frontend/src/index.css`
 - Type Definitions: `frontend/src/types/design-system.ts`
-- Design Decisions: `architecture_plans/20260109_design-system-skinning/design-decisions.md`
+- Design Decisions: `docs/architecture/20260109_design-system-skinning/design-decisions.md`

@@ -231,7 +231,7 @@ For each refactoring:
 
 - PRs for each high-priority refactoring
 - Updated tests where necessary
-- Progress documentation in `agent_progress_docs/`
+- Progress documentation in `agent_tasks/progress/`
 
 ## Phase 3: Medium-Priority Improvements
 
@@ -341,7 +341,7 @@ For each refactoring:
 
 - `.github/agents/frontend-swe.md` - Agent instructions with React patterns guidance
 - `../reference/testing-conventions.md` - Testing best practices
-- `agent_progress_docs/2026-01-08_*_react-patterns-refactor.md` - Implementation progress
+- `agent_tasks/progress/2026-01-08_*_react-patterns-refactor.md` - Implementation progress
 
 ## Task Breakdown for Orchestrator
 

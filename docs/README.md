@@ -32,7 +32,7 @@ Technical design and boundaries:
 |----------|---------|
 | [architecture/technical-boundaries.md](architecture/technical-boundaries.md) | Known limitations and edge cases |
 | [architecture/clerk-implementation-info.md](architecture/clerk-implementation-info.md) | Clerk authentication details |
-| [../architecture_plans/](../architecture_plans/) | Phase-specific designs |
+| [../docs/architecture/](../docs/architecture/) | Phase-specific designs |
 
 ## Reference Documentation
 
@@ -65,7 +65,7 @@ Technical guides and conventions:
 | [../.github/copilot-instructions.md](../.github/copilot-instructions.md) | General agent guidelines |
 | [../.github/agents/](../.github/agents/) | Role-specific instructions |
 | [../agent_tasks/](../agent_tasks/) | Task definitions |
-| [../agent_progress_docs/](../agent_progress_docs/) | PR documentation |
+| [../agent_tasks/progress/](../agent_tasks/progress/) | PR documentation |
 
 ## Archive
 

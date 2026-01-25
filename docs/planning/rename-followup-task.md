@@ -78,8 +78,8 @@ git clone https://github.com/TimChild/PaperTrade.git
 **Status**: ✅ Intentionally Preserved
 
 Historical documentation is intentionally unchanged to preserve project history:
-- `agent_progress_docs/` - Historical agent work logs
-- `architecture_plans/` - Historical architecture decisions
+- `agent_tasks/progress/` - Historical agent work logs
+- `docs/architecture/` - Historical architecture decisions
 - Git commit messages
 
 **Action**: No changes needed or wanted.

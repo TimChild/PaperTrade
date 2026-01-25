@@ -168,15 +168,15 @@ task docker:logs
 cd /Users/timchild/github/PaperTrade
 
 # 1. Manual checklist
-cat orchestrator_procedures/manual_e2e_testing.md
+cat docs/ai-agents/procedures/manual_e2e_testing.md
 # Execute each scenario manually
 
 # 2. Automated script
-./orchestrator_procedures/quick_e2e_test.sh
+./scripts/quick_e2e_test.sh
 
 # 3. Playwright framework (if ready)
 cd backend
-uv run python ../orchestrator_procedures/e2e_validation.py
+uv run python ../scripts/e2e_validation.py
 ```
 
 ## Success Criteria
@@ -223,7 +223,7 @@ uv run python ../orchestrator_procedures/e2e_validation.py
 
 ## Related Issues
 
-- Discovered during E2E testing (orchestrator_procedures/)
+- Discovered during E2E testing (docs/ai-agents/procedures/)
 - Follows successful merge of PR #40 (trade API fix)
 - Follows successful merge of PR #41 (CI workflow fixes)
 

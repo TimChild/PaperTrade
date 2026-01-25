@@ -120,7 +120,7 @@ Progress Documentation     8 files (ref)       ~30
 # .github/agents/backend-swe.md (235 lines)
 
 ## Before Starting Work
-1. Check agent_progress_docs/
+1. Check agent_tasks/progress/
 2. Check open PRs: gh pr list
 3. Review architecture docs
 4. Read existing code

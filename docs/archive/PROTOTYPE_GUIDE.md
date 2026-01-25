@@ -154,10 +154,10 @@ After design decision (Task 090):
 
 ## 📚 Additional Documentation
 
-- **Visual Specifications**: `agent_progress_docs/prototype_visual_documentation.md`
-- **Implementation Details**: `agent_progress_docs/20260110_055730_task089_dashboard_prototyping.md`
+- **Visual Specifications**: `agent_tasks/progress/prototype_visual_documentation.md`
+- **Implementation Details**: `agent_tasks/progress/20260110_055730_task089_dashboard_prototyping.md`
 - **Access Instructions**: `frontend/src/pages/__prototypes__/README.md`
-- **Strategic Plan**: `architecture_plans/20260109_design-system-skinning/`
+- **Strategic Plan**: `docs/architecture/20260109_design-system-skinning/`
 
 ---
 

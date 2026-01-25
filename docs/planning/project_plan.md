@@ -1,8 +1,8 @@
 # Zebu Project Plan
 
 **Note**: This is the **original project plan** from December 2025. For the **refined architecture plans** based on Phase 1-2 learnings, see:
-- **Phase 3 Refined**: `architecture_plans/phase3-refined/` (SELL → Auth → Analytics)
-- **Phase 4 Refined**: `architecture_plans/phase4-refined/` (UX, Orders, Multi-Provider, Observability)
+- **Phase 3 Refined**: `docs/architecture/phase3-refined/` (SELL → Auth → Analytics)
+- **Phase 4 Refined**: `docs/architecture/phase4-refined/` (UX, Orders, Multi-Provider, Observability)
 - **Product Roadmap**: `product-roadmap.md` (user-facing)
 
 The original plan below is preserved for historical context. Phase 3-4 have been refined based on actual implementation velocity and user needs analysis.
@@ -152,7 +152,7 @@ class MarketDataPort(Protocol):
 > - **Phase 3b: Production-Ready Foundation** (Clerk authentication) - 2-3 days
 > - **Phase 3c: Analytics & Insights** (Charts + Backtesting) - 3-4 weeks
 >
-> See `architecture_plans/phase3-refined/` for detailed specifications.
+> See `docs/architecture/phase3-refined/` for detailed specifications.
 >
 > **Why the change?** User feedback identified SELL orders and authentication as higher priorities than pure backtesting. The refined plan delivers incremental value faster while incorporating backtesting into Phase 3c alongside analytics.
 >
@@ -210,7 +210,7 @@ async def execute_trade(
 > - **Phase 4c: Multi-Provider & Resilience** (Finnhub, IEX Cloud fallback) - 3-4 weeks
 > - **Phase 4d: Observability & Operations** (Logging, monitoring, backups) - 3-4 weeks
 >
-> See `architecture_plans/phase4-refined/` for detailed specifications.
+> See `docs/architecture/phase4-refined/` for detailed specifications.
 >
 > **Why the change?** Phase 4 now emphasizes platform maturity (UX, observability, resilience) over just adding friction. The original "Friction & Reality" features are incorporated into Phase 4b.
 
