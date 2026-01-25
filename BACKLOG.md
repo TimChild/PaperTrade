@@ -19,6 +19,20 @@ Minor improvements, tech debt, and enhancements that don't block main developmen
    - **Found**: 2026-01-19 during quality check
    - **Status**: Not started
 
+2. **Investigate Slow App Performance with ~50 Portfolios** - NEW
+   - **Problem**: The app becomes very slow when a user has ~50 portfolios
+   - **Root Cause**: Unknown - needs investigation (likely N+1 queries or missing pagination)
+   - **Impact**: Poor user experience, E2E tests timeout with accumulated test portfolios
+   - **Solution**: Profile the portfolio listing endpoints and frontend rendering
+   - **Investigation Areas**:
+     - Check for N+1 queries when fetching portfolios
+     - Check if all portfolio data is loaded eagerly
+     - Consider pagination for portfolio list
+     - Review frontend rendering performance with large lists
+   - **Effort**: ~2-4 hours for investigation
+   - **Found**: 2026-01-25 during E2E test debugging
+   - **Status**: Not started
+
 ## Monitoring & Observability ✅ COMPLETE
 
 **Deployed Stack** (PRs #145, #151):
