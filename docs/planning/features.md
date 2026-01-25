@@ -1,7 +1,7 @@
 # Zebu: Feature Status Matrix
 
-**Last Updated**: January 4, 2026
-**Current Version**: Phase 2 Complete
+**Last Updated**: January 25, 2026
+**Current Version**: Phase 3c Complete
 
 ## Legend
 
@@ -56,14 +56,14 @@
 
 | Feature | Status | Details | Phase | Notes |
 |---------|--------|---------|-------|-------|
-| **Holdings Table** | ✅ Full | Current positions with quantities | Phase 1 | Average cost displayed |
+| **Holdings Table** | ✅ Full | Current positions with quantities | Phase 1 | Real-time prices displayed |
 | **Portfolio Value** | ✅ Full | Total value (cash + holdings) | Phase 2 | Real-time with market data |
-| **Gains/Losses** | ⚠️ Limited | Basic P&L calculation | Phase 2 | No percentage or charts |
-| **Performance Charts** | ❌ Not Implemented | Line/candlestick charts | Phase 3 | Historical data ready |
-| **Portfolio Comparison** | ❌ Not Implemented | Side-by-side comparison | Phase 3 | Multi-portfolio analytics |
-| **Benchmarking** | ❌ Not Implemented | Compare vs S&P 500, etc. | Phase 3 | Requires index data |
-| **Risk Metrics** | ❌ Not Implemented | Sharpe ratio, volatility, etc. | Phase 4 | Advanced analytics |
-| **Asset Allocation** | ❌ Not Implemented | Pie charts by sector/asset | Phase 3 | Requires classification data |
+| **Gains/Losses** | ✅ Full | Realized and unrealized P&L | Phase 3c | Percentage and dollar amounts |
+| **Performance Charts** | ✅ Full | Line charts over time | Phase 3c | Portfolio value history |
+| **Portfolio Comparison** | ❌ Not Implemented | Side-by-side comparison | Phase 4 | Multi-portfolio analytics |
+| **Benchmarking** | ❌ Not Implemented | Compare vs S&P 500, etc. | Phase 5 | Requires index data |
+| **Risk Metrics** | ❌ Not Implemented | Sharpe ratio, volatility, etc. | Phase 5 | Advanced analytics |
+| **Asset Allocation** | ⚠️ Limited | Basic holdings table | Phase 3c | Advanced charts in Phase 4 |
 
 ## User Interface
 
@@ -97,9 +97,9 @@
 
 | Feature | Status | Details | Phase | Notes |
 |---------|--------|---------|-------|-------|
-| **Unit Tests** | ✅ Full | 418 backend + 81 frontend tests | Phase 1-2 | 82%+ coverage |
+| **Unit Tests** | ✅ Full | 545 backend + 197 frontend tests | Phase 1-3 | 81%+ coverage |
 | **Integration Tests** | ✅ Full | API endpoints tested | Phase 1 | Full request/response cycle |
-| **E2E Tests** | ✅ Full | 7 critical workflows | Phase 2 | Playwright browser automation |
+| **E2E Tests** | ✅ Full | 21 critical workflows | Phase 3 | Playwright browser automation |
 | **Type Safety** | ✅ Full | Pyright (strict) + TypeScript | Phase 0 | Zero type errors |
 | **Linting** | ✅ Full | Ruff + ESLint, all passing | Phase 0 | Pre-commit hooks |
 | **CI/CD** | ✅ Full | GitHub Actions | Phase 0 | Automated test runs |
@@ -110,11 +110,11 @@
 
 | Feature | Status | Details | Phase | Notes |
 |---------|--------|---------|-------|-------|
-| **User Registration** | ❌ Not Implemented | Sign up flow | Phase 3b | Using Clerk (3rd party) |
-| **User Login** | ❌ Not Implemented | Authentication | Phase 3b | Clerk provides UI/backend |
-| **Session Management** | 🚧 In Progress | User ID via localStorage | Phase 2 | Temporary until Clerk |
-| **Password Reset** | ❌ Not Implemented | Email-based reset | Phase 3b | Clerk includes this |
-| **Multi-factor Auth** | ❌ Not Implemented | 2FA/TOTP | Phase 3b | Clerk supports 2FA |
+| **User Registration** | ✅ Full | Sign up flow via Clerk | Phase 3b | Email/password + social login |
+| **User Login** | ✅ Full | Authentication via Clerk | Phase 3b | Session management |
+| **Session Management** | ✅ Full | Secure user sessions | Phase 3b | Clerk handles tokens |
+| **Password Reset** | ✅ Full | Email-based reset via Clerk | Phase 3b | Built into Clerk |
+| **Multi-factor Auth** | ✅ Full | 2FA/TOTP via Clerk | Phase 3b | Optional for users |
 | **API Rate Limiting** | ⚠️ Limited | Only for market data | Phase 2 | No user-level limits |
 | **HTTPS** | 🔒 Blocked | TLS encryption | Production | Infrastructure concern |
 | **CORS** | ✅ Full | Configured for frontend | Phase 1 | Development & production |
@@ -149,23 +149,31 @@
 
 ## Implementation Priority
 
-### High Priority (Next 3 Months)
-1. SELL order functionality (Phase 3a)
-2. User authentication via Clerk (Phase 3b - 2-3 days)
-3. Portfolio analytics charts (Phase 3c)
-4. Historical backtesting MVP (Phase 3c)
+### Completed (Phase 3c)
+1. ✅ SELL order functionality
+2. ✅ User authentication via Clerk
+3. ✅ Portfolio analytics charts
+4. ✅ Gain/loss tracking
 
-### Medium Priority (3-6 Months)
-1. Advanced order types (limit, stop)
-2. Real-time WebSocket updates
-3. Mobile-responsive design improvements
-4. Comprehensive monitoring & alerting
+### High Priority (Phase 4 - Next 6 Months)
+1. Advanced order types (limit, stop orders) - Phase 4b
+2. Real-time WebSocket updates - Phase 4a
+3. Mobile-responsive design improvements - Phase 4a
+4. Toast notifications - Phase 4a
+5. Multi-provider market data - Phase 4c
+6. Comprehensive monitoring & alerting - Phase 4d
 
-### Low Priority (6+ Months)
+### Medium Priority (6-12 Months - Phase 5)
 1. Multi-currency support
-2. Tax reporting
-3. Social features
-4. Mobile native apps
+2. Advanced backtesting engine
+3. Portfolio comparison tools
+4. Advanced analytics (Sharpe ratio, beta)
+5. Automated trading strategies
+
+### Low Priority (12+ Months)
+1. Tax reporting
+2. Social features
+3. Mobile native apps
 
 ---
 

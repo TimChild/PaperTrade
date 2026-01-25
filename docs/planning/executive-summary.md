@@ -1,7 +1,7 @@
 # Zebu: Executive Summary
 
-**Version**: Phase 2 Complete (January 2026)
-**Status**: Production-Ready with Real Market Data Integration
+**Version**: Phase 3c Complete (January 2026)
+**Status**: Full-Featured Trading Platform with Analytics
 
 ## What is Zebu?
 
@@ -9,10 +9,12 @@ Zebu is a stock market emulation platform that lets you practice trading strateg
 
 ## Current State
 
-✅ **Fully Functional** - Core trading platform operational
+✅ **Fully Functional** - Complete trading platform operational
 ✅ **Real Market Data** - Live prices via Alpha Vantage API
+✅ **User Authentication** - Secure login via Clerk
+✅ **Analytics & Charts** - Portfolio performance visualization
 ✅ **Production Ready** - Dockerized deployment with CI/CD
-✅ **Well Tested** - 499 automated tests (418 backend + 81 frontend)
+✅ **Well Tested** - 740+ automated tests (545 backend + 197 frontend)
 
 ## Key Features Available Now
 
@@ -23,10 +25,11 @@ Zebu is a stock market emulation platform that lets you practice trading strateg
 - Automatic cash balance calculations from transaction ledger
 
 ### 2. Stock Trading
-- **BUY orders** for any publicly traded stock (US & International)
+- **BUY and SELL orders** for any publicly traded stock (US & International)
 - Real-time price fetching via Alpha Vantage
 - Automatic portfolio balance updates
 - Complete transaction history
+- Holdings validation (can't sell what you don't own)
 - Support for international exchanges (UK, Canada, Germany, China)
 
 ### 3. Market Data Integration
@@ -38,17 +41,25 @@ Zebu is a stock market emulation platform that lets you practice trading strateg
 
 ### 4. User Experience
 - Clean, responsive React interface
+- Secure user authentication via Clerk
+- Private portfolios per user
 - Real-time updates without page refreshes
 - Form validation with helpful error messages
 - Accessible design with proper ARIA labels
 - Loading states for async operations
 
+### 5. Portfolio Analytics
+- Portfolio performance charts over time
+- Gain/loss calculations
+- Holdings composition visualization
+- Transaction history with filters
+
 ## Known Limitations
 
 ### Trading Restrictions
-- ⚠️ **No limit/stop orders** - Market orders only
+- ⚠️ **No limit/stop orders** - Market orders only (Phase 4)
 - ⚠️ **No fractional shares** - Whole shares only
-- ⚠️ **No short selling** - Long positions only
+- ⚠️ **No short selling** - Long positions only (Phase 4)
 
 ### Market Data Constraints
 - **Rate Limits**: 5 API calls/minute, 500/day (Alpha Vantage free tier)
@@ -56,30 +67,30 @@ Zebu is a stock market emulation platform that lets you practice trading strateg
 - **Market Hours**: Prices update during market hours; may show stale after-hours
 
 ### Portfolio Analytics
-- ⚠️ **Limited visualizations** - No charts/graphs yet (Phase 3)
-- ⚠️ **Basic P&L** - Shows gains/losses but no detailed analytics
-- ⚠️ **No portfolio comparison** - Can't compare multiple portfolios
+- ⚠️ **No advanced metrics** - No Sharpe ratio, beta, etc. (Phase 4)
+- ⚠️ **No portfolio comparison** - Can't compare multiple portfolios side-by-side (Phase 4)
+- ⚠️ **No benchmarking** - No comparison vs S&P 500 (Phase 4)
 
 ### Technical Boundaries
 - **Single currency**: USD only (no multi-currency support)
-- **No user authentication**: All portfolios visible to all users (development mode)
-- **No backtesting**: Can't simulate trades at historical dates (Phase 3 feature)
+- **Limited backtesting**: Basic historical date selection (advanced features in Phase 4)
 
 ## What's Coming Next
 
-### Phase 3: Analytics & Backtesting (Planned)
-- SELL order functionality
-- Portfolio analytics dashboards with charts
-- Historical backtesting (test strategies against past data)
-- Performance metrics and benchmarking
-- Portfolio comparison tools
-
-### Phase 4: Advanced Features (Future)
-- Automated trading algorithms
-- WebSocket real-time updates
-- User authentication & authorization
-- Multi-currency support
+### Phase 4: Professional Polish & Advanced Features (Planned Q1-Q2 2026)
 - Advanced order types (limit, stop, stop-limit)
+- WebSocket real-time price updates
+- Toast notifications for better UX
+- Mobile-optimized responsive design
+- Dark mode theme
+- Transaction fees and slippage simulation
+
+### Phase 5: Automation & Advanced Analytics (Future)
+- Automated trading algorithms
+- Advanced portfolio metrics (Sharpe ratio, volatility, beta)
+- Portfolio comparison and benchmarking
+- Strategy backtesting engine
+- Multi-currency support
 
 ## For Users: Getting Started
 
@@ -103,9 +114,10 @@ See [FEATURE_STATUS.md](./FEATURE_STATUS.md) for implementation details and [TEC
 
 ## Performance Metrics
 
-- **Backend**: 418 tests passing, <500ms API response time
-- **Frontend**: 81 tests passing, accessible UI components
-- **E2E**: 7 complete user workflows validated
+- **Backend**: 545 tests passing, <500ms API response time
+- **Frontend**: 197 tests passing, accessible UI components
+- **E2E**: 21 complete user workflows validated
+- **Coverage**: 81%+ across backend and frontend
 - **Uptime**: Health checks on all services (PostgreSQL, Redis, Backend, Frontend)
 
 ## Architecture Highlights
@@ -118,6 +130,6 @@ See [FEATURE_STATUS.md](./FEATURE_STATUS.md) for implementation details and [TEC
 
 ---
 
-**Last Updated**: January 4, 2026
+**Last Updated**: January 25, 2026
 **Project Repository**: https://github.com/TimChild/Zebu
 **License**: MIT

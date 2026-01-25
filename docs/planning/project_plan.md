@@ -1,11 +1,13 @@
-# Zebu Project Plan
+# Zebu Project Plan (Historical Reference)
 
-**Note**: This is the **original project plan** from December 2025. For the **refined architecture plans** based on Phase 1-2 learnings, see:
-- **Phase 3 Refined**: `docs/architecture/phase3-refined/` (SELL → Auth → Analytics)
-- **Phase 4 Refined**: `docs/architecture/phase4-refined/` (UX, Orders, Multi-Provider, Observability)
-- **Product Roadmap**: `product-roadmap.md` (user-facing)
+**Status**: Historical Document - See `roadmap.md` for Current Plans
 
-The original plan below is preserved for historical context. Phase 3-4 have been refined based on actual implementation velocity and user needs analysis.
+**Note**: This is the **original project plan** from December 2025. For current roadmap and feature status:
+- **Current Roadmap**: See `roadmap.md` (high-level vision & timeline)
+- **Feature Status**: See `features.md` (detailed feature matrix)
+- **Architecture Strategy**: See `architecture-strategy.md` (technical decisions)
+
+Phases 1-3 are complete. Phase 4 has been refined based on learnings. This document is preserved for historical context.
 
 ---
 
