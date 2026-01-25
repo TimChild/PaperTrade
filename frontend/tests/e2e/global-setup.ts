@@ -31,10 +31,10 @@ export default async function globalSetup() {
   }
 
   // Extract frontend API URL from publishable key
-  // Format: pk_test_<base64> where base64 decodes to "<frontend-api>#<key>"
+  // Format: pk_test_<base64> where base64 decodes to "<frontend-api>#<key>" or "<frontend-api>$"
   const base64Part = publishableKey.replace(/^pk_(test|live)_/, '')
   const decoded = Buffer.from(base64Part, 'base64').toString('utf-8')
-  const frontendApi = decoded.split('#')[0]
+  const frontendApi = decoded.split('#')[0].replace(/\$$/, '') // Remove trailing $
 
   console.log('Creating Clerk testing token via API...')
 

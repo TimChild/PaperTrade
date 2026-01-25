@@ -34,6 +34,15 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
 
+  /* Run dev server before tests */
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:5173',
+    reuseExistingServer: true,
+    stdout: 'ignore',
+    stderr: 'pipe',
+  },
+
   /* Configure projects for major browsers */
   projects: [
     // Setup project - authenticate once and save state
@@ -50,6 +59,13 @@ export default defineConfig({
         storageState: 'playwright/.auth/user.json', // Reuse auth state
       },
       dependencies: ['setup'], // Run setup first
+    },
+    // Debug project without setup dependency
+    {
+      name: 'chromium-no-auth',
+      use: {
+        ...devices['Desktop Chrome'],
+      },
     },
     // Commented out for speed - only testing on Chromium
     // {
