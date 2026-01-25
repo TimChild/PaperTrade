@@ -1,130 +1,126 @@
-# Task 171: Fix E2E Testing Infrastructure & Make Failures Debuggable
+# Task 171: Fix E2E Testing Infrastructure & Make Failures Debuggable (v2)
 
 **Priority**: HIGH (blocking further development)  
 **Agent**: frontend-swe  
-**Estimated effort**: 4-6 hours  
-**Created**: 2026-01-24
+**Estimated effort**: 2-3 hours  
+**Created**: 2026-01-24  
+**Updated**: 2026-01-24 (v2 - focused on fix-first approach)
 
 ## Problem Statement
 
-**15 out of 22 E2E tests are failing** with backend request timeouts. This is a **pre-existing issue** that has persisted across multiple PRs. The root cause is unclear because:
-- ❌ No helpful error messages in terminal output
-- ❌ No validation that environment is correctly configured before tests run
-- ❌ Backend requests timeout (10s) but backend receives no requests (no logs)
-- ❌ Manual testing works fine, only automated E2E tests fail
-- ❌ Authentication test passes, but portfolio creation POST requests fail
+**15 out of 22 E2E tests are failing** with backend request timeouts. 
 
-**This keeps happening and we need to STOP it from recurring.**
+**CRITICAL**: First PR attempt (PR #168) added 1700+ lines of infrastructure without fixing the actual problem. This version focuses on **FIX FIRST, minimal infrastructure second**.
 
-## Investigation Summary (So Far)
+## MANDATORY First Steps (Do NOT Skip!)
 
-### What We Know
-- **Failure pattern**: All 15 failures are portfolio creation flows timing out
-- **Error message**: Form displays "timeout of 10000ms exceeded" (Axios timeout)
-- **Backend behavior**: No POST requests logged during E2E tests (only health checks)
-- **Manual testing**: Works perfectly via browser and Playwright MCP
-- **Authentication**: Auth setup test (#1) passes
-- **Test environment**: Running with 5 parallel workers locally (1 in CI)
-- **Services**: All Docker containers healthy (PostgreSQL, Redis, Backend, Frontend)
+### Step 1: Run Tests and Read Output (15 min)
+```bash
+cd /Users/timchild/github/PaperTrade
+task test:e2e 2>&1 | tee test-output.log
+```
 
-### What We've Ruled Out
-- ✅ Not a code issue - reverted all recent changes, still fails
-- ✅ Not a resource issue - backend using only 12% memory
-- ✅ Not a service health issue - all containers healthy
-- ✅ Not navigation code - navigation works when API succeeds
+**Read the output**. What do the errors actually say? Don't assume - read the logs.
 
-### Likely Root Causes
-1. **Clerk authentication tokens** not properly attached to POST requests in E2E environment
-2. **Backend not receiving requests** due to routing, CORS, or network issues
-3. **Environment variables** not properly loaded or configured
-4. **Test isolation** issues with parallel workers
+### Step 2: Diagnose Root Cause (30 min)
+Based on test output, investigate:
+- What specific error messages appear?
+- Check backend logs: `docker logs papertrade-backend-1 --tail 100`
+- Is it authentication? Network? Environment?
+- Test manually: `curl` the failing endpoints with auth tokens
+
+**Document your findings** before writing any code.
+
+### Step 3: Fix the Actual Problem (1 hour)
+Fix whatever is broken. Don't build infrastructure until the tests pass.
+
+### Step 4: Verify Fix (15 min)
+```bash
+task test:e2e  # Run 1 - must show 22/22 passing
+task test:e2e  # Run 2 - confirm stability
+task test:e2e  # Run 3 - confirm stability
+```
+
+**ALL THREE RUNS MUST SHOW 22/22 PASSING**
+
+### Step 5: Add Minimal Validation (30 min, OPTIONAL)
+Only if needed to prevent regression:
+- Simple pre-test check (< 100 lines)
+- Add to existing global-setup.ts
+- No new files unless absolutely necessary
+
+## Known Information (From Prior Investigation)
+
+**DO NOT trust this - verify yourself by running tests**:
+- 15/22 tests fail with "timeout of 10000ms exceeded"
+- Backend receives no POST requests during tests (only health checks)
+- Manual testing works fine
+- Authentication test (#1) passes
+- PR #168's validation found: "TOKEN_INVALID" - Clerk token rejected by backend
+
+**Likely root cause**: Clerk testing token generation or backend verification issue
+
+## CODE LIMITS (Strictly Enforced)
+
+- **Maximum new lines**: 300 (total across all files)
+- **New files**: Maximum 2 (only if absolutely necessary)
+- **No new dependencies** without explicit justification
+- **No markdown documentation files** (findings go in progress doc only)
+
+If you need more than 300 lines, you're over-engineering.
 
 ## Required Fixes
 
 ### 1. Pre-Test Environment Validation ⭐ CRITICAL
+What You Should Actually Do
 
-Create a validation script that runs BEFORE E2E tests start:
+### Phase 1: Understand the Problem (45 min)
 
-**File**: `frontend/tests/e2e/validate-environment.ts` (or similar)
+1. **Run the tests** - see what actually fails
+2. **Check backend logs** - what errors does the backend log?
+3. **Test auth manually** - does the Clerk token work outside of E2E tests?
+4. **Read the code** - how is global-setup.ts creating the token?
+5. **Document findings** in progress doc (NOT a new markdown file)
 
-Must validate:
-- ✅ All required environment variables are set (CLERK_SECRET_KEY, CLERK_PUBLISHABLE_KEY, E2E_CLERK_USER_EMAIL)
-- ✅ Backend is healthy and responding (`GET /health`)
-- ✅ Backend accepts authenticated requests (`GET /api/v1/portfolios` with test token)
-- ✅ PostgreSQL is accessible
-- ✅ Redis is accessible
-- ✅ Clerk testing token is valid and can be used for requests
-- ✅ Frontend is serving correctly
+### Phase 2: Fix the Root Cause (1 hour)
 
-**Integration**: Update `playwright.config.ts` to run this validation in `globalSetup`
+Based on your diagnosis, fix the actual issue. Likely candidates:
 
-### 2. Enhanced Logging & Error Messages ⭐ CRITICAL
+**If Clerk token is invalid**:
+- Check token creation in `frontend/tests/e2e/global-setup.ts`
+- Verify token format matches what backend expects
+- Check if token needs specific claims or format
+- Test token manually: `curl -H "Authorization: Bearer $TOKEN" http://localhost:8000/api/v1/portfolios`
 
-**During test execution**, we need to see:
-- What environment variables are set (redact secrets, show presence)
-- What authentication token is being used (first/last 4 chars only)
-- What backend URL requests are going to
-- What HTTP status codes are returned (if any)
-- What network errors occur (CORS, DNS, connection refused, etc.)
+**If backend auth middleware is broken**:
+- Check `backend/zebu/infrastructure/middleware/clerk_auth.py`
+- Verify it handles testing tokens correctly
+- Check environment variable configuration
 
-**Implementation areas**:
-- `frontend/src/services/api/client.ts` - Add debug logging for requests/responses when in test environment
-- `frontend/tests/e2e/helpers.ts` - Log each step of portfolio creation
-- Test files - Add console.log statements before critical operations
-- Playwright config - Ensure all console messages are captured and displayed
+**If it's environment setup**:
+- Verify Taskfile.yml correctly loads environment variables
+- Check that test token is being passed to browser/requests
 
-**Environment detection**: Use `process.env.PLAYWRIGHT_TEST` or similar to enable verbose logging only during tests
+### Phase 3: Add Minimal Safety (30 min, OPTIONAL)
 
-### 3. Authentication Token Debugging
+**Only if absolutely necessary**, add simple validation:
 
-Create a test utility that:
-1. Retrieves the Clerk testing token
-2. Makes a direct API call to backend with that token
-3. Logs the full request/response (including headers)
-4. Verifies token is accepted by backend
-
-**File**: `frontend/tests/e2e/debug-auth.ts`
-
-This should be run as part of environment validation.
-
-### 4. Test Isolation & Cleanup
-
-Ensure each test:
-- Uses unique portfolio names (timestamps)
-- Cleans up created resources (or uses separate test database)
-- Doesn't interfere with parallel tests
-
-Consider:
-- Reducing parallel workers to 1 temporarily to rule out race conditions
-- Adding test cleanup hooks
-- Using separate database schemas per worker (if possible)
-
-### 5. Backend Request Logging
-
-**Backend side** (`backend/zebu/infrastructure/middleware/logging_middleware.py`):
-- Ensure ALL requests are logged (even failed auth)
-- Log request headers (sanitized)
-- Log request body (sanitized)
-- Log response status and time
-
-**Check if**:
-- Requests are being blocked before reaching logging middleware
-- CORS is rejecting requests silently
-- Authentication middleware is rejecting without logging
-
-### 6. Network Connectivity Validation
-
-Add a simple curl-based test that:
-```bash
-# From frontend container/process, can we reach backend?
-curl -v http://localhost:8000/health
-curl -v http://localhost:8000/api/v1/portfolios -H "Authorization: Bearer $TEST_TOKEN"
+Example (add to `global-setup.ts`, ~30 lines):
+```typescript
+// At end of global-setup.ts, before returning
+console.log('Validating E2E setup...')
+try {
+  const response = await axios.get('http://localhost:8000/api/v1/portfolios', {
+    headers: { Authorization: `Bearer ${process.env.CLERK_TESTING_TOKEN}` }
+  })
+  console.log('✅ Auth validation passed')
+} catch (err) {
+  console.error('❌ Auth validation failed:', err.response?.data || err.message)
+  throw new Error('Setup validation failed - check backend logs')
+}
 ```
 
-This should be in the validation script.
-
-## Success Criteria
-
+That's it. No separate files, no 400-line validation scripts
 1. ✅ All 22 E2E tests pass consistently (run 3 times to confirm)
 2. ✅ Validation script catches configuration errors BEFORE tests run
 3. ✅ When a test fails, logs clearly show:
@@ -160,74 +156,108 @@ Based on diagnosis:
 4. Update backend to log failed auth attempts
 
 ### Phase 4: Validation & Documentation (1 hour)
-1. Run full test suite 3 times - all should pass
-2. Document validation script usage
-3. Document debugging process
-4. Update CI to use validation
-5. Create PR with comprehensive description
+1. Run full test su (ALL Required)
 
-## Files to Modify/Create
+1. ✅ **All 22 E2E tests pass** - Run `task test:e2e` three times, all show 22/22 passing
+2. ✅ **Root cause identified** - Progress doc explains what was broken and how you fixed it
+3. ✅ **Minimal code changes** - Total additions < 300 lines
+4. ✅ **No new dependencies** - Use existing tools/packages
+5. ✅ **Tests run fast** - No slowdown from validation overhead
 
-### New Files
-- `frontend/tests/e2e/validate-environment.ts` - Pre-test validation
-- `frontend/tests/e2e/debug-auth.ts` - Auth debugging utility
-- `frontend/tests/e2e/README.md` - E2E testing documentation
-
-### Modified Files
+**Nice to have** (but NOT required for merge):
+- Simple validation in global-setup.ts to catch future issues
+- Brief debugging notes in progress doc
 - `frontend/playwright.config.ts` - Integrate validation script
-- `frontend/src/services/api/client.ts` - Add debug logging
-- `frontend/tests/e2e/global-setup.ts` - Enhanced error messages
-- `frontend/tests/e2e/helpers.ts` - Add logging to helper functions
-- `backend/zebu/infrastructure/middleware/logging_middleware.py` - Log failed auth
-- `Taskfile.yml` - Maybe add `task test:e2e:validate` command
+- `Anti-Patterns to Avoid
 
-## Testing Checklist
+❌ **Don't create new files** unless fixing the issue requires it  
+❌ **Don't write documentation files** (use progress doc only)  
+❌ **Don't build infrastructure before fixing the bug**  
+❌ **Don't add logging frameworks** (use console.log if needed)  
+❌ **Don't create validation scripts** until tests pass  
+❌ **Don't assume** - run the tests and read the actual errors  
 
-Before marking complete:
-- [ ] Run validation script standalone - should pass
-- [ ] Run validation script with missing env var - should fail clearly
-- [ ] Run validation script with backend down - should fail clearly
-- [ ] Run single E2E test - should pass with clear logs
-- [ ] Run full E2E suite - all 22 tests should pass
-- [ ] Run E2E suite 3 times - should pass consistently
-- [ ] Introduce intentional failure - logs should clearly show why
-- [ ] Test in CI environment - should pass there too
+## Examples of Good vs Bad Approaches
 
-## Expected Outcome
+### ❌ Bad (What PR #168 Did)
+1. Assume the problem is lack of validation
+2. Build 400-line validation script
+3. Build 130-line debug utility  
+4. Write 400-line README
+5. Never actually run tests to see if problem is fixed
+6. Result: +1700 lines, tests still fail, problem not solved
 
-After this task:
-1. **All E2E tests pass reliably** - no more mysterious timeouts
-2. **Failures are self-diagnosing** - logs tell you exactly what went wrong
-3. **Configuration errors caught early** - before wasting time on test runs
-4. **Future debugging is fast** - clear logging shows what's happening
-5. **This doesn't happen again** - validation prevents similar issues
-
+### ✅ Good (What You Should Do)
+1. Run `task test:e2e` and read actual error
+2. See "TOKEN_INVALID" in backend logs
+3. Investigate why token is invalid (check global-setup.ts, backend auth middleware)
+4. Fix token creation or backend verification (maybe 20-50 lines changed)
+5. Run tests 3x - all pass
+6. Optionally add simple validation to global-setup.ts (~30 lines)
+7. Result: ~100 lines changed, problem solved
 ## Notes for Agent
+Likely Files to Modify (Based on TOKEN_INVALID Issue)
 
-**Be systematic**:
-- Don't guess at the problem - diagnose with logging first
-- Don't fix multiple things at once - fix one, test, then next
-- Don't assume environment is correct - validate everything
+**Primary suspects**:
+- `frontend/tests/e2e/global-setup.ts` - Token creation/configuration
+- `backend/zebu/infrastructure/middleware/clerk_auth.py` - Token verification
+- `.env` file - Environment variable configuration
 
-**Focus on debuggability**:
-- Every failure should produce a clear error message
-- Logs should tell the story of what happened
-- Validation should catch problems before they cause failures
+**Maybe needed**:
+- `frontend/tests/e2e/global-setup.ts` - Add simple validation at end (~30 lines)
 
-**Think prevention**:
-- How do we prevent this from happening again?
-- What assumptions were we making that turned out false?
-- What checks should run automatically?
+**Should NOT need to create**:
+- ❌ New validation files
+- ❌ New debug utilities
+- ❌ Documentation files
+- ❌ Test helper files
+- What checks should (Before Submitting PR)
 
-**Document your findings**:
-- What was the actual root cause?
-- What fixed it?
-- How to debug similar issues in future?
+**MANDATORY** (must all be checked):
+- [ ] `task test:e2e` - Run 1: Shows 22/22 passing
+- [ ] `task test:e2e` - Run 2: Shows 22/22 passing  
+- [ ] `task test:e2e` - Run 3: Shows 22/22 passing
+- [ ] Progress doc explains what was broken and how you fixed it
+- [ ] Total lines added < 300
+- [ ] No new npm packages added
 
-## Related Files
-
-- Error context: `frontend/test-results/portfolio-creation-Portfol-048a1-te-to-portfolio-detail-page-chromium/error-context.md`
-- Current E2E config: `frontend/playwright.config.ts`
+**OPTIONAL** (nice to have):
+- [ ] Simple validation added to global-setup.ts
+- [ ] Backend logs show successful auth for E2E tests
+- [ ] Tests run in ~same time as before (no slowdown)`
 - Auth setup: `frontend/tests/e2e/global-setup.ts`
 - API client: `frontend/src/services/api/client.ts`
 - Backend logging: `backend/zebu/infrastructure/middleware/logging_middleware.py`
+ - READ THIS CAREFULLY
+
+**This is version 2 of the task because version 1 (PR #168) failed**. It added 1700 lines without fixing the problem.
+
+**Your job**: Fix the bug. That's it.
+
+**Not your job**: Build validation infrastructure, write documentation, create debug utilities.
+
+**How to succeed**:
+1. Run the actual tests first (`task test:e2e`)
+2. Read the actual error messages (don't assume)
+3. Check backend logs (`docker logs papertrade-backend-1`)
+4. Fix the actual problem (probably authentication token issue)
+5. Verify tests pass 3 times
+6. Submit minimal PR (<300 lines)
+
+**How to fail**:
+1. Assume you know the problem without running tests
+2. Build elaborate validation infrastructure
+3. Write hundreds of lines of documentation
+4. Never verify tests actually pass
+5. Submit PR with 1000+ lines
+
+**Remember**: PR #168 found the issue (TOKEN_INVALID) but didn't fix it. You need to actually **fix** the token issue, not just detect it better.
+
+**Time budget**:
+- Diagnosis: 45 min
+- Fix: 1 hour  
+- Verification: 15 min
+- Optional validation: 30 min
+- **Total: ~2.5 hours**
+
+If you're spending more time than this, you're over-engineering.
