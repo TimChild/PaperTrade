@@ -11,7 +11,7 @@ import { PortfolioSummaryCard } from '@/components/features/portfolio/PortfolioS
 import { HoldingsTable } from '@/components/features/portfolio/HoldingsTable'
 import { TransactionList } from '@/components/features/portfolio/TransactionList'
 import { TradeForm } from '@/components/features/portfolio/TradeForm'
-import { PriceChart } from '@/components/features/PriceChart'
+import { PriceChartWrapper } from '@/components/features/PriceChart'
 import { PortfolioDetailSkeleton } from '@/components/features/portfolio/PortfolioDetailSkeleton'
 import { ErrorDisplay } from '@/components/ui/ErrorDisplay'
 import {
@@ -183,11 +183,13 @@ export function PortfolioDetail(): React.JSX.Element {
                 </h2>
                 <div className="space-y-4 sm:space-y-6 lg:space-y-card-gap">
                   {holdings.map((holding) => (
-                    <PriceChart
+                    <PriceChartWrapper
                       key={holding.ticker}
                       ticker={holding.ticker}
                       initialTimeRange="1M"
                       portfolioId={portfolioId}
+                      defaultImplementation="lightweight"
+                      showToggle={true}
                     />
                   ))}
                 </div>
