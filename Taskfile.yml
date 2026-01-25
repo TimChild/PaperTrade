@@ -129,50 +129,6 @@ tasks:
       - sh: test -f package.json
         msg: "Frontend not found"
 
-  test:e2e:validate:
-    desc: "Validate E2E test environment without running tests"
-    dir: "{{.FRONTEND_DIR}}"
-    deps:
-      - docker:up:all  # Ensure full stack is running
-    env:
-      # Load environment variables from .env file in repository root
-      CLERK_SECRET_KEY:
-        sh: grep "^CLERK_SECRET_KEY=" ../.env | cut -d= -f2- || echo ""
-      CLERK_PUBLISHABLE_KEY:
-        sh: grep "^CLERK_PUBLISHABLE_KEY=" ../.env | cut -d= -f2- || echo ""
-      VITE_CLERK_PUBLISHABLE_KEY:
-        sh: grep "^VITE_CLERK_PUBLISHABLE_KEY=" ../.env | cut -d= -f2- || echo ""
-      E2E_CLERK_USER_EMAIL:
-        sh: grep "^E2E_CLERK_USER_EMAIL=" ../.env | cut -d= -f2- || echo ""
-    cmds:
-      - echo "Validating E2E test environment..."
-      - npx tsx tests/e2e/utils/test-validation.ts
-    preconditions:
-      - sh: test -f package.json
-        msg: "Frontend not found"
-
-  test:e2e:debug-auth:
-    desc: "Run authentication debugging utility"
-    dir: "{{.FRONTEND_DIR}}"
-    deps:
-      - docker:up:all  # Ensure full stack is running
-    env:
-      # Load environment variables from .env file in repository root
-      CLERK_SECRET_KEY:
-        sh: grep "^CLERK_SECRET_KEY=" ../.env | cut -d= -f2- || echo ""
-      CLERK_PUBLISHABLE_KEY:
-        sh: grep "^CLERK_PUBLISHABLE_KEY=" ../.env | cut -d= -f2- || echo ""
-      VITE_CLERK_PUBLISHABLE_KEY:
-        sh: grep "^VITE_CLERK_PUBLISHABLE_KEY=" ../.env | cut -d= -f2- || echo ""
-      E2E_CLERK_USER_EMAIL:
-        sh: grep "^E2E_CLERK_USER_EMAIL=" ../.env | cut -d= -f2- || echo ""
-    cmds:
-      - echo "Running authentication debug utility..."
-      - npx tsx tests/e2e/utils/debug-auth.ts
-    preconditions:
-      - sh: test -f package.json
-        msg: "Frontend not found"
-
   lint:
     desc: "Run all linters (backend and frontend)"
     cmds:

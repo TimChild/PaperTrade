@@ -1,6 +1,4 @@
 import axios from 'axios'
-import { validateEnvironment } from './utils/validate-environment'
-import { debugAuthentication } from './utils/debug-auth'
 
 /**
  * Global setup for Playwright E2E tests.
@@ -17,22 +15,10 @@ export default async function globalSetup() {
     process.env.CLERK_PUBLISHABLE_KEY = process.env.VITE_CLERK_PUBLISHABLE_KEY
   }
 
-  console.log('🔧 Starting E2E Global Setup...\n')
-  console.log('Environment variables check:')
-  console.log('CLERK_PUBLISHABLE_KEY:', process.env.CLERK_PUBLISHABLE_KEY ? 'SET' : 'NOT SET')
-  console.log('CLERK_SECRET_KEY:', process.env.CLERK_SECRET_KEY ? 'SET' : 'NOT SET')
-  console.log('E2E_CLERK_USER_EMAIL:', process.env.E2E_CLERK_USER_EMAIL || 'NOT SET')
-
-  // Step 1: Validate environment BEFORE creating Clerk token
-  console.log('\n📋 Step 1: Validating environment (pre-token checks)...')
-
-  // Set debug flag for E2E tests
-  process.env.VITE_E2E_DEBUG = 'true'
-
-  const preValidation = await validateEnvironment()
-  if (!preValidation) {
-    throw new Error('❌ Pre-token environment validation failed. Check output above for details.')
-  }
+  console.log('🔧 E2E Global Setup - Environment Check:')
+  console.log('  CLERK_PUBLISHABLE_KEY:', process.env.CLERK_PUBLISHABLE_KEY ? '✓ SET' : '✗ NOT SET')
+  console.log('  CLERK_SECRET_KEY:', process.env.CLERK_SECRET_KEY ? '✓ SET' : '✗ NOT SET')
+  console.log('  E2E_CLERK_USER_EMAIL:', process.env.E2E_CLERK_USER_EMAIL || '✗ NOT SET')
 
   const secretKey = process.env.CLERK_SECRET_KEY
   const publishableKey = process.env.CLERK_PUBLISHABLE_KEY
@@ -50,7 +36,7 @@ export default async function globalSetup() {
   const decoded = Buffer.from(base64Part, 'base64').toString('utf-8')
   const frontendApi = decoded.split('#')[0]
 
-  console.log('Creating Clerk testing token via API...')
+  console.log('\n🔑 Creating Clerk testing token...')
 
   try {
     // Call Clerk API directly using axios (which handles Cloudflare better than fetch)
@@ -72,41 +58,24 @@ export default async function globalSetup() {
     process.env.CLERK_TESTING_TOKEN = testingToken
 
     console.log('✓ Clerk testing token created successfully')
-    console.log('Frontend API:', frontendApi)
-    console.log('Token preview:', testingToken.substring(0, 8) + '...' + testingToken.substring(testingToken.length - 8))
-
-    // Step 2: Validate environment AFTER creating Clerk token
-    console.log('\n📋 Step 2: Validating environment (post-token checks)...')
-    const postValidation = await validateEnvironment()
-    if (!postValidation) {
-      console.error('❌ Post-token environment validation failed')
-      console.log('\n🔍 Running authentication debug utility...')
-      await debugAuthentication()
-      throw new Error('Environment validation failed. Check output above for details.')
-    }
-
-    console.log('\n✅ All environment validations passed - ready to run tests!')
+    console.log('  Frontend API:', frontendApi)
+    console.log('  Token length:', testingToken.length, 'chars')
+    console.log('')
   } catch (error) {
-    console.error('✗ Failed to create Clerk testing token:')
+    console.error('\n✗ Failed to create Clerk testing token:')
     if (axios.isAxiosError(error)) {
-      console.error('Status:', error.response?.status)
-      console.error('Data:', JSON.stringify(error.response?.data, null, 2))
-      console.error('Headers:', error.response?.headers)
+      console.error('  Status:', error.response?.status)
+      console.error('  Data:', JSON.stringify(error.response?.data, null, 2))
 
       // Check for rate limiting
       if (error.response?.status === 429) {
-        console.error('⚠️  RATE LIMIT DETECTED - Clerk API rate limit exceeded')
-        console.error('This typically happens when creating too many testing tokens in a short period.')
-        console.error('Solutions:')
-        console.error('  1. Wait a few minutes before retrying')
-        console.error('  2. Use fewer parallel workers in Playwright config')
-        console.error('  3. Implement token caching if possible')
+        console.error('\n⚠️  RATE LIMIT DETECTED')
+        console.error('Wait a few minutes before retrying')
       }
     } else if (error instanceof Error) {
-      console.error('Error:', error.message)
-      console.error('Stack:', error.stack)
+      console.error('  Error:', error.message)
     } else {
-      console.error('Unknown error:', error)
+      console.error('  Unknown error:', error)
     }
     throw error
   }

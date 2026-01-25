@@ -11,40 +11,12 @@ const API_BASE_URL =
     ? '/api/v1'
     : 'http://localhost:8000/api/v1')
 
-// Debug logging helper for E2E tests
-// Enable debug logging if:
-// 1. URL has e2e-debug parameter
-// 2. Running in Playwright test environment
-// 3. VITE_E2E_DEBUG environment variable is set
-const isE2ETest =
-  (typeof window !== 'undefined' && window?.location?.search?.includes('e2e-debug')) ||
-  import.meta.env.VITE_E2E_DEBUG === 'true'
-
-// Always log in E2E environment for debugging
-const shouldDebugLog = isE2ETest
-
-function debugLog(message: string, ...args: unknown[]): void {
-  if (shouldDebugLog) {
-    console.log(`[API Client Debug] ${message}`, ...args)
-  }
-}
-
-// Safe JSON stringify that handles errors
-function safeStringify(data: unknown): string {
-  try {
-    return JSON.stringify(data || null)
-  } catch {
-    return '[Unstringifiable data]'
-  }
-}
-
 // Global token setter for Clerk authentication
 // This will be called from AuthProvider which has access to Clerk's useAuth
 let tokenGetter: (() => Promise<string | null>) | null = null
 
 export const setAuthTokenGetter = (getter: () => Promise<string | null>) => {
   tokenGetter = getter
-  debugLog('Auth token getter configured')
 }
 
 export const apiClient = axios.create({
@@ -55,59 +27,30 @@ export const apiClient = axios.create({
   timeout: 10000,
 })
 
-debugLog('API client created', { baseURL: API_BASE_URL })
-
 // Request interceptor to add authentication token
 apiClient.interceptors.request.use(
   async (config) => {
-    debugLog('Request starting', {
-      method: config.method?.toUpperCase(),
-      url: config.url,
-      baseURL: config.baseURL,
-      fullURL: `${config.baseURL}${config.url}`,
-    })
-
     // Get token from Clerk if tokenGetter is set
     if (tokenGetter) {
       try {
         const token = await tokenGetter()
         if (token) {
           config.headers.Authorization = `Bearer ${token}`
-          debugLog('Auth token attached', {
-            tokenPrefix: token.substring(0, 8) + '...',
-            tokenSuffix: '...' + token.substring(token.length - 8),
-            tokenLength: token.length,
-          })
-        } else {
-          debugLog('No auth token available from tokenGetter')
         }
       } catch (error) {
         console.error('Failed to get auth token:', error)
-        debugLog('Failed to get auth token', { error })
       }
-    } else {
-      debugLog('No tokenGetter configured')
     }
-
     return config
   },
   (error) => {
-    debugLog('Request interceptor error', { error })
     return Promise.reject(error)
   }
 )
 
 // Response interceptor for error handling
 apiClient.interceptors.response.use(
-  (response) => {
-    debugLog('Response received', {
-      status: response.status,
-      statusText: response.statusText,
-      url: response.config.url,
-      dataPreview: safeStringify(response.data).substring(0, 100),
-    })
-    return response
-  },
+  (response) => response,
   (error: AxiosError<ErrorResponse>) => {
     // Handle common errors
     if (error.response) {
@@ -119,20 +62,10 @@ apiClient.interceptors.response.use(
         ? `${error.config.baseURL}${requestUrl}`
         : requestUrl
 
-      debugLog('Response error', {
-        status,
-        statusText: error.response.statusText,
-        url: fullUrl,
-        method: error.config?.method?.toUpperCase(),
-        data,
-        headers: error.response.headers,
-      })
-
       switch (status) {
         case 401:
           console.error('Unauthorized - authentication required')
           console.error('URL:', fullUrl)
-          debugLog('401 Unauthorized - check authentication token')
           // TODO: Redirect to login when auth is implemented
           break
         case 403:
@@ -155,16 +88,9 @@ apiClient.interceptors.response.use(
     } else if (error.request) {
       // Request made but no response received
       console.error('Network error - no response from server')
-      debugLog('Network error - no response', {
-        error: error.message,
-        code: error.code,
-        url: error.config?.url,
-        baseURL: error.config?.baseURL,
-      })
     } else {
       // Error in request setup
       console.error('Request error:', error.message)
-      debugLog('Request setup error', { error: error.message })
     }
 
     return Promise.reject(error)
