@@ -2,7 +2,7 @@
 
 Minor improvements, tech debt, and enhancements that don't block main development.
 
-**Last Updated**: January 19, 2026
+**Last Updated**: January 24, 2026
 
 ## Active Backlog
 
@@ -37,15 +37,10 @@ Minor improvements, tech debt, and enhancements that don't block main developmen
 
 These are polished, user-facing features that would significantly improve the experience:
 
-1. **Show Purchase Points on Stock Price Charts** - ~2-3 hours
-   - **Problem**: Can't see when trades were executed on historical price graphs
-   - **Solution**: Add markers/dots on price charts at dates where BUY/SELL occurred
-   - **Implementation**:
-     - Fetch transactions for ticker from backend (already available)
-     - Add scatter plot layer to price charts showing BUY (green) and SELL (red) markers
-     - Tooltip on hover: "Bought 10 shares at $150.00"
-   - **Visual Impact**: Immediately see your entry/exit points vs price movement
-   - **Benefit**: Helps evaluate timing of trades
+1. ~~**Show Purchase Points on Stock Price Charts**~~ ✅ **COMPLETE** (PR #161, #166)
+   - **Status**: Implemented with scatter plot markers (green BUY, red SELL)
+   - **Fixed**: Tooltip type safety issue and Y-axis domain calculation (PR #166)
+   - **Quality**: 122 new tests added, comprehensive edge case coverage
 
 2. **Interactive Click-to-Trade from Charts** - ~2-3 hours
    - **Problem**: Manual entry of ticker and date when looking at charts
@@ -58,22 +53,7 @@ These are polished, user-facing features that would significantly improve the ex
    - **UX Flow**: Click chart → Trade form appears with pre-filled data → Just enter quantity
    - **Benefit**: Reduces friction for "what-if" trades and backtesting
 
-3. **Undo Transaction Feature** - ~3-4 hours
-   - **Problem**: No way to fix accidental trades or test scenarios
-   - **Solution**: Add "Undo" button on recent transactions
-   - **Implementation**:
-     - Backend validation: Check if undoing would create negative holdings
-     - Walk forward from undo point to verify all subsequent holdings remain valid
-     - Add `DELETE /api/v1/portfolios/{id}/transactions/{txn_id}` endpoint
-     - Frontend: Add undo button on transaction rows (with confirmation dialog)
-     - Disable undo for transactions that would invalidate later holdings
-   - **Business Rules**:
-     - Can undo BUY if selling those shares wouldn't create negative holdings later
-     - Can undo SELL if we had enough shares at that point in time
-     - Can undo DEPOSIT/WITHDRAW if balance stays positive
-   - **Benefit**: Experimentation-friendly, forgiving UX
-
-4. **Show Real-Time Stock Prices in Holdings** - ~1-2 hours
+2. **Show Real-Time Stock Prices in Holdings** - ~1-2 hours
    - **Problem**: Holdings table shows "Using average cost (current price unavailable)" with asterisk
    - **Impact**: Users can't see if their stocks went up or down
    - **Solution**: Fetch current prices from Alpha Vantage for each holding, display in "Current Price" column
@@ -85,22 +65,15 @@ These are polished, user-facing features that would significantly improve the ex
    - **Note**: Depends on weekend price fix being complete (PR #158 merged)
    - **Found**: Manual UI testing (2026-01-07)
 
-5. **Add Toast Notifications for Trade Actions** - ~1 hour
-   - **Problem**: Only modal alerts for trade success/failure, no persistent feedback
-   - **Solution**: Add toast notifications (react-hot-toast or similar)
-   - **Features**:
-     - Success toast: "Bought 2 shares of MSFT at $472.85"
-     - Error toast: "Trade failed: Insufficient funds"
-     - Auto-dismiss after 5 seconds
-     - Clickable to view transaction details
-   - **Benefits**: Better UX, less intrusive than modals
-   - **Found**: Manual UI testing (2026-01-07)
+3. ~~**Add Toast Notifications for Trade Actions**~~ ✅ **COMPLETE** (PR #163)
+   - **Status**: Centralized toast utility with react-hot-toast
+   - **Features**: Trade success/error, deposit/withdraw, portfolio management
+   - **Quality**: 18 tests, E2E compatibility verified
 
-6. **Highlight New Transactions** - ~30 minutes
-   - **Problem**: After trade execution, hard to find the new transaction in history
-   - **Solution**: Briefly highlight (pulse animation) newly added transaction row
-   - **Implementation**: Add CSS class for 3-second pulse animation on new items
-   - **Found**: Manual UI testing (2026-01-07)
+4. ~~**Highlight New Transactions**~~ ✅ **COMPLETE** (PR #164)
+   - **Status**: 3-second pulse animation on new transaction rows
+   - **Implementation**: TanStack Query cache manipulation with isNew flag
+   - **Quality**: 12 tests, accessibility features (aria-live)
 
 ---
 

@@ -1,14 +1,14 @@
 # Task 171: Fix E2E Testing Infrastructure & Make Failures Debuggable (v2)
 
-**Priority**: HIGH (blocking further development)  
-**Agent**: frontend-swe  
-**Estimated effort**: 2-3 hours  
-**Created**: 2026-01-24  
+**Priority**: HIGH (blocking further development)
+**Agent**: frontend-swe
+**Estimated effort**: 2-3 hours
+**Created**: 2026-01-24
 **Updated**: 2026-01-24 (v2 - focused on fix-first approach)
 
 ## Problem Statement
 
-**15 out of 22 E2E tests are failing** with backend request timeouts. 
+**15 out of 22 E2E tests are failing** with backend request timeouts.
 
 **CRITICAL**: First PR attempt (PR #168) added 1700+ lines of infrastructure without fixing the actual problem. This version focuses on **FIX FIRST, minimal infrastructure second**.
 
@@ -170,19 +170,19 @@ Based on diagnosis:
 - `frontend/playwright.config.ts` - Integrate validation script
 - `Anti-Patterns to Avoid
 
-❌ **Don't create new files** unless fixing the issue requires it  
-❌ **Don't write documentation files** (use progress doc only)  
-❌ **Don't build infrastructure before fixing the bug**  
-❌ **Don't add logging frameworks** (use console.log if needed)  
-❌ **Don't create validation scripts** until tests pass  
-❌ **Don't assume** - run the tests and read the actual errors  
+❌ **Don't create new files** unless fixing the issue requires it
+❌ **Don't write documentation files** (use progress doc only)
+❌ **Don't build infrastructure before fixing the bug**
+❌ **Don't add logging frameworks** (use console.log if needed)
+❌ **Don't create validation scripts** until tests pass
+❌ **Don't assume** - run the tests and read the actual errors
 
 ## Examples of Good vs Bad Approaches
 
 ### ❌ Bad (What PR #168 Did)
 1. Assume the problem is lack of validation
 2. Build 400-line validation script
-3. Build 130-line debug utility  
+3. Build 130-line debug utility
 4. Write 400-line README
 5. Never actually run tests to see if problem is fixed
 6. Result: +1700 lines, tests still fail, problem not solved
@@ -215,7 +215,7 @@ Likely Files to Modify (Based on TOKEN_INVALID Issue)
 
 **MANDATORY** (must all be checked):
 - [ ] `task test:e2e` - Run 1: Shows 22/22 passing
-- [ ] `task test:e2e` - Run 2: Shows 22/22 passing  
+- [ ] `task test:e2e` - Run 2: Shows 22/22 passing
 - [ ] `task test:e2e` - Run 3: Shows 22/22 passing
 - [ ] Progress doc explains what was broken and how you fixed it
 - [ ] Total lines added < 300
@@ -255,7 +255,7 @@ Likely Files to Modify (Based on TOKEN_INVALID Issue)
 
 **Time budget**:
 - Diagnosis: 45 min
-- Fix: 1 hour  
+- Fix: 1 hour
 - Verification: 15 min
 - Optional validation: 30 min
 - **Total: ~2.5 hours**
