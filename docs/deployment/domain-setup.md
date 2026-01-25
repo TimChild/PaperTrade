@@ -11,7 +11,7 @@
 This guide walks through configuring a custom domain (e.g., `zebutrader.com`) with automatic HTTPS/SSL for your Zebu deployment. This is a **one-time setup** performed after the application is running on your Proxmox VM.
 
 **Prerequisites:**
-- Zebu deployed and running on Proxmox VM (see [proxmox-vm-deployment.md](./proxmox-vm-deployment.md))
+- Zebu deployed and running on Proxmox VM (see [proxmox.md](./proxmox.md))
 - Domain registered and managed through DNS provider (this guide uses Cloudflare)
 - Reverse proxy available (this guide uses NPMplus - Nginx Proxy Manager Plus)
 - Access to your network's public IP or ability to configure port forwarding
@@ -588,7 +588,7 @@ iptables -L -n | grep 192.168.4.111
 - **Cloudflare DNS Documentation**: https://developers.cloudflare.com/dns/
 - **Let's Encrypt Documentation**: https://letsencrypt.org/docs/
 - **CORS Documentation**: https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS
-- **Zebu Deployment Docs**: [proxmox-vm-deployment.md](./proxmox-vm-deployment.md)
+- **Zebu Deployment Docs**: [proxmox.md](./proxmox.md)
 
 ---
 

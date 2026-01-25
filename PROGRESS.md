@@ -384,6 +384,6 @@ For detailed phase completion information and implementation details from Decemb
 - [Project Roadmap](docs/planning/product-roadmap.md)
 - [Technical Boundaries](docs/architecture/technical-boundaries.md)
 - [Feature Status](docs/planning/feature-status.md)
-- [Deployment Guide](docs/deployment/proxmox-vm-deployment.md)
+- [Deployment Guide](docs/deployment/README.md)
 - [Contributing](CONTRIBUTING.md)
 - [Backlog](BACKLOG.md)

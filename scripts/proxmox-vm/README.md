@@ -142,7 +142,7 @@ All scripts use `set -euo pipefail` for strict error handling:
 
 ## Documentation
 
-See `docs/deployment/proxmox-vm-deployment.md` for comprehensive documentation including:
+See `docs/deployment/proxmox.md` for comprehensive documentation including:
 - Quick start guide
 - Configuration reference
 - Troubleshooting
