@@ -219,7 +219,12 @@ export function LightweightPriceChart({
 
     seriesRef.current.setData(chartData)
     // Fit chart content to ensure proper scaling across the viewport
-    chartRef.current.timeScale().fitContent()
+    try {
+      chartRef.current.timeScale().fitContent()
+    } catch (error) {
+      // Silently handle errors if chart isn't fully initialized
+      console.debug('Chart fitContent failed:', error)
+    }
   }, [chartData])
 
   // Update trade markers when they change
