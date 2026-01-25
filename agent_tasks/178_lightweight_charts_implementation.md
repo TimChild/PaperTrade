@@ -100,10 +100,10 @@ export function LightweightPriceChart({ ticker, portfolioId }: Props) {
 
   useEffect(() => {
     if (!containerRef.current) return;
-    
+
     const chart = createChart(containerRef.current, options);
     chartRef.current = chart;
-    
+
     return () => {
       chart.remove();
     };
