@@ -5,7 +5,7 @@ test.describe('Portfolio Creation Flow', () => {
     // This test verifies the portfolio creation flow and navigation to the new portfolio
 
     // Monitor network requests to see if portfolio creation succeeds
-    let portfolioCreationResponse: any = null
+    let portfolioCreationResponse: unknown = null
     page.on('response', async (response) => {
       if (response.url().includes('/api/portfolios') && response.request().method() === 'POST') {
         const status = response.status()
@@ -15,7 +15,7 @@ test.describe('Portfolio Creation Flow', () => {
             const body = await response.json()
             portfolioCreationResponse = body
             console.log('[TEST] Portfolio created with ID:', body.portfolio_id)
-          } catch (e) {
+          } catch {
             console.log('[TEST] Could not parse response body')
           }
         }

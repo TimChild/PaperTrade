@@ -67,11 +67,11 @@ Add after the `frontend` service:
       # Playwright configuration
       PLAYWRIGHT_BASE_URL: http://frontend:5173
       CI: "true"  # Enable CI mode (no parallel, retries enabled)
-      
+
       # API configuration (for frontend app)
       VITE_API_BASE_URL: http://backend:8000/api/v1
       VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY}
-      
+
       # Clerk testing credentials
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
       E2E_CLERK_USER_EMAIL: ${E2E_CLERK_USER_EMAIL}
@@ -79,7 +79,7 @@ Add after the `frontend` service:
       # Mount test files for live updates during development
       - ./frontend/tests:/app/tests:ro
       - ./frontend/playwright.config.ts:/app/playwright.config.ts:ro
-      
+
       # Mount output directory for test results/reports
       - ./frontend/playwright-report:/app/playwright-report
       - ./frontend/test-results:/app/test-results
@@ -127,7 +127,7 @@ export default defineConfig({
     },
     {
       name: 'chromium',
-      use: { 
+      use: {
         ...devices['Desktop Chrome'],
         // Use saved auth state from setup
         storageState: path.resolve(__dirname, './playwright/.auth/user.json'),
@@ -258,16 +258,16 @@ E2E tests in CI can use the same Docker approach:
     needs: [backend-checks, frontend-checks]
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Create .env file
         run: |
           echo "CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }}" >> .env
           echo "VITE_CLERK_PUBLISHABLE_KEY=${{ secrets.CLERK_PUBLISHABLE_KEY }}" >> .env
           echo "E2E_CLERK_USER_EMAIL=${{ vars.E2E_CLERK_USER_EMAIL }}" >> .env
-      
+
       - name: Run E2E tests
         run: docker compose --profile e2e up --build --abort-on-container-exit e2e-tests
-      
+
       - name: Upload Playwright report
         if: always()
         uses: actions/upload-artifact@v4

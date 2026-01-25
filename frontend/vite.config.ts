@@ -6,10 +6,10 @@ import path from 'path'
 export default defineConfig(({ mode }) => {
   // Load env file based on `mode` in the current working directory
   const env = loadEnv(mode, process.cwd(), '')
-  
+
   const proxyTarget = env.VITE_PROXY_TARGET || 'http://localhost:8000'
   console.log('[Vite Config] Proxy target:', proxyTarget)
-  
+
   return {
     plugins: [react()],
     resolve: {
