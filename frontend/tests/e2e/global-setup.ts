@@ -1,4 +1,6 @@
 import axios from 'axios'
+import { validateEnvironment } from './utils/validate-environment'
+import { debugAuthentication } from './utils/debug-auth'
 
 /**
  * Global setup for Playwright E2E tests.
@@ -15,10 +17,18 @@ export default async function globalSetup() {
     process.env.CLERK_PUBLISHABLE_KEY = process.env.VITE_CLERK_PUBLISHABLE_KEY
   }
 
+  console.log('🔧 Starting E2E Global Setup...\n')
   console.log('Environment variables check:')
   console.log('CLERK_PUBLISHABLE_KEY:', process.env.CLERK_PUBLISHABLE_KEY ? 'SET' : 'NOT SET')
   console.log('CLERK_SECRET_KEY:', process.env.CLERK_SECRET_KEY ? 'SET' : 'NOT SET')
   console.log('E2E_CLERK_USER_EMAIL:', process.env.E2E_CLERK_USER_EMAIL || 'NOT SET')
+
+  // Step 1: Validate environment BEFORE creating Clerk token
+  console.log('\n📋 Step 1: Validating environment (pre-token checks)...')
+  const preValidation = await validateEnvironment()
+  if (!preValidation) {
+    throw new Error('❌ Pre-token environment validation failed. Check output above for details.')
+  }
 
   const secretKey = process.env.CLERK_SECRET_KEY
   const publishableKey = process.env.CLERK_PUBLISHABLE_KEY
@@ -59,6 +69,19 @@ export default async function globalSetup() {
 
     console.log('✓ Clerk testing token created successfully')
     console.log('Frontend API:', frontendApi)
+    console.log('Token preview:', testingToken.substring(0, 8) + '...' + testingToken.substring(testingToken.length - 8))
+
+    // Step 2: Validate environment AFTER creating Clerk token
+    console.log('\n📋 Step 2: Validating environment (post-token checks)...')
+    const postValidation = await validateEnvironment()
+    if (!postValidation) {
+      console.error('❌ Post-token environment validation failed')
+      console.log('\n🔍 Running authentication debug utility...')
+      await debugAuthentication()
+      throw new Error('Environment validation failed. Check output above for details.')
+    }
+
+    console.log('\n✅ All environment validations passed - ready to run tests!')
   } catch (error) {
     console.error('✗ Failed to create Clerk testing token:')
     if (axios.isAxiosError(error)) {
