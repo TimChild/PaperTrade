@@ -13,7 +13,7 @@ The `/api/v1/prices/{ticker}/history` endpoint returns duplicate price entries f
 The `price_history` table stores multiple entries per trading day with different timestamps:
 
 ```sql
-SELECT timestamp, source, price_amount FROM price_history 
+SELECT timestamp, source, price_amount FROM price_history
 WHERE ticker='IBM' ORDER BY timestamp DESC LIMIT 10;
 
          timestamp          |    source     | price_amount
