@@ -1,6 +1,6 @@
 """Tests for GetPortfolioBalance query with weekend and backdated trade scenarios."""
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
 
@@ -77,7 +77,7 @@ class TestGetPortfolioBalanceWeekendScenarios:
         - Thursday (Jan 22): Buy AAPL at $150.00
         - Friday (Jan 23): AAPL closes at $155.00 (+$5.00)
         - Sunday (Jan 25): Query portfolio balance
-        
+
         Expected: Daily change should show +$500.00 (100 shares * $5 change)
         comparing Friday close vs Thursday close.
         """
@@ -125,11 +125,12 @@ class TestGetPortfolioBalanceWeekendScenarios:
             interval="1day",
         )
         market_data.seed_price(friday_close)
-        
-        # Note: On Sunday, get_current_price() will return friday_close (most recent)
-        # and get_price_at(Friday 21:00) will also return friday_close
-        # So we need to compare to Thursday's close instead.
-        # This is the actual bug - we should be comparing Friday's current to Thursday's close!
+
+        # Note: On Sunday, get_current_price() will return friday_close
+        # (most recent) and get_price_at(Friday 21:00) will also return
+        # friday_close. So we need to compare to Thursday's close instead.
+        # This is the actual bug - we should be comparing Friday's current
+        # to Thursday's close!
 
         # Query on Sunday
         query = GetPortfolioBalanceQuery(portfolio_id=sample_portfolio.id)
@@ -140,11 +141,11 @@ class TestGetPortfolioBalanceWeekendScenarios:
         # Assert
         # Current value: 100 * $155.00 = $15,500.00
         assert result.holdings_value.amount == Decimal("15500.00")
-        
+
         # Daily change: Friday close ($155) vs Thursday close ($150)
         # 100 shares * ($155 - $150) = $500
         assert result.daily_change.amount == Decimal("500.00")
-        
+
         # Daily change percent: ($500 / $15000) * 100 = 3.33%
         assert result.daily_change_percent == Decimal("3.33")
 
@@ -157,10 +158,10 @@ class TestGetPortfolioBalanceWeekendScenarios:
         - Thursday (Jan 22): AAPL closes at $150.00
         - Friday (Jan 23): AAPL closes at $155.00
         - Monday (Jan 26): AAPL current price is $157.00
-        
+
         Since tests run on Sunday (today), the daily change will compare
         Friday close ($155, most recent) to Thursday close ($150, previous).
-        
+
         Note: In production on actual Monday, this would compare Monday current
         to Friday close, but we can't test that without mocking datetime.now().
         """
@@ -228,11 +229,11 @@ class TestGetPortfolioBalanceWeekendScenarios:
         # Assert
         # Current value: Most recent price is Monday $157: 100 * $157.00 = $15,700.00
         assert result.holdings_value.amount == Decimal("15700.00")
-        
+
         # Daily change on Sunday: Current (Mon $157) vs Previous trading day (Thu $150)
         # 100 shares * ($157 - $150) = $700
         assert result.daily_change.amount == Decimal("700.00")
-        
+
         # Daily change percent: ($700 / $15000) * 100 = 4.67%
         assert result.daily_change_percent == Decimal("4.67")
 
@@ -245,7 +246,7 @@ class TestGetPortfolioBalanceWeekendScenarios:
         - Thursday (Jan 22): Backdated buy of AAPL at $150.00
         - Friday (Jan 23): AAPL closes at $155.00
         - Sunday (Jan 25): Query shows movement
-        
+
         This is the exact scenario described in the problem statement.
         """
         # Arrange - Create deposit (backdated)
@@ -306,7 +307,7 @@ class TestGetPortfolioBalanceWeekendScenarios:
         assert result.daily_change_percent != Decimal("0.00"), (
             "Daily change percent should not be 0.00%"
         )
-        
+
         # Should show the actual movement: Friday vs Thursday
         assert result.daily_change.amount == Decimal("500.00")
         assert result.daily_change_percent == Decimal("3.33")

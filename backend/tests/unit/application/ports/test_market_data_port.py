@@ -255,7 +255,7 @@ class TestInMemoryAdapterGetPriceAt:
 
         # Request at 16:00 (2 hours later)
         requested_time = datetime(2025, 12, 28, 16, 0, tzinfo=UTC)
-        
+
         # Should return the price at 14:00 (most recent before 16:00)
         result = await adapter.get_price_at(Ticker("AAPL"), requested_time)
         assert result == price_point
@@ -305,7 +305,8 @@ class TestInMemoryAdapterGetPriceAt:
 
         adapter.seed_prices([price1, price2])
 
-        # Request at 14:40 - should return price1 (14:00) since price2 (14:45) is AFTER 14:40
+        # Request at 14:40 - should return price1 (14:00) since price2
+        # (14:45) is AFTER 14:40
         requested_time = datetime(2025, 12, 28, 14, 40, tzinfo=UTC)
         result = await adapter.get_price_at(Ticker("AAPL"), requested_time)
 

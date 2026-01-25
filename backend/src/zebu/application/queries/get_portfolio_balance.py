@@ -24,16 +24,17 @@ logger = logging.getLogger(__name__)
 def _get_previous_trading_day(reference_date: datetime | None = None) -> datetime:
     """Get previous trading day for daily change calculation (skip weekends).
 
-    This function determines what "yesterday's close" means for daily change calculations.
-    The logic depends on what day we're on:
-    
+    This function determines what "yesterday's close" means for daily change
+    calculations. The logic depends on what day we're on:
+
     - Monday: Compare current (Mon) to Friday's close (3 days back)
     - Tuesday-Friday: Compare current to previous day's close (1 day back)
     - Saturday: Compare current (Fri close) to Thursday close (2 days back)
     - Sunday: Compare current (Fri close) to Thursday close (3 days back)
-    
-    The key insight is that on weekends, both "current" and "most recent trading day"
-    resolve to Friday. For daily change, we need to compare Friday to Thursday.
+
+    The key insight is that on weekends, both "current" and "most recent
+    trading day" resolve to Friday. For daily change, we need to compare
+    Friday to Thursday.
 
     Args:
         reference_date: Reference date to calculate from (defaults to now)
