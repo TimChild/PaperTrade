@@ -42,4 +42,3 @@ Before making changes, read all assigned files and determining:
 - `read_file` / `file_search`: To gather context.
 - `create_file` / `replace_string_in_file` / `run_in_terminal` (rm/mv): To restructure.
 - `grep_search`: To find incoming links to files being moved/deleted.
-
