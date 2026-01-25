@@ -39,7 +39,7 @@ The TradingView implementation was added *alongside* Recharts (with a toggle for
 1. Delete redundant Recharts price chart code:
    - `PriceChart.tsx`
    - `PriceChart.test.tsx`
-   
+
 2. Remove evaluation UI:
    - `PriceChartWrapper.tsx`
    - Toggle no longer needed
