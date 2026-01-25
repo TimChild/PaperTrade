@@ -1,8 +1,8 @@
 # Task 179: Clean Up Recharts Price Chart Code
 
-**Date**: 2026-01-25  
-**Agent**: frontend-swe  
-**Status**: ✅ Complete  
+**Date**: 2026-01-25
+**Agent**: frontend-swe
+**Status**: ✅ Complete
 **PR Branch**: copilot/remove-recharts-price-chart
 
 ## Objective
@@ -144,6 +144,6 @@ This cleanup is complete. Future work:
 
 ---
 
-**Agent**: frontend-swe  
-**Completion Time**: ~30 minutes  
+**Agent**: frontend-swe
+**Completion Time**: ~30 minutes
 **Lines Changed**: +2 / -992

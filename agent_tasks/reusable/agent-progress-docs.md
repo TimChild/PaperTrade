@@ -4,13 +4,13 @@
 
 ## When Required
 
-✅ Coding agents creating PRs (backend-swe, frontend-swe, etc.)  
-✅ Architectural decisions  
-✅ Complex bug fixes  
+✅ Coding agents creating PRs (backend-swe, frontend-swe, etc.)
+✅ Architectural decisions
+✅ Complex bug fixes
 
-❌ Orchestration sessions (direct conversations)  
-❌ Simple questions or explorations  
-❌ Documentation-only changes  
+❌ Orchestration sessions (direct conversations)
+❌ Simple questions or explorations
+❌ Documentation-only changes
 
 ## File Format
 

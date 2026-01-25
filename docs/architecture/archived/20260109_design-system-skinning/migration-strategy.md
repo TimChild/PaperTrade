@@ -409,7 +409,7 @@ const changeColorClass = portfolio.dailyChange >= 0
 - Days 6-9: Build component primitives (Phase 3)
 - Day 10: Migrate Dashboard (Phase 4, Task 4.1)
 
-**Flags**: 
+**Flags**:
 - `NEW_DASHBOARD_DESIGN` added, disabled by default
 - Deploy with flag disabled (no user impact)
 - Enable flag in staging for testing
@@ -459,7 +459,7 @@ function isFeatureEnabled(flag: string, rolloutPercent: number): boolean {
   const envFlag = import.meta.env[`VITE_${flag}`]
   if (envFlag === 'true') return true
   if (envFlag === 'false') return false
-  
+
   // Gradual rollout: use user ID hash
   const userId = getUserId() // From auth context
   const hash = hashString(userId)

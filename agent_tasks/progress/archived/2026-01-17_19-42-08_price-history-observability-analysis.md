@@ -1,7 +1,7 @@
 # Price History System - Observability & Completeness Analysis
 
-**Date**: 2026-01-17  
-**Agent**: backend-swe  
+**Date**: 2026-01-17
+**Agent**: backend-swe
 **Task**: Investigate incomplete price history data and identify observability gaps
 
 ## Executive Summary
@@ -16,7 +16,7 @@ The price history system suffers from **incomplete caching logic** that returns 
 
 ### 1. Incomplete Caching Logic (Root Cause)
 
-**File**: `backend/src/zebu/adapters/outbound/market_data/alpha_vantage_adapter.py`  
+**File**: `backend/src/zebu/adapters/outbound/market_data/alpha_vantage_adapter.py`
 **Lines**: 475-565 (specifically 529-531)
 
 ```python
@@ -49,7 +49,7 @@ if history:
 
 ### 2. Alpha Vantage API Limitations Not Documented
 
-**File**: `backend/src/zebu/adapters/outbound/market_data/alpha_vantage_adapter.py`  
+**File**: `backend/src/zebu/adapters/outbound/market_data/alpha_vantage_adapter.py`
 **Line**: 591
 
 ```python
@@ -75,7 +75,7 @@ if history:
 
 ### 3. Deduplication Issues
 
-**File**: `backend/src/zebu/adapters/outbound/repositories/price_repository.py`  
+**File**: `backend/src/zebu/adapters/outbound/repositories/price_repository.py`
 **Lines**: 48-100 (upsert_price method)
 
 **Current Behavior**:
@@ -84,7 +84,7 @@ if history:
 Index("uk_price_history", "ticker", "timestamp", "source", "interval", unique=True)
 ```
 
-**Problem**: 
+**Problem**:
 - Scheduler runs at midnight → stores price with `timestamp=2026-01-17 21:00:00` (market close at 4PM ET)
 - Backfill runs same day → tries to store same timestamp → **upsert updates existing record**
 - This is correct behavior (no duplicates) ✓
@@ -417,7 +417,7 @@ async def inspect_price_cache(
     price_repository: PriceRepositoryDep = None,
 ) -> dict:
     """Debug endpoint to inspect cached price data.
-    
+
     Returns:
         - Total cached points for ticker
         - Date range of cached data
@@ -438,7 +438,7 @@ async def check_data_completeness(
     interval: str = "1day",
 ) -> dict:
     """Debug endpoint to check data completeness for a date range.
-    
+
     Returns:
         - Expected trading days in range
         - Actual cached days in range
@@ -456,7 +456,7 @@ async def get_rate_limit_status(
     rate_limiter: RateLimiterDep,
 ) -> dict:
     """Debug endpoint to check current rate limit status.
-    
+
     Returns:
         - Tokens remaining (per-minute)
         - Tokens remaining (per-day)
@@ -475,7 +475,7 @@ async def get_rate_limit_status(
 ```python
 class TestPartialCache:
     """Tests for partial cache scenarios where cache has some but not all requested data."""
-    
+
     async def test_partial_cache_should_fetch_missing_dates(self):
         """When cache has Jan 15-17 and request is Jan 10-17, should fetch Jan 10-14."""
         # Arrange
@@ -484,26 +484,26 @@ class TestPartialCache:
         await repo.upsert_price(make_price_point("AAPL", "2026-01-15"))
         await repo.upsert_price(make_price_point("AAPL", "2026-01-16"))
         await repo.upsert_price(make_price_point("AAPL", "2026-01-17"))
-        
+
         adapter = AlphaVantageAdapter(price_repository=repo, ...)
-        
+
         # Act
         history = await adapter.get_price_history(
             Ticker("AAPL"),
             start=datetime(2026, 1, 10, tzinfo=UTC),
             end=datetime(2026, 1, 17, tzinfo=UTC),
         )
-        
+
         # Assert
         assert len(history) >= 5  # Should have Jan 10-14 (new) + Jan 15-17 (cached)
         dates = {p.timestamp.date() for p in history}
         assert date(2026, 1, 10) in dates or date(2026, 1, 12) in dates  # Allow for weekends
-    
+
     async def test_cache_has_future_dates_only(self):
         """When cache has Jan 20-25 but request is Jan 10-17, should fetch Jan 10-17."""
         # Cache has data outside requested range
         ...
-    
+
     async def test_cache_has_gap_in_middle(self):
         """When cache has Jan 10-12 and Jan 16-17 (missing Jan 13-15), should fetch gap."""
         ...
@@ -514,11 +514,11 @@ class TestPartialCache:
 ```python
 class TestDateRangeValidation:
     """Tests for validating completeness of returned date ranges."""
-    
+
     async def test_detect_missing_trading_days(self):
         """Should detect when returned data has gaps (missing trading days)."""
         ...
-    
+
     async def test_request_beyond_api_limit(self):
         """Should warn or error when requesting dates beyond 100 trading days ago."""
         ...
@@ -529,11 +529,11 @@ class TestDateRangeValidation:
 ```python
 class TestCacheInvalidation:
     """Tests for cache TTL and invalidation logic."""
-    
+
     async def test_stale_cache_should_refresh(self):
         """When cached data is >24 hours old, should fetch fresh data."""
         ...
-    
+
     async def test_cache_refresh_on_new_trading_day(self):
         """At market close, should invalidate cache and fetch today's data."""
         ...
@@ -544,14 +544,14 @@ class TestCacheInvalidation:
 ```python
 class TestEndToEndPriceHistory:
     """Integration tests for complete price history flow."""
-    
+
     async def test_backfill_then_api_request_returns_complete_data(self):
         """Backfill should populate cache, API request should return all data."""
         # 1. Run backfill for 7 days
         # 2. Make API request for same 7 days
         # 3. Verify response has all ~5 trading days
         ...
-    
+
     async def test_multiple_requests_extend_cache_range(self):
         """Multiple requests should accumulate data in cache without duplicates."""
         # 1. Request Jan 10-15 → caches these dates
@@ -591,12 +591,12 @@ async def get_price_history(
     interval: str = "1day",
 ) -> list[PricePoint]:
     # ... (validation code stays same)
-    
+
     # Try to get cached data first
     cached_history = await self.price_repository.get_price_history(
         ticker, start, end, interval
     )
-    
+
     # Check if cached data is complete for requested range
     if cached_history and interval == "1day":
         if self._is_cache_complete(cached_history, start, end):
@@ -620,11 +620,11 @@ async def get_price_history(
                 }
             )
             # Fall through to API fetch
-    
+
     # No cached data or incomplete - fetch from API
     if interval == "1day":
         # ... (existing API fetch logic)
-    
+
     # For other intervals, return cached data or empty
     return cached_history or []
 
@@ -635,42 +635,42 @@ def _is_cache_complete(
     end: datetime,
 ) -> bool:
     """Check if cached data is complete for the requested date range.
-    
+
     For daily data, checks if we have at least one price point per trading day
     in the requested range. Trading days are Mon-Fri excluding market holidays.
-    
+
     Args:
         cached_data: List of cached price points (must be sorted by timestamp)
         start: Start of requested range
         end: End of requested range
-    
+
     Returns:
         True if cached data appears complete, False otherwise
     """
     if not cached_data:
         return False
-    
+
     # Check boundary coverage
     first_cached = cached_data[0].timestamp.replace(tzinfo=UTC)
     last_cached = cached_data[-1].timestamp.replace(tzinfo=UTC)
-    
+
     # Cached data must cover the requested range boundaries
     # Allow 1-day tolerance for timezone/market close timing
     if first_cached > start + timedelta(days=1):
         return False  # Missing early dates
     if last_cached < end - timedelta(days=1):
         return False  # Missing recent dates
-    
+
     # For date ranges ≤ 30 days, verify we have at least 70% of expected trading days
     # (This accounts for weekends, holidays, but catches major gaps)
     days_requested = (end - start).days
     if days_requested <= 30:
         expected_trading_days = days_requested * 5 / 7  # Rough estimate (weekends)
         min_required_points = int(expected_trading_days * 0.7)
-        
+
         if len(cached_data) < min_required_points:
             return False  # Too many gaps
-    
+
     return True
 ```
 
@@ -724,12 +724,12 @@ async def get_price_history(
     interval: str = "1day",
 ) -> list[PricePoint]:
     # ... (validation code)
-    
+
     # Get cached data (might be partial)
     cached_history = await self.price_repository.get_price_history(
         ticker, start, end, interval
     )
-    
+
     # For daily data, try to fetch fresh data from API
     fresh_data: list[PricePoint] = []
     if interval == "1day":
@@ -742,10 +742,10 @@ async def get_price_history(
                     logger.warning(f"API fetch failed, using cached data: {e}")
         else:
             logger.info("Rate limited, using cached data only")
-    
+
     # Merge cached + fresh data (deduplicate by timestamp)
     all_data = self._merge_price_histories(cached_history, fresh_data)
-    
+
     # Filter to requested range and return
     return [
         p for p in all_data
@@ -763,11 +763,11 @@ def _merge_price_histories(
         (p.ticker.symbol, p.timestamp): p
         for p in cached
     }
-    
+
     # Fresh data overwrites cached (in case of corrections)
     for p in fresh:
         merged[(p.ticker.symbol, p.timestamp)] = p
-    
+
     # Sort by timestamp
     result = list(merged.values())
     result.sort(key=lambda p: p.timestamp)
@@ -807,10 +807,10 @@ def _merge_price_histories(
 ```python
 class PriceHistoryCache:
     """Enhanced cache with TTL and invalidation logic."""
-    
+
     def __init__(self, ttl_hours: int = 24):
         self.ttl_hours = ttl_hours
-    
+
     async def is_stale(
         self,
         ticker: Ticker,
@@ -819,43 +819,43 @@ class PriceHistoryCache:
         """Check if cached data for ticker is stale."""
         # Get latest cached price
         latest = await self.repository.get_latest_price(ticker, interval)
-        
+
         if not latest:
             return True  # No cache = stale
-        
+
         # Check TTL
         age = datetime.now(UTC) - latest.timestamp
         if age > timedelta(hours=self.ttl_hours):
             return True  # Older than TTL = stale
-        
+
         # Check if market closed since last update
         if self._has_market_closed_since(latest.timestamp):
             return True  # New trading day data available
-        
+
         return False
-    
+
     def _has_market_closed_since(self, timestamp: datetime) -> bool:
         """Check if US market has closed since timestamp."""
         # US market closes at 4PM ET (21:00 UTC)
         # If current time is after today's market close and timestamp is before it, stale
         now = datetime.now(UTC)
         market_close_today = now.replace(hour=21, minute=0, second=0, microsecond=0)
-        
+
         # If now is before today's market close, use yesterday's close
         if now < market_close_today:
             market_close_today -= timedelta(days=1)
-        
+
         return timestamp < market_close_today and now >= market_close_today
 
 # In AlphaVantageAdapter.get_price_history:
 async def get_price_history(...) -> list[PricePoint]:
     # Check if cache is stale
     cache_stale = await self.cache_manager.is_stale(ticker, interval)
-    
+
     if cache_stale:
         # Invalidate and fetch fresh
         await self._fetch_and_cache(ticker, start, end, interval)
-    
+
     # Return cached data (now fresh)
     return await self.price_repository.get_price_history(...)
 ```
@@ -930,7 +930,7 @@ These improvements require no architecture changes and can be implemented immedi
 - Add `logger = logging.getLogger(__name__)` at module level
 - Add structured logging at key decision points
 
-**Estimated effort**: 1 hour  
+**Estimated effort**: 1 hour
 **Impact**: Immediately enables debugging of current production issues
 
 ### 2. Add Debug Endpoint for Cache Inspection ⚡ MEDIUM PRIORITY
@@ -945,30 +945,30 @@ async def inspect_price_cache(
     market_data: MarketDataDep,
 ) -> dict:
     """Inspect cached price data for debugging.
-    
+
     **Development only** - shows what data exists in cache for a ticker.
     """
     from datetime import timedelta
-    
+
     ticker_obj = Ticker(ticker.upper())
-    
+
     # Get all data for this ticker (last 100 days)
     end = datetime.now(UTC)
     start = end - timedelta(days=100)
-    
+
     history = await market_data.price_repository.get_price_history(
         ticker_obj, start, end, "1day"
     )
-    
+
     if not history:
         return {
             "ticker": ticker,
             "status": "no_data",
             "message": "No cached data found",
         }
-    
+
     dates = [p.timestamp.date().isoformat() for p in history]
-    
+
     return {
         "ticker": ticker,
         "status": "ok",
@@ -982,7 +982,7 @@ async def inspect_price_cache(
     }
 ```
 
-**Estimated effort**: 30 minutes  
+**Estimated effort**: 30 minutes
 **Impact**: Enables manual investigation of cache state during debugging
 
 ### 3. Improve Backfill Script Logging
@@ -1002,7 +1002,7 @@ print(f"Success: {success_count}, Errors: {error_count}")
 print(f"Total price points fetched: ???")  # Need to track this
 ```
 
-**Estimated effort**: 15 minutes  
+**Estimated effort**: 15 minutes
 **Impact**: Better visibility into what backfill actually did
 
 ### 4. Add API Response Validation
@@ -1033,7 +1033,7 @@ return PriceHistoryResponse(
 )
 ```
 
-**Estimated effort**: 10 minutes  
+**Estimated effort**: 10 minutes
 **Impact**: Captures metrics on empty responses
 
 ### 5. Document Alpha Vantage Limitations
@@ -1048,7 +1048,7 @@ return PriceHistoryResponse(
                          # Use "full" for 20+ years (requires premium API key)
 ```
 
-**Estimated effort**: 5 minutes  
+**Estimated effort**: 5 minutes
 **Impact**: Prevents future confusion about API limitations
 
 ## Implementation Pseudo-Code for Option A
@@ -1063,7 +1063,7 @@ logger = logging.getLogger(__name__)
 
 class AlphaVantageAdapter:
     # ... (existing code)
-    
+
     async def get_price_history(
         self,
         ticker: Ticker,
@@ -1072,7 +1072,7 @@ class AlphaVantageAdapter:
         interval: str = "1day",
     ) -> list[PricePoint]:
         """Get price history over a time range.
-        
+
         [Existing docstring...]
         """
         # Existing validation
@@ -1082,7 +1082,7 @@ class AlphaVantageAdapter:
             raise ValueError(...)
         if not self.price_repository:
             raise MarketDataUnavailableError(...)
-        
+
         # Log request
         logger.info(
             "Price history request",
@@ -1094,12 +1094,12 @@ class AlphaVantageAdapter:
                 "requested_days": (end - start).days,
             }
         )
-        
+
         # Try to get cached data first
         cached_history = await self.price_repository.get_price_history(
             ticker, start, end, interval
         )
-        
+
         # Log cache query result
         if cached_history:
             logger.info(
@@ -1115,11 +1115,11 @@ class AlphaVantageAdapter:
                 "Cache miss",
                 extra={"ticker": ticker.symbol}
             )
-        
+
         # Check if cached data is complete for daily intervals
         if cached_history and interval == "1day":
             is_complete = self._is_cache_complete(cached_history, start, end)
-            
+
             if is_complete:
                 logger.info(
                     "Returning complete cached data",
@@ -1140,7 +1140,7 @@ class AlphaVantageAdapter:
                     }
                 )
                 # Fall through to API fetch
-        
+
         # No cached data or incomplete - fetch from API if interval is "1day"
         if interval == "1day":
             # Check rate limiting before API call
@@ -1150,7 +1150,7 @@ class AlphaVantageAdapter:
                     extra={"ticker": ticker.symbol}
                 )
                 return cached_history or []
-            
+
             # Consume rate limit token
             consumed = await self.rate_limiter.consume_token()
             if not consumed:
@@ -1159,16 +1159,16 @@ class AlphaVantageAdapter:
                     extra={"ticker": ticker.symbol}
                 )
                 return cached_history or []
-            
+
             # Fetch from API
             try:
                 logger.info(
                     "Fetching from Alpha Vantage API",
                     extra={"ticker": ticker.symbol}
                 )
-                
+
                 fresh_history = await self._fetch_daily_history_from_api(ticker)
-                
+
                 logger.info(
                     "API fetch successful",
                     extra={
@@ -1177,14 +1177,14 @@ class AlphaVantageAdapter:
                         "fetched_range": f"{fresh_history[0].timestamp.date()} to {fresh_history[-1].timestamp.date()}" if fresh_history else "none",
                     }
                 )
-                
+
                 # Filter to requested date range
                 filtered_history = [
                     p
                     for p in fresh_history
                     if start <= p.timestamp.replace(tzinfo=UTC) <= end
                 ]
-                
+
                 logger.info(
                     "Returning filtered API data",
                     extra={
@@ -1192,9 +1192,9 @@ class AlphaVantageAdapter:
                         "points_returned": len(filtered_history),
                     }
                 )
-                
+
                 return filtered_history
-                
+
             except Exception as e:
                 logger.error(
                     "API fetch failed",
@@ -1206,10 +1206,10 @@ class AlphaVantageAdapter:
                 )
                 # Return cached data as fallback (may be incomplete)
                 return cached_history or []
-        
+
         # For other intervals, return cached data or empty list
         return cached_history or []
-    
+
     def _is_cache_complete(
         self,
         cached_data: list[PricePoint],
@@ -1217,26 +1217,26 @@ class AlphaVantageAdapter:
         end: datetime,
     ) -> bool:
         """Check if cached data is complete for the requested date range.
-        
+
         For daily data, validates:
         1. Boundary coverage: Cache spans from start to end (±1 day tolerance)
         2. Density check: Has at least 70% of expected trading days (for ranges ≤30 days)
-        
+
         Args:
             cached_data: List of cached price points (assumed sorted by timestamp)
             start: Start of requested range (UTC)
             end: End of requested range (UTC)
-        
+
         Returns:
             True if cached data appears complete, False if likely incomplete
         """
         if not cached_data:
             return False
-        
+
         # Get boundary timestamps
         first_cached = cached_data[0].timestamp.replace(tzinfo=UTC)
         last_cached = cached_data[-1].timestamp.replace(tzinfo=UTC)
-        
+
         # Check boundary coverage (allow 1-day tolerance for timezone/market timing)
         if first_cached > start + timedelta(days=1):
             logger.debug(
@@ -1247,7 +1247,7 @@ class AlphaVantageAdapter:
                 }
             )
             return False
-        
+
         if last_cached < end - timedelta(days=1):
             logger.debug(
                 "Cache incomplete: missing recent dates",
@@ -1257,7 +1257,7 @@ class AlphaVantageAdapter:
                 }
             )
             return False
-        
+
         # For short date ranges (≤30 days), verify density
         # This catches major gaps in the middle of the range
         days_requested = (end - start).days
@@ -1266,7 +1266,7 @@ class AlphaVantageAdapter:
             expected_trading_days = days_requested * 5 / 7
             # Require at least 70% of expected days (allows for holidays, minor gaps)
             min_required_points = int(expected_trading_days * 0.7)
-            
+
             if len(cached_data) < min_required_points:
                 logger.debug(
                     "Cache incomplete: insufficient density",
@@ -1277,7 +1277,7 @@ class AlphaVantageAdapter:
                     }
                 )
                 return False
-        
+
         # Cache appears complete
         return True
 ```
@@ -1286,7 +1286,7 @@ class AlphaVantageAdapter:
 
 ### ✅ Complete Understanding of Why Data is Missing
 
-**Root Cause Identified**: 
+**Root Cause Identified**:
 - Incomplete caching logic (lines 529-531) returns partial cache without validation
 - Alpha Vantage `outputsize=compact` limit (100 trading days) not validated
 - No detection of date range gaps or completeness

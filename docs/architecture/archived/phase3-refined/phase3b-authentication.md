@@ -64,7 +64,7 @@ graph TB
     AuthAdapter[ClerkAuthAdapter<br/>implements AuthPort]
     TestAdapter[InMemoryAuthAdapter<br/>for testing]
     Domain[Domain Layer<br/>User-agnostic]
-    
+
     Frontend --> ClerkUI
     Frontend --> API
     API --> AuthAdapter
@@ -73,7 +73,7 @@ graph TB
     AuthAdapter -.implements.-> AuthPort[AuthPort Interface]
     TestAdapter -.implements.-> AuthPort
     AuthPort --> Domain
-    
+
     style Frontend fill:#87CEEB
     style API fill:#90EE90
     style Domain fill:#FFD700

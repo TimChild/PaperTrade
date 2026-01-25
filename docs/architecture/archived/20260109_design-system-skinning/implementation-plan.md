@@ -52,7 +52,7 @@ Architect + Frontend SWE (collaborative)
 
 **Dependencies**: None
 
-**Risk Mitigation**: 
+**Risk Mitigation**:
 - Prototypes in separate directory (won't affect production)
 - Feature flag to enable/disable prototype routes
 
@@ -240,14 +240,14 @@ export default {
     --color-primary: 220 90% 56%;
     --color-positive: 142 71% 45%;
     --color-negative: 0 84% 60%;
-    
+
     /* Semantic colors */
     --color-background: 0 0% 100%;
     --color-foreground: 0 0% 9%;
     --color-muted: 0 0% 96%;
     --color-border: 0 0% 89%;
   }
-  
+
   .dark {
     --color-primary: 220 90% 65%;
     --color-positive: 142 71% 55%;
@@ -590,7 +590,7 @@ export function PercentBadge({ value, showArrow = true }: PercentBadgeProps) {
   const isPositive = value >= 0
   const colorClass = isPositive ? 'text-positive' : 'text-negative'
   const arrow = isPositive ? '↑' : '↓'
-  
+
   return (
     <span className={cn('font-medium', colorClass)}>
       {showArrow && arrow} {formatPercent(Math.abs(value))}

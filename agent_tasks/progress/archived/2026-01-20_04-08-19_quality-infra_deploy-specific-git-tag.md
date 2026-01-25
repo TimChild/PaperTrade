@@ -1,8 +1,8 @@
 # Deploy Specific Git Tag to Proxmox - Implementation Complete
 
-**Date**: 2026-01-20  
-**Time**: 04:08 UTC  
-**Agent**: quality-infra  
+**Date**: 2026-01-20
+**Time**: 04:08 UTC
+**Agent**: quality-infra
 **Task**: Add VERSION parameter support for deploying specific git tags to Proxmox VM
 
 ---

@@ -1,8 +1,8 @@
 # Phase 3b Authentication - Discovery & Gap Analysis
 
-**Date**: 2026-01-04  
-**Agent**: Architect  
-**Task**: #049 - Phase 3b Authentication Discovery  
+**Date**: 2026-01-04
+**Agent**: Architect
+**Task**: #049 - Phase 3b Authentication Discovery
 **Status**: ✅ ANALYSIS COMPLETE
 
 ---
@@ -276,7 +276,7 @@ class PortfolioModel(SQLModel, table=True):
     """Database model for Portfolio entity."""
     __tablename__ = "portfolios"
     __table_args__ = (Index("idx_portfolio_user_id", "user_id"),)
-    
+
     id: UUID = Field(primary_key=True)
     user_id: UUID = Field(index=True)  # ✅ Ready for FK constraint
     name: str = Field(max_length=100)
@@ -322,8 +322,8 @@ backend/migrations/versions/
   ```
 - ❌ Migration to add foreign key constraint:
   ```sql
-  ALTER TABLE portfolios 
-  ADD CONSTRAINT fk_portfolio_user 
+  ALTER TABLE portfolios
+  ADD CONSTRAINT fk_portfolio_user
   FOREIGN KEY (user_id) REFERENCES users(id);
   ```
 - ❌ SQLModelUserRepository implementation
@@ -410,13 +410,13 @@ frontend/src/
  */
 function getMockUserId(): string {
   const STORAGE_KEY = 'papertrade_mock_user_id'
-  
+
   // Check localStorage for existing ID
   const stored = localStorage.getItem(STORAGE_KEY)
   if (stored) {
     return stored
   }
-  
+
   // Generate new ID and store it
   const newId = crypto.randomUUID()
   localStorage.setItem(STORAGE_KEY, newId)
@@ -691,11 +691,11 @@ When implementing Phase 3b, **must include**:
 1. **Create Backend Implementation Task** (#050):
    ```markdown
    # Task 050: Implement Phase 3b Authentication - Backend
-   
+
    **Agent**: backend-swe
    **Effort**: 1.5-2 weeks
    **Architecture**: docs/architecture/phase3-refined/phase3b-authentication.md
-   
+
    ## Implementation Order
    1. Add dependencies (python-jose, passlib)
    2. Domain layer (User entity, exceptions)
@@ -708,12 +708,12 @@ When implementing Phase 3b, **must include**:
 2. **Create Frontend Implementation Task** (#051):
    ```markdown
    # Task 051: Implement Phase 3b Authentication - Frontend
-   
+
    **Agent**: frontend-swe
    **Effort**: 1 week
    **Dependencies**: Task #050 (backend must be complete first)
    **Architecture**: docs/architecture/phase3-refined/phase3b-authentication.md
-   
+
    ## Implementation Order
    1. Auth Zustand store
    2. Auth API service
@@ -776,7 +776,7 @@ This discovery confirms:
 ```python
 class Portfolio:
     """Portfolio entity representing a user's investment portfolio."""
-    
+
     id: UUID
     user_id: UUID  # Owner of the portfolio (immutable)
     name: str
@@ -845,10 +845,10 @@ export const apiClient = axios.create({
 ```python
 class PortfolioModel(SQLModel, table=True):
     """Database model for Portfolio entity."""
-    
+
     __tablename__ = "portfolios"
     __table_args__ = (Index("idx_portfolio_user_id", "user_id"),)
-    
+
     id: UUID = Field(primary_key=True)
     user_id: UUID = Field(index=True)  # No FK constraint (User table doesn't exist)
     name: str = Field(max_length=100)
@@ -871,7 +871,7 @@ class PortfolioModel(SQLModel, table=True):
 
 **Critical Path**:
 1. Backend domain + application (Week 1)
-2. Backend database + API (Week 2)  
+2. Backend database + API (Week 2)
 3. Frontend pages + state management (Week 3)
 
 **Next Step**: Create implementation tasks #050 (backend) and #051 (frontend) referencing this discovery document.

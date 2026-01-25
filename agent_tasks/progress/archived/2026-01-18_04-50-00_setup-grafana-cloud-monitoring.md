@@ -1,8 +1,8 @@
 # Agent Progress: Setup Grafana Cloud Monitoring & Observability
 
-**Agent**: quality-infra  
-**Date**: 2026-01-18  
-**Task**: Task 149 - Setup Grafana Cloud Monitoring & Observability  
+**Agent**: quality-infra
+**Date**: 2026-01-18
+**Task**: Task 149 - Setup Grafana Cloud Monitoring & Observability
 **PR**: [#TBD](https://github.com/TimChild/PaperTrade/pull/TBD)
 
 ## Executive Summary
@@ -407,7 +407,7 @@ sum(rate({container="zebu-backend-prod"} | json | event="Price fetched from cach
 
 ---
 
-**Task Status**: ✅ COMPLETE  
-**Quality**: Production-ready  
-**Next Agent**: N/A  
+**Task Status**: ✅ COMPLETE
+**Quality**: Production-ready
+**Next Agent**: N/A
 **Blockers**: None

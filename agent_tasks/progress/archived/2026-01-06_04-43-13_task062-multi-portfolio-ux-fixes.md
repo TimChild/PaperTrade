@@ -1,8 +1,8 @@
 # Task 062: Critical UX Fixes - Multi-Portfolio Access & Trade Execution
 
-**Agent**: Frontend SWE  
-**Date**: 2026-01-06  
-**Status**: Completed (Issue #1), Investigated (Issue #2)  
+**Agent**: Frontend SWE
+**Date**: 2026-01-06
+**Status**: Completed (Issue #1), Investigated (Issue #2)
 **Branch**: `copilot/fix-multi-portfolio-access`
 
 ## Task Summary

@@ -49,7 +49,7 @@ The plan follows a natural progression:
 
 **Impact**: Could waste time on wrong designs or get stuck in analysis paralysis.
 
-**Recommendation**: 
+**Recommendation**:
 - Prioritize 2-3 highest-impact screens (Dashboard, Portfolio Detail)
 - Use code prototypes for speed (can become production code)
 - Define evaluation criteria upfront (readability, data density, user flow)
@@ -102,7 +102,7 @@ The plan follows a natural progression:
 - Design tokens must account for both themes from the start
 
 ### 5. **Unclear Component Primitive Scope**
-**Issue**: "Extract reusable styled components (Button, Card, Input, etc.)" 
+**Issue**: "Extract reusable styled components (Button, Card, Input, etc.)"
 
 **Problems**:
 - Which components exactly? (Needs exhaustive list)
@@ -307,7 +307,7 @@ The plan follows a natural progression:
 ### Refinement 1: Split Design Exploration into Two Phases
 **Original**: 1-2 days for design exploration
 
-**Refined**: 
+**Refined**:
 - **Phase 1a** (1 day): Rapid prototyping (2 design variants for Dashboard)
 - **Stakeholder checkpoint**: Review, choose direction
 - **Phase 1b** (1 day): Apply chosen direction to Portfolio Detail screen

@@ -1,8 +1,8 @@
 # Task 076: Fix Performance Summary Loading State
 
-**Date**: 2026-01-08  
-**Agent**: frontend-swe  
-**Status**: ✅ Complete  
+**Date**: 2026-01-08
+**Agent**: frontend-swe
+**Status**: ✅ Complete
 **PR**: copilot/fix-performance-summary-loading
 
 ## Problem Statement

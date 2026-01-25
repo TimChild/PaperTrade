@@ -135,7 +135,7 @@ All typography tokens include font size, line height, and font weight.
 // Page layout with consistent padding
 <main className="px-container-padding-x py-container-padding-y">
   <h1 className="text-heading-xl mb-8">Dashboard</h1>
-  
+
   {/* Card grid */}
   <div className="grid grid-cols-1 lg:grid-cols-2 gap-card-gap">
     <div className="bg-background-secondary rounded-card p-card-padding">
@@ -215,18 +215,18 @@ export function PortfolioCard({ portfolio, onClick }: PortfolioCardProps) {
       <h2 className="text-heading-lg text-foreground-primary mb-4">
         {portfolio.name}
       </h2>
-      
+
       <p className="text-value-primary text-foreground-primary mb-2">
         {formatCurrency(portfolio.totalValue)}
       </p>
-      
+
       <p className={cn(
         'text-value-secondary',
         isPositive ? 'text-positive' : 'text-negative'
       )}>
         {isPositive ? '+' : ''}{formatCurrency(dailyChange)}
       </p>
-      
+
       <p className="text-sm text-foreground-tertiary mt-2">
         Cash: {formatCurrency(portfolio.cash)}
       </p>
