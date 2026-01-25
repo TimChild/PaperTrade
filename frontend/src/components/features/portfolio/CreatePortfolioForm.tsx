@@ -48,15 +48,20 @@ export function CreatePortfolioForm({
     }
 
     try {
+      console.log('[CreatePortfolioForm] Submitting portfolio creation...')
       const result = await createPortfolio.mutateAsync({
         name: name.trim(),
         initial_deposit: depositAmount.toFixed(2),
         currency: 'USD',
       })
 
+      console.log('[CreatePortfolioForm] Portfolio created:', result.portfolio_id)
+
       if (onSuccess) {
+        console.log('[CreatePortfolioForm] Calling onSuccess callback')
         onSuccess(result.portfolio_id)
       } else {
+        console.log('[CreatePortfolioForm] Navigating to portfolio:', result.portfolio_id)
         // Navigate to the new portfolio by default
         navigate(`/portfolio/${result.portfolio_id}`)
       }
@@ -64,6 +69,7 @@ export function CreatePortfolioForm({
       // Show success toast after navigation to ensure it appears on the new page
       toasts.portfolioCreated(name.trim())
     } catch (err) {
+      console.error('[CreatePortfolioForm] Error creating portfolio:', err)
       setError(
         err instanceof Error ? err.message : 'Failed to create portfolio'
       )

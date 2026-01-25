@@ -124,9 +124,12 @@ export function Dashboard(): React.JSX.Element {
         >
           <CreatePortfolioForm
             onSuccess={(portfolioId) => {
-              setShowCreateModal(false)
-              // Navigate to the newly created portfolio so user can see it immediately
+              console.log('[Dashboard] onSuccess called with portfolioId:', portfolioId)
+              console.log('[Dashboard] Navigating to portfolio:', portfolioId)
+              // Navigate first, then close modal
               navigate(`/portfolio/${portfolioId}`)
+              console.log('[Dashboard] Navigation called, closing modal')
+              setShowCreateModal(false)
             }}
             onCancel={() => setShowCreateModal(false)}
           />
