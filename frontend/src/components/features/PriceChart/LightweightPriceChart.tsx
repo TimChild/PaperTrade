@@ -215,9 +215,16 @@ export function LightweightPriceChart({
 
   // Update chart data when it changes
   useEffect(() => {
-    if (!seriesRef.current || !chartData) return
+    if (!seriesRef.current || !chartData || !chartRef.current) return
 
     seriesRef.current.setData(chartData)
+    // Fit chart content to ensure proper scaling across the viewport
+    try {
+      chartRef.current.timeScale().fitContent()
+    } catch (error) {
+      // Silently handle errors if chart isn't fully initialized
+      console.debug('Chart fitContent failed:', error)
+    }
   }, [chartData])
 
   // Update trade markers when they change
@@ -304,6 +311,12 @@ export function LightweightPriceChart({
 
   // No data state
   if (!data || data.prices.length === 0) {
+    // Provide helpful message for 1D view on weekends/holidays
+    const isOneDayView = timeRange === '1D'
+    const emptyMessage = isOneDayView
+      ? 'Market Closed - No intraday data available for today. Try "1W" for recent data.'
+      : 'No price data available for this time range'
+
     return (
       <Card>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
@@ -314,7 +327,9 @@ export function LightweightPriceChart({
         </CardHeader>
         <CardContent>
           <div className="flex h-64 items-center justify-center">
-            <p className="text-foreground-secondary">No price data available</p>
+            <p className="text-foreground-secondary text-center px-4">
+              {emptyMessage}
+            </p>
           </div>
         </CardContent>
       </Card>
