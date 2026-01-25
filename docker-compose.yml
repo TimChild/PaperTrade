@@ -95,6 +95,7 @@ services:
       - "${FRONTEND_PORT:-5173}:${FRONTEND_INTERNAL_PORT:-5173}"
     environment:
       VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000/api/v1}
+      VITE_PROXY_TARGET: ${VITE_PROXY_TARGET:-http://backend:8000}
       VITE_CLERK_PUBLISHABLE_KEY: ${VITE_CLERK_PUBLISHABLE_KEY}
     depends_on:
       backend:
