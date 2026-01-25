@@ -129,6 +129,18 @@ tasks:
       - sh: test -f package.json
         msg: "Frontend not found"
 
+  test:e2e:cleanup:
+    desc: "Clean up E2E test data from database"
+    cmds:
+      - |
+        echo "Cleaning up E2E test portfolios from database..."
+        docker exec papertrade-db-1 psql -U papertrade -d papertrade_dev -c \
+          "DELETE FROM portfolios WHERE name LIKE 'Test Portfolio %' OR name LIKE 'Persistent %' OR name LIKE 'Analytics Test %' OR name LIKE 'Trading Portfolio %' OR name LIKE 'Poor Portfolio%' OR name LIKE 'Holdings Test%' OR name LIKE 'Buy-Sell Portfolio%' OR name LIKE 'Empty Portfolio%' OR name LIKE 'Quick Sell%' OR name LIKE 'Multi Test Portfolio%' OR name LIKE 'Click Test Portfolio%';"
+        echo "✓ E2E test data cleaned up"
+    preconditions:
+      - sh: docker ps | grep -q papertrade-db-1
+        msg: "Database container not running. Run 'task docker:up' first."
+
   lint:
     desc: "Run all linters (backend and frontend)"
     cmds:
@@ -436,6 +448,7 @@ tasks:
     cmds:
       - echo "🔄 Running E2E tests..."
       - task: health:wait
+      - task: test:e2e:cleanup
       - task: test:e2e
 
   # =========================================================================
