@@ -502,4 +502,216 @@ describe('PriceChart', () => {
     // Component should render without errors
     // Y-axis domain should include the trade marker at 170 (above the max price line of 160)
   })
+
+  describe('ReferenceDot trade markers', () => {
+    it('renders price line correctly with trade markers present', async () => {
+      const mockHistory = {
+        ticker: 'IBM',
+        prices: [
+          {
+            ticker: { symbol: 'IBM' },
+            price: { amount: 150, currency: 'USD' },
+            timestamp: '2024-01-01T00:00:00Z',
+            source: 'cache' as const,
+            interval: '1day' as const,
+          },
+          {
+            ticker: { symbol: 'IBM' },
+            price: { amount: 152, currency: 'USD' },
+            timestamp: '2024-01-02T00:00:00Z',
+            source: 'cache' as const,
+            interval: '1day' as const,
+          },
+          {
+            ticker: { symbol: 'IBM' },
+            price: { amount: 155, currency: 'USD' },
+            timestamp: '2024-01-03T00:00:00Z',
+            source: 'cache' as const,
+            interval: '1day' as const,
+          },
+        ],
+        source: 'mock',
+        cached: false,
+      }
+
+      const mockTransactions: TransactionListResponse = {
+        transactions: [
+          {
+            id: '1',
+            portfolio_id: 'portfolio-1',
+            transaction_type: 'BUY',
+            timestamp: '2024-01-02T00:00:00Z',
+            cash_change: '-1520.00',
+            ticker: 'IBM',
+            quantity: '10',
+            price_per_share: '152.00',
+            notes: null,
+          },
+        ],
+        total_count: 1,
+        limit: 100,
+        offset: 0,
+      }
+
+      vi.spyOn(pricesApi, 'getPriceHistory').mockResolvedValue(mockHistory)
+      vi.spyOn(transactionsApi.transactionsApi, 'list').mockResolvedValue(
+        mockTransactions
+      )
+
+      const Wrapper = createWrapper()
+      render(<PriceChart ticker="IBM" portfolioId="portfolio-1" />, {
+        wrapper: Wrapper,
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText('$155.00')).toBeInTheDocument()
+      })
+
+      // Component should render without errors
+      // Price line should render as complete curve with all 3 points
+      // Trade marker should appear at correct position (Jan 2)
+    })
+
+    it('renders correctly with multiple trade markers', async () => {
+      const mockHistory = {
+        ticker: 'IBM',
+        prices: [
+          {
+            ticker: { symbol: 'IBM' },
+            price: { amount: 150, currency: 'USD' },
+            timestamp: '2024-01-01T00:00:00Z',
+            source: 'cache' as const,
+            interval: '1day' as const,
+          },
+          {
+            ticker: { symbol: 'IBM' },
+            price: { amount: 152, currency: 'USD' },
+            timestamp: '2024-01-02T00:00:00Z',
+            source: 'cache' as const,
+            interval: '1day' as const,
+          },
+          {
+            ticker: { symbol: 'IBM' },
+            price: { amount: 148, currency: 'USD' },
+            timestamp: '2024-01-03T00:00:00Z',
+            source: 'cache' as const,
+            interval: '1day' as const,
+          },
+        ],
+        source: 'mock',
+        cached: false,
+      }
+
+      const mockTransactions: TransactionListResponse = {
+        transactions: [
+          {
+            id: '1',
+            portfolio_id: 'portfolio-1',
+            transaction_type: 'BUY',
+            timestamp: '2024-01-01T00:00:00Z',
+            cash_change: '-1500.00',
+            ticker: 'IBM',
+            quantity: '10',
+            price_per_share: '150.00',
+            notes: null,
+          },
+          {
+            id: '2',
+            portfolio_id: 'portfolio-1',
+            transaction_type: 'SELL',
+            timestamp: '2024-01-03T00:00:00Z',
+            cash_change: '740.00',
+            ticker: 'IBM',
+            quantity: '5',
+            price_per_share: '148.00',
+            notes: null,
+          },
+        ],
+        total_count: 2,
+        limit: 100,
+        offset: 0,
+      }
+
+      vi.spyOn(pricesApi, 'getPriceHistory').mockResolvedValue(mockHistory)
+      vi.spyOn(transactionsApi.transactionsApi, 'list').mockResolvedValue(
+        mockTransactions
+      )
+
+      const Wrapper = createWrapper()
+      render(<PriceChart ticker="IBM" portfolioId="portfolio-1" />, {
+        wrapper: Wrapper,
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText('$148.00')).toBeInTheDocument()
+      })
+
+      // Component should render without errors
+      // Price line should render as complete curve with all 3 points
+      // Both trade markers (BUY and SELL) should appear
+    })
+
+    it('renders correctly when no trade markers in range', async () => {
+      const mockHistory = {
+        ticker: 'IBM',
+        prices: [
+          {
+            ticker: { symbol: 'IBM' },
+            price: { amount: 150, currency: 'USD' },
+            timestamp: '2024-01-15T00:00:00Z',
+            source: 'cache' as const,
+            interval: '1day' as const,
+          },
+          {
+            ticker: { symbol: 'IBM' },
+            price: { amount: 155, currency: 'USD' },
+            timestamp: '2024-01-16T00:00:00Z',
+            source: 'cache' as const,
+            interval: '1day' as const,
+          },
+        ],
+        source: 'mock',
+        cached: false,
+      }
+
+      // Trade marker outside the visible date range
+      const mockTransactions: TransactionListResponse = {
+        transactions: [
+          {
+            id: '1',
+            portfolio_id: 'portfolio-1',
+            transaction_type: 'BUY',
+            timestamp: '2024-01-01T00:00:00Z',
+            cash_change: '-1400.00',
+            ticker: 'IBM',
+            quantity: '10',
+            price_per_share: '140.00',
+            notes: null,
+          },
+        ],
+        total_count: 1,
+        limit: 100,
+        offset: 0,
+      }
+
+      vi.spyOn(pricesApi, 'getPriceHistory').mockResolvedValue(mockHistory)
+      vi.spyOn(transactionsApi.transactionsApi, 'list').mockResolvedValue(
+        mockTransactions
+      )
+
+      const Wrapper = createWrapper()
+      render(<PriceChart ticker="IBM" portfolioId="portfolio-1" />, {
+        wrapper: Wrapper,
+      })
+
+      await waitFor(() => {
+        expect(screen.getByText('$155.00')).toBeInTheDocument()
+      })
+
+      // Component should render without errors
+      // Price line should render correctly
+      // Trade marker outside range will still be formatted but should not disrupt chart
+      // (ReferenceDot with non-matching x value simply won't appear in view)
+    })
+  })
 })

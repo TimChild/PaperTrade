@@ -11,8 +11,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Scatter,
-  ZAxis,
+  ReferenceDot,
 } from 'recharts'
 import { usePriceHistory } from '@/hooks/usePriceHistory'
 import { useTransactions } from '@/hooks/useTransactions'
@@ -32,8 +31,7 @@ const TRADE_COLORS = {
   SELL: '#ef4444', // red-500
 } as const
 
-// Scatter plot configuration
-const SCATTER_Z_AXIS_SIZE = 64 // Recharts ZAxis range for scatter plot
+// Trade marker configuration
 const TRADE_MARKER_RADIUS = 8 // Visual radius of trade marker circles (px)
 
 // Chart padding configuration
@@ -58,18 +56,6 @@ interface TradeMarker {
   action: 'BUY' | 'SELL'
   quantity: string
   fullDate: string
-}
-
-interface ScatterShapeProps {
-  cx: number
-  cy: number
-  payload: {
-    time: string
-    price: number
-    action: 'BUY' | 'SELL'
-    quantity: string
-    fullDate: string
-  }
 }
 
 export function PriceChart({
@@ -295,7 +281,6 @@ export function PriceChart({
               className="sm:text-xs"
               tickFormatter={(value) => `$${value.toFixed(0)}`}
             />
-            <ZAxis range={[SCATTER_Z_AXIS_SIZE, SCATTER_Z_AXIS_SIZE]} />
             <Tooltip
               contentStyle={{
                 backgroundColor: 'hsl(var(--background))',
@@ -330,34 +315,28 @@ export function PriceChart({
               dot={false}
               activeDot={{ r: 6 }}
             />
-            {/* Trade markers - only show if portfolioId is provided */}
-            {portfolioId && formattedTradeMarkers.length > 0 && (
-              <Scatter
-                name="Trades"
-                data={formattedTradeMarkers}
-                fill={TRADE_COLORS.BUY}
-                shape={(props: unknown) => {
-                  // Recharts passes unknown props, so we need to cast
-                  // Safe because we control the data structure
-                  const { cx, cy, payload } = props as ScatterShapeProps
-                  const isBuy = payload.action === 'BUY'
-                  const color = isBuy ? TRADE_COLORS.BUY : TRADE_COLORS.SELL
-
-                  return (
-                    <g>
-                      <circle
-                        cx={cx}
-                        cy={cy}
-                        r={TRADE_MARKER_RADIUS}
-                        fill={color}
-                        stroke="#fff"
-                        strokeWidth={2}
-                      />
-                    </g>
-                  )
-                }}
-              />
-            )}
+            {/* Trade markers - use ReferenceDot to position by actual axis values */}
+            {portfolioId &&
+              formattedTradeMarkers.map((marker, index) => {
+                const isBuy = marker.action === 'BUY'
+                const color = isBuy ? TRADE_COLORS.BUY : TRADE_COLORS.SELL
+                return (
+                  <ReferenceDot
+                    key={`${marker.time}-${index}`}
+                    x={marker.time}
+                    y={marker.price}
+                    r={TRADE_MARKER_RADIUS}
+                    fill={color}
+                    stroke="#fff"
+                    strokeWidth={2}
+                    label={{
+                      value: `${marker.action} ${marker.quantity}`,
+                      position: 'top',
+                      fontSize: 0, // Hide label to avoid clutter
+                    }}
+                  />
+                )
+              })}
           </ComposedChart>
         </ResponsiveContainer>
       </CardContent>
