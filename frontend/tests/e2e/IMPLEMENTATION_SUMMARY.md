@@ -236,6 +236,7 @@ Error: ❌ Pre-token environment validation failed. Check output above for detai
 - `frontend/src/services/api/client.ts` - Added comprehensive debug logging
 - `frontend/tests/e2e/global-setup.ts` - Integrated validation
 - `frontend/tests/e2e/helpers.ts` - Added logging to helpers
+- `Taskfile.yml` - Added `task test:e2e:validate` and `task test:e2e:debug-auth` commands
 
 ## Next Steps
 
@@ -243,11 +244,12 @@ To complete the fix:
 
 1. ✅ **Deploy changes** - Already committed
 2. **Start services** - `task docker:up:all`
-3. **Run validation** - Should pass with all services running
-4. **Run E2E tests** - `task test:e2e`
-5. **Analyze output** - Validation report + debug logs will show exact issue
-6. **Fix root cause** - Based on clear error messages
-7. **Verify fix** - Run tests 3 times to ensure stability
+3. **Run validation** - `task test:e2e:validate` (NEW! Validates without running tests)
+4. **Debug if needed** - `task test:e2e:debug-auth` (NEW! Shows detailed auth info)
+5. **Run E2E tests** - `task test:e2e`
+6. **Analyze output** - Validation report + debug logs will show exact issue
+7. **Fix root cause** - Based on clear error messages
+8. **Verify fix** - Run tests 3 times to ensure stability
 
 ## Benefits
 

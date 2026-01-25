@@ -43,6 +43,30 @@ cd frontend
 npm run test:e2e
 ```
 
+### Validate E2E environment (without running tests)
+```bash
+# From project root  
+task test:e2e:validate
+
+# Or from frontend directory
+cd frontend
+npx tsx tests/e2e/utils/test-validation.mjs
+```
+
+This validates that all services and configuration are correct before running tests.
+
+### Debug authentication issues
+```bash
+# From project root
+task test:e2e:debug-auth
+
+# Or from frontend directory
+cd frontend
+npx tsx tests/e2e/utils/debug-auth.ts
+```
+
+This runs a detailed authentication diagnostic showing token info and API requests.
+
 ### Run tests with UI (interactive mode)
 ```bash
 task test:e2e:ui
