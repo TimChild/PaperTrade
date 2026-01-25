@@ -59,7 +59,7 @@ Apple-like minimalism with generous whitespace, clear visual hierarchy, and calm
 - **Divider**: 1px gray-200
 
 #### Button Design
-- **Primary CTA**: 
+- **Primary CTA**:
   - rounded-xl
   - px-8 py-4 (large padding)
   - text-lg font-semibold
@@ -146,7 +146,7 @@ Bloomberg Terminal-inspired information-rich design with efficient space usage a
 - **Divider**: 1px gray-700
 
 #### Button Design
-- **Primary CTA**: 
+- **Primary CTA**:
   - rounded (0.25rem)
   - px-4 py-2 (compact padding)
   - text-sm font-semibold

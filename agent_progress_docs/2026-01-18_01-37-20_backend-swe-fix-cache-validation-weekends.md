@@ -1,9 +1,9 @@
 # Agent Progress Documentation
 
-**Agent**: backend-swe  
-**Date**: 2026-01-18  
-**Task**: Fix Cache Validation for Weekends and Holidays (Task 147)  
-**Branch**: `copilot/fix-cache-validation-weekends`  
+**Agent**: backend-swe
+**Date**: 2026-01-18
+**Task**: Fix Cache Validation for Weekends and Holidays (Task 147)
+**Branch**: `copilot/fix-cache-validation-weekends`
 **PR**: (To be created)
 
 ## Task Overview
@@ -36,23 +36,23 @@ Fixed a critical bug in the AlphaVantageAdapter where weekend requests caused un
 ```python
 def _get_last_trading_day(self, from_date: datetime) -> datetime:
     """Calculate the most recent trading day from a given date.
-    
+
     US stock market is closed on:
     - Saturdays and Sundays
     - Market holidays (simplified: not checking actual holiday calendar)
-    
+
     Args:
         from_date: Reference date (UTC)
-    
+
     Returns:
         Most recent date that would have market data
     """
     current_date = from_date.date()
-    
+
     # Walk backwards until we hit a weekday (Mon-Fri)
     while current_date.weekday() >= 5:  # 5=Saturday, 6=Sunday
         current_date -= timedelta(days=1)
-    
+
     # Return datetime at market close (21:00 UTC = 4:00 PM ET)
     return datetime(
         current_date.year,
@@ -80,7 +80,7 @@ if now < market_close_today:
     # Go back one day first, then find the last trading day from there
     yesterday = now - timedelta(days=1)
     last_trading_day = self._get_last_trading_day(yesterday)
-    
+
     if last_cached >= last_trading_day:
         # Cache complete
     else:
@@ -240,7 +240,7 @@ For the current scope, weekend handling is sufficient and addresses the reported
 1. **`backend/src/zebu/adapters/outbound/market_data/alpha_vantage_adapter.py`**
    - Added `_get_last_trading_day()` helper method (32 lines)
    - Updated `_is_cache_complete()` logic (50 lines modified)
-   
+
 2. **`backend/tests/unit/adapters/outbound/market_data/test_alpha_vantage_weekend_cache.py`** (NEW)
    - 12 comprehensive unit and integration tests
    - 530+ lines of test code

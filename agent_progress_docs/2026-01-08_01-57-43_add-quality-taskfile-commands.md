@@ -1,15 +1,15 @@
 # Agent Progress: Task 072 - Add Combined Quality Tasks to Taskfile
 
-**Agent**: quality-infra  
-**Date**: 2026-01-08  
-**Task**: agent_tasks/072_add-quality-taskfile-commands.md  
+**Agent**: quality-infra
+**Date**: 2026-01-08
+**Task**: agent_tasks/072_add-quality-taskfile-commands.md
 **PR**: [Link will be added when created]
 
 ## Task Summary
 
 Added three combined quality check tasks to `Taskfile.yml` to simplify agent documentation and developer workflows:
 - `quality:backend` - runs format + lint + test for backend
-- `quality:frontend` - runs format + lint + test for frontend  
+- `quality:frontend` - runs format + lint + test for frontend
 - `quality` - runs both backend and frontend quality checks
 
 ## Changes Made
@@ -27,7 +27,7 @@ Added three combined quality check tasks to `Taskfile.yml` to simplify agent doc
    - Sequentially runs: format:backend → lint:backend → test:backend
    - Success message: "✓ All backend quality checks passed"
 
-3. **Task: quality:frontend**  
+3. **Task: quality:frontend**
    - Sequentially runs: format:frontend → lint:frontend → test:frontend
    - Success message: "✓ All frontend quality checks passed"
 
@@ -42,7 +42,7 @@ Added three combined quality check tasks to `Taskfile.yml` to simplify agent doc
 
 **Backend Quality** (`task quality:backend`):
 - ✅ Format: 141 files unchanged (ruff format)
-- ✅ Lint: All checks passed (ruff check + pyright)  
+- ✅ Lint: All checks passed (ruff check + pyright)
 - ✅ Tests: 501 passed, 4 skipped, 82% coverage
 
 **Frontend Quality** (`task quality:frontend`):
@@ -64,11 +64,11 @@ $ task --list | grep quality
 
 ## Success Criteria Met
 
-✅ `task quality:backend` runs format, lint, test sequentially  
-✅ `task quality:frontend` runs format, lint, test sequentially  
-✅ `task quality` runs both backend and frontend quality checks  
-✅ `task --list` shows the new tasks with descriptions  
-✅ All new tasks work when run manually  
+✅ `task quality:backend` runs format, lint, test sequentially
+✅ `task quality:frontend` runs format, lint, test sequentially
+✅ `task quality` runs both backend and frontend quality checks
+✅ `task --list` shows the new tasks with descriptions
+✅ All new tasks work when run manually
 
 ## Follow-up Tasks
 

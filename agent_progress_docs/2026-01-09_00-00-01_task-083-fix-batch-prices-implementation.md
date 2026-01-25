@@ -1,7 +1,7 @@
 # Task 083: Fix Batch Prices Implementation in Frontend
 
 **Date**: 2026-01-09
-**Agent**: frontend-swe  
+**Agent**: frontend-swe
 **Status**: ✅ Complete
 **PR**: [Fix batch prices implementation](../../../pulls)
 

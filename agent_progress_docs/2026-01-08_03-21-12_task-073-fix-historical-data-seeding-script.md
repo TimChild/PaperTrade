@@ -1,7 +1,7 @@
 # Task 073: Fix Historical Data Seeding Script
 
-**Date**: 2026-01-08  
-**Agent**: backend-swe  
+**Date**: 2026-01-08
+**Agent**: backend-swe
 **Status**: ✅ Complete
 
 ## Summary
@@ -48,7 +48,7 @@ async def main() -> None:
     """Run historical data seeding."""
     # Load environment variables from .env file
     load_dotenv()  # ← NEW
-    
+
     # ... rest of function
 ```
 

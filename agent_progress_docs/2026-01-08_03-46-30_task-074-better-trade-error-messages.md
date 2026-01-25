@@ -1,8 +1,8 @@
 # Task 074: Better Trade Error Messages
 
-**Agent**: backend-swe  
-**Session**: 20260108_034630  
-**Status**: ✅ Complete  
+**Agent**: backend-swe
+**Session**: 20260108_034630
+**Status**: ✅ Complete
 **Branch**: copilot/improve-trade-error-handling
 
 ## Problem Statement
