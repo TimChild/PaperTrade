@@ -193,14 +193,35 @@ export function PriceChart({
     fullDate: new Date(point.timestamp).toLocaleString(),
   }))
 
-  // Format trade markers to match chart time format
-  const formattedTradeMarkers = tradeMarkers.map((marker) => ({
-    time: formatDateForAxis(marker.timestamp, timeRange),
-    price: marker.price,
-    action: marker.action,
-    quantity: marker.quantity,
-    fullDate: marker.fullDate,
-  }))
+  // Format trade markers and snap to nearest price data point
+  // This is necessary because Recharts uses categorical X-axis - trade markers
+  // must use a 'time' value that exists in chartData for proper positioning
+  const formattedTradeMarkers = tradeMarkers.map((marker) => {
+    const markerTime = new Date(marker.timestamp).getTime()
+
+    // Find the closest price data point by timestamp
+    // data.prices is guaranteed non-empty due to the early return check above
+    let closestPoint = data.prices[0]!
+    let closestDiff = Math.abs(new Date(closestPoint.timestamp).getTime() - markerTime)
+
+    for (const point of data.prices) {
+      const diff = Math.abs(new Date(point.timestamp).getTime() - markerTime)
+      if (diff < closestDiff) {
+        closestDiff = diff
+        closestPoint = point
+      }
+    }
+
+    return {
+      // Use the time from the closest price data point for X-axis alignment
+      time: formatDateForAxis(closestPoint.timestamp, timeRange),
+      // Keep the actual trade price for Y-axis positioning
+      price: marker.price,
+      action: marker.action,
+      quantity: marker.quantity,
+      fullDate: marker.fullDate,
+    }
+  })
 
   // Calculate Y-axis domain from both chart data and trade markers
   const allPrices = [
