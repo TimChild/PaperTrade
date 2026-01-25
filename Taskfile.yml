@@ -146,7 +146,7 @@ tasks:
         sh: grep "^E2E_CLERK_USER_EMAIL=" ../.env | cut -d= -f2- || echo ""
     cmds:
       - echo "Validating E2E test environment..."
-      - npx tsx tests/e2e/utils/test-validation.mjs
+      - npx tsx tests/e2e/utils/test-validation.ts
     preconditions:
       - sh: test -f package.json
         msg: "Frontend not found"

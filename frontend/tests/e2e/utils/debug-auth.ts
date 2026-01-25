@@ -118,13 +118,17 @@ export async function debugAuthentication(): Promise<void> {
 /**
  * Main entry point when run directly
  */
-if (import.meta.url === `file://${process.argv[1]}`) {
-  debugAuthentication()
-    .then(() => {
-      console.log('Debug complete')
-    })
-    .catch((error) => {
-      console.error('Debug failed:', error)
-      process.exit(1)
-    })
+if (import.meta.url.startsWith('file:')) {
+  const modulePath = new URL(import.meta.url).pathname
+  const scriptPath = process.argv[1]
+  if (modulePath === scriptPath || modulePath.endsWith(scriptPath)) {
+    debugAuthentication()
+      .then(() => {
+        console.log('Debug complete')
+      })
+      .catch((error) => {
+        console.error('Debug failed:', error)
+        process.exit(1)
+      })
+  }
 }

@@ -1,12 +1,12 @@
-#!/usr/bin/env node
+#!/usr/bin/env tsx
 /**
  * Standalone test script to verify environment validation works
  *
  * This script can be run without Playwright to test the validation logic.
- * Usage: node test-validation.mjs
+ * Usage: npx tsx test-validation.ts
  */
 
-import { validateEnvironment } from './validate-environment.ts'
+import { validateEnvironment } from './validate-environment'
 
 console.log('Testing E2E Environment Validation Script')
 console.log('==========================================\n')

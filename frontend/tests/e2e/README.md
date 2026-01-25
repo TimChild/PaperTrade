@@ -50,7 +50,7 @@ task test:e2e:validate
 
 # Or from frontend directory
 cd frontend
-npx tsx tests/e2e/utils/test-validation.mjs
+npx tsx tests/e2e/utils/test-validation.ts
 ```
 
 This validates that all services and configuration are correct before running tests.

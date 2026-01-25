@@ -17,18 +17,24 @@ const API_BASE_URL =
 // 2. Running in Playwright test environment
 // 3. VITE_E2E_DEBUG environment variable is set
 const isE2ETest =
-  (typeof window !== 'undefined' && window.location.search.includes('e2e-debug')) ||
+  (typeof window !== 'undefined' && window?.location?.search?.includes('e2e-debug')) ||
   import.meta.env.VITE_E2E_DEBUG === 'true'
-const isPlaywrightTest =
-  import.meta.env.MODE === 'test' ||
-  (typeof process !== 'undefined' && process.env.PLAYWRIGHT_TEST)
 
 // Always log in E2E environment for debugging
-const shouldDebugLog = isE2ETest || isPlaywrightTest
+const shouldDebugLog = isE2ETest
 
 function debugLog(message: string, ...args: unknown[]): void {
   if (shouldDebugLog) {
     console.log(`[API Client Debug] ${message}`, ...args)
+  }
+}
+
+// Safe JSON stringify that handles errors
+function safeStringify(data: unknown): string {
+  try {
+    return JSON.stringify(data || null)
+  } catch {
+    return '[Unstringifiable data]'
   }
 }
 
@@ -98,7 +104,7 @@ apiClient.interceptors.response.use(
       status: response.status,
       statusText: response.statusText,
       url: response.config.url,
-      dataPreview: JSON.stringify(response.data).substring(0, 100),
+      dataPreview: safeStringify(response.data).substring(0, 100),
     })
     return response
   },

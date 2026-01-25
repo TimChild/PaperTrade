@@ -290,7 +290,8 @@ function printReport(report: ValidationReport): void {
     for (const result of report.passed) {
       console.log(`  ✓ ${result.message}`)
       if (result.details) {
-        console.log(`    ${JSON.stringify(result.details, null, 2).split('\n').join('\n    ')}`)
+        const formatted = JSON.stringify(result.details, null, 2).replace(/\n/g, '\n    ')
+        console.log(`    ${formatted}`)
       }
     }
   }
@@ -300,7 +301,8 @@ function printReport(report: ValidationReport): void {
     for (const result of report.warnings) {
       console.log(`  ⚠ ${result.message}`)
       if (result.details) {
-        console.log(`    ${JSON.stringify(result.details, null, 2).split('\n').join('\n    ')}`)
+        const formatted = JSON.stringify(result.details, null, 2).replace(/\n/g, '\n    ')
+        console.log(`    ${formatted}`)
       }
     }
   }
@@ -310,7 +312,8 @@ function printReport(report: ValidationReport): void {
     for (const result of report.failed) {
       console.log(`  ✗ ${result.message}`)
       if (result.details) {
-        console.log(`    ${JSON.stringify(result.details, null, 2).split('\n').join('\n    ')}`)
+        const formatted = JSON.stringify(result.details, null, 2).replace(/\n/g, '\n    ')
+        console.log(`    ${formatted}`)
       }
     }
   }
@@ -387,13 +390,17 @@ export async function validateEnvironment(): Promise<boolean> {
 /**
  * Main entry point when run directly
  */
-if (import.meta.url === `file://${process.argv[1]}`) {
-  validateEnvironment()
-    .then((success) => {
-      process.exit(success ? 0 : 1)
-    })
-    .catch((error) => {
-      console.error('Validation failed with error:', error)
-      process.exit(1)
-    })
+if (import.meta.url.startsWith('file:')) {
+  const modulePath = new URL(import.meta.url).pathname
+  const scriptPath = process.argv[1]
+  if (modulePath === scriptPath || modulePath.endsWith(scriptPath)) {
+    validateEnvironment()
+      .then((success) => {
+        process.exit(success ? 0 : 1)
+      })
+      .catch((error) => {
+        console.error('Validation failed with error:', error)
+        process.exit(1)
+      })
+  }
 }
