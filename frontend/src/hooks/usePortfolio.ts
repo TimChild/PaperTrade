@@ -183,7 +183,10 @@ export function useDeletePortfolio() {
 
   return useMutation({
     mutationFn: (portfolioId: string) => portfoliosApi.delete(portfolioId),
-    onSuccess: () => {
+    onSuccess: (_, portfolioId) => {
+      // Remove all queries related to the deleted portfolio to prevent errors
+      queryClient.removeQueries({ queryKey: ['portfolio', portfolioId] })
+      // Invalidate the portfolios list to refetch
       queryClient.invalidateQueries({ queryKey: ['portfolios'] })
     },
   })

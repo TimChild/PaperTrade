@@ -56,8 +56,17 @@ export function PerformanceChart({
     return (
       <Card>
         <CardContent className="pt-6">
-          <div data-testid="performance-chart-empty">
-            No performance data available. Snapshots will be generated daily.
+          <div
+            data-testid="performance-chart-empty"
+            className="flex flex-col items-center gap-3"
+          >
+            <p className="text-foreground-secondary text-center">
+              No performance data available yet.
+            </p>
+            <p className="text-sm text-foreground-tertiary text-center">
+              Performance charts update daily after market close. Check back
+              tomorrow!
+            </p>
           </div>
         </CardContent>
       </Card>

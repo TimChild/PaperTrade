@@ -117,7 +117,9 @@ describe('LightweightPriceChart', () => {
     render(<LightweightPriceChart ticker="AAPL" />, { wrapper: Wrapper })
 
     await waitFor(() => {
-      expect(screen.getByText('No price data available')).toBeInTheDocument()
+      expect(
+        screen.getByText(/No price data available for this time range/i)
+      ).toBeInTheDocument()
     })
   })
 
