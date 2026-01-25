@@ -21,8 +21,24 @@ test.describe('Portfolio Creation Flow', () => {
     await page.getByTestId('create-portfolio-name-input').fill(portfolioName)
     await page.getByTestId('create-portfolio-deposit-input').fill('10000')
 
+    // Log current URL before submission
+    console.log('[TEST] URL before submit:', page.url())
+
     // 4. Submit
     await page.getByTestId('submit-portfolio-form-btn').click()
+
+    // Wait a moment for the submission to process
+    await page.waitForTimeout(1000)
+    console.log('[TEST] URL after submit:', page.url())
+
+    // Check for any error messages
+    const errorElements = await page.locator('[role="alert"]').all()
+    if (errorElements.length > 0) {
+      for (const error of errorElements) {
+        const text = await error.textContent()
+        console.log('[TEST] Error message found:', text)
+      }
+    }
 
     // 5. Should navigate to the new portfolio's detail page
     await page.waitForURL('**/portfolio/*', { timeout: 10000 })
