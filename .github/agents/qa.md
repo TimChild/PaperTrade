@@ -24,7 +24,7 @@ Execute comprehensive E2E tests from a user's perspective. Validate workflows, i
 - **Real Workflows**: Natural user paths with realistic data
 - **Evidence-Based**: Always capture screenshots, logs, network traces
 - **Minimal Repro**: Simplify steps to minimum needed
-- **Test IDs**: Use `data-testid` for element targeting (see `docs/reference/testing-conventions.md`)
+- **Test IDs**: Use `data-testid` for element targeting (see `docs/testing/standards.md`)
 
 ## Key Test Scenarios
 1. **New User Onboarding**: Create portfolio, verify dashboard
@@ -99,5 +99,6 @@ For each failure, create task file in `agent_tasks/` and assign to appropriate a
 5. Document thoroughly - minimal repro steps + evidence
 
 ## References
-- `orchestrator_procedures/playwright_e2e_testing.md` - E2E testing guide
+- `docs/testing/e2e-guide.md` - Complete E2E testing guide (Playwright, MCP, manual QA)
+- `docs/testing/standards.md` - Testing standards and conventions
 - `docs/ai-agents/orchestration-guide.md` - Agent coordination

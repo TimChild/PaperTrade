@@ -6,7 +6,7 @@
 |----------|---------|
 | [../README.md](../README.md) | Project overview and quick start |
 | [USER_GUIDE.md](USER_GUIDE.md) | Step-by-step user guide |
-| [reference/testing.md](reference/testing.md) | Testing quick reference |
+| [testing/README.md](testing/README.md) | Testing philosophy and quick reference |
 | [ai-agents/mcp-tools.md](ai-agents/mcp-tools.md) | MCP tools for AI assistants |
 
 ## Planning Documentation
@@ -34,16 +34,22 @@ Technical design and boundaries:
 | [architecture/clerk-implementation-info.md](architecture/clerk-implementation-info.md) | Clerk authentication details |
 | [../docs/architecture/](../docs/architecture/) | Phase-specific designs |
 
+## Testing Documentation
+
+Comprehensive testing guides:
+
+| Document | Purpose |
+|----------|---------|
+| [testing/README.md](testing/README.md) | Testing philosophy, pyramid, and quick reference |
+| [testing/e2e-guide.md](testing/e2e-guide.md) | Complete E2E testing guide (Playwright, MCP, manual QA) |
+| [testing/standards.md](testing/standards.md) | Best practices, naming conventions, accessibility |
+
 ## Reference Documentation
 
 Technical guides and conventions:
 
 | Document | Purpose |
 |----------|---------|
-| [reference/testing.md](reference/testing.md) | Testing philosophy and quick reference |
-| [reference/e2e-testing-standards.md](reference/e2e-testing-standards.md) | When and how to write E2E tests |
-| [reference/testing-conventions.md](reference/testing-conventions.md) | Test ID naming patterns |
-| [reference/qa-accessibility-guide.md](reference/qa-accessibility-guide.md) | QA and accessibility testing |
 | [reference/external-resources.md](reference/external-resources.md) | API docs and framework links |
 
 ## Deployment Documentation

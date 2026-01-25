@@ -15,6 +15,7 @@ task test:e2e                  # E2E tests (Playwright)
 
 # All tests
 task test                      # Run everything
+task ci                        # Run all CI checks
 ```
 
 ## Test Philosophy
@@ -41,6 +42,8 @@ task test                      # Run everything
 | Unit | ~350 | <2s | `backend/tests/unit/`, `frontend/tests/unit/` |
 | Integration | ~30 | <5s | `backend/tests/integration/` |
 | E2E | ~7 | <30s | `frontend/tests/e2e/` |
+
+**Key Principle**: The higher up the pyramid, the fewer tests you should have. E2E tests are expensive to maintain and slow to run.
 
 ## Running Tests
 
@@ -84,16 +87,16 @@ npm run test:e2e:ui         # Interactive UI
 npm run typecheck
 ```
 
-## Local Integration Testing
+### Local Integration Testing
 
-### 1. Start Infrastructure
+#### 1. Start Infrastructure
 
 ```bash
 docker-compose up -d
 docker-compose ps  # Verify healthy
 ```
 
-### 2. Start Backend
+#### 2. Start Backend
 
 ```bash
 cd backend
@@ -102,27 +105,13 @@ uv run uvicorn zebu.main:app --reload --host 0.0.0.0 --port 8000
 # API docs: http://localhost:8000/docs
 ```
 
-### 3. Start Frontend
+#### 3. Start Frontend
 
 ```bash
 cd frontend
 npm install
 npm run dev
 # App: http://localhost:5173
-```
-
-### 4. Manual Testing
-
-```bash
-# Create portfolio
-curl -X POST http://localhost:8000/api/v1/portfolios \
-  -H "Content-Type: application/json" \
-  -H "X-User-Id: 00000000-0000-0000-0000-000000000001" \
-  -d '{"name": "Test", "initial_deposit": 10000.00, "currency": "USD"}'
-
-# Get balance (replace {id} with portfolio_id from response)
-curl http://localhost:8000/api/v1/portfolios/{id}/balance \
-  -H "X-User-Id: 00000000-0000-0000-0000-000000000001"
 ```
 
 ## Writing Tests
@@ -176,21 +165,20 @@ Every PR runs:
 
 ## Anti-Patterns to Avoid
 
-❌ **Don't mock internal logic** - Test real behavior with test databases
-❌ **Don't test implementation details** - Test public interfaces only
-❌ **Don't create flaky tests** - Use explicit waits, not `time.sleep()`
+❌ **Don't mock internal logic** - Test real behavior with test databases  
+❌ **Don't test implementation details** - Test public interfaces only  
+❌ **Don't create flaky tests** - Use explicit waits, not `time.sleep()`  
 ❌ **Don't couple tests** - Each test should be independent
 
 ## Lessons Learned
 
-**Task 016 revealed**: 218 unit tests passed but 3 critical bugs existed in production paths.
-**Root cause**: No integration tests verifying API contracts.
+**Task 016 revealed**: 218 unit tests passed but 3 critical bugs existed in production paths.  
+**Root cause**: No integration tests verifying API contracts.  
 **Solution**: Task 017 added 26 integration + 7 E2E tests, catching field name mismatches and DTO mapping errors.
 
 **Key insight**: Tests passing ≠ System working. Need all pyramid levels.
 
 ## Related Documentation
 
-- [E2E Testing Standards](./e2e-testing-standards.md) - When and how to write E2E tests
-- [Testing Conventions](./testing-conventions.md) - Test ID naming patterns for stable E2E tests
-- [QA Accessibility Guide](./qa-accessibility-guide.md) - Accessibility testing and manual QA
+- [E2E Testing Guide](./e2e-guide.md) - Complete E2E testing procedures
+- [Testing Standards](./standards.md) - Best practices, conventions, and accessibility

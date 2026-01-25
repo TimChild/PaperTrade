@@ -490,5 +490,5 @@ This QA task is complete when:
 ## References
 
 - [.github/agents/qa.md](../../.github/agents/qa.md) - QA Agent definition
-- [docs/ai-agents/procedures/playwright_e2e_testing.md](../../docs/ai-agents/procedures/playwright_e2e_testing.md) - Technical testing guide
-- [docs/ai-agents/procedures/run_qa_validation.md](../../docs/ai-agents/procedures/run_qa_validation.md) - Orchestrator workflow
+- [docs/testing/e2e-guide.md](../../docs/testing/e2e-guide.md) - Complete E2E testing guide
+- [docs/testing/standards.md](../../docs/testing/standards.md) - Testing standards and conventions
