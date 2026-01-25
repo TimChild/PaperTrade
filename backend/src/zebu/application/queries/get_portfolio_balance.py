@@ -22,7 +22,19 @@ logger = logging.getLogger(__name__)
 
 
 def _get_previous_trading_day(reference_date: datetime | None = None) -> datetime:
-    """Get previous trading day (skip weekends).
+    """Get previous trading day for daily change calculation (skip weekends).
+
+    This function determines what "yesterday's close" means for daily change
+    calculations. The logic depends on what day we're on:
+
+    - Monday: Compare current (Mon) to Friday's close (3 days back)
+    - Tuesday-Friday: Compare current to previous day's close (1 day back)
+    - Saturday: Compare current (Fri close) to Thursday close (2 days back)
+    - Sunday: Compare current (Fri close) to Thursday close (3 days back)
+
+    The key insight is that on weekends, both "current" and "most recent
+    trading day" resolve to Friday. For daily change, we need to compare
+    Friday to Thursday.
 
     Args:
         reference_date: Reference date to calculate from (defaults to now)
@@ -37,18 +49,25 @@ def _get_previous_trading_day(reference_date: datetime | None = None) -> datetim
     current_date = reference_date.date()
     day_of_week = current_date.weekday()
 
-    # If Monday (0), go back 3 days to Friday
-    if day_of_week == 0:
-        previous_date = current_date - timedelta(days=3)
-    # If Sunday (6), go back 2 days to Friday
-    elif day_of_week == 6:
-        previous_date = current_date - timedelta(days=2)
-    # If Saturday (5), go back 1 day to Friday
-    elif day_of_week == 5:
-        previous_date = current_date - timedelta(days=1)
-    # Otherwise (Tuesday-Friday), go back 1 day
-    else:
-        previous_date = current_date - timedelta(days=1)
+    # Calculate days to go back based on day of week
+    if day_of_week == 0:  # Monday
+        # Current: Monday
+        # Previous close: Friday (3 days back)
+        days_back = 3
+    elif day_of_week == 5:  # Saturday
+        # Current: Friday close (using most recent)
+        # Previous close: Thursday (2 days back)
+        days_back = 2
+    elif day_of_week == 6:  # Sunday
+        # Current: Friday close (using most recent)
+        # Previous close: Thursday (3 days back)
+        days_back = 3
+    else:  # Tuesday (1) through Friday (4)
+        # Current: Today
+        # Previous close: Yesterday
+        days_back = 1
+
+    previous_date = current_date - timedelta(days=days_back)
 
     # Return datetime at market close (4 PM ET = 21:00 UTC)
     return datetime(
