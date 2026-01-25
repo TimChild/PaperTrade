@@ -1,6 +1,6 @@
 # Zebu Development Progress
 
-**Last Updated**: January 18, 2026
+**Last Updated**: January 25, 2026
 
 ## Current Status
 
@@ -13,11 +13,28 @@
 | Phase 3b: Authentication | ✅ Complete | Clerk integration |
 | Phase 3c: Analytics | ✅ Complete | 489+ tests, Charts & Insights |
 | **UX Polish** | ✅ **Complete** | Real-time prices, Charts working |
-| **Code Quality** | ✅ **Exceptional** | 0 ESLint suppressions, 796 tests |
-| **Production Deployment** | ✅ **Live** | zebutrader.com with SSL |
+| **Code Quality** | ✅ **Exceptional** | 0 ESLint suppressions, 800+ tests |
+| **Production Deployment** | ✅ **Live** | v1.2.0 deployed |
 | Infrastructure | ✅ Production-Ready | Docker, CI/CD, E2E testing |
 
-### Recent Work (Jan 18, 2026)
+### Recent Work (Jan 25, 2026)
+- ✅ **Frontend UX & Chart Fixes** (PR #180):
+  - **Chart Scaling**: Fixed 1M view x-axis logic to properly fill chart width.
+  - **Empty States**: Improved 1D view to show "Market Closed" message on weekends/holidays instead of blank error.
+  - **Analytics UX**: Clarified empty state messaging for new portfolios (data updates nightly).
+  - **Bug Fix**: Resolved `invalid_quantity` console error during portfolio deletion.
+- ✅ **Backend Statistics Accuracy** (PR #181):
+  - **Daily Change Logic**: Fixed calculation to correctly identify previous trading day (handling weekends/holidays).
+  - **Backdated Trades**: Verified correct price change calculation for assets bought on past dates.
+  - **Integration Tests**: Added robust tests for backdated trade scenarios.
+- ✅ **Charting Engine Upgrade** (PR #178, #179):
+  - Replaced Recharts with **TradingView Lightweight Charts** for financial data.
+  - Native support for candlestick/line charts, trade markers, and crosshair interactions.
+  - Removed legacy Recharts pricing components (cleanup).
+- ✅ **Release v1.2.0**:
+  - Tagged and deployed to Proxmox production environment.
+
+### Previous Work (Jan 18, 2026)
 - ✅ **Weekend/Holiday Price Handling** (PR #158, Task #162):
   - **Problem Solved**: Users got "Ticker not found" errors on weekends/holidays
   - **Solution**: Intelligent price fetching with weekend awareness + API fallback

@@ -192,6 +192,8 @@ These improve the analytics/insights capabilities:
 
 ## Recently Completed (Last 7 Days)
 
+- ✅ **Release v1.2.0** (Jan 29, 2026) - Production deployment to Proxmox
+- ✅ **Chart & Stats Fixes** (PRs #180, #181) - Fixed daily change calculation, weekend handling, and 1M chart scaling
 - ✅ **Weekend/Holiday Price Handling** (PR #158, Task #162) - Intelligent price fetching with weekend awareness
 - ✅ **Grafana Cloud Monitoring** (PRs #145, #151) - 3 dashboards, 5 alerts, log shipping
 - ✅ **E2E Test Infrastructure** (PR #147) - Fixed Clerk rate limiting, shared auth state

@@ -1,73 +1,47 @@
-# Resume Point: TradingView Charts Merged - Cleanup Ready
+# Resume From Here (January 29, 2026)
 
-**Date**: January 25, 2026
-**Status**: PR #178 merged, cleanup task created
+## 🚀 Current Status
 
----
+**Release v1.2.0** has been successfully deployed to the Proxmox production environment.
 
-## What Was Accomplished
+The application is stable, with critical UX issues and backend statistic calculation bugs resolved.
 
-### Evaluation Complete
-- Tested both PR #177 (Recharts fix) and PR #178 (TradingView Lightweight Charts)
-- TradingView implementation works perfectly:
-  - Price line renders correctly
-  - Trade markers display natively
-  - Time range selector works
-  - Theme integration works
-  - TradingView attribution displays
+## ✅ Recent Accomplishments
 
-### Decision Made
-**Chose TradingView Lightweight Charts** as the standard for financial charting because:
-1. Purpose-built for financial data visualization
-2. Trade markers work natively (no workarounds)
-3. Future-proof for candlesticks, indicators, etc.
-4. Well-maintained (273K weekly downloads)
-5. Lightweight (~40KB gzipped)
+1.  **Frontend UX Polish (PR #180)**
+    - Fixed 1M chart scaling (removed empty space on right side).
+    - Improved empty state messaging for charts.
+    - Fixed "Market Closed" vs "No Data" messaging for weekend data.
+    - Fixed `invalid_quantity` error when deleting portfolios.
 
-### PRs Handled
-- ✅ **PR #178 merged** - TradingView implementation
-- ✅ **PR #177 closed** - Recharts fix no longer needed
+2.  **Backend Logic Fixes (PR #181)**
+    - Fixed `daily_change` calculation to correctly compare against the previous *trading* day (ignoring weekends).
+    - Fixed logic for backdated trades to ensure accurate snapshot comparisons.
+    - Validated with manual test portfolio "Stats Verify".
 
----
+3.  **Deployment**
+    - Tagged `v1.2.0`.
+    - Deployed to Proxmox VM 100 via `task proxmox-vm:deploy`.
 
-## Next Step: Cleanup Task
+## 📍 Where We Left Off
 
-**Task 179: Clean Up Recharts Price Chart Code**
+- **Branch**: `main` (Clean, up to date with `v1.2.0` tag).
+- **Environment**: Docker dev environment is healthy. `playwright-mcp` is configured and working.
 
-The TradingView implementation was added *alongside* Recharts (with a toggle for evaluation). Now we need to clean up:
+## 📋 Next Recommended Actions
 
-1. Delete redundant Recharts price chart code:
-   - `PriceChart.tsx`
-   - `PriceChart.test.tsx`
+### High Priority (From Backlog)
 
-2. Remove evaluation UI:
-   - `PriceChartWrapper.tsx`
-   - Toggle no longer needed
+1.  **Fix Weekend Cache Validation Tests**: 2 failing tests in `test_alpha_vantage_weekend_cache.py`.
+2.  **Investigate Performance**: App slows down with ~50 portfolios (needs investigation).
+3.  **Interactive Click-to-Trade**: UX improvement to click charts to pre-fill trade form.
 
-3. Update PortfolioDetail to use `LightweightPriceChart` directly
+### Maintenance
 
-**Note**: Keep Recharts installed - we use it for pie charts in Analytics.
+- Consider deleting the "Stats Verify" portfolio in the production DB if it's no longer needed (Id: `portfolio_verify_stats`).
 
-See: `agent_tasks/179_cleanup_recharts_price_chart.md`
+## 🛠 Useful Commands
 
----
-
-## Open PR
-
-- **PR #174**: Architecture: Adapt price data granularity system design
-  - This is a design document, may still need review
-
----
-
-## Quick Commands
-
-```bash
-# Check PR status
-GH_PAGER="" gh pr list
-
-# Quality checks
-task quality:frontend
-
-# Start dev environment
-task docker:up && task dev
-```
+- **Deploy**: `task proxmox-vm:deploy`
+- **Run Backend Tests**: `task test:backend`
+- **Run Frontend Tests**: `task test:frontend`
