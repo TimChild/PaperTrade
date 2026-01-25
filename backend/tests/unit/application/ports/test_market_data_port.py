@@ -218,7 +218,7 @@ class TestInMemoryAdapterGetPriceAt:
 
     @pytest.mark.asyncio
     async def test_get_price_at_finds_closest_within_window(self) -> None:
-        """Should return closest price within ±1 hour."""
+        """Should return most recent price at or before timestamp."""
         adapter = InMemoryMarketDataAdapter()
 
         # Price at 14:00
@@ -231,15 +231,16 @@ class TestInMemoryAdapterGetPriceAt:
         )
         adapter.seed_price(price_point)
 
-        # Request at 14:30 (30 minutes later, within window)
+        # Request at 14:30 (30 minutes later)
         requested_time = datetime(2025, 12, 28, 14, 30, tzinfo=UTC)
         result = await adapter.get_price_at(Ticker("AAPL"), requested_time)
 
+        # Should return the price at 14:00 (most recent before 14:30)
         assert result == price_point
 
     @pytest.mark.asyncio
     async def test_get_price_at_outside_window(self) -> None:
-        """Should raise error when no price within ±1 hour."""
+        """Should return price even if several hours old (at or before logic)."""
         adapter = InMemoryMarketDataAdapter()
 
         # Price at 14:00
@@ -252,17 +253,39 @@ class TestInMemoryAdapterGetPriceAt:
         )
         adapter.seed_price(price_point)
 
-        # Request at 16:00 (2 hours later, outside window)
+        # Request at 16:00 (2 hours later)
         requested_time = datetime(2025, 12, 28, 16, 0, tzinfo=UTC)
+        
+        # Should return the price at 14:00 (most recent before 16:00)
+        result = await adapter.get_price_at(Ticker("AAPL"), requested_time)
+        assert result == price_point
+
+    @pytest.mark.asyncio
+    async def test_get_price_at_no_price_before_timestamp(self) -> None:
+        """Should raise error when no price at or before requested timestamp."""
+        adapter = InMemoryMarketDataAdapter()
+
+        # Price at 14:00
+        price_point = PricePoint(
+            ticker=Ticker("AAPL"),
+            price=Money(Decimal("150.25"), "USD"),
+            timestamp=datetime(2025, 12, 28, 14, 0, tzinfo=UTC),
+            source="database",
+            interval="real-time",
+        )
+        adapter.seed_price(price_point)
+
+        # Request at 12:00 (before any available price)
+        requested_time = datetime(2025, 12, 28, 12, 0, tzinfo=UTC)
 
         with pytest.raises(MarketDataUnavailableError) as exc_info:
             await adapter.get_price_at(Ticker("AAPL"), requested_time)
 
-        assert "within ±1 hour" in str(exc_info.value)
+        assert "at or before" in str(exc_info.value)
 
     @pytest.mark.asyncio
     async def test_get_price_at_selects_closest(self) -> None:
-        """Should select closest price when multiple within window."""
+        """Should select most recent price at or before timestamp."""
         adapter = InMemoryMarketDataAdapter()
 
         price1 = PricePoint(
@@ -282,11 +305,12 @@ class TestInMemoryAdapterGetPriceAt:
 
         adapter.seed_prices([price1, price2])
 
-        # Request at 14:40 - closer to price2 (14:45)
+        # Request at 14:40 - should return price1 (14:00) since price2 (14:45) is AFTER 14:40
         requested_time = datetime(2025, 12, 28, 14, 40, tzinfo=UTC)
         result = await adapter.get_price_at(Ticker("AAPL"), requested_time)
 
-        assert result == price2
+        # Most recent price at or before 14:40 is price1 at 14:00
+        assert result == price1
 
 
 class TestInMemoryAdapterGetPriceHistory:

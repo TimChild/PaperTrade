@@ -1,6 +1,6 @@
 """In-memory market data adapter for testing."""
 
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from zebu.application.dtos.price_point import PricePoint
 from zebu.application.exceptions import (
@@ -98,21 +98,21 @@ class InMemoryMarketDataAdapter:
         return result
 
     async def get_price_at(self, ticker: Ticker, timestamp: datetime) -> PricePoint:
-        """Get price closest to specified timestamp.
+        """Get price closest to (but not after) specified timestamp.
 
-        Finds the price observation closest to the requested timestamp
-        within a ±1 hour window.
+        Finds the most recent price observation at or before the requested timestamp.
+        This matches the production PriceRepository behavior.
 
         Args:
             ticker: Stock ticker symbol
             timestamp: Requested time (UTC)
 
         Returns:
-            PricePoint closest to requested timestamp
+            PricePoint at or before requested timestamp
 
         Raises:
             TickerNotFoundError: If ticker not in storage
-            MarketDataUnavailableError: If no price found within ±1 hour window
+            MarketDataUnavailableError: If no price found at or before timestamp
         """
         ticker_symbol = ticker.symbol
         if ticker_symbol not in self._prices or not self._prices[ticker_symbol]:
@@ -120,20 +120,20 @@ class InMemoryMarketDataAdapter:
 
         prices = self._prices[ticker_symbol]
 
-        # Find closest price within ±1 hour window
-        max_window = timedelta(hours=1)
+        # Find the most recent price at or before the requested timestamp
+        # Prices are sorted by timestamp in ascending order
         closest_price = None
-        closest_diff = None
 
         for price in prices:
-            diff = abs(price.timestamp - timestamp)
-            if diff <= max_window and (closest_diff is None or diff < closest_diff):
+            if price.timestamp <= timestamp:
                 closest_price = price
-                closest_diff = diff
+            else:
+                # Since prices are sorted, we can stop once we pass the timestamp
+                break
 
         if closest_price is None:
             raise MarketDataUnavailableError(
-                f"No price data found for {ticker_symbol} within ±1 hour of {timestamp}"
+                f"No price data found for {ticker_symbol} at or before {timestamp}"
             )
 
         return closest_price
