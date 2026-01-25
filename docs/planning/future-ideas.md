@@ -39,6 +39,6 @@ This document tracks ideas for future features, integrations, and improvements t
 
 ---
 
-*Add new ideas by editing this file. Move items to `roadmap.md` when they become concrete plans.*
+*Add new ideas by editing this file. Move concrete plans to `roadmap.md` when ready for implementation.*
 
 **Note**: WebSocket updates and Alerts/Notifications are now planned for Phase 4a. Multi-currency support is targeted for Phase 5.

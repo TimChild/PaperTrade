@@ -363,7 +363,7 @@ A: We use Alpha Vantage API (real market data). Free tier has 15-20 min delays. 
 A: Basic backtesting is available in Phase 3c. Advanced backtesting features coming in Phase 5.
 
 **Q: Will this always be free?**
-A: Core features will always be free. We may add premium features (real-time data, advanced analytics) for a small fee in 2027+.
+A: Core features will always be free. We may add premium features (real-time data, advanced analytics) for a small fee in the future.
 
 ---
 

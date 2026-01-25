@@ -57,9 +57,9 @@ Zebu is a stock market emulation platform that lets you practice trading strateg
 ## Known Limitations
 
 ### Trading Restrictions
-- ⚠️ **No limit/stop orders** - Market orders only (Phase 4)
+- ⚠️ **No limit/stop orders** - Market orders only (Phase 4b)
 - ⚠️ **No fractional shares** - Whole shares only
-- ⚠️ **No short selling** - Long positions only (Phase 4)
+- ⚠️ **No short selling** - Long positions only (Phase 4b)
 
 ### Market Data Constraints
 - **Rate Limits**: 5 API calls/minute, 500/day (Alpha Vantage free tier)

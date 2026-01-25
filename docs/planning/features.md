@@ -136,9 +136,9 @@
 
 | Feature | Status | Details | Phase | Notes |
 |---------|--------|---------|-------|-------|
-| **Backtesting** | ❌ Not Implemented | Test strategies on historical data | Phase 3 | Data infrastructure ready |
-| **Algorithmic Trading** | ❌ Not Implemented | Automated trade execution | Phase 4 | Complex feature |
-| **Strategy Builder** | ❌ Not Implemented | Visual strategy creator | Phase 4 | Advanced UI |
+| **Backtesting** | ⚠️ Limited | Basic historical date selection | Phase 3c | Advanced features in Phase 5 |
+| **Algorithmic Trading** | ❌ Not Implemented | Automated trade execution | Phase 5 | Complex feature |
+| **Strategy Builder** | ❌ Not Implemented | Visual strategy creator | Phase 5 | Advanced UI |
 | **Paper Trading Leagues** | ❌ Not Implemented | Compete with other users | Future | Social feature |
 | **Portfolio Sharing** | ❌ Not Implemented | Public portfolios | Future | Privacy concerns |
 | **Mobile App** | ❌ Not Implemented | iOS/Android apps | Future | React Native potential |
