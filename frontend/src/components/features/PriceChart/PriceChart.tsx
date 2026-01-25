@@ -317,23 +317,18 @@ export function PriceChart({
             />
             {/* Trade markers - use ReferenceDot to position by actual axis values */}
             {portfolioId &&
-              formattedTradeMarkers.map((marker, index) => {
+              formattedTradeMarkers.map((marker) => {
                 const isBuy = marker.action === 'BUY'
                 const color = isBuy ? TRADE_COLORS.BUY : TRADE_COLORS.SELL
                 return (
                   <ReferenceDot
-                    key={`${marker.time}-${index}`}
+                    key={`${marker.fullDate}-${marker.price}-${marker.action}`}
                     x={marker.time}
                     y={marker.price}
                     r={TRADE_MARKER_RADIUS}
                     fill={color}
                     stroke="#fff"
                     strokeWidth={2}
-                    label={{
-                      value: `${marker.action} ${marker.quantity}`,
-                      position: 'top',
-                      fontSize: 0, // Hide label to avoid clutter
-                    }}
                   />
                 )
               })}
