@@ -186,6 +186,7 @@ export function PriceChart({
     action: marker.action,
     quantity: marker.quantity,
     fullDate: marker.fullDate,
+    timestamp: marker.timestamp, // Keep for stable React keys
   }))
 
   // Calculate Y-axis domain from both chart data and trade markers
@@ -322,7 +323,7 @@ export function PriceChart({
                 const color = isBuy ? TRADE_COLORS.BUY : TRADE_COLORS.SELL
                 return (
                   <ReferenceDot
-                    key={`${marker.fullDate}-${marker.price}-${marker.action}`}
+                    key={`${marker.timestamp}-${marker.action}`}
                     x={marker.time}
                     y={marker.price}
                     r={TRADE_MARKER_RADIUS}
