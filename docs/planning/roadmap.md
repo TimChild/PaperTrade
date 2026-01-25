@@ -88,8 +88,6 @@ Phase 3 is complete! Phase 4 focuses on professional polish, advanced trading fe
 
 **What**: Professional trading features and realistic constraints
 
-**What**: Professional trading features and realistic constraints
-
 **Features**:
 - Limit orders (buy/sell at specific price)
 - Stop orders (trigger at price threshold)
