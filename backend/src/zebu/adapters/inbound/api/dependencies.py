@@ -102,21 +102,38 @@ def get_auth_port() -> AuthPort:
 
     Returns the appropriate AuthPort implementation based on environment
     configuration. Uses ClerkAuthAdapter for production with a valid
-    Clerk secret key, or InMemoryAuthAdapter for testing.
+    Clerk secret key, or InMemoryAuthAdapter for testing/E2E.
+
+    For E2E tests, creates an InMemoryAuthAdapter with a pre-configured
+    test user that can be authenticated using the E2E_TEST_TOKEN.
 
     Returns:
         AuthPort implementation (ClerkAuthAdapter or InMemoryAuthAdapter)
     """
     clerk_secret_key = os.getenv("CLERK_SECRET_KEY", "")
 
-    # Use Clerk adapter if secret key is configured
+    # Use Clerk adapter if secret key is configured and not 'test'
     if clerk_secret_key and clerk_secret_key != "test":
         return ClerkAuthAdapter(secret_key=clerk_secret_key)
 
-    # Fall back to in-memory adapter for testing
-    # In test environments, this will be overridden with a properly
-    # configured InMemoryAuthAdapter
-    return InMemoryAuthAdapter()
+    # Use in-memory adapter for testing/E2E
+    # Pre-configure test user for E2E tests
+    from zebu.adapters.auth.in_memory_adapter import InMemoryAuthAdapter
+    
+    adapter = InMemoryAuthAdapter()
+    
+    # Add E2E test user if email is configured
+    e2e_email = os.getenv("E2E_CLERK_USER_EMAIL", "")
+    e2e_token = os.getenv("E2E_TEST_TOKEN", "test-token-12345")
+    
+    if e2e_email:
+        test_user = AuthenticatedUser(
+            id="test-user-e2e-12345",
+            email=e2e_email,
+        )
+        adapter.add_user(test_user, e2e_token)
+    
+    return adapter
 
 
 async def get_current_user(

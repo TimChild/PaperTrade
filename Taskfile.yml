@@ -91,9 +91,9 @@ tasks:
       - docker:up:all  # Ensure full stack is running
     env:
       # Load environment variables from .env file in repository root
-      # These are required for Clerk authentication in E2E tests
-      CLERK_SECRET_KEY:
-        sh: grep "^CLERK_SECRET_KEY=" ../.env | cut -d= -f2- || echo ""
+      # These are required for E2E tests
+      CLERK_SECRET_KEY: "test"  # Use in-memory auth for E2E
+      E2E_TEST_TOKEN: "test-token-12345"
       CLERK_PUBLISHABLE_KEY:
         sh: grep "^CLERK_PUBLISHABLE_KEY=" ../.env | cut -d= -f2- || echo ""
       VITE_CLERK_PUBLISHABLE_KEY:
@@ -114,8 +114,8 @@ tasks:
       - docker:up:all  # Ensure full stack is running
     env:
       # Load environment variables from .env file in repository root
-      CLERK_SECRET_KEY:
-        sh: grep "^CLERK_SECRET_KEY=" ../.env | cut -d= -f2- || echo ""
+      CLERK_SECRET_KEY: "test"  # Use in-memory auth for E2E
+      E2E_TEST_TOKEN: "test-token-12345"
       CLERK_PUBLISHABLE_KEY:
         sh: grep "^CLERK_PUBLISHABLE_KEY=" ../.env | cut -d= -f2- || echo ""
       VITE_CLERK_PUBLISHABLE_KEY:

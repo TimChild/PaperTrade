@@ -30,6 +30,16 @@ export const apiClient = axios.create({
 // Request interceptor to add authentication token
 apiClient.interceptors.request.use(
   async (config) => {
+    // Check for E2E test token first (used in E2E tests)
+    const e2eToken = typeof window !== 'undefined' 
+      ? localStorage.getItem('e2e_test_token')
+      : null
+    
+    if (e2eToken) {
+      config.headers.Authorization = `Bearer ${e2eToken}`
+      return config
+    }
+    
     // Get token from Clerk if tokenGetter is set
     if (tokenGetter) {
       try {
