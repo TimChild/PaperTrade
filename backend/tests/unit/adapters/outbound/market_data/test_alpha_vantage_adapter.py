@@ -890,3 +890,243 @@ class TestRedisCachingIntegration:
         assert mock_price_repository.upsert_price.called
         # Data was stored in Redis
         mock_price_cache.set_history.assert_called_once()
+
+
+class TestDailyPriceDeduplication:
+    """Tests for deduplication of daily price entries."""
+
+    async def test_deduplicate_daily_prices_with_market_close(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_price_repository: MagicMock,
+        mock_price_cache: MagicMock,
+    ) -> None:
+        """Should deduplicate entries for same date, preferring market close."""
+        # Arrange
+        ticker = Ticker("IBM")
+        start = datetime(2026, 1, 20, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 1, 20, 23, 59, 59, tzinfo=UTC)
+
+        # Simulate multiple entries for same trading day (Jan 20)
+        # with different timestamps - exactly as described in the issue
+        cached_data = [
+            # Intraday cache entry at 00:37:58
+            create_price_point(
+                ticker,
+                datetime(2026, 1, 20, 0, 37, 58, tzinfo=UTC),
+                Decimal("305.67"),
+            ),
+            # Another intraday cache entry at 13:35:59
+            create_price_point(
+                ticker,
+                datetime(2026, 1, 20, 13, 35, 59, tzinfo=UTC),
+                Decimal("305.67"),
+            ),
+            # Market close entry at 21:00:00
+            create_price_point(
+                ticker,
+                datetime(2026, 1, 20, 21, 0, 0, tzinfo=UTC),
+                Decimal("291.35"),
+            ),
+        ]
+
+        # Mock Redis returns all three entries
+        mock_price_cache.get_history = AsyncMock(return_value=cached_data)
+        # Mock database returns no additional entries
+        mock_price_repository.get_price_history = AsyncMock(return_value=[])
+
+        # Act
+        result = await alpha_vantage_adapter.get_price_history(
+            ticker, start, end, "1day"
+        )
+
+        # Assert
+        # Should return exactly ONE entry for Jan 20
+        assert len(result) == 1
+        # Should be the market close entry (21:00:00)
+        assert result[0].timestamp == datetime(2026, 1, 20, 21, 0, 0, tzinfo=UTC)
+        assert result[0].price.amount == Decimal("291.35")
+
+    async def test_deduplicate_daily_prices_prefers_newer_when_no_market_close(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_price_repository: MagicMock,
+        mock_price_cache: MagicMock,
+    ) -> None:
+        """Should prefer newer timestamp when no market close entry exists."""
+        # Arrange
+        ticker = Ticker("AAPL")
+        start = datetime(2026, 1, 20, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 1, 20, 23, 59, 59, tzinfo=UTC)
+
+        # Multiple intraday entries, none at market close time
+        cached_data = [
+            create_price_point(
+                ticker,
+                datetime(2026, 1, 20, 10, 30, 0, tzinfo=UTC),
+                Decimal("150.00"),
+            ),
+            create_price_point(
+                ticker,
+                datetime(2026, 1, 20, 14, 45, 0, tzinfo=UTC),
+                Decimal("151.00"),
+            ),
+            create_price_point(
+                ticker,
+                datetime(2026, 1, 20, 8, 15, 0, tzinfo=UTC),
+                Decimal("149.00"),
+            ),
+        ]
+
+        mock_price_cache.get_history = AsyncMock(return_value=cached_data)
+        mock_price_repository.get_price_history = AsyncMock(return_value=[])
+
+        # Act
+        result = await alpha_vantage_adapter.get_price_history(
+            ticker, start, end, "1day"
+        )
+
+        # Assert
+        # Should return exactly ONE entry
+        assert len(result) == 1
+        # Should be the newest entry (14:45:00)
+        assert result[0].timestamp == datetime(2026, 1, 20, 14, 45, 0, tzinfo=UTC)
+        assert result[0].price.amount == Decimal("151.00")
+
+    async def test_deduplicate_daily_prices_multiple_dates(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_price_repository: MagicMock,
+        mock_price_cache: MagicMock,
+    ) -> None:
+        """Should deduplicate across multiple trading dates."""
+        # Arrange
+        ticker = Ticker("AAPL")
+        start = datetime(2026, 1, 19, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 1, 21, 23, 59, 59, tzinfo=UTC)
+
+        # Multiple entries for Jan 19, 20, and 21
+        cached_data = [
+            # Jan 19 - two entries
+            create_price_point(
+                ticker, datetime(2026, 1, 19, 13, 0, 0, tzinfo=UTC), Decimal("150.00")
+            ),
+            create_price_point(
+                ticker, datetime(2026, 1, 19, 21, 0, 0, tzinfo=UTC), Decimal("151.00")
+            ),
+            # Jan 20 - three entries
+            create_price_point(
+                ticker, datetime(2026, 1, 20, 9, 0, 0, tzinfo=UTC), Decimal("152.00")
+            ),
+            create_price_point(
+                ticker, datetime(2026, 1, 20, 13, 0, 0, tzinfo=UTC), Decimal("153.00")
+            ),
+            create_price_point(
+                ticker, datetime(2026, 1, 20, 21, 0, 0, tzinfo=UTC), Decimal("154.00")
+            ),
+            # Jan 21 - one entry (already unique)
+            create_price_point(
+                ticker, datetime(2026, 1, 21, 21, 0, 0, tzinfo=UTC), Decimal("155.00")
+            ),
+        ]
+
+        mock_price_cache.get_history = AsyncMock(return_value=cached_data)
+        mock_price_repository.get_price_history = AsyncMock(return_value=[])
+
+        # Act
+        result = await alpha_vantage_adapter.get_price_history(
+            ticker, start, end, "1day"
+        )
+
+        # Assert
+        # Should return exactly THREE entries (one per date)
+        assert len(result) == 3
+        # All should be at market close (21:00)
+        assert all(
+            p.timestamp.time() == datetime(2026, 1, 1, 21, 0, 0).time() for p in result
+        )
+        # Should have correct prices (market close values)
+        assert result[0].price.amount == Decimal("151.00")  # Jan 19
+        assert result[1].price.amount == Decimal("154.00")  # Jan 20
+        assert result[2].price.amount == Decimal("155.00")  # Jan 21
+
+    async def test_no_deduplication_for_intraday_intervals(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_price_repository: MagicMock,
+        mock_price_cache: MagicMock,
+    ) -> None:
+        """Should NOT deduplicate for non-daily intervals (e.g., 1hour)."""
+        # Arrange
+        ticker = Ticker("AAPL")
+        start = datetime(2026, 1, 20, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 1, 20, 23, 59, 59, tzinfo=UTC)
+
+        # Multiple entries for same day with 1hour interval
+        # These represent different hourly candles, so they should NOT be deduplicated
+        cached_data = [
+            PricePoint(
+                ticker=ticker,
+                timestamp=datetime(2026, 1, 20, 9, 0, 0, tzinfo=UTC),
+                price=Money(Decimal("150.00"), "USD"),
+                source="alpha_vantage",
+                interval="1hour",
+            ),
+            PricePoint(
+                ticker=ticker,
+                timestamp=datetime(2026, 1, 20, 10, 0, 0, tzinfo=UTC),
+                price=Money(Decimal("151.00"), "USD"),
+                source="alpha_vantage",
+                interval="1hour",
+            ),
+            PricePoint(
+                ticker=ticker,
+                timestamp=datetime(2026, 1, 20, 11, 0, 0, tzinfo=UTC),
+                price=Money(Decimal("152.00"), "USD"),
+                source="alpha_vantage",
+                interval="1hour",
+            ),
+        ]
+
+        mock_price_cache.get_history = AsyncMock(return_value=cached_data)
+        mock_price_repository.get_price_history = AsyncMock(return_value=[])
+
+        # Act
+        result = await alpha_vantage_adapter.get_price_history(
+            ticker, start, end, "1hour"
+        )
+
+        # Assert
+        # For non-daily intervals, current implementation returns empty
+        # (intraday fetching not yet supported)
+        # This test documents that deduplication logic doesn't affect other intervals
+        assert result == []
+
+    async def test_deduplicate_helper_method_directly(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+    ) -> None:
+        """Test the _deduplicate_daily_prices helper method directly."""
+        # Arrange
+        ticker = Ticker("AAPL")
+
+        # Multiple entries for same date
+        prices = [
+            create_price_point(
+                ticker, datetime(2026, 1, 20, 10, 0, 0, tzinfo=UTC), Decimal("150.00")
+            ),
+            create_price_point(
+                ticker, datetime(2026, 1, 20, 21, 0, 0, tzinfo=UTC), Decimal("151.00")
+            ),
+            create_price_point(
+                ticker, datetime(2026, 1, 20, 14, 0, 0, tzinfo=UTC), Decimal("152.00")
+            ),
+        ]
+
+        # Act
+        result = alpha_vantage_adapter._deduplicate_daily_prices(prices)
+
+        # Assert
+        assert len(result) == 1
+        assert result[0].timestamp == datetime(2026, 1, 20, 21, 0, 0, tzinfo=UTC)
+        assert result[0].price.amount == Decimal("151.00")

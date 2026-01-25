@@ -10,7 +10,7 @@ stale cached data if available rather than failing completely.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, time, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from typing import TYPE_CHECKING
 
@@ -684,7 +684,8 @@ class AlphaVantageAdapter:
                 cached_points=len(cached_history),
                 source="redis",
             )
-            return cached_history
+            # Deduplicate daily prices before returning
+            return self._deduplicate_daily_prices(cached_history)
 
         # Calculate which days we have cached
         if cached_history:
@@ -736,7 +737,9 @@ class AlphaVantageAdapter:
                 await self.price_cache.set_history(
                     ticker, start, end, db_history, interval, ttl=ttl
                 )
-            return sorted(all_prices, key=lambda p: p.timestamp)
+            # Deduplicate daily prices before returning
+            deduplicated = self._deduplicate_daily_prices(all_prices)
+            return sorted(deduplicated, key=lambda p: p.timestamp)
 
         # Tier 3: Fetch from API if data is incomplete
         # Only support daily data fetching for now (Alpha Vantage free tier)
@@ -755,7 +758,9 @@ class AlphaVantageAdapter:
                 )
                 # Return partial data if we have any
                 if all_prices:
-                    return sorted(all_prices, key=lambda p: p.timestamp)
+                    # Deduplicate daily prices before returning
+                    deduplicated = self._deduplicate_daily_prices(all_prices)
+                    return sorted(deduplicated, key=lambda p: p.timestamp)
                 raise MarketDataUnavailableError(
                     "Rate limit exceeded. Cannot fetch historical data at this time."
                 )
@@ -766,7 +771,9 @@ class AlphaVantageAdapter:
                 log.warning("Failed to consume rate limit token")
                 # Return partial data if we have any
                 if all_prices:
-                    return sorted(all_prices, key=lambda p: p.timestamp)
+                    # Deduplicate daily prices before returning
+                    deduplicated = self._deduplicate_daily_prices(all_prices)
+                    return sorted(deduplicated, key=lambda p: p.timestamp)
                 raise MarketDataUnavailableError(
                     "Rate limit exceeded. Cannot fetch historical data."
                 )
@@ -809,7 +816,9 @@ class AlphaVantageAdapter:
                     for p in all_prices
                     if start <= p.timestamp.replace(tzinfo=UTC) <= end
                 ]
-                return sorted(filtered, key=lambda p: p.timestamp)
+                # Deduplicate daily prices before returning
+                deduplicated = self._deduplicate_daily_prices(filtered)
+                return sorted(deduplicated, key=lambda p: p.timestamp)
 
             except Exception as e:
                 log.error(
@@ -819,7 +828,9 @@ class AlphaVantageAdapter:
                 )
                 # Return partial data if we have any
                 if all_prices:
-                    return sorted(all_prices, key=lambda p: p.timestamp)
+                    # Deduplicate daily prices before returning
+                    deduplicated = self._deduplicate_daily_prices(all_prices)
+                    return sorted(deduplicated, key=lambda p: p.timestamp)
                 return []
 
         # For other intervals (non-1day), we don't support API fetching
@@ -868,6 +879,57 @@ class AlphaVantageAdapter:
             0,
             tzinfo=UTC,
         )
+
+    def _deduplicate_daily_prices(self, prices: list[PricePoint]) -> list[PricePoint]:
+        """Deduplicate price points by trading day, preferring market close entries.
+
+        When multiple price entries exist for the same trading day (due to caching
+        at different times), this method ensures only one entry per day is returned.
+        It prefers the market close entry (21:00:00 UTC) over intraday cache entries.
+
+        Args:
+            prices: List of price points to deduplicate
+
+        Returns:
+            List of deduplicated price points, sorted chronologically
+
+        Example:
+            >>> # Three entries for Jan 20, 2026:
+            >>> # - 00:37:58 (cache miss)
+            >>> # - 13:35:59 (intraday cache)
+            >>> # - 21:00:00 (market close)
+            >>> prices = [...]
+            >>> result = self._deduplicate_daily_prices(prices)
+            >>> # Returns only the 21:00:00 entry
+        """
+        from datetime import date
+
+        # Group by date, preferring market close time (21:00:00 UTC)
+        by_date: dict[date, PricePoint] = {}
+        market_close_time = time(21, 0, 0)
+
+        for price_point in prices:
+            trading_date = price_point.timestamp.date()
+            existing = by_date.get(trading_date)
+
+            # Keep this entry if:
+            # 1. No entry exists for this date yet, OR
+            # 2. This entry is at market close time (21:00:00), OR
+            # 3. Existing entry is not at market close AND this one is newer
+            if existing is None:
+                by_date[trading_date] = price_point
+            elif price_point.timestamp.time() == market_close_time:
+                # Always prefer market close time
+                by_date[trading_date] = price_point
+            elif (
+                existing.timestamp.time() != market_close_time
+                and price_point.timestamp > existing.timestamp
+            ):
+                # If neither is market close, prefer newer timestamp
+                by_date[trading_date] = price_point
+
+        # Return sorted by timestamp
+        return sorted(by_date.values(), key=lambda p: p.timestamp)
 
     def _is_cache_complete(
         self,
