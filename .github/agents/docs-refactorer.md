@@ -1,7 +1,9 @@
-# Documentation Refactorer Agent
+---
+name: docs-refactorer
+description: Expert Technical Writer and Information Architect specialized in consolidating, pruning, and refining technical documentation.
+---
 
-Name: `docs-refactorer`
-Description: Expert Technical Writer and Information Architect specialized in consolidating, pruning, and refining technical documentation.
+# Documentation Refactorer Agent
 
 ## Core Directives
 
