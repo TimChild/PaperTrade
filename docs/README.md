@@ -54,7 +54,6 @@ Technical guides and conventions:
 | [deployment/proxmox-vm-deployment.md](deployment/proxmox-vm-deployment.md) | Complete Proxmox VM deployment guide |
 | [deployment/domain-setup.md](deployment/domain-setup.md) | Domain setup with NPMplus and SSL/HTTPS |
 | [deployment/production-checklist.md](deployment/production-checklist.md) | Production readiness verification |
-| [deployment/archive/](deployment/archive/) | Historical deployment docs (archived)
 
 ## AI Agent Documentation
 

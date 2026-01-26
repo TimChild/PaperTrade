@@ -309,19 +309,6 @@ See [Proxmox VM Deployment Guide](./proxmox-vm-deployment.md#cicd-integration) f
 
 ---
 
-## Archive
-
-Historical documentation and design decisions are archived in `archive/`:
-
-- **[Proxmox Learnings](./archive/proxmox-learnings.md)** - Lessons from prototype deployment
-- **[VM vs LXC Comparison](./archive/proxmox-vm-approach-comparison.md)** - Architecture decision rationale
-- **[Environment Reference](./archive/proxmox-environment-reference.md)** - Historical environment details
-- **[Community Scripts Reference](./archive/community-scripts-reference.md)** - Background on community scripts
-
-These are preserved for historical context but are not needed for deployment.
-
----
-
 ## Getting Help
 
 1. **Read the guides** - Start with [Proxmox VM Deployment](./proxmox-vm-deployment.md)
