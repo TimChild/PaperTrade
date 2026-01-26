@@ -255,7 +255,7 @@ Current limitations and future plans:
 4. ⚠️ **API rate limits (5/min, 500/day)** → Future (consider paid tier or multi-provider)
 5. ⚠️ **No advanced order types** → Phase 4 (limit, stop orders)
 
-For complete details, see [feature-status.md](./feature-status.md)
+For complete details, see [features.md](./features.md)
 
 ---
 
