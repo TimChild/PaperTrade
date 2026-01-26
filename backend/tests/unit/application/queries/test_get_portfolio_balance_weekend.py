@@ -310,12 +310,12 @@ class TestGetPortfolioBalanceWeekendScenarios:
         result = await handler.execute(query)
 
         # Assert - Should NOT show $0.00 daily change
-        assert result.daily_change.amount != Decimal("0.00"), (
-            "Daily change should reflect Friday's movement, not $0.00"
-        )
-        assert result.daily_change_percent != Decimal("0.00"), (
-            "Daily change percent should not be 0.00%"
-        )
+        assert result.daily_change.amount != Decimal(
+            "0.00"
+        ), "Daily change should reflect Friday's movement, not $0.00"
+        assert result.daily_change_percent != Decimal(
+            "0.00"
+        ), "Daily change percent should not be 0.00%"
 
         # Should show the actual movement: Friday vs Thursday
         assert result.daily_change.amount == Decimal("500.00")
