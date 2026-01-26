@@ -4,14 +4,6 @@ Quick reference guides and external resource links.
 
 ## Contents
 
-### Testing
-- **testing.md** - Testing guide and quick reference
-  - Test philosophy and pyramid
-  - Running tests (backend, frontend, E2E)
-  - Writing tests (conventions, patterns)
-  - Common issues and solutions
-  - CI integration
-
 ### External Resources
 - **external-resources.md** - API documentation and framework reference links
   - Market data APIs (Alpha Vantage, etc.)
@@ -21,13 +13,13 @@ Quick reference guides and external resource links.
 
 ## Related Documentation
 
-### Testing Standards
-- [TESTING_CONVENTIONS.md](../TESTING_CONVENTIONS.md) - Detailed testing conventions and standards
-- [E2E_TESTING_STANDARDS.md](../E2E_TESTING_STANDARDS.md) - End-to-end testing guidelines
-- [QA_ACCESSIBILITY_GUIDE.md](../QA_ACCESSIBILITY_GUIDE.md) - QA and accessibility testing guide
+### Testing Documentation
+- [../testing/README.md](../testing/README.md) - Testing philosophy and quick reference
+- [../testing/e2e-guide.md](../testing/e2e-guide.md) - E2E testing procedures and QA workflows
+- [../testing/standards.md](../testing/standards.md) - Testing standards, conventions, and accessibility
 
 ### User Guides
-- [USER_GUIDE.md](../USER_GUIDE.md) - End-user documentation for Zebu application
+- [../USER_GUIDE.md](../USER_GUIDE.md) - End-user documentation for Zebu application
 
 ## Navigation
 

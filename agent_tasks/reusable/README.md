@@ -26,7 +26,7 @@ Execute all critical user workflows to validate application quality. Produces de
 - After major refactoring
 - Regression testing after critical fixes
 
-**See**: [docs/ai-agents/procedures/run_qa_validation.md](../../docs/ai-agents/procedures/run_qa_validation.md)
+**See**: [docs/testing/e2e-guide.md](../../docs/testing/e2e-guide.md)
 
 ### Reusable Guidance Chunks
 
