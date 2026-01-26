@@ -87,9 +87,11 @@ class GetPortfolioBalanceQuery:
 
     Attributes:
         portfolio_id: Portfolio to calculate balance for
+        as_of: Optional reference time for calculation (defaults to now)
     """
 
     portfolio_id: UUID
+    as_of: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -160,6 +162,8 @@ class GetPortfolioBalanceHandler:
         if portfolio is None:
             raise InvalidPortfolioError(f"Portfolio not found: {query.portfolio_id}")
 
+        current_time = query.as_of or datetime.now(UTC)
+
         # Get all transactions
         transactions = await self._transaction_repository.get_by_portfolio(
             query.portfolio_id
@@ -179,7 +183,7 @@ class GetPortfolioBalanceHandler:
                 holdings_value=Money(Decimal("0.00"), cash_balance.currency),
                 total_value=cash_balance,
                 currency=cash_balance.currency,
-                as_of=datetime.now(UTC),
+                as_of=current_time,
                 daily_change=Money(Decimal("0.00"), cash_balance.currency),
                 daily_change_percent=Decimal("0.00"),
             )
@@ -191,6 +195,14 @@ class GetPortfolioBalanceHandler:
         current_prices_dict: dict[Ticker, Money] = {}
         for ticker in tickers:
             try:
+                # TODO: This should ideally support as_of/temporal queries too
+                # if we want full history support, but for daily change calculation
+                # we just want "market price as known now".
+                # If doing a historical query, 'get_current_price' might be misleading
+                # if the adapter doesn't know about time travel.
+                # However, for the purpose of fixing the Sunday test bug, we assume
+                # the market data adapter is seeded appropriately for the 'current'
+                # time.
                 price_point = await self._market_data.get_current_price(ticker)
                 current_prices_dict[ticker] = price_point.price
             except (TickerNotFoundError, MarketDataUnavailableError) as e:
@@ -201,7 +213,7 @@ class GetPortfolioBalanceHandler:
                 continue
 
         # Fetch previous close prices
-        previous_date = _get_previous_trading_day()
+        previous_date = _get_previous_trading_day(current_time)
         previous_prices_dict: dict[Ticker, Money] = {}
         for ticker in tickers:
             try:
@@ -237,7 +249,7 @@ class GetPortfolioBalanceHandler:
             holdings_value=holdings_value,
             total_value=total_value,
             currency=cash_balance.currency,
-            as_of=datetime.now(UTC),
+            as_of=current_time,
             daily_change=daily_change,
             daily_change_percent=daily_change_percent,
         )

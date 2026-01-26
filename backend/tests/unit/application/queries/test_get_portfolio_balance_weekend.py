@@ -133,7 +133,10 @@ class TestGetPortfolioBalanceWeekendScenarios:
         # to Thursday's close!
 
         # Query on Sunday
-        query = GetPortfolioBalanceQuery(portfolio_id=sample_portfolio.id)
+        query_time = datetime(2026, 1, 25, 12, 0, tzinfo=UTC)
+        query = GetPortfolioBalanceQuery(
+            portfolio_id=sample_portfolio.id, as_of=query_time
+        )
 
         # Act
         result = await handler.execute(query)
@@ -220,8 +223,11 @@ class TestGetPortfolioBalanceWeekendScenarios:
         )
         market_data.seed_price(monday_current)
 
-        # Query (will use datetime.now() which is Sunday)
-        query = GetPortfolioBalanceQuery(portfolio_id=sample_portfolio.id)
+        # Query (explicitly set to Sunday to match test assumptions)
+        query_time = datetime(2026, 1, 25, 12, 0, tzinfo=UTC)
+        query = GetPortfolioBalanceQuery(
+            portfolio_id=sample_portfolio.id, as_of=query_time
+        )
 
         # Act
         result = await handler.execute(query)
@@ -295,7 +301,10 @@ class TestGetPortfolioBalanceWeekendScenarios:
         market_data.seed_price(friday_close)
 
         # Query on Sunday
-        query = GetPortfolioBalanceQuery(portfolio_id=sample_portfolio.id)
+        query_time = datetime(2026, 1, 25, 12, 0, tzinfo=UTC)
+        query = GetPortfolioBalanceQuery(
+            portfolio_id=sample_portfolio.id, as_of=query_time
+        )
 
         # Act
         result = await handler.execute(query)
