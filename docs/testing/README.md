@@ -15,6 +15,7 @@ task test:e2e                  # E2E tests (Playwright)
 
 # All tests
 task test                      # Run everything
+task quality                   # Run all quality checks (lint + test)
 ```
 
 ## Test Philosophy
@@ -23,6 +24,8 @@ task test                      # Run everything
 - **Sociable Tests**: Exercise Use Cases and Domain together
 - **No Mocking Internal Logic**: Only mock at architectural boundaries
 - **Persistence Ignorance**: 90% of tests should run without a database
+
+> 📖 **Based on**: Modern Software Engineering principles (Dave Farley)
 
 ## Test Pyramid
 
@@ -38,9 +41,11 @@ task test                      # Run everything
 
 | Level | Count | Speed | Location |
 |-------|-------|-------|----------|
-| Unit | ~350 | <2s | `backend/tests/unit/`, `frontend/tests/unit/` |
+| Unit | ~550 | <2s | `backend/tests/unit/`, `frontend/tests/unit/` |
 | Integration | ~30 | <5s | `backend/tests/integration/` |
-| E2E | ~7 | <30s | `frontend/tests/e2e/` |
+| E2E | ~20 | <30s | `frontend/tests/e2e/` |
+
+**Total**: 796+ tests (571 backend + 225 frontend)
 
 ## Running Tests
 
@@ -75,7 +80,7 @@ cd frontend
 npm test                    # Run once
 npm run test:watch          # Watch mode
 
-# E2E tests
+# E2E tests (requires services running)
 npm run test:e2e            # Headless
 npm run test:e2e:headed     # With browser
 npm run test:e2e:ui         # Interactive UI
@@ -89,31 +94,47 @@ npm run typecheck
 ### 1. Start Infrastructure
 
 ```bash
-docker-compose up -d
-docker-compose ps  # Verify healthy
+# Start Docker services (PostgreSQL, Redis)
+task docker:up
+
+# Verify services are healthy
+docker compose ps
 ```
 
 ### 2. Start Backend
 
 ```bash
+# Terminal 1: Backend
+task dev:backend
+
+# Or manually:
 cd backend
 uv sync --all-extras
 uv run uvicorn zebu.main:app --reload --host 0.0.0.0 --port 8000
-# API docs: http://localhost:8000/docs
 ```
+
+**Verify**: http://localhost:8000/docs (Swagger UI)
 
 ### 3. Start Frontend
 
 ```bash
+# Terminal 2: Frontend
+task dev:frontend
+
+# Or manually:
 cd frontend
 npm install
 npm run dev
-# App: http://localhost:5173
 ```
 
-### 4. Manual Testing
+**Verify**: http://localhost:5173 (Frontend app)
+
+### 4. Manual API Testing
 
 ```bash
+# Health check
+curl http://localhost:8000/health
+
 # Create portfolio
 curl -X POST http://localhost:8000/api/v1/portfolios \
   -H "Content-Type: application/json" \
@@ -124,6 +145,8 @@ curl -X POST http://localhost:8000/api/v1/portfolios \
 curl http://localhost:8000/api/v1/portfolios/{id}/balance \
   -H "X-User-Id: 00000000-0000-0000-0000-000000000001"
 ```
+
+**Quick E2E API Script**: `scripts/quick_e2e_test.sh` automates the above.
 
 ## Writing Tests
 
@@ -148,10 +171,10 @@ test('should show error when portfolio name is empty', async () => {
 def test_deposit_increases_balance():
     # Arrange
     portfolio = create_test_portfolio(initial_balance=Money(0, "USD"))
-
+    
     # Act
     portfolio.deposit(Money(Decimal("100"), "USD"))
-
+    
     # Assert
     assert portfolio.get_balance() == Money(Decimal("100"), "USD")
 ```
@@ -163,7 +186,8 @@ def test_deposit_increases_balance():
 | Tests pass individually, fail in suite | Check for global state/singletons |
 | Flaky E2E tests | Use explicit waits, not `sleep()` |
 | Import errors | Run `uv sync` or `npm install` |
-| Database errors | Ensure `docker-compose up -d` |
+| Database errors | Ensure `docker compose up -d` |
+| Port conflicts | Check `lsof -i :8000` or `lsof -i :5173` |
 
 ## CI Integration
 
@@ -174,23 +198,33 @@ Every PR runs:
 4. Integration tests (Backend)
 5. E2E tests (Full stack)
 
+**CI Configuration**: `.github/workflows/ci.yml`
+
 ## Anti-Patterns to Avoid
 
-❌ **Don't mock internal logic** - Test real behavior with test databases
-❌ **Don't test implementation details** - Test public interfaces only
-❌ **Don't create flaky tests** - Use explicit waits, not `time.sleep()`
-❌ **Don't couple tests** - Each test should be independent
+❌ **Don't mock internal logic** - Test real behavior with test databases  
+❌ **Don't test implementation details** - Test public interfaces only  
+❌ **Don't create flaky tests** - Use explicit waits, not `time.sleep()`  
+❌ **Don't couple tests** - Each test should be independent  
 
 ## Lessons Learned
 
 **Task 016 revealed**: 218 unit tests passed but 3 critical bugs existed in production paths.
+
 **Root cause**: No integration tests verifying API contracts.
+
 **Solution**: Task 017 added 26 integration + 7 E2E tests, catching field name mismatches and DTO mapping errors.
 
 **Key insight**: Tests passing ≠ System working. Need all pyramid levels.
 
 ## Related Documentation
 
-- [E2E Testing Standards](./e2e-testing-standards.md) - When and how to write E2E tests
-- [Testing Conventions](./testing-conventions.md) - Test ID naming patterns for stable E2E tests
-- [QA Accessibility Guide](./qa-accessibility-guide.md) - Accessibility testing and manual QA
+- [E2E Testing Guide](./e2e-guide.md) - Manual testing, Playwright, QA procedures
+- [Testing Standards](./standards.md) - Best practices, conventions, accessibility
+
+## External References
+
+- [pytest documentation](https://docs.pytest.org/)
+- [Vitest documentation](https://vitest.dev/)
+- [Playwright documentation](https://playwright.dev/)
+- [Testing Library](https://testing-library.com/)

@@ -11,7 +11,8 @@
 This guide covers deploying Zebu to a Proxmox VM using the [community Docker VM script](https://github.com/community-scripts/ProxmoxVE). The community script uses `virt-customize` to pre-install Docker into the VM image before first boot, providing a production-ready Docker environment immediately.
 
 **Why use the community script?**
-See [proxmox-vm-approach-comparison.md](./proxmox-vm-approach-comparison.md) for a detailed analysis. Key benefits:
+
+Key benefits:
 - Docker installed before first boot (no cloud-init wait)
 - Avoids dpkg lock issues during initial setup
 - Battle-tested by thousands of Proxmox users
@@ -718,7 +719,7 @@ bash scripts/proxmox-vm/destroy.sh force
 
 ### Why VM over LXC?
 
-**VM Advantages** (see `proxmox-learnings.md` for full analysis):
+**VM Advantages**:
 - Full hardware virtualization = better security isolation
 - No AppArmor configuration needed for Docker
 - No privileged container requirements

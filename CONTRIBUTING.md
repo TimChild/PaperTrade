@@ -214,7 +214,7 @@ Zebu follows the standard testing pyramid:
 - Form validation (use component tests)
 - Simple routes (use React Router tests)
 
-See [docs/reference/e2e-testing-standards.md](docs/reference/e2e-testing-standards.md) for complete E2E testing guidelines.
+See [docs/testing/standards.md](docs/testing/standards.md) for complete E2E testing guidelines.
 
 ### Test Structure
 

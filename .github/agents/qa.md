@@ -24,7 +24,7 @@ Execute comprehensive E2E tests from a user's perspective. Validate workflows, i
 - **Real Workflows**: Natural user paths with realistic data
 - **Evidence-Based**: Always capture screenshots, logs, network traces
 - **Minimal Repro**: Simplify steps to minimum needed
-- **Test IDs**: Use `data-testid` for element targeting (see `docs/reference/testing-conventions.md`)
+- **Test IDs**: Use `data-testid` for element targeting (see `docs/testing/standards.md`)
 
 ## Key Test Scenarios
 1. **New User Onboarding**: Create portfolio, verify dashboard
