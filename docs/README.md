@@ -16,8 +16,8 @@ High-level strategy, roadmaps, and feature tracking:
 | Document | Purpose |
 |----------|---------|
 | [planning/executive-summary.md](planning/executive-summary.md) | Quick overview of current capabilities |
-| [planning/product-roadmap.md](planning/product-roadmap.md) | Product vision and feature roadmap |
-| [planning/feature-status.md](planning/feature-status.md) | Complete feature implementation matrix |
+| [planning/roadmap.md](planning/roadmap.md) | Product vision and feature roadmap |
+| [planning/features.md](planning/features.md) | Complete feature implementation matrix |
 | [planning/project_plan.md](planning/project_plan.md) | Development phases and milestones |
 | [planning/project_strategy.md](planning/project_strategy.md) | Architecture and tech decisions |
 | [planning/future-ideas.md](planning/future-ideas.md) | Feature ideas for exploration |

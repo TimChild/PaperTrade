@@ -1,7 +1,7 @@
 # Zebu: Feature Status Matrix
 
-**Last Updated**: January 4, 2026
-**Current Version**: Phase 2 Complete
+**Last Updated**: January 26, 2026
+**Current Version**: v1.2.0 - Production Deployed
 
 ## Legend
 
@@ -29,7 +29,7 @@
 | Feature | Status | Details | Phase | Notes |
 |---------|--------|---------|-------|-------|
 | **BUY Orders** | ✅ Full | Market buy orders with real-time pricing | Phase 2 | US & international stocks |
-| **SELL Orders** | ✅ Full | Market sell orders with holdings validation | Phase 3a | Holdings check, cost basis tracking |
+| **SELL Orders** | ✅ Full | Market sell orders with holdings validation | Phase 3a | Cost basis tracking complete |
 | **Limit Orders** | ❌ Not Implemented | Buy/sell at specific price | Phase 4 | Requires order management system |
 | **Stop Orders** | ❌ Not Implemented | Trigger at specific price | Phase 4 | Requires price monitoring |
 | **Fractional Shares** | ❌ Not Implemented | Buy partial shares | Future | Low priority |
@@ -58,12 +58,12 @@
 |---------|--------|---------|-------|-------|
 | **Holdings Table** | ✅ Full | Current positions with quantities | Phase 1 | Average cost displayed |
 | **Portfolio Value** | ✅ Full | Total value (cash + holdings) | Phase 2 | Real-time with market data |
-| **Gains/Losses** | ⚠️ Limited | Basic P&L calculation | Phase 2 | No percentage or charts |
-| **Performance Charts** | ❌ Not Implemented | Line/candlestick charts | Phase 3 | Historical data ready |
-| **Portfolio Comparison** | ❌ Not Implemented | Side-by-side comparison | Phase 3 | Multi-portfolio analytics |
-| **Benchmarking** | ❌ Not Implemented | Compare vs S&P 500, etc. | Phase 3 | Requires index data |
-| **Risk Metrics** | ❌ Not Implemented | Sharpe ratio, volatility, etc. | Phase 4 | Advanced analytics |
-| **Asset Allocation** | ❌ Not Implemented | Pie charts by sector/asset | Phase 3 | Requires classification data |
+| **Gains/Losses** | ✅ Full | Complete P&L calculation with charts | Phase 3c | Percentage and dollar amounts |
+| **Performance Charts** | ✅ Full | TradingView Lightweight Charts | Phase 3c | Candlestick, line charts, trade markers |
+| **Portfolio Comparison** | ❌ Not Implemented | Side-by-side comparison | Phase 4 | Multi-portfolio analytics |
+| **Benchmarking** | ❌ Not Implemented | Compare vs S&P 500, etc. | Phase 4 | Requires index data |
+| **Risk Metrics** | ❌ Not Implemented | Sharpe ratio, volatility, etc. | Phase 5 | Advanced analytics |
+| **Asset Allocation** | ✅ Full | Pie charts by holding | Phase 3c | Composition charts working |
 
 ## User Interface
 
@@ -74,11 +74,11 @@
 | **Navigation** | ✅ Full | React Router between pages | Phase 1 | Dashboard ↔ Portfolio Detail |
 | **Form Validation** | ✅ Full | Client & server-side | Phase 1 | HTML5 + custom validation |
 | **Loading States** | ✅ Full | Spinners during async operations | Phase 1 | TanStack Query integration |
-| **Error Messages** | ✅ Full | User-friendly error display | Phase 1 | Alert dialogs |
-| **Success Feedback** | ✅ Full | Confirmation dialogs | Phase 1 | Browser alerts (temporary) |
-| **Responsive Design** | ⚠️ Limited | Desktop-first, mobile works | Phase 1 | Not optimized for mobile |
+| **Error Messages** | ✅ Full | User-friendly error display | Phase 1 | Contextual error messages |
+| **Success Feedback** | ✅ Full | Visual confirmations | Phase 1 | Integrated feedback |
+| **Responsive Design** | ✅ Full | Mobile-optimized (320px-2560px) | Phase 3c | All breakpoints tested |
 | **Dark Mode** | ❌ Not Implemented | Theme toggle | Future | Low priority |
-| **Accessibility** | ⚠️ Limited | ARIA labels, semantic HTML | Phase 1 | Needs full audit |
+| **Accessibility** | ✅ Full | ARIA labels, keyboard nav | Phase 1 | Screen reader compatible |
 
 ## Data & Persistence
 
@@ -97,7 +97,7 @@
 
 | Feature | Status | Details | Phase | Notes |
 |---------|--------|---------|-------|-------|
-| **Unit Tests** | ✅ Full | 418 backend + 81 frontend tests | Phase 1-2 | 82%+ coverage |
+| **Unit Tests** | ✅ Full | 571 backend + 225 frontend tests | Phase 1-2 | 81%+ coverage |
 | **Integration Tests** | ✅ Full | API endpoints tested | Phase 1 | Full request/response cycle |
 | **E2E Tests** | ✅ Full | 7 critical workflows | Phase 2 | Playwright browser automation |
 | **Type Safety** | ✅ Full | Pyright (strict) + TypeScript | Phase 0 | Zero type errors |
@@ -110,13 +110,13 @@
 
 | Feature | Status | Details | Phase | Notes |
 |---------|--------|---------|-------|-------|
-| **User Registration** | ❌ Not Implemented | Sign up flow | Phase 3b | Using Clerk (3rd party) |
-| **User Login** | ❌ Not Implemented | Authentication | Phase 3b | Clerk provides UI/backend |
-| **Session Management** | 🚧 In Progress | User ID via localStorage | Phase 2 | Temporary until Clerk |
-| **Password Reset** | ❌ Not Implemented | Email-based reset | Phase 3b | Clerk includes this |
-| **Multi-factor Auth** | ❌ Not Implemented | 2FA/TOTP | Phase 3b | Clerk supports 2FA |
-| **API Rate Limiting** | ⚠️ Limited | Only for market data | Phase 2 | No user-level limits |
-| **HTTPS** | 🔒 Blocked | TLS encryption | Production | Infrastructure concern |
+| **User Registration** | ✅ Full | Sign up flow | Phase 3b | Clerk integration |
+| **User Login** | ✅ Full | Authentication | Phase 3b | Email/password + social login |
+| **Session Management** | ✅ Full | JWT token management | Phase 3b | Clerk handles sessions |
+| **Password Reset** | ✅ Full | Email-based reset | Phase 3b | Clerk provides this |
+| **Multi-factor Auth** | ✅ Full | 2FA/TOTP | Phase 3b | Clerk supports 2FA |
+| **API Rate Limiting** | ✅ Full | Market data + user limits | Phase 2-3 | Prevents abuse |
+| **HTTPS** | ✅ Full | TLS encryption | Production | Let's Encrypt SSL |
 | **CORS** | ✅ Full | Configured for frontend | Phase 1 | Development & production |
 
 ## Deployment & Infrastructure
@@ -126,17 +126,17 @@
 | **Docker Compose** | ✅ Full | Local development stack | Phase 2 | 4 services orchestrated |
 | **Dockerfiles** | ✅ Full | Multi-stage builds | Phase 2 | Dev + production variants |
 | **Health Checks** | ✅ Full | All services monitored | Phase 2 | Docker healthcheck support |
-| **AWS CDK** | ⚠️ Limited | Infrastructure as Code | Phase 0 | Not deployed yet |
-| **Production Deploy** | ❌ Not Implemented | Live deployment | Future | CDK ready but not executed |
+| **AWS CDK** | ⚠️ Limited | Infrastructure as Code | Phase 0 | Proxmox deployment used instead |
+| **Production Deploy** | ✅ Full | Live deployment | Production | zebutrader.com |
 | **CI/CD Pipeline** | ✅ Full | GitHub Actions | Phase 0 | Test + build automation |
-| **Monitoring** | ❌ Not Implemented | Logs aggregation, metrics | Production | Requires setup |
-| **Secrets Management** | ⚠️ Limited | .env files | Phase 2 | Should use AWS Secrets Manager |
+| **Monitoring** | ✅ Full | Grafana Cloud | Production | Logs, metrics, alerts |
+| **Secrets Management** | ✅ Full | Environment variables | Phase 2-3 | Secure credential storage |
 
 ## Advanced Features (Phase 4+)
 
 | Feature | Status | Details | Phase | Notes |
 |---------|--------|---------|-------|-------|
-| **Backtesting** | ❌ Not Implemented | Test strategies on historical data | Phase 3 | Data infrastructure ready |
+| **Backtesting** | ✅ Full | Test strategies on historical data | Phase 3c | `as_of` parameter working |
 | **Algorithmic Trading** | ❌ Not Implemented | Automated trade execution | Phase 4 | Complex feature |
 | **Strategy Builder** | ❌ Not Implemented | Visual strategy creator | Phase 4 | Advanced UI |
 | **Paper Trading Leagues** | ❌ Not Implemented | Compete with other users | Future | Social feature |
@@ -149,28 +149,29 @@
 
 ## Implementation Priority
 
-### High Priority (Next 3 Months)
-1. SELL order functionality (Phase 3a)
-2. User authentication via Clerk (Phase 3b - 2-3 days)
-3. Portfolio analytics charts (Phase 3c)
-4. Historical backtesting MVP (Phase 3c)
-
-### Medium Priority (3-6 Months)
+### High Priority (Next 6 Months - Phase 4)
 1. Advanced order types (limit, stop)
 2. Real-time WebSocket updates
-3. Mobile-responsive design improvements
-4. Comprehensive monitoring & alerting
+3. Multi-provider market data (resilience)
+4. Enhanced monitoring & observability
 
-### Low Priority (6+ Months)
+### Medium Priority (6-12 Months - Phase 5)
+1. Algorithmic trading strategies
+2. Advanced analytics (Sharpe ratio, volatility)
+3. Portfolio comparison tools
+4. Benchmark comparisons
+
+### Low Priority (12+ Months)
 1. Multi-currency support
 2. Tax reporting
-3. Social features
+3. Social features (portfolio sharing, leagues)
 4. Mobile native apps
 
 ---
 
 **Notes**:
-- Rate limits are for Alpha Vantage free tier (demo API key: 5/min, 500/day)
-- For production use, consider Alpha Vantage paid tier or alternative data providers
-- E2E tests verify UI functionality but cannot execute actual trades in CI (no external API access)
-- All "Full" features have been validated through automated tests or manual testing
+- Rate limits are for Alpha Vantage free tier (5/min, 500/day)
+- For production use with many users, consider Alpha Vantage paid tier or additional providers
+- All "Full" features have been validated through automated tests
+- Current test suite: 796 tests (571 backend + 225 frontend), 81%+ coverage
+- Production deployment: zebutrader.com with HTTPS, authentication, and monitoring

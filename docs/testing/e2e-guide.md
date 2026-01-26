@@ -78,13 +78,13 @@ task docker:clean  # WARNING: Deletes data
    ```bash
    # Headless
    task test:e2e
-   
+
    # With browser UI
    npm run test:e2e:headed
-   
+
    # Interactive mode
    npm run test:e2e:ui
-   
+
    # Specific test
    npx playwright test tests/e2e/trading.spec.ts
    ```
@@ -157,7 +157,7 @@ For orchestrators running comprehensive QA sessions.
    # Use reusable template
    gh agent-task create --custom-agent qa \
      -F agent_tasks/reusable/e2e_qa_validation.md
-   
+
    # Or create custom task focusing on recent changes
    ```
 

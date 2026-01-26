@@ -15,7 +15,7 @@ A stock market emulation platform for practicing trading strategies without risk
 - **[User Guide](docs/USER_GUIDE.md)** - Step-by-step instructions for using Zebu
 
 **Developers & Contributors:**
-- **[Feature Status Matrix](docs/planning/feature-status.md)** - Complete feature implementation status
+- **[Feature Status Matrix](docs/planning/features.md)** - Complete feature implementation status
 - **[Technical Boundaries](docs/architecture/technical-boundaries.md)** - Known limitations and edge cases
 
 **Deployment & Operations:**
