@@ -38,7 +38,7 @@ graph LR
         Backend[Zebu Backend] -- Writes JSON logs --> Stdout
         Promtail -- Reads --> DockerSocket
     end
-    
+
     Promtail -- Pushes logs (HTTPS) --> Loki[Grafana Cloud Loki]
     Grafana[Grafana Dashboard] -- Queries (LogQL) --> Loki
     AlertManager -- Evaluates --> Loki

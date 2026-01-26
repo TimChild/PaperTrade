@@ -1,8 +1,8 @@
 # Task 084: Fix Price Chart "Invalid Price Data" Error
 
-**Agent**: frontend-swe  
-**Date**: 2026-01-09  
-**Session**: 20260109_051843  
+**Agent**: frontend-swe
+**Date**: 2026-01-09
+**Session**: 20260109_051843
 **Status**: ✅ Complete
 
 ## Summary
@@ -301,7 +301,7 @@ fix: parse string prices to numbers in getPriceHistory
 
 ---
 
-**Task Status**: ✅ Complete  
-**All Tests Passing**: ✅ Yes  
-**Type Safety**: ✅ Maintained  
+**Task Status**: ✅ Complete
+**All Tests Passing**: ✅ Yes
+**Type Safety**: ✅ Maintained
 **Code Quality**: ✅ Passing

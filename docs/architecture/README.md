@@ -7,22 +7,22 @@ Zebu follows **Clean Architecture** (Hexagonal Architecture) principles to ensur
 ```mermaid
 graph TD
     Client[React Frontend] -->|HTTP REST| API[FastAPI Backend]
-    
+
     subgraph "Backend System"
         API --> UseCases[Application Layer]
         UseCases --> Domain[Domain Layer]
-        
+
         UseCases --> Ports[Ports / Interfaces]
-        
+
         Adapters -->|Implement| Ports
-        
+
         subgraph "Infrastructure Adapters"
             PG[Postgres Adapter]
             Redis[Redis Adapter]
             Alpha[Alpha Vantage Adapter]
         end
     end
-    
+
     PG --> Database[(PostgreSQL)]
     Redis --> Cache[(Redis)]
     Alpha --> MarketData((Alpha Vantage API))
