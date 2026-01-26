@@ -118,7 +118,7 @@ See [docs/user/](../user/) for detailed user guides.
 - **Docker**: Full-stack containerization for local development
 - **Monitoring**: Grafana Cloud for production observability
 
-See [feature-status.md](./features.md) for implementation details and [project-strategy.md](./project_strategy.md) for architecture principles.
+See [features.md](./features.md) for implementation details and [project_strategy.md](./project_strategy.md) for architecture principles.
 
 ## Performance Metrics
 
