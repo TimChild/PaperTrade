@@ -171,10 +171,10 @@ test('should show error when portfolio name is empty', async () => {
 def test_deposit_increases_balance():
     # Arrange
     portfolio = create_test_portfolio(initial_balance=Money(0, "USD"))
-    
+
     # Act
     portfolio.deposit(Money(Decimal("100"), "USD"))
-    
+
     # Assert
     assert portfolio.get_balance() == Money(Decimal("100"), "USD")
 ```
@@ -202,10 +202,10 @@ Every PR runs:
 
 ## Anti-Patterns to Avoid
 
-❌ **Don't mock internal logic** - Test real behavior with test databases  
-❌ **Don't test implementation details** - Test public interfaces only  
-❌ **Don't create flaky tests** - Use explicit waits, not `time.sleep()`  
-❌ **Don't couple tests** - Each test should be independent  
+❌ **Don't mock internal logic** - Test real behavior with test databases
+❌ **Don't test implementation details** - Test public interfaces only
+❌ **Don't create flaky tests** - Use explicit waits, not `time.sleep()`
+❌ **Don't couple tests** - Each test should be independent
 
 ## Lessons Learned
 
