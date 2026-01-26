@@ -385,7 +385,7 @@ For small-scale production (personal use, small team, low traffic):
 ## Resources
 
 - [Proxmox VM Deployment Guide](./proxmox-vm-deployment.md)
-- [Domain and SSL Setup Guide](./domain-and-ssl-setup.md)
+- [Domain and SSL Setup Guide](./domain-setup.md)
 - [Zebu Documentation](../../README.md)
 - [OWASP Security Best Practices](https://owasp.org/www-project-top-ten/)
 - [12 Factor App Methodology](https://12factor.net/)
