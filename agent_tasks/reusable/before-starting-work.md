@@ -5,8 +5,8 @@
 ## 1. Check Recent Agent Activity
 
 ```bash
-ls -lt agent_progress_docs/ | head -10
-find agent_progress_docs/ -name "*keyword*"
+ls -lt agent_tasks/progress/ | head -10
+find agent_tasks/progress/ -name "*keyword*"
 ```
 
 ## 2. Check Open PRs
@@ -20,7 +20,7 @@ Look for PRs touching same files/features or related work.
 ## 3. Review Architecture Documentation
 
 ```bash
-ls -la architecture_plans/
+ls -la docs/architecture/
 ls -la docs/architecture/
 ```
 
@@ -50,7 +50,7 @@ Familiarize yourself with:
 
 ```bash
 GH_PAGER="" gh pr list && \
-ls -lt agent_progress_docs/ | head -5 && \
-ls -la architecture_plans/ && \
+ls -lt agent_tasks/progress/ | head -5 && \
+ls -la docs/architecture/ && \
 echo "✓ Pre-work checks complete"
 ```

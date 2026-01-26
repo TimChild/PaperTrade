@@ -303,7 +303,7 @@ kill $(cat temp/frontend.pid) 2>/dev/null || true
 
 ## Deliverable: Test Report
 
-Create a comprehensive test report in `agent_progress_docs/` following this format:
+Create a comprehensive test report in `agent_tasks/progress/` following this format:
 
 ```markdown
 # E2E QA Test Report - [DATE]
@@ -429,7 +429,7 @@ Example task file:
 
 **Priority**: P0 (Critical)
 **Agent**: backend-swe
-**Related QA Report**: agent_progress_docs/YYYY-MM-DD_HH-MM-SS_e2e-qa-report.md
+**Related QA Report**: agent_tasks/progress/YYYY-MM-DD_HH-MM-SS_e2e-qa-report.md
 
 ## Issue
 
@@ -472,7 +472,7 @@ Trade should either:
 
 This QA task is complete when:
 - ✅ All test scenarios executed
-- ✅ Comprehensive test report created in `agent_progress_docs/`
+- ✅ Comprehensive test report created in `agent_tasks/progress/`
 - ✅ All failures documented with evidence
 - ✅ Follow-up tasks created for critical/high issues
 - ✅ Severity assessment provided for all findings
@@ -490,5 +490,4 @@ This QA task is complete when:
 ## References
 
 - [.github/agents/qa.md](../../.github/agents/qa.md) - QA Agent definition
-- [orchestrator_procedures/playwright_e2e_testing.md](../../orchestrator_procedures/playwright_e2e_testing.md) - Technical testing guide
-- [orchestrator_procedures/run_qa_validation.md](../../orchestrator_procedures/run_qa_validation.md) - Orchestrator workflow
+- [docs/testing/e2e-guide.md](../../docs/testing/e2e-guide.md) - Technical testing guide and QA workflow

@@ -133,7 +133,10 @@ class TestGetPortfolioBalanceWeekendScenarios:
         # to Thursday's close!
 
         # Query on Sunday
-        query = GetPortfolioBalanceQuery(portfolio_id=sample_portfolio.id)
+        query_time = datetime(2026, 1, 25, 12, 0, tzinfo=UTC)
+        query = GetPortfolioBalanceQuery(
+            portfolio_id=sample_portfolio.id, as_of=query_time
+        )
 
         # Act
         result = await handler.execute(query)
@@ -220,8 +223,11 @@ class TestGetPortfolioBalanceWeekendScenarios:
         )
         market_data.seed_price(monday_current)
 
-        # Query (will use datetime.now() which is Sunday)
-        query = GetPortfolioBalanceQuery(portfolio_id=sample_portfolio.id)
+        # Query (explicitly set to Sunday to match test assumptions)
+        query_time = datetime(2026, 1, 25, 12, 0, tzinfo=UTC)
+        query = GetPortfolioBalanceQuery(
+            portfolio_id=sample_portfolio.id, as_of=query_time
+        )
 
         # Act
         result = await handler.execute(query)
@@ -295,18 +301,21 @@ class TestGetPortfolioBalanceWeekendScenarios:
         market_data.seed_price(friday_close)
 
         # Query on Sunday
-        query = GetPortfolioBalanceQuery(portfolio_id=sample_portfolio.id)
+        query_time = datetime(2026, 1, 25, 12, 0, tzinfo=UTC)
+        query = GetPortfolioBalanceQuery(
+            portfolio_id=sample_portfolio.id, as_of=query_time
+        )
 
         # Act
         result = await handler.execute(query)
 
         # Assert - Should NOT show $0.00 daily change
-        assert result.daily_change.amount != Decimal("0.00"), (
-            "Daily change should reflect Friday's movement, not $0.00"
-        )
-        assert result.daily_change_percent != Decimal("0.00"), (
-            "Daily change percent should not be 0.00%"
-        )
+        assert result.daily_change.amount != Decimal(
+            "0.00"
+        ), "Daily change should reflect Friday's movement, not $0.00"
+        assert result.daily_change_percent != Decimal(
+            "0.00"
+        ), "Daily change percent should not be 0.00%"
 
         # Should show the actual movement: Friday vs Thursday
         assert result.daily_change.amount == Decimal("500.00")

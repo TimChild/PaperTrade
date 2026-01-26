@@ -329,7 +329,7 @@ tests/
 - 90% of tests use `InMemoryAuthAdapter` (no Clerk dependency)
 - Domain layer remains auth-agnostic
 
-**See**: `architecture_plans/phase3-refined/phase3b-authentication.md` for details
+**See**: `docs/architecture/phase3-refined/phase3b-authentication.md` for details
 
 ### Data Protection
 

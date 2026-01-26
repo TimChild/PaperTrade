@@ -15,12 +15,13 @@ A stock market emulation platform for practicing trading strategies without risk
 - **[User Guide](docs/USER_GUIDE.md)** - Step-by-step instructions for using Zebu
 
 **Developers & Contributors:**
-- **[Feature Status Matrix](docs/planning/feature-status.md)** - Complete feature implementation status
+- **[Feature Status Matrix](docs/planning/features.md)** - Complete feature implementation status
 - **[Technical Boundaries](docs/architecture/technical-boundaries.md)** - Known limitations and edge cases
 
 **Deployment & Operations:**
+- **[Deployment Guide](docs/deployment/README.md)** - Complete deployment documentation index
 - **[Proxmox VM Deployment](docs/deployment/proxmox-vm-deployment.md)** - Production deployment guide
-- **[Domain & SSL Setup](docs/deployment/domain-and-ssl-setup.md)** - Configure custom domain with HTTPS
+- **[Domain & SSL Setup](docs/deployment/domain-setup.md)** - Configure custom domain with HTTPS
 - **[Production Checklist](docs/deployment/production-checklist.md)** - Pre-deployment verification
 
 **Project Information:**

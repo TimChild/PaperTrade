@@ -6,7 +6,7 @@
 |----------|---------|
 | [../README.md](../README.md) | Project overview and quick start |
 | [USER_GUIDE.md](USER_GUIDE.md) | Step-by-step user guide |
-| [reference/testing.md](reference/testing.md) | Testing quick reference |
+| [testing/README.md](testing/README.md) | Testing quick reference |
 | [ai-agents/mcp-tools.md](ai-agents/mcp-tools.md) | MCP tools for AI assistants |
 
 ## Planning Documentation
@@ -16,8 +16,8 @@ High-level strategy, roadmaps, and feature tracking:
 | Document | Purpose |
 |----------|---------|
 | [planning/executive-summary.md](planning/executive-summary.md) | Quick overview of current capabilities |
-| [planning/product-roadmap.md](planning/product-roadmap.md) | Product vision and feature roadmap |
-| [planning/feature-status.md](planning/feature-status.md) | Complete feature implementation matrix |
+| [planning/roadmap.md](planning/roadmap.md) | Product vision and feature roadmap |
+| [planning/features.md](planning/features.md) | Complete feature implementation matrix |
 | [planning/project_plan.md](planning/project_plan.md) | Development phases and milestones |
 | [planning/project_strategy.md](planning/project_strategy.md) | Architecture and tech decisions |
 | [planning/future-ideas.md](planning/future-ideas.md) | Feature ideas for exploration |
@@ -32,29 +32,34 @@ Technical design and boundaries:
 |----------|---------|
 | [architecture/technical-boundaries.md](architecture/technical-boundaries.md) | Known limitations and edge cases |
 | [architecture/clerk-implementation-info.md](architecture/clerk-implementation-info.md) | Clerk authentication details |
-| [../architecture_plans/](../architecture_plans/) | Phase-specific designs |
+| [../docs/architecture/](../docs/architecture/) | Phase-specific designs |
 
-## Reference Documentation
+## Testing Documentation
 
-Technical guides and conventions:
+Comprehensive testing guides and standards:
 
 | Document | Purpose |
 |----------|---------|
-| [reference/testing.md](reference/testing.md) | Testing philosophy and quick reference |
-| [reference/e2e-testing-standards.md](reference/e2e-testing-standards.md) | When and how to write E2E tests |
-| [reference/testing-conventions.md](reference/testing-conventions.md) | Test ID naming patterns |
-| [reference/qa-accessibility-guide.md](reference/qa-accessibility-guide.md) | QA and accessibility testing |
+| [testing/README.md](testing/README.md) | Testing philosophy, running tests, quick reference |
+| [testing/e2e-guide.md](testing/e2e-guide.md) | E2E testing procedures (manual, Playwright, QA workflows) |
+| [testing/standards.md](testing/standards.md) | Testing standards, conventions, and accessibility |
+
+## Reference Documentation
+
+Technical guides and external resources:
+
+| Document | Purpose |
+|----------|---------|
 | [reference/external-resources.md](reference/external-resources.md) | API docs and framework links |
 
 ## Deployment Documentation
 
 | Document | Purpose |
 |----------|---------|
+| [deployment/README.md](deployment/README.md) | **Start here** - Deployment index and overview |
 | [deployment/proxmox-vm-deployment.md](deployment/proxmox-vm-deployment.md) | Complete Proxmox VM deployment guide |
-| [deployment/domain-and-ssl-setup.md](deployment/domain-and-ssl-setup.md) | Domain setup with NPMplus and SSL/HTTPS |
+| [deployment/domain-setup.md](deployment/domain-setup.md) | Domain setup with NPMplus and SSL/HTTPS |
 | [deployment/production-checklist.md](deployment/production-checklist.md) | Production readiness verification |
-| [deployment/proxmox-vm-approach-comparison.md](deployment/proxmox-vm-approach-comparison.md) | VM vs LXC comparison |
-| [deployment/proxmox-learnings.md](deployment/proxmox-learnings.md) | Lessons learned from deployment |
 
 ## AI Agent Documentation
 
@@ -65,7 +70,7 @@ Technical guides and conventions:
 | [../.github/copilot-instructions.md](../.github/copilot-instructions.md) | General agent guidelines |
 | [../.github/agents/](../.github/agents/) | Role-specific instructions |
 | [../agent_tasks/](../agent_tasks/) | Task definitions |
-| [../agent_progress_docs/](../agent_progress_docs/) | PR documentation |
+| [../agent_tasks/progress/](../agent_tasks/progress/) | PR documentation |
 
 ## Archive
 

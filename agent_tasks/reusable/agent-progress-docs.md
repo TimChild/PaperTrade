@@ -4,18 +4,18 @@
 
 ## When Required
 
-✅ Coding agents creating PRs (backend-swe, frontend-swe, etc.)  
-✅ Architectural decisions  
-✅ Complex bug fixes  
+✅ Coding agents creating PRs (backend-swe, frontend-swe, etc.)
+✅ Architectural decisions
+✅ Complex bug fixes
 
-❌ Orchestration sessions (direct conversations)  
-❌ Simple questions or explorations  
-❌ Documentation-only changes  
+❌ Orchestration sessions (direct conversations)
+❌ Simple questions or explorations
+❌ Documentation-only changes
 
 ## File Format
 
 ```
-agent_progress_docs/YYYY-MM-DD_HH-MM-SS_short-description.md
+agent_tasks/progress/YYYY-MM-DD_HH-MM-SS_short-description.md
 ```
 
 Get timestamp: `date "+%Y-%m-%d_%H-%M-%S"`

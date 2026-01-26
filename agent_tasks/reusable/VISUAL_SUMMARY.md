@@ -120,7 +120,7 @@ Progress Documentation     8 files (ref)       ~30
 # .github/agents/backend-swe.md (235 lines)
 
 ## Before Starting Work
-1. Check agent_progress_docs/
+1. Check agent_tasks/progress/
 2. Check open PRs: gh pr list
 3. Review architecture docs
 4. Read existing code
@@ -146,7 +146,7 @@ task test:backend
 - Review backend/tests/conftest.py for fixtures
 
 ## Pre-Completion Validation
-> 📖 **See**: 
+> 📖 **See**:
 > - [pre-completion-checklist.md](...)
 > - [backend-quality-checks.md](...)
 ```
@@ -155,7 +155,7 @@ task test:backend
 
 ### Updating Git Workflow Instructions
 
-**Before**: 
+**Before**:
 ```
 1. Update .github/copilot-instructions.md
 2. Update AGENT_ORCHESTRATION.md

@@ -22,8 +22,8 @@
 ### 📋 Deferred (Lower Priority)
 
 - Archiving completed tasks in `agent_tasks/` by phase
-- Archiving `agent_progress_docs/` by month
-- Moving `orchestrator_procedures/` to `docs/ai-agents/procedures/`
+- Archiving `agent_tasks/progress/` by month
+- Moving `docs/ai-agents/procedures/` to `docs/ai-agents/procedures/`
 - Creating AI agents documentation hub at `docs/ai-agents/`
 
 ---
@@ -145,7 +145,7 @@ agent_tasks/
 3. Rename `reusable/` → `templates/`
 4. Create `README.md` explaining structure
 
-### agent_progress_docs/ Directory (72 files)
+### agent_tasks/progress/ Directory (72 files)
 
 **Analysis**:
 - All files are **historical** - document completed PRs
@@ -156,7 +156,7 @@ agent_tasks/
 **Recommendation**: **Archive by month, keep structure**
 
 ```
-agent_progress_docs/
+agent_tasks/progress/
 ├── README.md                    # NEW - Explains purpose, when to create
 ├── 2026-01/                     # Current month - keep accessible
 │   ├── 2026-01-06_00-36-04_task056-phase3c-analytics-domain.md
@@ -175,11 +175,11 @@ agent_progress_docs/
 3. Keep current month (2026-01) at top level or in dated folder
 4. Create `README.md` explaining structure
 
-### architecture_plans/ Directory (4 subdirs)
+### docs/architecture/ Directory (4 subdirs)
 
 **Structure**:
 ```
-architecture_plans/
+docs/architecture/
 ├── 20251227_phase1-backend-mvp/
 ├── 20251228_phase2-market-data/
 ├── phase3-refined/
@@ -194,11 +194,11 @@ architecture_plans/
 **Recommendation**: **Keep as-is** - Already well-organized
 - Consider: Add `README.md` with index
 
-### orchestrator_procedures/ Directory (7 files)
+### docs/ai-agents/procedures/ Directory (7 files)
 
 **Structure**:
 ```
-orchestrator_procedures/
+docs/ai-agents/procedures/
 ├── README.md
 ├── e2e_validation.py
 ├── manual_e2e_testing.md
@@ -277,7 +277,7 @@ docs/
 │   ├── mcp-tools-reference.md         # FROM docs/mcp-tools.md
 │   ├── instructions/                  # Future: Reusable guidance chunks
 │   │   └── README.md
-│   └── procedures/                    # FROM orchestrator_procedures/
+│   └── procedures/                    # FROM docs/ai-agents/procedures/
 │       ├── README.md
 │       ├── e2e_validation.py
 │       ├── manual_e2e_testing.md
@@ -318,16 +318,16 @@ agent_tasks/                           # REORGANIZE (see above)
 ├── templates/                         # RENAME from reusable/
 └── archive/                           # EXPAND - Tasks 001-067 by phase
 
-agent_progress_docs/                   # REORGANIZE (see above)
+agent_tasks/progress/                   # REORGANIZE (see above)
 ├── README.md                          # NEW
 ├── 2026-01/                           # Current month
 └── archive/                           # Historical months
 
-architecture_plans/                    # KEEP AS-IS (consider adding README)
+docs/architecture/                    # KEEP AS-IS (consider adding README)
 
 docs/                                  # REORGANIZE (see above)
 
-orchestrator_procedures/               # DELETE - Moved to docs/ai-agents/procedures/
+docs/ai-agents/procedures/               # DELETE - Moved to docs/ai-agents/procedures/
 
 starting_files/                        # DELETE - Moved to docs/archive/seed-files/
 
@@ -375,7 +375,7 @@ CONTRIBUTING.md                        # KEEP - Standard OSS
 **Living Docs**:
 - `.github/copilot-instructions.md` - Core guidelines
 - `.github/agents/*.md` - Role-specific instructions
-- `architecture_plans/` - Design specs
+- `docs/architecture/` - Design specs
 
 **Static/Reference**:
 - `.github/copilot-code-review-instructions.md` - Review standards
@@ -387,7 +387,7 @@ CONTRIBUTING.md                        # KEEP - Standard OSS
 **Read-Only**:
 - `docs/archive/` - Historical snapshots
 - `agent_tasks/archive/` - Completed tasks
-- `agent_progress_docs/archive/` - Old PR docs
+- `agent_tasks/progress/archive/` - Old PR docs
 
 ---
 
@@ -398,7 +398,7 @@ CONTRIBUTING.md                        # KEEP - Standard OSS
 **Tasks**:
 1. Create new directory structure under `docs/`
 2. Create all `README.md` files for new directories
-3. Create `agent_tasks/README.md` and `agent_progress_docs/README.md`
+3. Create `agent_tasks/README.md` and `agent_tasks/progress/README.md`
 4. Review and approve proposal
 
 **Deliverables**:
@@ -410,7 +410,7 @@ CONTRIBUTING.md                        # KEEP - Standard OSS
 
 **Tasks**:
 1. Move `agent_tasks/001-067` to `archive/phaseN/`
-2. Move `agent_progress_docs/2025-12/` to `archive/2025-12/`
+2. Move `agent_tasks/progress/2025-12/` to `archive/2025-12/`
 3. Move `starting_files/` to `docs/archive/seed-files/`
 4. Move completed docs investigations to `docs/archive/`
 
@@ -421,7 +421,7 @@ CONTRIBUTING.md                        # KEEP - Standard OSS
 **Tasks**:
 1. Create subdirectories: `planning/`, `architecture/`, `development/`, `reference/`, `ai-agents/`
 2. Move files from `docs/` to new subdirectories
-3. Move `orchestrator_procedures/` to `docs/ai-agents/procedures/`
+3. Move `docs/ai-agents/procedures/` to `docs/ai-agents/procedures/`
 4. Update `docs/README.md` with new structure
 
 **Impact**: Medium - Changes doc paths, needs link updates
@@ -452,7 +452,7 @@ CONTRIBUTING.md                        # KEEP - Standard OSS
 ### Phase 6: Cleanup & Validation
 
 **Tasks**:
-1. Remove empty `orchestrator_procedures/` directory
+1. Remove empty `docs/ai-agents/procedures/` directory
 2. Remove empty `starting_files/` directory
 3. Verify all links work
 4. Update CI/CD if any paths referenced
@@ -575,7 +575,7 @@ These files need updates **after** reorganization (separate task):
 
 **Before**:
 - `AGENT_ORCHESTRATION.md` at root (not obvious it's AI-focused)
-- Procedures in separate `orchestrator_procedures/` directory
+- Procedures in separate `docs/ai-agents/procedures/` directory
 - Task files mixed with completed + active
 
 **After**:
@@ -615,14 +615,14 @@ These files need updates **after** reorganization (separate task):
 - **Root-level markdown**: 8 files
 - **docs/**: 14 files (flat structure)
 - **agent_tasks/**: 76 files + 2 subdirs
-- **agent_progress_docs/**: 72 files (flat)
+- **agent_tasks/progress/**: 72 files (flat)
 - **Total documentation files**: ~170+
 
 ### After Reorganization
 - **Root-level markdown**: 4 files (README, PROGRESS, BACKLOG, CONTRIBUTING)
 - **docs/**: ~50 active files in 6 subdirectories
 - **agent_tasks/**: ~10 active files + templates + 66 archived
-- **agent_progress_docs/**: Current month + archived by month
+- **agent_tasks/progress/**: Current month + archived by month
 - **Total documentation files**: ~170+ (same, but organized)
 
 ### Navigation Improvement
@@ -637,7 +637,7 @@ These files need updates **after** reorganization (separate task):
 
 ## Open Questions
 
-1. **Architecture Plans**: Should `architecture_plans/` move to `docs/architecture/plans/`?
+1. **Architecture Plans**: Should `docs/architecture/` move to `docs/architecture/plans/`?
    - **Pro**: All architecture docs together
    - **Con**: Plans are large, might clutter `docs/architecture/`
    - **Recommendation**: Keep separate at root for now, monitor
@@ -687,7 +687,7 @@ These files need updates **after** reorganization (separate task):
 | `docs/mcp-tools.md` | `docs/ai-agents/mcp-tools-reference.md` | AI-specific |
 | `docs/future-ideas.md` | `docs/planning/future-ideas.md` | Planning |
 | `docs/USER_GUIDE.md` | `docs/reference/user-guide.md` | Reference |
-| `orchestrator_procedures/*` | `docs/ai-agents/procedures/*` | AI-specific |
+| `docs/ai-agents/procedures/*` | `docs/ai-agents/procedures/*` | AI-specific |
 
 ### Files Being Archived
 
@@ -698,7 +698,7 @@ These files need updates **after** reorganization (separate task):
 | `docs/foundation-evaluation-2026-01-03.md` | `docs/archive/foundation-evaluation-2026-01-03.md` | Historical |
 | `docs/e2e-testing-alpha-vantage-investigation.md` | `docs/archive/e2e-testing-alpha-vantage-investigation.md` | Historical |
 | `agent_tasks/001-067` | `agent_tasks/archive/phaseN/` | Completed |
-| `agent_progress_docs/2025-12/*` | `agent_progress_docs/archive/2025-12/*` | Historical |
+| `agent_tasks/progress/2025-12/*` | `agent_tasks/progress/archive/2025-12/*` | Historical |
 
 ### Files Being Deleted
 

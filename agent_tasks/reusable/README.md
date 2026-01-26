@@ -26,7 +26,7 @@ Execute all critical user workflows to validate application quality. Produces de
 - After major refactoring
 - Regression testing after critical fixes
 
-**See**: [orchestrator_procedures/run_qa_validation.md](../../orchestrator_procedures/run_qa_validation.md)
+**See**: [docs/testing/e2e-guide.md](../../docs/testing/e2e-guide.md)
 
 ### Reusable Guidance Chunks
 
@@ -90,7 +90,7 @@ gh agent-task create --custom-agent qa -F agent_tasks/reusable/e2e_qa_validation
 ```
 
 ### Option 2: Reference in Orchestrator Procedures
-Orchestrator procedures (in `orchestrator_procedures/`) can reference these templates as part of larger workflows.
+Orchestrator procedures (in `docs/ai-agents/procedures/`) can reference these templates as part of larger workflows.
 
 ## Adding New Reusable Tasks
 
@@ -163,5 +163,5 @@ Review reusable templates quarterly:
 ## References
 
 - [../README.md](../README.md) - Main agent tasks directory
-- [../../orchestrator_procedures/](../../orchestrator_procedures/) - Orchestrator workflows
+- [../../docs/ai-agents/procedures/](../../docs/ai-agents/procedures/) - Orchestrator workflows
 - [../../AGENT_ORCHESTRATION.md](../../AGENT_ORCHESTRATION.md) - Agent coordination guide

@@ -395,7 +395,7 @@ test:docker:prod:
 ## Related References
 
 - PR #47: Docker infrastructure implementation
-- Agent Progress Doc: `agent_progress_docs/2026-01-02_00-40-20_dockerize-backend-frontend.md`
+- Agent Progress Doc: `agent_tasks/progress/2026-01-02_00-40-20_dockerize-backend-frontend.md`
 - Docker Compose docs: https://docs.docker.com/compose/
 - Uvicorn auto-reload: https://www.uvicorn.org/deployment/#development
 - GitHub Copilot agent setup: https://docs.github.com/en/copilot/how-tos/use-copilot-agents/coding-agent/customize-the-agent-environment

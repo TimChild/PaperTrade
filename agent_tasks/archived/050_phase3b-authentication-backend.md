@@ -5,7 +5,7 @@
 **Created**: 2026-01-04
 **Effort**: 1.5-2 weeks
 **Dependencies**: None
-**Discovery Document**: [agent_progress_docs/2026-01-04_05-55-00_phase3b-auth-discovery.md](../agent_progress_docs/2026-01-04_05-55-00_phase3b-auth-discovery.md)
+**Discovery Document**: [agent_tasks/progress/2026-01-04_05-55-00_phase3b-auth-discovery.md](../agent_tasks/progress/2026-01-04_05-55-00_phase3b-auth-discovery.md)
 
 ## Objective
 
@@ -19,7 +19,7 @@ Implement complete authentication infrastructure for PaperTrade backend followin
 - Infrastructure: 11% prepared (user_id field exists, dependency injection ready)
 - Components Needed: 30 missing (78% of total architecture)
 
-**Architecture Reference**: `architecture_plans/phase3-refined/phase3b-authentication.md`
+**Architecture Reference**: `docs/architecture/phase3-refined/phase3b-authentication.md`
 
 ## Implementation Order (Bottom-Up Clean Architecture)
 
@@ -520,6 +520,6 @@ JWT_SECRET_KEY=your-secret-key-here  # Generate with: openssl rand -hex 32
 
 ## References
 
-- Architecture: `architecture_plans/phase3-refined/phase3b-authentication.md`
-- Discovery: `agent_progress_docs/2026-01-04_05-55-00_phase3b-auth-discovery.md`
+- Architecture: `docs/architecture/phase3-refined/phase3b-authentication.md`
+- Discovery: `agent_tasks/progress/2026-01-04_05-55-00_phase3b-auth-discovery.md`
 - Copilot Instructions: `.github/copilot-instructions.md`

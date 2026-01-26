@@ -203,7 +203,7 @@ task lint           # Run linters
 | `.github/agents/*.md` | Role-specific agent instructions |
 | `Taskfile.yml` | Commands (`task --list`) |
 | `docs/ai-agents/mcp-tools.md` | MCP tools reference |
-| `orchestrator_procedures/*.md` | Orchestrator testing and validation procedures |
+| `docs/ai-agents/procedures/*.md` | Orchestrator testing and validation procedures |
 
 ## Best Practices
 

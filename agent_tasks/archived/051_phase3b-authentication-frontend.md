@@ -5,7 +5,7 @@
 **Created**: 2026-01-04
 **Effort**: 1 week
 **Dependencies**: Task #050 (Backend auth must be complete)
-**Discovery Document**: [agent_progress_docs/2026-01-04_05-55-00_phase3b-auth-discovery.md](../agent_progress_docs/2026-01-04_05-55-00_phase3b-auth-discovery.md)
+**Discovery Document**: [agent_tasks/progress/2026-01-04_05-55-00_phase3b-auth-discovery.md](../agent_tasks/progress/2026-01-04_05-55-00_phase3b-auth-discovery.md)
 
 ## Objective
 
@@ -18,7 +18,7 @@ Implement authentication UI and state management for PaperTrade frontend. Enable
 - Missing: Auth pages, state management, protected routes, token refresh logic
 - Prepared Infrastructure: Zustand installed, interceptor pattern ready
 
-**Architecture Reference**: `architecture_plans/phase3-refined/phase3b-authentication.md`
+**Architecture Reference**: `docs/architecture/phase3-refined/phase3b-authentication.md`
 
 ## Prerequisites
 
@@ -608,6 +608,6 @@ test('complete authentication flow', async ({ page }) => {
 
 ## References
 
-- Architecture: `architecture_plans/phase3-refined/phase3b-authentication.md`
-- Discovery: `agent_progress_docs/2026-01-04_05-55-00_phase3b-auth-discovery.md`
+- Architecture: `docs/architecture/phase3-refined/phase3b-authentication.md`
+- Discovery: `agent_tasks/progress/2026-01-04_05-55-00_phase3b-auth-discovery.md`
 - Copilot Instructions: `.github/copilot-instructions.md`
