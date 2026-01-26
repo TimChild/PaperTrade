@@ -1,7 +1,7 @@
 # Zebu Product Roadmap
 
-**Last Updated**: January 4, 2026
-**Version**: Phase 2 Complete
+**Last Updated**: January 26, 2026
+**Version**: v1.2.0 - Production Deployed
 
 ## What is this document?
 
@@ -21,98 +21,71 @@ We're building a platform where:
 
 ---
 
-## ✅ What You Can Do Today (Phase 2 Complete)
+## ✅ What You Can Do Today (Production Live!)
+
+**Current Status**: Live at [zebutrader.com](https://zebutrader.com) with 796 automated tests
 
 ### Portfolio Management
 - ✅ Create unlimited portfolios with virtual cash
 - ✅ View all portfolios in centralized dashboard
-- ✅ Track portfolio value in real-time
+- ✅ Track portfolio value in real-time with charts
 - ✅ See complete transaction history
+- ✅ Performance metrics and analytics
 
 ### Stock Trading
 - ✅ **BUY stocks** with real market prices (US & international)
+- ✅ **SELL stocks** with cost basis tracking
 - ✅ Trade during market hours with live data
 - ✅ Automatic portfolio balance updates
 - ✅ Support for UK, Canada, Germany, China exchanges
+- ✅ Weekend/holiday-aware price handling
 
-### Market Data
+### Market Data & Charts
 - ✅ Real-time current prices (Alpha Vantage API)
-- ✅ Intelligent caching (respects 5 calls/min, 500/day limits)
+- ✅ Intelligent 3-tier caching (Redis → PostgreSQL → API)
 - ✅ Historical price data storage
 - ✅ Background price scheduler
+- ✅ TradingView Lightweight Charts integration
+- ✅ Candlestick and line charts with trade markers
+
+### Analytics & Insights
+- ✅ Portfolio performance charts (value over time)
+- ✅ Composition pie charts (asset allocation)
+- ✅ Performance metrics (daily change, total return)
+- ✅ Backtesting support (trade at historical dates)
+- ✅ Daily snapshot calculations
+
+### Authentication & Security
+- ✅ User authentication (Clerk integration)
+- ✅ Private portfolios (data privacy)
+- ✅ Protected API endpoints
+- ✅ HTTPS/SSL encryption
 
 ### User Experience
 - ✅ Clean, responsive React interface
+- ✅ Mobile-responsive design (320px-2560px)
 - ✅ Real-time updates without page refreshes
 - ✅ Form validation with helpful errors
 - ✅ Accessible design (ARIA labels)
+- ✅ Empty state messaging
+- ✅ Chart scaling and interaction
 
-**Current Status**: Production-ready infrastructure with 499 automated tests
-
----
-
-## 🚀 Coming Soon (Q1-Q2 2026)
-
-### Phase 3a: Complete Trading (Jan-Feb 2026)
-
-**What**: Enable SELL orders so you can exit positions
-
-**Why**: #1 user request - you need to sell stocks to realize gains and rebalance portfolios
-
-**Features**:
-- ✅ **SELL stocks** you own
-- ✅ Validate sufficient holdings (can't sell what you don't own)
-- ✅ Automatic portfolio rebalancing
-- ✅ Track cost basis and realized gains/losses
-
-**When**: 2-3 weeks (targeting late January)
-
-**Impact**: Complete basic trading loop - finally buy AND sell!
+### Infrastructure
+- ✅ Production deployment (Proxmox)
+- ✅ Grafana Cloud monitoring
+- ✅ Docker containerization
+- ✅ GitHub Actions CI/CD
+- ✅ E2E testing (Playwright)
 
 ---
 
-### Phase 3b: User Accounts (Late Jan 2026)
+## 🔮 What's Next (Q2-Q4 2026)
 
-**What**: User authentication and private portfolios
-
-**Why**: Currently all portfolios are public (development mode only). Authentication is **CRITICAL** for production deployment.
-
-**Features**:
-- ✅ Register with email/password
-- ✅ Login with Clerk (third-party auth - no custom UI needed)
-- ✅ Private portfolios (only you see your data)
-- ✅ Pre-built profile management
-
-**When**: 2-3 days (after Phase 3a)
-
-**Impact**: Ready for public deployment - data privacy guaranteed
-
-**Decision**: Using Clerk instead of custom JWT saves 3-4 weeks. Auth is commodity infrastructure - we focus on trading features.
+All Phase 3 features are complete and deployed. Focus is now on platform maturity and advanced features.
 
 ---
 
-### Phase 3c: Analytics & Backtesting (Mar-Apr 2026)
-
-**What**: See your performance and test strategies on historical data
-
-**Why**: You want to know "How am I doing?" and "What if I'd bought earlier?"
-
-**Features**:
-- ✅ Portfolio value charts (line charts over time)
-- ✅ Gain/loss calculations (dollars and percentages)
-- ✅ Holdings composition (pie charts)
-- ✅ Simple backtesting (select past date, execute trades)
-- ✅ Performance metrics (best day, worst day, peak value)
-
-**When**: 3-4 weeks (after Phase 3b)
-
-**Impact**: Make data-driven decisions - visualize your success!
-
----
-
-## 🔮 Future Plans (Q3-Q4 2026 & Beyond)
-
-### Phase 4: Professional Features (Q3-Q4 2026)
+### Phase 4: Professional Features (Q2-Q4 2026)
 
 **Advanced Order Types**:
 - Limit orders (buy at specific price or lower)
@@ -137,7 +110,7 @@ We're building a platform where:
 - Performance dashboards
 - Automated backups
 
-**Timeline**: 4-5 months after Phase 3 completes
+**Timeline**: Q2-Q4 2026 (in progress - monitoring and UX improvements already deployed)
 
 ---
 
@@ -187,6 +160,19 @@ Some features are commonly requested but out of scope:
 ---
 
 ## 📊 Release History
+
+### January 2026 - v1.2.0 Production Launch ✅
+- **Phase 3c Complete**: Analytics, performance charts, backtesting
+- **UX Polish Complete**: TradingView charts, mobile responsive, empty states
+- **Production Deployment**: Live at zebutrader.com
+- **Infrastructure**: Grafana Cloud monitoring, E2E testing
+- **Quality**: 796 tests, 0 ESLint suppressions
+
+### January 2026 - Phase 3a-3b Complete ✅
+- **SELL orders**: Complete trading loop with cost basis tracking
+- **Authentication**: Clerk integration with E2E tests
+- **Weekend handling**: Market calendar with intelligent caching
+- **Project rename**: PaperTrade → Zebu (268 files updated)
 
 ### January 2026 - Phase 2 Complete ✅
 - Real market data integration (Alpha Vantage)
@@ -240,15 +226,16 @@ How we decide what to build:
 
 ## 📅 Target Milestones
 
-| Milestone | Target Date | Confidence | Features |
-|-----------|-------------|------------|----------|
-| **Phase 3a** | Late Jan 2026 | High | SELL orders |
-| **Phase 3b** | Late Jan 2026 | High | User authentication (Clerk) |
-| **Phase 3c** | Late Feb 2026 | Medium | Analytics & backtesting |
-| **Phase 4a** | Q3 2026 | Medium | UX & real-time |
-| **Phase 4b** | Q4 2026 | Low-Medium | Advanced orders |
-| **Public Beta** | Early Feb 2026 | High | After Phase 3b (auth) |
-| **V1.0 Launch** | Q4 2026 | Low | After Phase 4 |
+| Milestone | Target Date | Status | Features |
+|-----------|-------------|--------|----------|
+| **Phase 3a** | Jan 2026 | ✅ Complete | SELL orders |
+| **Phase 3b** | Jan 2026 | ✅ Complete | User authentication (Clerk) |
+| **Phase 3c** | Jan 2026 | ✅ Complete | Analytics & backtesting |
+| **v1.0 Production** | Jan 2026 | ✅ Deployed | Live at zebutrader.com |
+| **Phase 4a** | Q2 2026 | 🚧 In Progress | UX & monitoring (partial) |
+| **Phase 4b** | Q3 2026 | 📋 Planned | Advanced orders |
+| **Phase 4c** | Q4 2026 | 📋 Planned | Multi-provider data |
+| **v2.0 Launch** | Q4 2026 | 📋 Planned | After Phase 4 |
 
 **Confidence Levels**:
 - **High**: Clear scope, no blockers, realistic estimate
@@ -257,46 +244,39 @@ How we decide what to build:
 
 ---
 
-## 🐛 Known Limitations (Being Addressed)
+## 🐛 Known Limitations
 
-Current limitations and when they'll be fixed:
+Current limitations and future plans:
 
-### Critical (Fixes in Phase 3)
-1. ❌ **No SELL orders** → Phase 3a (Jan 2026)
-2. ❌ **No user authentication** → Phase 3b (Late Jan 2026, 2-3 days with Clerk)
-3. ❌ **No portfolio analytics** → Phase 3c (Feb 2026)
+### Low Priority (Future Improvements)
+1. ⚠️ **No dark mode** → Future (user feedback will prioritize)
+2. ⚠️ **Whole shares only** → Future (fractional shares complex)
+3. ⚠️ **USD currency only** → Future (multi-currency)
+4. ⚠️ **API rate limits (5/min, 500/day)** → Future (consider paid tier or multi-provider)
+5. ⚠️ **No advanced order types** → Phase 4 (limit, stop orders)
 
-### Medium (Fixes in Phase 4)
-4. ⚠️ **Browser alert dialogs** → Phase 4a (toast notifications)
-5. ⚠️ **Limited mobile responsiveness** → Phase 4a (mobile redesign)
-6. ⚠️ **API rate limits (5/min, 500/day)** → Phase 4c (multi-provider)
-
-### Low (Future)
-7. ⚠️ **No dark mode** → Phase 4a
-8. ⚠️ **Whole shares only** → Future (fractional shares complex)
-9. ⚠️ **USD currency only** → Future (multi-currency)
-
-For complete details, see [TECHNICAL_BOUNDARIES.md](./TECHNICAL_BOUNDARIES.md)
+For complete details, see [feature-status.md](./feature-status.md)
 
 ---
 
 ## 🏗️ Development Velocity
 
-Based on Phase 1-2 performance:
+**Actual Performance (Dec 2025 - Jan 2026)**:
 
-- **Phase 1**: 6 days (with team ramp-up)
-- **Phase 2**: 8 days (real market data integration)
-- **Total**: 2 major phases in ~2 weeks
+- **Phase 1**: 6 days (with team ramp-up) - Dec 28, 2025
+- **Phase 2**: 8 days (real market data integration) - Jan 1, 2026
+- **Phase 3a**: 3 days (SELL orders) - Jan 4, 2026
+- **Phase 3b**: 2 days (Clerk authentication) - Jan 5, 2026
+- **Phase 3c**: 1 day (Analytics, 6 PRs) - Jan 6, 2026
+- **UX Polish**: 18 days (Charts, monitoring, mobile) - Jan 25, 2026
+- **Total**: Production deployment in ~30 days
 
-**Projected**:
-- Phase 3: 5-7 weeks (3 sub-phases, Clerk saves 3 weeks on auth)
-- Phase 4: 15-19 weeks (4 sub-phases)
-
-**Key Factors**:
+**Key Success Factors**:
 - Clean Architecture accelerates feature development
-- 85%+ test coverage catches bugs early
+- 81%+ test coverage catches bugs early
 - E2E tests validate complete workflows
-- Parallel development possible (auth + SELL can overlap)
+- Parallel development possible
+- Strategic use of third-party services (Clerk, Grafana, Alpha Vantage)
 
 ---
 
@@ -342,8 +322,8 @@ We're considering open-sourcing Zebu in 2027. Here's the plan:
 
 ## ❓ FAQ
 
-**Q: When will SELL orders be available?**
-A: Late January 2026 (Phase 3a). This is our highest priority.
+**Q: Can I trade both buy and sell?**
+A: Yes! Both BUY and SELL orders are fully functional with cost basis tracking.
 
 **Q: Can I use this for real trading?**
 A: No! Zebu is a **simulation** with virtual money. Use it to learn, then trade for real elsewhere.
@@ -355,13 +335,13 @@ A: Not in 2026. The web app works on mobile browsers. Phase 4a will improve mobi
 A: Not yet. Planned for future (CSV import). For now, manually re-create trades.
 
 **Q: Is my data safe?**
-A: After Phase 3b (Late Jan 2026), yes. Clerk authentication ensures data privacy with industry-standard security. Currently it's development mode (not production-safe).
+A: Yes! Clerk authentication ensures data privacy with industry-standard security. Your portfolios are private and protected.
 
 **Q: How accurate are the prices?**
 A: We use Alpha Vantage API (real market data). Free tier has 15-20 min delays. Paid tier is real-time.
 
 **Q: Can I test my strategy from 2020?**
-A: Yes! Phase 3c (Mar 2026) adds backtesting. You'll be able to create portfolios at past dates and execute historical trades.
+A: Yes! Backtesting is fully functional. You can create portfolios at past dates and execute historical trades using the `as_of` parameter.
 
 **Q: Will this always be free?**
 A: Core features will always be free. We may add premium features (real-time data, advanced analytics) for a small fee in 2027+.
@@ -376,7 +356,7 @@ We're building Zebu because we believe everyone should have access to investment
 
 ---
 
-**Questions? Suggestions?** Open an issue on GitHub or contact us at [feedback@zebu.com](mailto:feedback@zebu.com)
+**Questions? Suggestions?** Open an issue on GitHub or visit [zebutrader.com](https://zebutrader.com)
 
-**Last Updated**: January 4, 2026
-**Next Update**: April 2026 (post-Phase 3)
+**Last Updated**: January 26, 2026
+**Next Update**: April 2026 (post-Phase 4a)
