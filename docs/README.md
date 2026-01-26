@@ -50,11 +50,11 @@ Technical guides and conventions:
 
 | Document | Purpose |
 |----------|---------|
+| [deployment/README.md](deployment/README.md) | **Start here** - Deployment index and overview |
 | [deployment/proxmox-vm-deployment.md](deployment/proxmox-vm-deployment.md) | Complete Proxmox VM deployment guide |
-| [deployment/domain-and-ssl-setup.md](deployment/domain-and-ssl-setup.md) | Domain setup with NPMplus and SSL/HTTPS |
+| [deployment/domain-setup.md](deployment/domain-setup.md) | Domain setup with NPMplus and SSL/HTTPS |
 | [deployment/production-checklist.md](deployment/production-checklist.md) | Production readiness verification |
-| [deployment/proxmox-vm-approach-comparison.md](deployment/proxmox-vm-approach-comparison.md) | VM vs LXC comparison |
-| [deployment/proxmox-learnings.md](deployment/proxmox-learnings.md) | Lessons learned from deployment |
+| [deployment/archive/](deployment/archive/) | Historical deployment docs (archived)
 
 ## AI Agent Documentation
 
