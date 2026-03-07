@@ -2,32 +2,44 @@
 
 Minor improvements, tech debt, and enhancements that don't block main development.
 
-**Last Updated**: January 24, 2026
+**Last Updated**: March 7, 2026
 
 ## Active Backlog
 
-### 🔄 High Priority
+### 🔄 In Progress (Agent Tasks)
 
-1. **Fix Weekend Cache Validation Tests** - NEW
-   - **Problem**: 2 failing tests in `test_alpha_vantage_weekend_cache.py`
-     - `test_historical_request_ending_saturday`
-     - `test_historical_request_ending_sunday`
-   - **Root Cause**: Tests expect Friday data to be complete for Saturday/Sunday requests, but `_is_cache_complete()` returns False (looking for data beyond Friday)
-   - **Impact**: Non-blocking (tests only, production works correctly)
-   - **Solution**: Either fix test expectations or adjust cache validation logic to recognize weekends
-   - **Effort**: ~30 minutes
-   - **Found**: 2026-01-19 during quality check
-   - **Status**: Not started
+1. **Backend Quality Fixes** — Task 192, PR #192 (backend-swe agent)
+   - Fix 2 weekend cache validation tests
+   - Investigate and fix 50-portfolio performance issue
+   - **Status**: Agent running
 
-2. **Investigate Slow App Performance with ~50 Portfolios** - NEW
-   - **Problem**: The app becomes very slow when a user has ~50 portfolios
-   - **Root Cause**: Unknown - needs investigation (likely N+1 queries or missing pagination)
-   - **Impact**: Poor user experience, E2E tests timeout with accumulated test portfolios
-   - **Solution**: Profile the portfolio listing endpoints and frontend rendering
-   - **Investigation Areas**:
-     - Check for N+1 queries when fetching portfolios
-     - Check if all portfolio data is loaded eagerly
-     - Consider pagination for portfolio list
+2. **Frontend UX Improvements** — Task 193, PR #193 (frontend-swe agent)
+   - Verify & polish real-time holdings prices
+   - Interactive click-to-trade from charts
+   - **Status**: Agent running
+
+### 🔄 Medium Priority
+
+1. **Documentation Reorganization** — Task 194 (DRAFT)
+   - Separate human-facing docs (`docs/`) from agent-facing docs (`agent_docs/`)
+   - Add MkDocs configuration and deploy docs site on Proxmox
+   - Establish clear conventions that all agents follow
+   - **Status**: Draft task written, not started
+
+2. **Phase 4: Automated Trading Strategies** — Planning needed
+   - Architecture design for strategy definition and execution
+   - Backtesting integration (partially exists with `as_of` trades)
+   - Scheduling/execution engine
+   - Risk management / position limits
+   - **Status**: Needs architect design doc before implementation
+
+### 🔄 High Priority (Previously)
+
+1. **Fix Weekend Cache Validation Tests** — ⬆️ Moved to Task 192
+   - **Status**: In progress (backend-swe agent)
+
+2. **Investigate Slow App Performance with ~50 Portfolios** — ⬆️ Moved to Task 192
+   - **Status**: In progress (backend-swe agent)
      - Review frontend rendering performance with large lists
    - **Effort**: ~2-4 hours for investigation
    - **Found**: 2026-01-25 during E2E test debugging
