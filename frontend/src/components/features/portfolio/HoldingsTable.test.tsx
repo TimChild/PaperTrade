@@ -286,7 +286,9 @@ describe('HoldingsTable', () => {
       })
 
       expect(screen.getByText(/-\$5,000\.00/)).toBeInTheDocument()
-      expect(screen.getAllByText(/25\.00%/).length).toBeGreaterThan(0)
+      // -25.00% appears in both the desktop gain/loss column and the mobile P&L indicator
+      const percentages = screen.getAllByText(/-25\.00%/)
+      expect(percentages).toHaveLength(2)
     })
 
     it('should format gain/loss percentage correctly', () => {

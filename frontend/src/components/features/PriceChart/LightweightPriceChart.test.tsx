@@ -7,13 +7,16 @@ import * as pricesApi from '@/services/api/prices'
 
 // Capture click handler registered via subscribeClick so tests can invoke it
 let capturedClickHandler: ((param: unknown) => void) | undefined
+// Capture the mock series so tests can populate seriesData with a matching key
+let capturedSeries: { setData: ReturnType<typeof vi.fn> } | undefined
 
 // Mock lightweight-charts to avoid JSDOM issues
 vi.mock('lightweight-charts', () => ({
   createChart: vi.fn(() => ({
-    addSeries: vi.fn(() => ({
-      setData: vi.fn(),
-    })),
+    addSeries: vi.fn(() => {
+      capturedSeries = { setData: vi.fn() }
+      return capturedSeries
+    }),
     applyOptions: vi.fn(),
     remove: vi.fn(),
     timeScale: vi.fn(() => ({
@@ -52,6 +55,7 @@ describe('LightweightPriceChart', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     capturedClickHandler = undefined
+    capturedSeries = undefined
   })
 
   it('renders loading state initially', () => {
@@ -228,6 +232,34 @@ describe('LightweightPriceChart', () => {
       source: 'mock',
       cached: false,
     }
+
+    it('extracts price from seriesData when the series has data at the click point', async () => {
+      vi.spyOn(pricesApi, 'getPriceHistory').mockResolvedValue(mockHistory)
+
+      const onChartClick = vi.fn()
+      const Wrapper = createWrapper()
+      render(
+        <LightweightPriceChart ticker="AAPL" onChartClick={onChartClick} />,
+        { wrapper: Wrapper }
+      )
+
+      await waitFor(() => {
+        expect(capturedClickHandler).toBeDefined()
+        expect(capturedSeries).toBeDefined()
+      })
+
+      // Populate seriesData with the captured series reference to simulate a data-point click
+      const seriesData = new Map()
+      seriesData.set(capturedSeries, { time: '2024-01-02', value: 155 })
+
+      capturedClickHandler!({ time: '2024-01-02', seriesData })
+
+      expect(onChartClick).toHaveBeenCalledWith({
+        ticker: 'AAPL',
+        date: '2024-01-02',
+        price: 155,
+      })
+    })
 
     it('calls onChartClick with ticker, date and price when chart is clicked', async () => {
       vi.spyOn(pricesApi, 'getPriceHistory').mockResolvedValue(mockHistory)
