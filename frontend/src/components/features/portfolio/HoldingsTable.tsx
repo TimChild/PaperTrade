@@ -62,7 +62,7 @@ export function HoldingsTable({
     })
   }, [holdings, priceMap])
 
-  if (isLoading || pricesLoading) {
+  if (isLoading) {
     return (
       <Card>
         <CardContent className="space-y-3 pt-6">
@@ -176,23 +176,39 @@ export function HoldingsTable({
                         {formatCurrency(holding.averageCost)}
                       </td>
                       <td className="whitespace-nowrap px-3 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm text-foreground-secondary">
-                        <span className="inline-flex items-center gap-1">
-                          {formatCurrency(holding.currentPrice)}
-                          {usingFallback && (
-                            <span
-                              className="text-foreground-tertiary"
-                              title="Using average cost (current price unavailable)"
-                            >
-                              *
-                            </span>
-                          )}
-                        </span>
+                        {pricesLoading ? (
+                          <Skeleton
+                            className="h-4 w-16 ml-auto"
+                            data-testid={`holding-price-loading-${holding.ticker}`}
+                          />
+                        ) : (
+                          <span className="inline-flex items-center gap-1">
+                            {formatCurrency(holding.currentPrice)}
+                            {usingFallback && (
+                              <span
+                                className="text-foreground-tertiary"
+                                title="Price unavailable — using average cost"
+                                data-testid={`holding-price-unavailable-${holding.ticker}`}
+                              >
+                                *
+                              </span>
+                            )}
+                          </span>
+                        )}
                       </td>
                       <td
                         className="whitespace-nowrap px-3 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-medium text-foreground-primary"
                         data-testid={`holding-value-${holding.ticker}`}
                       >
-                        {formatCurrency(holding.marketValue)}
+                        <div>{formatCurrency(holding.marketValue)}</div>
+                        {/* Compact P&L indicator visible on mobile (full column is hidden on mobile) */}
+                        <div
+                          className={`md:hidden text-xs ${gainLossColorClass}`}
+                          data-testid={`holding-pnl-mobile-${holding.ticker}`}
+                        >
+                          {isPositive ? '▲' : '▼'}{' '}
+                          {formatPercent(holding.gainLossPercent / 100)}
+                        </div>
                       </td>
                       <td
                         className={`hidden md:table-cell whitespace-nowrap px-3 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-medium ${gainLossColorClass}`}

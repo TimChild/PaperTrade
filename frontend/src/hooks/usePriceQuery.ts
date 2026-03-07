@@ -44,7 +44,8 @@ export function useBatchPricesQuery(tickers: string[]) {
     queryFn: () => getBatchPrices(tickers),
     staleTime: 60 * 1000, // Consider data fresh for 1 minute
     gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-    refetchInterval: false, // Don't auto-refetch to avoid rate limiting
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes for live updates
+    refetchIntervalInBackground: false, // Only when window is focused
     enabled: tickers.length > 0, // Only run if we have tickers
     retry: (failureCount, error) => {
       const axiosError = error as AxiosError

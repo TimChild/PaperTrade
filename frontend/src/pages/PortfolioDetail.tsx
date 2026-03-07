@@ -31,7 +31,8 @@ export function PortfolioDetail(): React.JSX.Element {
     action: 'BUY' | 'SELL'
     ticker: string
     quantity: string
-  }>({ action: 'BUY', ticker: '', quantity: '' })
+    date: string
+  }>({ action: 'BUY', ticker: '', quantity: '', date: '' })
 
   const {
     data: portfolioDTO,
@@ -69,7 +70,7 @@ export function PortfolioDetail(): React.JSX.Element {
           toasts.tradeSell(trade.ticker, quantity)
         }
         // Reset quick sell state
-        setQuickSellState({ action: 'BUY', ticker: '', quantity: '' })
+        setQuickSellState({ action: 'BUY', ticker: '', quantity: '', date: '' })
       },
       onError: (error) => {
         console.error(`[TradeSubmit Error] Portfolio ID: ${portfolioId}`, error)
@@ -85,9 +86,35 @@ export function PortfolioDetail(): React.JSX.Element {
       action: 'SELL',
       ticker,
       quantity: quantity.toString(),
+      date: '',
     })
 
     // Scroll to trade form with smooth behavior
+    setTimeout(() => {
+      tradeFormRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      })
+    }, 100)
+  }
+
+  const handleChartClick = (data: {
+    ticker: string
+    date: string
+    price?: number
+  }) => {
+    const today = new Date().toISOString().split('T')[0]
+    // Only use backtest mode for historical dates, not today
+    const isHistorical = data.date !== today
+
+    setQuickSellState({
+      action: 'BUY',
+      ticker: data.ticker,
+      quantity: '',
+      date: isHistorical ? data.date : '',
+    })
+
+    // Scroll to trade form so user can enter quantity and submit
     setTimeout(() => {
       tradeFormRef.current?.scrollIntoView({
         behavior: 'smooth',
@@ -188,6 +215,7 @@ export function PortfolioDetail(): React.JSX.Element {
                       ticker={holding.ticker}
                       initialTimeRange="1M"
                       portfolioId={portfolioId}
+                      onChartClick={handleChartClick}
                     />
                   ))}
                 </div>
@@ -225,13 +253,14 @@ export function PortfolioDetail(): React.JSX.Element {
             {/* Trade Form */}
             <section ref={tradeFormRef}>
               <TradeForm
-                key={`${quickSellState.action}-${quickSellState.ticker}-${quickSellState.quantity}`}
+                key={`${quickSellState.action}-${quickSellState.ticker}-${quickSellState.quantity}-${quickSellState.date}`}
                 onSubmit={handleTradeSubmit}
                 isSubmitting={executeTrade.isPending}
                 holdings={holdings}
                 initialAction={quickSellState.action}
                 initialTicker={quickSellState.ticker}
                 initialQuantity={quickSellState.quantity}
+                initialDate={quickSellState.date}
               />
             </section>
           </div>

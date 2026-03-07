@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HoldingsTable } from './HoldingsTable'
 import type { Holding } from '@/types/portfolio'
 import type { HoldingDTO } from '@/services/api/types'
+import { useBatchPricesQuery } from '@/hooks/usePriceQuery'
 
 // Mock the price query hook
 vi.mock('@/hooks/usePriceQuery', () => ({
@@ -285,7 +286,9 @@ describe('HoldingsTable', () => {
       })
 
       expect(screen.getByText(/-\$5,000\.00/)).toBeInTheDocument()
-      expect(screen.getByText(/25\.00%/)).toBeInTheDocument()
+      // -25.00% appears in both the desktop gain/loss column and the mobile P&L indicator
+      const percentages = screen.getAllByText(/-25\.00%/)
+      expect(percentages).toHaveLength(2)
     })
 
     it('should format gain/loss percentage correctly', () => {
@@ -354,6 +357,93 @@ describe('HoldingsTable', () => {
 
       const aaplRow = screen.getByTestId('holding-row-AAPL')
       expect(aaplRow).toHaveClass('hover:bg-gray-50')
+    })
+  })
+
+  describe('Price loading state', () => {
+    it('should show price cell skeletons while prices are loading', () => {
+      vi.mocked(useBatchPricesQuery).mockReturnValueOnce({
+        data: undefined,
+        isLoading: true,
+      } as ReturnType<typeof useBatchPricesQuery>)
+
+      render(<HoldingsTable holdings={mockHoldings} />, {
+        wrapper: createWrapper(),
+      })
+
+      // Table should still render (not replaced with full skeleton)
+      expect(screen.getByTestId('holdings-table')).toBeInTheDocument()
+      // Price loading indicators should be visible
+      expect(
+        screen.getByTestId('holding-price-loading-AAPL')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByTestId('holding-price-loading-MSFT')
+      ).toBeInTheDocument()
+    })
+
+    it('should show unavailable indicator when price is not available', () => {
+      vi.mocked(useBatchPricesQuery).mockReturnValueOnce({
+        data: new Map(), // empty map — no prices
+        isLoading: false,
+      } as ReturnType<typeof useBatchPricesQuery>)
+
+      render(<HoldingsTable holdings={mockHoldings} />, {
+        wrapper: createWrapper(),
+      })
+
+      expect(
+        screen.getByTestId('holding-price-unavailable-AAPL')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByTestId('holding-price-unavailable-MSFT')
+      ).toBeInTheDocument()
+    })
+  })
+
+  describe('Mobile P&L indicator', () => {
+    it('should render mobile P&L indicator for each holding', () => {
+      render(<HoldingsTable holdings={mockHoldings} />, {
+        wrapper: createWrapper(),
+      })
+
+      expect(
+        screen.getByTestId('holding-pnl-mobile-AAPL')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByTestId('holding-pnl-mobile-MSFT')
+      ).toBeInTheDocument()
+    })
+
+    it('should show up arrow for positive P&L', () => {
+      render(<HoldingsTable holdings={mockHoldings} />, {
+        wrapper: createWrapper(),
+      })
+
+      // AAPL has positive gain (+16.67%)
+      const aaplMobilePnl = screen.getByTestId('holding-pnl-mobile-AAPL')
+      expect(aaplMobilePnl).toHaveTextContent('▲')
+    })
+
+    it('should show down arrow for negative P&L', () => {
+      const holdingsWithLoss: Holding[] = [
+        {
+          ticker: 'LOSS',
+          quantity: 100,
+          averageCost: 200.0,
+          currentPrice: 150.0,
+          marketValue: 15000.0,
+          gainLoss: -5000.0,
+          gainLossPercent: -25.0,
+        },
+      ]
+
+      render(<HoldingsTable holdings={holdingsWithLoss} />, {
+        wrapper: createWrapper(),
+      })
+
+      const lossMobilePnl = screen.getByTestId('holding-pnl-mobile-LOSS')
+      expect(lossMobilePnl).toHaveTextContent('▼')
     })
   })
 })

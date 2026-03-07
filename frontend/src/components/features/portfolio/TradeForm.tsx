@@ -17,6 +17,7 @@ interface TradeFormProps {
   initialAction?: 'BUY' | 'SELL'
   initialTicker?: string
   initialQuantity?: string
+  initialDate?: string // Pre-fill backtest date (enables backtest mode when provided)
 }
 
 export function TradeForm({
@@ -26,12 +27,14 @@ export function TradeForm({
   initialAction = 'BUY',
   initialTicker = '',
   initialQuantity = '',
+  initialDate = '',
 }: TradeFormProps): React.JSX.Element {
   const [action, setAction] = useState<'BUY' | 'SELL'>(initialAction)
   const [ticker, setTicker] = useState(initialTicker)
   const [quantity, setQuantity] = useState(initialQuantity)
-  const [backtestMode, setBacktestMode] = useState(false)
-  const [backtestDate, setBacktestDate] = useState('')
+  // Pre-enable backtest mode and pre-fill the date when initialDate is provided
+  const [backtestMode, setBacktestMode] = useState(Boolean(initialDate))
+  const [backtestDate, setBacktestDate] = useState(initialDate)
 
   // Debounce ticker input to avoid excessive API calls
   const debouncedTicker = useDebounce(ticker.trim().toUpperCase(), 500)

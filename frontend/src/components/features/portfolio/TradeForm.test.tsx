@@ -632,4 +632,64 @@ describe('TradeForm', () => {
       expect(results).toHaveNoViolations()
     })
   })
+
+  describe('initialDate prop (click-to-trade)', () => {
+    it('should enable backtest mode when initialDate is provided', () => {
+      renderWithProviders(
+        <TradeForm onSubmit={mockOnSubmit} initialDate="2024-01-15" />
+      )
+
+      const backtestToggle = screen.getByTestId(
+        'backtest-mode-toggle'
+      ) as HTMLInputElement
+      expect(backtestToggle.checked).toBe(true)
+    })
+
+    it('should pre-fill backtest date when initialDate is provided', () => {
+      renderWithProviders(
+        <TradeForm onSubmit={mockOnSubmit} initialDate="2024-01-15" />
+      )
+
+      const datePicker = screen.getByTestId(
+        'backtest-date-picker'
+      ) as HTMLInputElement
+      expect(datePicker.value).toBe('2024-01-15')
+    })
+
+    it('should not enable backtest mode when initialDate is empty', () => {
+      renderWithProviders(
+        <TradeForm onSubmit={mockOnSubmit} initialDate="" />
+      )
+
+      const backtestToggle = screen.getByTestId(
+        'backtest-mode-toggle'
+      ) as HTMLInputElement
+      expect(backtestToggle.checked).toBe(false)
+    })
+
+    it('should pre-fill ticker and date together from chart click', () => {
+      renderWithProviders(
+        <TradeForm
+          onSubmit={mockOnSubmit}
+          initialTicker="AAPL"
+          initialDate="2024-06-01"
+        />
+      )
+
+      const tickerInput = screen.getByTestId(
+        'trade-form-ticker-input'
+      ) as HTMLInputElement
+      expect(tickerInput.value).toBe('AAPL')
+
+      const datePicker = screen.getByTestId(
+        'backtest-date-picker'
+      ) as HTMLInputElement
+      expect(datePicker.value).toBe('2024-06-01')
+
+      const backtestToggle = screen.getByTestId(
+        'backtest-mode-toggle'
+      ) as HTMLInputElement
+      expect(backtestToggle.checked).toBe(true)
+    })
+  })
 })

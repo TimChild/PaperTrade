@@ -2,7 +2,7 @@
  * Price chart component using TradingView Lightweight Charts
  * Alternative implementation to Recharts-based PriceChart
  */
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useLayoutEffect, useRef } from 'react'
 import {
   createChart,
   createSeriesMarkers,
@@ -14,6 +14,7 @@ import {
   type SeriesMarker,
   type Time,
   type ISeriesMarkersPluginApi,
+  type MouseEventParams,
   LineSeries,
 } from 'lightweight-charts'
 import { usePriceHistory } from '@/hooks/usePriceHistory'
@@ -39,6 +40,11 @@ interface LightweightPriceChartProps {
   ticker: string
   initialTimeRange?: TimeRange
   portfolioId?: string
+  onChartClick?: (data: {
+    ticker: string
+    date: string
+    price?: number
+  }) => void
 }
 
 interface TradeMarker {
@@ -53,6 +59,7 @@ export function LightweightPriceChart({
   ticker,
   initialTimeRange = '1M',
   portfolioId,
+  onChartClick,
 }: LightweightPriceChartProps): React.JSX.Element {
   const [timeRange, setTimeRange] = useState<TimeRange>(initialTimeRange)
   const { data, isLoading, error, refetch } = usePriceHistory(ticker, timeRange)
@@ -69,6 +76,16 @@ export function LightweightPriceChart({
   const chartRef = useRef<IChartApi | null>(null)
   const seriesRef = useRef<ISeriesApi<'Line'> | null>(null)
   const markersRef = useRef<ISeriesMarkersPluginApi<Time> | null>(null)
+
+  // Stable refs for callback and ticker to avoid recreating chart on every prop change
+  const onChartClickRef = useRef(onChartClick)
+  const tickerRef = useRef(ticker)
+
+  // Keep refs in sync with latest prop values without triggering chart re-initialization
+  useLayoutEffect(() => {
+    onChartClickRef.current = onChartClick
+    tickerRef.current = ticker
+  })
 
   // Filter and map transactions to trade markers
   const tradeMarkers = useMemo(() => {
@@ -204,8 +221,21 @@ export function LightweightPriceChart({
     const seriesMarkers = createSeriesMarkers(lineSeries, [])
     markersRef.current = seriesMarkers
 
+    // Subscribe to chart click events for click-to-trade
+    const handleClick = (param: MouseEventParams<Time>) => {
+      if (!onChartClickRef.current || !param.time) return
+      const date = param.time as string
+      const seriesItem = seriesRef.current
+        ? (param.seriesData.get(seriesRef.current) as LineData | undefined)
+        : undefined
+      const price = seriesItem?.value
+      onChartClickRef.current({ ticker: tickerRef.current, date, price })
+    }
+    chart.subscribeClick(handleClick)
+
     // Cleanup
     return () => {
+      chart.unsubscribeClick(handleClick)
       chart.remove()
       chartRef.current = null
       seriesRef.current = null
