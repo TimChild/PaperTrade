@@ -98,18 +98,18 @@ async def test_get_performance_with_snapshots(
 
     # Verify data points
     assert data["data_points"][0]["date"] == str(today - timedelta(days=7))
-    assert data["data_points"][0]["total_value"] == "10000.00"
-    assert data["data_points"][2]["total_value"] == "11000.00"
+    assert data["data_points"][0]["total_value"] == 10000.0
+    assert data["data_points"][2]["total_value"] == 11000.0
 
     # Verify metrics
     metrics = data["metrics"]
     assert metrics is not None
-    assert metrics["starting_value"] == "10000.00"
-    assert metrics["ending_value"] == "11000.00"
-    assert metrics["absolute_gain"] == "1000.00"
-    assert metrics["percentage_gain"] == "10.00"
-    assert metrics["highest_value"] == "11000.00"
-    assert metrics["lowest_value"] == "10000.00"
+    assert metrics["starting_value"] == 10000.0
+    assert metrics["ending_value"] == 11000.0
+    assert metrics["absolute_gain"] == 1000.0
+    assert metrics["percentage_gain"] == 10.0
+    assert metrics["highest_value"] == 11000.0
+    assert metrics["lowest_value"] == 10000.0
 
 
 def test_get_performance_with_no_snapshots(
@@ -295,10 +295,10 @@ def test_get_composition_with_holdings(
     # Verify total value calculation
     # $50,000 initial - $15,000 (AAPL) - $7,600 (MSFT) = $27,400 cash
     # Total: $15,000 + $7,600 + $27,400 = $50,000
-    assert Decimal(data["total_value"]) == Decimal("50000.00")
+    assert data["total_value"] == 50000.0
 
     # Verify percentages sum to ~100%
-    total_percentage = sum(Decimal(item["percentage"]) for item in composition)
+    total_percentage = sum(item["percentage"] for item in composition)
     assert 99.0 <= total_percentage <= 101.0  # Allow rounding errors
 
     # Verify each item has required fields
@@ -345,12 +345,12 @@ def test_get_composition_cash_only_portfolio(
     assert len(data["composition"]) == 1
     cash_item = data["composition"][0]
     assert cash_item["ticker"] == "CASH"
-    assert cash_item["value"] == "10000.00"
-    assert cash_item["percentage"] == "100.0"
+    assert cash_item["value"] == 10000.0
+    assert cash_item["percentage"] == 100.0
     assert cash_item["quantity"] is None
 
     # Total value should equal cash
-    assert data["total_value"] == "10000.00"
+    assert data["total_value"] == 10000.0
 
 
 def test_get_composition_portfolio_not_found(

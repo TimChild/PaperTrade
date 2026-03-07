@@ -115,6 +115,7 @@ export function PerformanceChart({
               style={{ fontSize: '12px' }}
             />
             <YAxis
+              domain={['auto', 'auto']}
               tickFormatter={(value) => formatCurrency(value, 'USD', 'compact')}
               stroke="hsl(var(--foreground) / 0.5)"
               style={{ fontSize: '12px' }}

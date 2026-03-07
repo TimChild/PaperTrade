@@ -13,7 +13,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel
+from pydantic import BaseModel, PlainSerializer
 
 from zebu.adapters.inbound.api.dependencies import (
     CurrentUserDep,
@@ -47,25 +47,28 @@ SnapshotJobDep = Annotated[SnapshotJobService, Depends(get_snapshot_job)]
 
 # Response Models
 
+# Type alias: Decimal fields serialized as JSON floats (not strings)
+JsonFloat = Annotated[Decimal, PlainSerializer(float)]
+
 
 class DataPointSchema(BaseModel):
     """Snapshot data point for performance chart."""
 
     date: date
-    total_value: Decimal
-    cash_balance: Decimal
-    holdings_value: Decimal
+    total_value: JsonFloat
+    cash_balance: JsonFloat
+    holdings_value: JsonFloat
 
 
 class MetricsSchema(BaseModel):
     """Performance metrics for a time period."""
 
-    starting_value: Decimal
-    ending_value: Decimal
-    absolute_gain: Decimal
-    percentage_gain: Decimal
-    highest_value: Decimal
-    lowest_value: Decimal
+    starting_value: JsonFloat
+    ending_value: JsonFloat
+    absolute_gain: JsonFloat
+    percentage_gain: JsonFloat
+    highest_value: JsonFloat
+    lowest_value: JsonFloat
 
 
 class PerformanceResponse(BaseModel):
@@ -117,8 +120,8 @@ class CompositionItemSchema(BaseModel):
     """Portfolio composition item (holding or cash)."""
 
     ticker: str
-    value: Decimal
-    percentage: Decimal
+    value: JsonFloat
+    percentage: JsonFloat
     quantity: int | None
 
 
@@ -126,7 +129,7 @@ class CompositionResponse(BaseModel):
     """Portfolio composition response."""
 
     portfolio_id: UUID
-    total_value: Decimal
+    total_value: JsonFloat
     composition: list[CompositionItemSchema]
 
     @classmethod
