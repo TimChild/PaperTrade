@@ -18,7 +18,6 @@ High-level strategy, roadmaps, and feature tracking:
 | [planning/executive-summary.md](planning/executive-summary.md) | Quick overview of current capabilities |
 | [planning/roadmap.md](planning/roadmap.md) | Product vision and feature roadmap |
 | [planning/features.md](planning/features.md) | Complete feature implementation matrix |
-| [planning/project_plan.md](planning/project_plan.md) | Development phases and milestones |
 | [planning/project_strategy.md](planning/project_strategy.md) | Architecture and tech decisions |
 | [planning/future-ideas.md](planning/future-ideas.md) | Feature ideas for exploration |
 | [../PROGRESS.md](../PROGRESS.md) | Current status and recent work |
@@ -30,9 +29,9 @@ Technical design and boundaries:
 
 | Document | Purpose |
 |----------|---------|
+| [architecture/README.md](architecture/README.md) | System architecture overview |
 | [architecture/technical-boundaries.md](architecture/technical-boundaries.md) | Known limitations and edge cases |
-| [architecture/clerk-implementation-info.md](architecture/clerk-implementation-info.md) | Clerk authentication details |
-| [../docs/architecture/](../docs/architecture/) | Phase-specific designs |
+| [architecture/authentication.md](architecture/authentication.md) | Clerk authentication implementation details |
 
 ## Testing Documentation
 

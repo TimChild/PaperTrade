@@ -81,7 +81,7 @@ count_over_time({container="zebu-backend-prod"} | json | event =~ ".*rate limit.
 
 **Remediation**:
 1. **Immediate**: Verify stale cache is serving requests (degraded mode)
-2. **Check usage**: 
+2. **Check usage**:
    ```logql
    count_over_time({container="zebu-backend-prod"} | json | event="Alpha Vantage API called" [24h])
    ```
@@ -292,7 +292,7 @@ count_over_time({container="zebu-redis-prod"} [5m]) < 5
 **Remediation**:
 1. **Monitor usage trend**: Check if spike or steady increase
 2. **Review cache configuration**: Ensure proper TTLs
-3. **Identify heavy tickers**: 
+3. **Identify heavy tickers**:
    ```logql
    topk(10, count_over_time({container="zebu-backend-prod"} | json | event="Alpha Vantage API called" [24h]) by (ticker))
    ```
@@ -339,11 +339,11 @@ Add annotations to alerts for better context:
 summary: Backend error rate is above threshold
 description: |
   Current error rate: {{ $value }} errors/second
-  
+
   Threshold: 0.1 errors/second
-  
+
   Check logs: https://your-grafana-instance.grafana.net/explore?...
-  
+
   Runbook: https://github.com/TimChild/PaperTrade/blob/main/docs/monitoring/monitoring-runbook.md#investigating-high-error-rates
 ```
 
@@ -426,7 +426,7 @@ import logging
 logging.basicConfig()
 logger = logging.getLogger('test')
 logger.error('Test alert error')
-" 
+"
   sleep 1
 done
 ```

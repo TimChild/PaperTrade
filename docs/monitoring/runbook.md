@@ -123,14 +123,14 @@ sum(count_over_time({container="zebu-backend-prod"} | json | event =~ "Price fet
    ```logql
    {container="zebu-redis-prod"}
    ```
-   
+
    If no logs: Redis container may be down.
 
 2. **Check for cache evictions**:
    ```logql
    {container="zebu-redis-prod"} |~ "evict"
    ```
-   
+
    High evictions = Redis out of memory.
 
 3. **Review cache TTL settings**:

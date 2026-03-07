@@ -1,8 +1,8 @@
 # Task 167: Highlight New Transactions
 
-**Agent**: frontend-swe  
-**Date**: 2026-01-20  
-**Status**: ✅ COMPLETED  
+**Agent**: frontend-swe
+**Date**: 2026-01-20
+**Status**: ✅ COMPLETED
 **PR**: copilot/highlight-new-transactions
 
 ## Task Summary
@@ -102,8 +102,8 @@ Instead of component-level state management, we leverage TanStack Query's cache:
 
 ```typescript
 // After trade succeeds, invalidate queries
-queryClient.invalidateQueries({ 
-  queryKey: ['portfolio', portfolioId, 'transactions'] 
+queryClient.invalidateQueries({
+  queryKey: ['portfolio', portfolioId, 'transactions']
 })
 
 // After refetch, mark the new transaction
@@ -152,7 +152,7 @@ setTimeout(() => {
 
 ## User Impact
 
-**Before**: Users had to scan through transaction list to find their new trade  
+**Before**: Users had to scan through transaction list to find their new trade
 **After**: New transaction pulses for 3 seconds, immediately catching user's attention
 
 **User Value**: Immediate visual confirmation that "your trade executed and here it is!"
@@ -222,7 +222,7 @@ No new dependencies added. Used existing:
 
 Successfully implemented a polished UX enhancement that provides immediate visual feedback to users after trade execution. The solution is performant, accessible, and maintainable, following modern React patterns and best practices.
 
-**Total Development Time**: ~30 minutes (as estimated)  
-**Code Quality**: ✅ All checks pass  
-**Test Coverage**: ✅ Comprehensive  
+**Total Development Time**: ~30 minutes (as estimated)
+**Code Quality**: ✅ All checks pass
+**Test Coverage**: ✅ Comprehensive
 **Accessibility**: ✅ WCAG 2.1 compliant

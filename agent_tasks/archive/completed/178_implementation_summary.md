@@ -61,7 +61,7 @@ Comprehensive test suite with mocked lightweight-charts for JSDOM compatibility.
 ```typescript
 // Create chart
 const chart = createChart(container, {
-  layout: { 
+  layout: {
     attributionLogo: true,  // TradingView requirement
     background: { type: ColorType.Solid, color: 'transparent' },
   },
@@ -176,7 +176,7 @@ Users can switch between implementations at runtime via the toggle button.
 ## Known Issues & Limitations
 
 ### JSDOM Test Compatibility
-Lightweight-charts uses canvas rendering which doesn't work in JSDOM test environment. 
+Lightweight-charts uses canvas rendering which doesn't work in JSDOM test environment.
 
 **Solution:** Mock the library in tests. This is acceptable because:
 - We test the component logic, not the charting library
