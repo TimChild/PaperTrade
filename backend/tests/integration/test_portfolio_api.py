@@ -888,3 +888,111 @@ def test_total_value_includes_both_cash_and_holdings(
     assert balance["cash_balance"] != balance["holdings_value"]
     assert balance["cash_balance"] != balance["total_value"]
     assert balance["holdings_value"] != balance["total_value"]
+
+
+def test_get_all_balances_returns_empty_for_no_portfolios(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    """Test that /balances returns empty list when user has no portfolios."""
+    response = client.get(
+        "/api/v1/portfolios/balances",
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_get_all_balances_returns_balance_for_each_portfolio(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    """Test batch balance endpoint returns balance for each portfolio."""
+    # Create two portfolios
+    resp1 = client.post(
+        "/api/v1/portfolios",
+        headers=auth_headers,
+        json={"name": "Portfolio A", "initial_deposit": "10000.00", "currency": "USD"},
+    )
+    assert resp1.status_code == 201
+
+    resp2 = client.post(
+        "/api/v1/portfolios",
+        headers=auth_headers,
+        json={"name": "Portfolio B", "initial_deposit": "20000.00", "currency": "USD"},
+    )
+    assert resp2.status_code == 201
+
+    # Get all balances
+    response = client.get(
+        "/api/v1/portfolios/balances",
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    balances = response.json()
+    assert len(balances) == 2
+
+    # All fields present
+    for balance in balances:
+        assert "cash_balance" in balance
+        assert "holdings_value" in balance
+        assert "total_value" in balance
+        assert "currency" in balance
+        assert "as_of" in balance
+        assert "daily_change" in balance
+        assert "daily_change_percent" in balance
+
+    # Verify the cash amounts (order follows portfolio creation order)
+    cash_amounts = {b["cash_balance"] for b in balances}
+    assert "10000.00" in cash_amounts
+    assert "20000.00" in cash_amounts
+
+
+def test_list_portfolios_pagination(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    """Test that list_portfolios supports limit and offset pagination."""
+    # Create 3 portfolios
+    for i in range(3):
+        client.post(
+            "/api/v1/portfolios",
+            headers=auth_headers,
+            json={
+                "name": f"Portfolio {i}",
+                "initial_deposit": "1000.00",
+                "currency": "USD",
+            },
+        )
+
+    # Get first 2
+    response_p1 = client.get(
+        "/api/v1/portfolios?limit=2&offset=0",
+        headers=auth_headers,
+    )
+    assert response_p1.status_code == 200
+    page1 = response_p1.json()
+    assert len(page1) == 2
+
+    # Get next 1
+    response_p2 = client.get(
+        "/api/v1/portfolios?limit=2&offset=2",
+        headers=auth_headers,
+    )
+    assert response_p2.status_code == 200
+    page2 = response_p2.json()
+    assert len(page2) == 1
+
+    # No overlap
+    ids_p1 = {p["id"] for p in page1}
+    ids_p2 = {p["id"] for p in page2}
+    assert ids_p1.isdisjoint(ids_p2)
+
+    # Get all
+    response_all = client.get(
+        "/api/v1/portfolios?limit=10&offset=0",
+        headers=auth_headers,
+    )
+    assert response_all.status_code == 200
+    all_portfolios = response_all.json()
+    assert len(all_portfolios) == 3

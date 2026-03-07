@@ -21,7 +21,7 @@ from zebu.domain.value_objects.ticker import Ticker
 logger = logging.getLogger(__name__)
 
 
-def _get_previous_trading_day(reference_date: datetime | None = None) -> datetime:
+def get_previous_trading_day(reference_date: datetime | None = None) -> datetime:
     """Get previous trading day for daily change calculation (skip weekends).
 
     This function determines what "yesterday's close" means for daily change
@@ -213,7 +213,7 @@ class GetPortfolioBalanceHandler:
                 continue
 
         # Fetch previous close prices
-        previous_date = _get_previous_trading_day(current_time)
+        previous_date = get_previous_trading_day(current_time)
         previous_prices_dict: dict[Ticker, Money] = {}
         for ticker in tickers:
             try:

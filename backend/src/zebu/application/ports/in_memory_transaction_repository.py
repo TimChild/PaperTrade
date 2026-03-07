@@ -113,6 +113,25 @@ class InMemoryTransactionRepository:
                 del self._transactions[tid]
             return len(to_delete)
 
+    async def get_by_portfolios(
+        self, portfolio_ids: list[UUID]
+    ) -> dict[UUID, list[Transaction]]:
+        """Retrieve transactions for multiple portfolios in a single query."""
+        with self._lock:
+            result: dict[UUID, list[Transaction]] = {}
+            for portfolio_id in portfolio_ids:
+                portfolio_transactions = [
+                    t
+                    for t in self._transactions.values()
+                    if t.portfolio_id == portfolio_id
+                ]
+                sorted_transactions = sorted(
+                    portfolio_transactions, key=lambda t: t.timestamp
+                )
+                if sorted_transactions:
+                    result[portfolio_id] = sorted_transactions
+            return result
+
     def clear(self) -> None:
         """Clear all transactions (for testing)."""
         with self._lock:

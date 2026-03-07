@@ -13,7 +13,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator
 
 from zebu.adapters.inbound.api.dependencies import (
@@ -55,6 +55,10 @@ from zebu.application.queries.get_portfolio import (
 from zebu.application.queries.get_portfolio_balance import (
     GetPortfolioBalanceHandler,
     GetPortfolioBalanceQuery,
+)
+from zebu.application.queries.get_portfolio_balances import (
+    GetPortfolioBalancesHandler,
+    GetPortfolioBalancesQuery,
 )
 from zebu.application.queries.get_portfolio_holdings import (
     GetPortfolioHoldingsHandler,
@@ -220,9 +224,14 @@ async def create_portfolio(
 async def list_portfolios(
     current_user: CurrentUserDep,
     portfolio_repo: PortfolioRepositoryDep,
+    limit: int = Query(
+        default=20, ge=1, le=100, description="Max portfolios to return"
+    ),
+    offset: int = Query(default=0, ge=0, description="Number of portfolios to skip"),
 ) -> list[PortfolioResponse]:
     """Get all portfolios for the current user."""
     portfolios = await portfolio_repo.get_by_user(current_user)
+    paginated = portfolios[offset : offset + limit]
 
     return [
         PortfolioResponse(
@@ -231,7 +240,45 @@ async def list_portfolios(
             name=p.name,
             created_at=p.created_at.isoformat(),
         )
-        for p in portfolios
+        for p in paginated
+    ]
+
+
+@router.get("/balances", response_model=list[BalanceResponse])
+async def get_all_balances(
+    current_user: CurrentUserDep,
+    portfolio_repo: PortfolioRepositoryDep,
+    transaction_repo: TransactionRepositoryDep,
+    market_data: MarketDataDep,
+) -> list[BalanceResponse]:
+    """Get balances for all current user's portfolios in a single request.
+
+    Eliminates N+1 API calls when displaying portfolio dashboard.
+    Returns balances in the same order as list_portfolios().
+    """
+    portfolios = await portfolio_repo.get_by_user(current_user)
+    portfolio_ids = [p.id for p in portfolios]
+
+    if not portfolio_ids:
+        return []
+
+    query = GetPortfolioBalancesQuery(portfolio_ids=portfolio_ids)
+    handler = GetPortfolioBalancesHandler(
+        portfolio_repo, transaction_repo, market_data
+    )
+    result = await handler.execute(query)
+
+    return [
+        BalanceResponse(
+            cash_balance=f"{b.cash_balance.amount:.2f}",
+            holdings_value=f"{b.holdings_value.amount:.2f}",
+            total_value=f"{b.total_value.amount:.2f}",
+            currency=b.cash_balance.currency,
+            as_of=b.as_of.isoformat(),
+            daily_change=f"{b.daily_change.amount:.2f}",
+            daily_change_percent=f"{b.daily_change_percent:.2f}",
+        )
+        for b in result.balances
     ]
 
 

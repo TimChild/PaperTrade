@@ -333,3 +333,130 @@ class TestSQLModelTransactionRepository:
         assert result.quantity.shares == Decimal("1.0000")
         assert result.price_per_share is not None
         assert result.price_per_share.amount == Decimal("150.00")
+
+
+class TestGetByPortfolios:
+    """Tests for get_by_portfolios() batch query."""
+
+    @pytest.mark.asyncio
+    async def test_get_by_portfolios_returns_grouped_transactions(self, session):
+        """Test that transactions are grouped by portfolio_id."""
+        # Arrange
+        repo = SQLModelTransactionRepository(session)
+        portfolio_id_1 = uuid4()
+        portfolio_id_2 = uuid4()
+
+        t1 = Transaction(
+            id=uuid4(),
+            portfolio_id=portfolio_id_1,
+            transaction_type=TransactionType.DEPOSIT,
+            timestamp=datetime.now(),
+            cash_change=Money(Decimal("1000.00"), "USD"),
+            ticker=None,
+            quantity=None,
+            price_per_share=None,
+        )
+        t2 = Transaction(
+            id=uuid4(),
+            portfolio_id=portfolio_id_2,
+            transaction_type=TransactionType.DEPOSIT,
+            timestamp=datetime.now(),
+            cash_change=Money(Decimal("2000.00"), "USD"),
+            ticker=None,
+            quantity=None,
+            price_per_share=None,
+        )
+        t3 = Transaction(
+            id=uuid4(),
+            portfolio_id=portfolio_id_1,
+            transaction_type=TransactionType.BUY,
+            timestamp=datetime.now(),
+            cash_change=Money(Decimal("-150.00"), "USD"),
+            ticker=Ticker("AAPL"),
+            quantity=Quantity(Decimal("1.0000")),
+            price_per_share=Money(Decimal("150.00"), "USD"),
+        )
+
+        await repo.save(t1)
+        await repo.save(t2)
+        await repo.save(t3)
+        await session.commit()
+
+        # Act
+        result = await repo.get_by_portfolios([portfolio_id_1, portfolio_id_2])
+
+        # Assert
+        assert portfolio_id_1 in result
+        assert portfolio_id_2 in result
+        assert len(result[portfolio_id_1]) == 2
+        assert len(result[portfolio_id_2]) == 1
+        assert result[portfolio_id_2][0].cash_change.amount == Decimal("2000.00")
+
+    @pytest.mark.asyncio
+    async def test_get_by_portfolios_empty_list_returns_empty_dict(self, session):
+        """Test that empty input returns empty dict."""
+        repo = SQLModelTransactionRepository(session)
+        result = await repo.get_by_portfolios([])
+        assert result == {}
+
+    @pytest.mark.asyncio
+    async def test_get_by_portfolios_missing_portfolio_excluded(self, session):
+        """Test that portfolio IDs with no transactions are excluded from result."""
+        repo = SQLModelTransactionRepository(session)
+        portfolio_id = uuid4()
+        missing_id = uuid4()
+
+        t1 = Transaction(
+            id=uuid4(),
+            portfolio_id=portfolio_id,
+            transaction_type=TransactionType.DEPOSIT,
+            timestamp=datetime.now(),
+            cash_change=Money(Decimal("1000.00"), "USD"),
+            ticker=None,
+            quantity=None,
+            price_per_share=None,
+        )
+        await repo.save(t1)
+        await session.commit()
+
+        result = await repo.get_by_portfolios([portfolio_id, missing_id])
+
+        assert portfolio_id in result
+        assert missing_id not in result
+
+    @pytest.mark.asyncio
+    async def test_get_by_portfolios_returns_chronological_order(self, session):
+        """Test that transactions within each portfolio are sorted chronologically."""
+        repo = SQLModelTransactionRepository(session)
+        portfolio_id = uuid4()
+
+        t1 = Transaction(
+            id=uuid4(),
+            portfolio_id=portfolio_id,
+            transaction_type=TransactionType.DEPOSIT,
+            timestamp=datetime(2026, 1, 1, 10, 0, 0),
+            cash_change=Money(Decimal("1000.00"), "USD"),
+            ticker=None,
+            quantity=None,
+            price_per_share=None,
+        )
+        t2 = Transaction(
+            id=uuid4(),
+            portfolio_id=portfolio_id,
+            transaction_type=TransactionType.DEPOSIT,
+            timestamp=datetime(2026, 1, 2, 10, 0, 0),
+            cash_change=Money(Decimal("500.00"), "USD"),
+            ticker=None,
+            quantity=None,
+            price_per_share=None,
+        )
+
+        await repo.save(t1)
+        await repo.save(t2)
+        await session.commit()
+
+        result = await repo.get_by_portfolios([portfolio_id])
+
+        assert len(result[portfolio_id]) == 2
+        assert result[portfolio_id][0].id == t1.id
+        assert result[portfolio_id][1].id == t2.id

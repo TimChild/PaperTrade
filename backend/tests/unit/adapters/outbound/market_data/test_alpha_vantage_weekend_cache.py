@@ -393,7 +393,15 @@ class TestHistoricalRequestsWithWeekendEndDates:
         ]
 
         # Should be complete (Friday Jan 30 is last trading day before Saturday Jan 31)
-        result = alpha_vantage_adapter._is_cache_complete(cached_data, start, end)
+        mock_now = datetime(2026, 3, 7, 12, 0, 0, tzinfo=UTC)
+        with patch(
+            "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
+        ) as mock_datetime:
+            mock_datetime.now.return_value = mock_now
+            mock_datetime.side_effect = lambda *args, **kwargs: datetime(
+                *args, **kwargs
+            )
+            result = alpha_vantage_adapter._is_cache_complete(cached_data, start, end)
 
         assert result is True
 
@@ -436,7 +444,15 @@ class TestHistoricalRequestsWithWeekendEndDates:
         ]
 
         # Should be complete (Friday Jan 30 is last trading day before Sunday Feb 1)
-        result = alpha_vantage_adapter._is_cache_complete(cached_data, start, end)
+        mock_now = datetime(2026, 3, 7, 12, 0, 0, tzinfo=UTC)
+        with patch(
+            "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
+        ) as mock_datetime:
+            mock_datetime.now.return_value = mock_now
+            mock_datetime.side_effect = lambda *args, **kwargs: datetime(
+                *args, **kwargs
+            )
+            result = alpha_vantage_adapter._is_cache_complete(cached_data, start, end)
 
         assert result is True
 
