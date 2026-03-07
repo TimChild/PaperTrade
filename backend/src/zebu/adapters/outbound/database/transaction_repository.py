@@ -174,3 +174,38 @@ class SQLModelTransactionRepository:
         await self._session.exec(statement)
 
         return count
+
+    async def get_by_portfolios(
+        self, portfolio_ids: list[UUID]
+    ) -> dict[UUID, list[Transaction]]:
+        """Retrieve transactions for multiple portfolios in a single query.
+
+        Args:
+            portfolio_ids: List of portfolio IDs to retrieve transactions for
+
+        Returns:
+            Dict mapping each portfolio_id to its list of transactions,
+            sorted by timestamp ascending. Missing portfolio_ids are excluded.
+        """
+        if not portfolio_ids:
+            return {}
+
+        statement = (
+            select(TransactionModel)
+            .where(TransactionModel.portfolio_id.in_(portfolio_ids))  # type: ignore[attr-defined]
+            .order_by(TransactionModel.timestamp.asc())  # type: ignore[attr-defined]
+        )
+
+        result = await self._session.exec(statement)
+        models = result.all()
+
+        # Group by portfolio_id
+        grouped: dict[UUID, list[Transaction]] = {}
+        for model in models:
+            transaction = model.to_domain()
+            pid = transaction.portfolio_id
+            if pid not in grouped:
+                grouped[pid] = []
+            grouped[pid].append(transaction)
+
+        return grouped

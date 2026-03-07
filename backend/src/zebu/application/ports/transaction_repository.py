@@ -108,3 +108,20 @@ class TransactionRepository(Protocol):
             RepositoryError: If database connection or delete fails
         """
         ...
+
+    async def get_by_portfolios(
+        self, portfolio_ids: list[UUID]
+    ) -> dict[UUID, list[Transaction]]:
+        """Retrieve transactions for multiple portfolios in a single query.
+
+        Args:
+            portfolio_ids: List of portfolio IDs to retrieve transactions for
+
+        Returns:
+            Dict mapping each portfolio_id to its list of transactions,
+            sorted by timestamp ascending. Missing portfolio_ids are excluded.
+
+        Raises:
+            RepositoryError: If database connection or query fails
+        """
+        ...
