@@ -47,7 +47,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'  # Match README requirements (3.12+)
+          python-version: '3.13'  # Match pyproject.toml requirements (3.13+)
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
@@ -152,7 +152,7 @@ jobs:
       - name: Verify backend imports
         working-directory: backend
         run: |
-          if uv run python -c "import papertrade" 2>/dev/null; then
+          if uv run python -c "import zebu" 2>/dev/null; then
             echo "✅ Backend imports work"
           else
             echo "⚠️  Backend imports failed"
