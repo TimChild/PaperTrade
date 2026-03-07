@@ -5,6 +5,9 @@ import { LightweightPriceChart } from './LightweightPriceChart'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import * as pricesApi from '@/services/api/prices'
 
+// Capture click handler registered via subscribeClick so tests can invoke it
+let capturedClickHandler: ((param: unknown) => void) | undefined
+
 // Mock lightweight-charts to avoid JSDOM issues
 vi.mock('lightweight-charts', () => ({
   createChart: vi.fn(() => ({
@@ -16,6 +19,10 @@ vi.mock('lightweight-charts', () => ({
     timeScale: vi.fn(() => ({
       fitContent: vi.fn(),
     })),
+    subscribeClick: vi.fn((handler: (param: unknown) => void) => {
+      capturedClickHandler = handler
+    }),
+    unsubscribeClick: vi.fn(),
   })),
   createSeriesMarkers: vi.fn(() => ({
     setMarkers: vi.fn(),
@@ -44,6 +51,7 @@ function createWrapper() {
 describe('LightweightPriceChart', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    capturedClickHandler = undefined
   })
 
   it('renders loading state initially', () => {
@@ -196,5 +204,93 @@ describe('LightweightPriceChart', () => {
 
     // Restore env
     import.meta.env.DEV = originalEnv
+  })
+
+  describe('onChartClick callback', () => {
+    const mockHistory = {
+      ticker: 'AAPL',
+      prices: [
+        {
+          ticker: { symbol: 'AAPL' },
+          price: { amount: 150, currency: 'USD' },
+          timestamp: '2024-01-01T00:00:00Z',
+          source: 'cache' as const,
+          interval: '1day' as const,
+        },
+        {
+          ticker: { symbol: 'AAPL' },
+          price: { amount: 155, currency: 'USD' },
+          timestamp: '2024-01-02T00:00:00Z',
+          source: 'cache' as const,
+          interval: '1day' as const,
+        },
+      ],
+      source: 'mock',
+      cached: false,
+    }
+
+    it('calls onChartClick with ticker, date and price when chart is clicked', async () => {
+      vi.spyOn(pricesApi, 'getPriceHistory').mockResolvedValue(mockHistory)
+
+      const onChartClick = vi.fn()
+      const Wrapper = createWrapper()
+      render(
+        <LightweightPriceChart ticker="AAPL" onChartClick={onChartClick} />,
+        { wrapper: Wrapper }
+      )
+
+      // Wait for chart to render with data (subscribeClick is called after init)
+      await waitFor(() => {
+        expect(capturedClickHandler).toBeDefined()
+      })
+
+      // Simulate a click on a data point
+      capturedClickHandler!({
+        time: '2024-01-02',
+        seriesData: new Map(),
+      })
+
+      expect(onChartClick).toHaveBeenCalledWith({
+        ticker: 'AAPL',
+        date: '2024-01-02',
+        price: undefined,
+      })
+    })
+
+    it('does not call onChartClick when clicked outside data range (no time)', async () => {
+      vi.spyOn(pricesApi, 'getPriceHistory').mockResolvedValue(mockHistory)
+
+      const onChartClick = vi.fn()
+      const Wrapper = createWrapper()
+      render(
+        <LightweightPriceChart ticker="AAPL" onChartClick={onChartClick} />,
+        { wrapper: Wrapper }
+      )
+
+      await waitFor(() => {
+        expect(capturedClickHandler).toBeDefined()
+      })
+
+      // Simulate a click with no time (outside data range)
+      capturedClickHandler!({ time: undefined, seriesData: new Map() })
+
+      expect(onChartClick).not.toHaveBeenCalled()
+    })
+
+    it('does not throw when onChartClick is not provided', async () => {
+      vi.spyOn(pricesApi, 'getPriceHistory').mockResolvedValue(mockHistory)
+
+      const Wrapper = createWrapper()
+      render(<LightweightPriceChart ticker="AAPL" />, { wrapper: Wrapper })
+
+      await waitFor(() => {
+        expect(capturedClickHandler).toBeDefined()
+      })
+
+      // Should not throw when callback is absent
+      expect(() => {
+        capturedClickHandler!({ time: '2024-01-02', seriesData: new Map() })
+      }).not.toThrow()
+    })
   })
 })
