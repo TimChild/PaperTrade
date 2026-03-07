@@ -196,6 +196,7 @@ class SnapshotJobService:
 
         # Get current prices for all holdings
         holdings_data: list[tuple[str, int, Decimal]] = []
+        failed_tickers: list[str] = []
         for holding in holdings:
             if holding.quantity.shares > 0:
                 try:
@@ -212,12 +213,19 @@ class SnapshotJobService:
                         )
                     )
                 except (TickerNotFoundError, MarketDataUnavailableError) as e:
-                    # Log warning but continue - use zero value for unavailable prices
                     logger.warning(
                         f"Price unavailable for {holding.ticker.symbol}: {e}"
                     )
-                    # Skip this holding (don't include in snapshot)
-                    continue
+                    failed_tickers.append(holding.ticker.symbol)
+
+        # If any holdings had price lookup failures, skip this snapshot entirely.
+        # Saving a snapshot with missing holdings would record an artificially low
+        # total_value (just cash), causing erratic chart oscillation.
+        if failed_tickers:
+            raise MarketDataUnavailableError(
+                f"Cannot calculate accurate snapshot: "
+                f"price unavailable for {', '.join(failed_tickers)}"
+            )
 
         # Calculate snapshot using domain service
         return self._calculator.calculate_snapshot(

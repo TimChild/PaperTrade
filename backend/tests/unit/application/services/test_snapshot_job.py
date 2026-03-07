@@ -451,3 +451,124 @@ class TestCalculateSnapshotForPortfolio:
         assert snapshot.holdings_value == Decimal("1500.00")
         assert snapshot.total_value == Decimal("10000.00")
         assert snapshot.holdings_count == 1
+
+    @pytest.mark.asyncio
+    async def test_calculate_snapshot_fails_when_price_unavailable(self) -> None:
+        """Test that snapshot calculation fails when any holding price is unavailable.
+
+        This prevents saving a snapshot with artificially low total_value
+        (just cash) when price lookups fail due to rate limiting or API errors.
+        """
+        # Arrange
+        portfolio_repo = InMemoryPortfolioRepository()
+        transaction_repo = InMemoryTransactionRepository()
+        snapshot_repo = InMemorySnapshotRepository()
+        market_data = InMemoryMarketDataAdapter()
+
+        user_id = uuid4()
+        portfolio = Portfolio(
+            id=uuid4(),
+            user_id=user_id,
+            name="Test Portfolio",
+            created_at=datetime.now(UTC),
+        )
+        await portfolio_repo.save(portfolio)
+
+        # Add deposit
+        deposit = Transaction(
+            id=uuid4(),
+            portfolio_id=portfolio.id,
+            transaction_type=TransactionType.DEPOSIT,
+            timestamp=datetime.now(UTC),
+            cash_change=Money(Decimal("10000.00"), "USD"),
+        )
+        await transaction_repo.save(deposit)
+
+        # Add buy transaction for AAPL (but do NOT seed price in market_data)
+        ticker = Ticker("AAPL")
+        buy = Transaction(
+            id=uuid4(),
+            portfolio_id=portfolio.id,
+            transaction_type=TransactionType.BUY,
+            timestamp=datetime.now(UTC),
+            cash_change=Money(Decimal("-1500.00"), "USD"),
+            ticker=ticker,
+            quantity=Quantity(Decimal("10")),
+            price_per_share=Money(Decimal("150.00"), "USD"),
+        )
+        await transaction_repo.save(buy)
+
+        service = SnapshotJobService(
+            portfolio_repo=portfolio_repo,
+            transaction_repo=transaction_repo,
+            snapshot_repo=snapshot_repo,
+            market_data=market_data,
+        )
+
+        # Act & Assert - should raise because AAPL price is not available
+        from zebu.application.exceptions import MarketDataUnavailableError
+
+        with pytest.raises(MarketDataUnavailableError, match="AAPL"):
+            await service._calculate_snapshot_for_portfolio(
+                portfolio_id=portfolio.id,
+                snapshot_date=date.today(),
+            )
+
+    @pytest.mark.asyncio
+    async def test_daily_snapshot_skips_portfolio_when_price_unavailable(self) -> None:
+        """Test daily snapshot skips portfolio when prices unavailable.
+
+        The snapshot should NOT be saved with missing holdings data.
+        """
+        # Arrange
+        portfolio_repo = InMemoryPortfolioRepository()
+        transaction_repo = InMemoryTransactionRepository()
+        snapshot_repo = InMemorySnapshotRepository()
+        market_data = InMemoryMarketDataAdapter()
+
+        user_id = uuid4()
+        portfolio = Portfolio(
+            id=uuid4(),
+            user_id=user_id,
+            name="Test Portfolio",
+            created_at=datetime.now(UTC),
+        )
+        await portfolio_repo.save(portfolio)
+
+        # Add deposit + buy without seeding price
+        deposit = Transaction(
+            id=uuid4(),
+            portfolio_id=portfolio.id,
+            transaction_type=TransactionType.DEPOSIT,
+            timestamp=datetime.now(UTC),
+            cash_change=Money(Decimal("10000.00"), "USD"),
+        )
+        await transaction_repo.save(deposit)
+
+        buy = Transaction(
+            id=uuid4(),
+            portfolio_id=portfolio.id,
+            transaction_type=TransactionType.BUY,
+            timestamp=datetime.now(UTC),
+            cash_change=Money(Decimal("-1500.00"), "USD"),
+            ticker=Ticker("AAPL"),
+            quantity=Quantity(Decimal("10")),
+            price_per_share=Money(Decimal("150.00"), "USD"),
+        )
+        await transaction_repo.save(buy)
+
+        service = SnapshotJobService(
+            portfolio_repo=portfolio_repo,
+            transaction_repo=transaction_repo,
+            snapshot_repo=snapshot_repo,
+            market_data=market_data,
+        )
+
+        # Act
+        results = await service.run_daily_snapshot()
+
+        # Assert - should fail, NOT save a snapshot with missing data
+        assert results["processed"] == 1
+        assert results["succeeded"] == 0
+        assert results["failed"] == 1
+        assert len(snapshot_repo._snapshots) == 0
