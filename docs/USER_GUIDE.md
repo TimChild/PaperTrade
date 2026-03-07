@@ -1,553 +1,180 @@
 # Zebu User Guide
 
-**Version**: 2.0 (Phase 2 Complete)
-**Last Updated**: January 4, 2026
-
-## Table of Contents
-
-1. [What is Zebu?](#what-is-zebu)
-2. [Getting Started](#getting-started)
-3. [Creating Your First Portfolio](#creating-your-first-portfolio)
-4. [Making Your First Trade](#making-your-first-trade)
-5. [Portfolio Management](#portfolio-management)
-6. [Trading Stocks](#trading-stocks)
-7. [Understanding Market Data](#understanding-market-data)
-8. [Tips & Best Practices](#tips--best-practices)
-9. [Troubleshooting](#troubleshooting)
-10. [Known Limitations](#known-limitations)
-
----
+**Last Updated**: March 7, 2026
 
 ## What is Zebu?
 
-Zebu is a stock market simulator that lets you practice investing with virtual money. You can:
+Zebu is a stock market simulator where you can practice trading with virtual money and real market prices. Create portfolios, buy and sell stocks, and track your performance — all without financial risk.
 
-- Create multiple portfolios with different strategies
-- Buy stocks using real market prices
-- Track your performance over time
-- Learn investing without financial risk
-
-Think of it as a **sandbox for investors** – all the market experience, none of the real-world consequences.
-
-### Current Status
-
-✅ **Phase 1 Complete**: Portfolio management and transaction ledger
-✅ **Phase 2 Complete**: Real market data integration (Alpha Vantage)
-🚧 **Phase 3 In Planning**: SELL orders, analytics, backtesting
+**Live at**: [zebutrader.com](https://zebutrader.com)
 
 ---
 
 ## Getting Started
 
-### Accessing the Application
+### 1. Sign In
 
-**Local Development**:
-```
-http://localhost:5173
-```
+Zebu uses [Clerk](https://clerk.com) for authentication. When you visit the app, you'll see a sign-in form. You can create an account or sign in with an existing one. All your portfolios are private to your account.
 
-**Production** (if deployed):
-```
-https://your-domain.com
-```
+### 2. Dashboard
 
-### System Requirements
+After signing in, you land on the **Dashboard** (`/dashboard`). This shows all your portfolios as cards. Each card displays the portfolio name, total value, and quick actions.
 
-- Modern web browser (Chrome, Firefox, Safari, Edge)
-- JavaScript enabled
-- Internet connection (for market data)
+### 3. Create a Portfolio
 
-### First-Time Setup
+Click **"Create New Portfolio"** and fill in:
 
-1. Navigate to the application URL
-2. You'll land on the **Dashboard** (main portfolio list)
-3. If no portfolios exist, you'll see an empty state
-4. Click **"Create New Portfolio"** to begin
+- **Portfolio Name** — A descriptive name (e.g., "Tech Growth", "Dividend Income")
+- **Initial Deposit** — Starting cash balance (must be greater than $0)
+
+A toast notification confirms creation. The new portfolio appears on your dashboard immediately.
 
 ---
 
-## Creating Your First Portfolio
+## Trading
 
-### Step-by-Step Guide
+### Buying Stocks
 
-#### 1. Click "Create New Portfolio"
+1. Open a portfolio from the dashboard
+2. Find the **Trade** section on the portfolio detail page
+3. Select **BUY** (the default action)
+4. Enter:
+   - **Symbol** — Ticker symbol (e.g., `AAPL`, `MSFT`, `IBM`)
+   - **Quantity** — Number of whole shares (no fractional shares)
+5. The form shows a live price preview as you type the ticker
+6. Click **"Execute Buy Order"**
+7. A toast notification confirms the trade with price details
 
-On the dashboard, locate and click the **"Create New Portfolio"** button.
+### Selling Stocks
 
-#### 2. Fill Out the Form
+1. Select **SELL** in the trade form action toggle
+2. Enter the ticker of a stock you hold
+3. The form shows your current holdings for that ticker
+4. Enter the quantity to sell (cannot exceed shares owned)
+5. Click **"Execute Sell Order"**
 
-**Portfolio Name** (Required):
-- Enter a descriptive name
-- Examples: "Long-Term Growth", "Tech Stocks", "Dividend Portfolio"
-- Must not be empty
+You can also use the **Quick Sell** button in the Holdings table.
 
-**Initial Deposit** (Required):
-- Enter an amount **greater than $0**
-- Format: Numbers with up to 2 decimal places
-- Examples: `1000`, `10000.50`, `50000`
-- **Note**: Cannot start with $0 (must have cash to trade)
+### Backtest Mode
 
-#### 3. Submit
-
-Click **"Create Portfolio"** button.
-
-#### 4. Confirmation
-
-- Success message will appear
-- New portfolio card will display on dashboard
-- Shows: Portfolio name, total value, cash balance
-
-### Example Portfolios
-
-**Conservative Investor**:
-- Name: "Safe Haven Portfolio"
-- Initial Deposit: $10,000
-
-**Aggressive Trader**:
-- Name: "High-Risk Tech Bets"
-- Initial Deposit: $50,000
-
-**Beginner**:
-- Name: "Learning Portfolio"
-- Initial Deposit: $1,000
-
-### Validation Rules
-
-| Field | Rule | Error Message |
-|-------|------|---------------|
-| Name | Cannot be empty | "Portfolio name is required" (HTML5) |
-| Name | Must have characters | Browser focuses empty field on submit |
-| Deposit | Must be > $0 | "Initial deposit must be a positive number greater than zero" |
-| Deposit | Must be numeric | "Please enter a valid number" |
-
----
-
-## Making Your First Trade
-
-### Step-by-Step Guide
-
-#### 1. Navigate to Portfolio Detail
-
-From the dashboard:
-- Click **"Trade Stocks"** link on your portfolio card
-- OR click on the portfolio name itself
-
-This takes you to: `/portfolio/{portfolio-id}`
-
-#### 2. Locate the Trade Form
-
-On the portfolio detail page, find the **"Execute Trade"** section (typically in a sidebar or dedicated area).
-
-#### 3. Fill Out Trade Details
-
-**Stock Symbol** (Required):
-- Enter the ticker symbol
-- Examples: `IBM`, `AAPL`, `MSFT`, `GOOGL`
-- International stocks: `TSCO.LON` (London), `0700.HK` (Hong Kong)
-- **Case-insensitive**: `ibm` = `IBM`
-
-**Quantity** (Required):
-- Number of shares to buy
-- Must be a positive integer (whole shares only)
-- Examples: `1`, `10`, `100`
-- **No fractional shares**: Can't buy `0.5` shares
-
-**Action**:
-- Currently only **BUY** is available
-- SELL functionality coming in Phase 3
-
-#### 4. Execute the Trade
-
-Click **"Execute Buy Order"** button.
-
-#### 5. Confirmation
-
-- Alert dialog will appear with result
-- Success: "Trade executed successfully"
-- Error: Specific error message (e.g., "Insufficient funds")
-
-#### 6. Verify Results
-
-After successful trade:
-- **Cash Balance** decreases by (price × quantity)
-- **Holdings Table** shows new position
-- **Transaction History** records the trade
-
-### Example Trade
-
-**Scenario**: Buy 10 shares of IBM
-
-1. Navigate to portfolio detail page
-2. In trade form, enter:
-   - Symbol: `IBM`
-   - Quantity: `10`
-3. Click "Execute Buy Order"
-4. If IBM trades at $185.50:
-   - Cost: $1,855.00
-   - Cash decreases by $1,855.00
-   - Holdings shows: IBM, 10 shares, $185.50 avg cost
-
----
-
-## Portfolio Management
-
-### Viewing Portfolios
-
-**Dashboard View** (`/dashboard`):
-- Grid of portfolio cards
-- Each card shows:
-  - Portfolio name
-  - Total value (cash + holdings)
-  - Quick actions (Trade, View)
-
-**Detail View** (`/portfolio/{id}`):
-- Full portfolio information
-- Cash balance
-- Holdings table
-- Transaction history
-- Trade form
-
-### Multiple Portfolios
-
-You can create as many portfolios as needed:
-
-**Use Cases**:
-- Different strategies (growth vs income)
-- Risk levels (conservative vs aggressive)
-- Sector focus (tech, healthcare, energy)
-- Learning experiments (test different approaches)
-
-**Data Isolation**:
-- Each portfolio is completely separate
-- No cross-portfolio dependencies
-- Independent cash balances and holdings
-
-### Portfolio Details Page
-
-#### Cash Balance Section
-- Shows available cash
-- Updates in real-time after trades
-- Never goes negative (validated before trades)
-
-#### Holdings Table
-- Lists all owned stocks
-- Columns:
-  - Symbol
-  - Quantity (shares owned)
-  - Average Cost (your cost basis per share)
-  - Current Price (latest market price)
-  - Total Value (quantity × current price)
-  - Gain/Loss (difference vs purchase price)
-
-#### Transaction History
-- Chronological list of all transactions
-- Types: DEPOSIT (initial funding), BUY (purchases)
-- Shows: Date, Type, Symbol, Quantity, Price, Total
-- Immutable (cannot be edited or deleted)
-
----
-
-## Trading Stocks
-
-### Supported Markets
-
-**United States**:
-- NYSE, NASDAQ stocks
-- Examples: `AAPL`, `MSFT`, `GOOGL`, `TSLA`, `IBM`
-
-**International**:
-- London Stock Exchange (`.LON`): `TSCO.LON`, `BP.LON`
-- Toronto Stock Exchange (`.TRT`): `SHOP.TRT`
-- Frankfurt (`.FRK`): `SAP.FRK`
-- Hong Kong (`.HK`): `0700.HK` (Tencent)
-- Shanghai (`.SHA`): `601857.SHA`
-- Shenzhen (`.SHE`): `000001.SHE`
-
-### How Prices Work
-
-**Real-Time Pricing**:
-- Prices fetched from Alpha Vantage API
-- `GLOBAL_QUOTE` endpoint for current price
-- Updates when you execute trades
-
-**Price Caching**:
-- Recent prices cached in Redis
-- Cache duration: Configurable (default ~5 minutes)
-- Reduces API calls, respects rate limits
-
-**Rate Limits**:
-- Free tier: 5 API calls/minute, 500 calls/day
-- Automatic retry with exponential backoff
-- If limit exceeded, may use cached price
+The trade form includes a backtest toggle that lets you execute trades at historical prices by selecting a past date.
 
 ### Trade Validation
 
-**Before Execution**:
-1. **Valid Symbol**: Ticker exists and is tradable
-2. **Sufficient Funds**: Cash balance >= (price × quantity)
-3. **Positive Quantity**: Must buy at least 1 share
-4. **Price Availability**: Market data accessible
+Trades are validated before execution:
+- **Sufficient funds** — Cash balance must cover the total cost (BUY)
+- **Sufficient shares** — Must own enough shares (SELL)
+- **Valid symbol** — Ticker must exist and be tradable
+- **Positive quantity** — Must be at least 1 share
 
-**Error Handling**:
-- Clear error messages in alert dialogs
-- Examples:
-  - "Insufficient funds to execute trade"
-  - "Market data unavailable: Network error"
-  - "Invalid ticker symbol"
-
-### After a Trade
-
-**Immediate Updates**:
-1. Cash balance decreases
-2. Holdings table updates (new position or increased quantity)
-3. Transaction ledger records the trade
-4. Portfolio total value recalculates
-
-**Holdings Calculation**:
-- Average cost updates for repeat buys
-- Example: Buy 10 @ $100, then 10 @ $120 → Avg cost = $110
+Error messages appear as toast notifications.
 
 ---
 
-## Understanding Market Data
+## Portfolio Detail Page
 
-### Data Source
+Accessible at `/portfolio/{id}`. Shows:
 
-**Alpha Vantage API**:
-- Industry-standard market data provider
-- Free tier available (demo key: `apikey=demo`)
-- Production tier: ~$50/month for higher limits
+### Cash Balance
+Available cash, updated after every trade.
 
-### Price Types
+### Holdings Table
 
-**Current Price** (`GLOBAL_QUOTE`):
-- Latest traded price
-- May be delayed 15-20 minutes (free tier)
-- Used for: Trade execution, portfolio valuation
+| Column | Description |
+|--------|-------------|
+| Symbol | Stock ticker |
+| Shares | Number of shares owned |
+| Avg Cost | Your average purchase price per share |
+| Current Price | Latest market price (real-time via Alpha Vantage) |
+| Market Value | Current Price x Shares |
+| Gain/Loss | Market Value minus Cost Basis |
+| Actions | Quick Sell button (if available) |
 
-**Historical Prices** (`TIME_SERIES_DAILY`):
-- Daily closing prices
-- Stored in PostgreSQL
-- Used for: Charts (future), backtesting (future)
+**Note**: "Avg Cost" and "Gain/Loss" columns are hidden on small screens for readability.
 
-### When Prices Update
+### Transaction History
 
-**During Market Hours**:
-- Prices update with each API call
-- Cache prevents excessive requests
-- Generally reflects live market
+Chronological list of all activity:
+- **Deposit** — Initial funding or subsequent deposits
+- **Withdrawal** — Cash withdrawals
+- **Buy** — Stock purchases
+- **Sell** — Stock sales
 
-**After Market Close**:
-- Shows last closing price
-- Won't update until next trading day
-- Cache prevents stale data issues
+Transactions are immutable — they form a permanent ledger.
 
-**Weekends & Holidays**:
-- Markets closed, prices don't change
-- Shows last available price (previous trading day)
+### Price Chart
 
-### Cache Behavior
-
-**Why Caching?**
-- Respects API rate limits (5/min, 500/day)
-- Improves performance (faster page loads)
-- Reduces costs (fewer API calls)
-
-**How Long?**
-- Configurable TTL (Time To Live)
-- Default: ~5 minutes
-- Adjustable based on needs vs freshness
-
-**Cache Keys**:
-- Per ticker symbol
-- Example: `price:IBM`, `price:AAPL`
+An interactive chart (powered by TradingView's lightweight-charts) showing the historical price of a selected stock, with trade markers overlaid.
 
 ---
 
-## Tips & Best Practices
+## Portfolio Analytics
 
-### Portfolio Setup
+Accessible at `/portfolio/{id}/analytics`. Includes:
 
-1. **Start Small**: Begin with $1,000-$10,000 to learn
-2. **Name Clearly**: Use descriptive names ("Tech Growth 2026")
-3. **Multiple Portfolios**: Test different strategies simultaneously
-4. **Track Intent**: Document why you're buying (learning opportunity)
+- **Performance Chart** — Portfolio value over time
+- **Composition Chart** — Pie chart showing asset allocation
+- **Metrics Cards** — Summary statistics
 
-### Trading Strategy
+---
 
-1. **Research First**: Know why you're buying a stock
-2. **Diversify**: Don't put all virtual money in one stock
-3. **Track Performance**: Review holdings regularly
-4. **Learn from Mistakes**: It's virtual money – experiment!
-5. **Note Limitations**: Remember SELL isn't available yet
+## Market Data
 
-### Working with Market Data
+### Source
 
-1. **Check Symbol Format**: Use correct ticker (TSCO.LON, not TSCO for UK)
-2. **Understand Delays**: Free tier may have delayed prices
-3. **Watch Rate Limits**: Don't refresh excessively (cached data is fine)
-4. **Market Hours**: Best prices during active trading hours
+Prices come from the **Alpha Vantage API** (free tier).
 
-### Data Management
+### Caching
 
-1. **Refresh After Trades**: Hard refresh (Ctrl+R) if values don't update
-2. **Browser Cache**: Clear if seeing stale data
-3. **Persistent Data**: Docker restart won't lose portfolios
-4. **Transaction History**: Review for accuracy
+Prices are cached in Redis to respect rate limits and improve performance. Cached prices may be up to ~5 minutes old. The actual trade always fetches a fresh price at execution time, so the display price and execution price may differ slightly.
+
+### Rate Limits
+
+- **Free tier**: 5 API calls/minute, 500 calls/day
+- If exceeded, you'll see a "rate limit" error toast — wait 60 seconds and retry
+- A background scheduler pre-fetches prices for popular tickers to reduce live calls
+
+### Supported Markets
+
+- **US**: NYSE, NASDAQ (e.g., `AAPL`, `MSFT`, `GOOGL`)
+- **International**: London (`.LON`), Toronto (`.TRT`), Frankfurt (`.FRK`), Hong Kong (`.HK`)
+- All prices displayed in USD
+
+### Market Hours
+
+Prices are stale outside trading hours. On weekends and holidays, the last available closing price is shown.
 
 ---
 
 ## Troubleshooting
 
-### Common Issues
+### "Insufficient funds"
+Your cash balance is less than the trade cost. Reduce quantity or deposit more cash.
 
-#### "Portfolio not appearing after creation"
+### "Market data unavailable"
+The Alpha Vantage API may be rate-limited or down. Wait 60 seconds and retry, or check your internet connection.
 
-**Solution**:
-1. Wait 2-3 seconds for React Query invalidation
-2. Manually refresh page (F5 or Ctrl+R)
-3. Check browser console for errors (F12)
+### Stale prices
+Prices are cached. Hard-refresh the page (Cmd+Shift+R / Ctrl+Shift+R) or wait for the cache to expire (~5 minutes).
 
-#### "Trade button disabled / form won't submit"
+### Portfolio not appearing
+React Query may take 1-2 seconds to refetch. Refresh the page if the portfolio doesn't appear.
 
-**Causes**:
-- Empty portfolio name field (HTML5 validation)
-- Negative or zero deposit amount
-- Non-numeric input in quantity field
-
-**Solution**:
-- Fill all required fields
-- Ensure deposit > $0
-- Check quantity is positive integer
-
-#### "Insufficient funds" error
-
-**Cause**: Cash balance < (stock price × quantity)
-
-**Solution**:
-- Check current stock price
-- Reduce quantity
-- Or create new portfolio with more cash
-
-#### "Market data unavailable" error
-
-**Causes**:
-- API rate limit exceeded (5/min, 500/day)
-- Network connectivity issue
-- Alpha Vantage service outage
-- Invalid ticker symbol
-
-**Solutions**:
-1. Wait 60 seconds and retry (rate limit)
-2. Check internet connection
-3. Verify ticker symbol is correct
-4. Try different stock (to test API vs symbol issue)
-
-#### "Prices not updating"
-
-**Solutions**:
-1. Check cache TTL hasn't expired (wait 5+ minutes)
-2. Hard refresh page (Ctrl+Shift+R)
-3. Verify market is open (trading hours)
-4. Check API rate limit status
-
-#### "Frontend not loading"
-
-**Docker Issues**:
-1. Check frontend container: `docker ps`
-2. View logs: `docker logs zebu-frontend`
-3. If "vite: not found", exec into container and run `npm install`
-4. Restart: `docker compose restart frontend`
-
-#### "Backend API errors"
-
-**Solutions**:
-1. Check backend health: `curl http://localhost:8000/health`
-2. View logs: `docker logs zebu-backend`
-3. Verify PostgreSQL running: `docker ps | grep postgres`
-4. Check Redis: `docker ps | grep redis`
-
-### Getting Help
-
-1. **Check Logs**: Docker logs often show root cause
-2. **Review Errors**: Browser console (F12 → Console tab)
-3. **Network Tab**: F12 → Network, check API calls
-4. **Documentation**: See TECHNICAL_BOUNDARIES.md for known issues
+### Docker development issues
+- Check services are running: `docker compose ps`
+- View logs: `docker compose logs -f backend`
+- Backend health: `curl http://localhost:8000/health`
+- See [deployment docs](deployment/README.md) for full setup instructions
 
 ---
 
 ## Known Limitations
 
-### Critical Limitations
+- **Whole shares only** — No fractional share trading
+- **Market orders only** — No limit, stop, or stop-limit orders
+- **USD only** — All prices in US dollars
+- **No short selling** — Cannot sell stocks you don't own
+- **No real-time updates** — Prices update on page focus, not via WebSocket
+- **Single market data provider** — Alpha Vantage only (no failover)
 
-1. **No SELL Orders**
-   - Can only BUY stocks currently
-   - Holdings are locked until Phase 3
-   - Workaround: Create new portfolio to "reset"
-
-2. **No User Authentication**
-   - All portfolios visible to all users
-   - Not suitable for production deployment
-   - Coming in Phase 3
-
-3. **API Rate Limits**
-   - 5 calls/minute, 500 calls/day (free tier)
-   - Shared across all users
-   - May get "rate limit exceeded" errors
-   - Workaround: Wait 60 seconds
-
-### Minor Limitations
-
-4. **Whole Shares Only**: No fractional shares (e.g., 0.5 shares)
-5. **Market Orders Only**: No limit/stop orders
-6. **USD Only**: All prices in US dollars
-7. **Basic Analytics**: No charts or detailed P&L yet
-8. **Single User Mode**: No multi-user support
-9. **No Notifications**: No alerts for price changes
-
-### Technical Constraints
-
-10. **Demo API Key**: Used for development (has stricter limits)
-11. **Price Delays**: Free tier may have 15-20 minute delays
-12. **Market Hours**: Prices stale outside trading hours
-13. **Browser Alerts**: Success/error messages use simple alerts (not elegant notifications)
-
-See [TECHNICAL_BOUNDARIES.md](./TECHNICAL_BOUNDARIES.md) for full details.
-
----
-
-## Next Steps
-
-### Learn More
-
-- **Feature Status**: [FEATURE_STATUS.md](./FEATURE_STATUS.md) - What's implemented
-- **Technical Boundaries**: [TECHNICAL_BOUNDARIES.md](./TECHNICAL_BOUNDARIES.md) - Known issues
-- **Executive Summary**: [EXECUTIVE_SUMMARY.md](./EXECUTIVE_SUMMARY.md) - Project overview
-
-### Provide Feedback
-
-Found a bug or have a suggestion?
-- Open an issue on GitHub
-- Check BACKLOG.md for planned improvements
-- Contribute via pull request
-
-### Coming Soon
-
-**Phase 3 Features**:
-- SELL order functionality
-- Portfolio analytics with charts
-- Historical backtesting
-- User authentication
-
-**Expected**: Q1-Q2 2026
-
----
-
-**Happy Trading! 📈**
-
-Remember: This is virtual money – experiment, learn, and have fun without financial risk.
-
----
-
-**Last Updated**: January 4, 2026
-**Version**: 2.0 (Phase 2 Complete)
+For full details, see [Technical Boundaries](architecture/technical-boundaries.md).
