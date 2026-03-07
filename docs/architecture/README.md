@@ -7,8 +7,10 @@ Zebu follows **Clean Architecture** (Hexagonal Architecture) principles to ensur
 ```mermaid
 graph TD
     Client[React Frontend] -->|HTTP REST| API[FastAPI Backend]
+    Client -->|Auth| Clerk((Clerk Auth))
 
     subgraph "Backend System"
+        API --> AuthPort[Auth Port]
         API --> UseCases[Application Layer]
         UseCases --> Domain[Domain Layer]
 
@@ -20,9 +22,11 @@ graph TD
             PG[Postgres Adapter]
             Redis[Redis Adapter]
             Alpha[Alpha Vantage Adapter]
+            ClerkAdapter[Clerk Auth Adapter]
         end
     end
 
+    ClerkAdapter -->|JWT Validation| Clerk
     PG --> Database[(PostgreSQL)]
     Redis --> Cache[(Redis)]
     Alpha --> MarketData((Alpha Vantage API))
@@ -68,6 +72,8 @@ The backend is strictly layered. **Dependencies point inward only**.
 ## Key Decisions
 
 - **Framework**: FastAPI (Async Python) + SQLModel (Pydantic/SQLAlchemy).
-- **Database**: PostgreSQL (primary store).
-- **Caching**: Redis (market data caching).
-- **State Management**: React Query (Frontend), Stateless Backend (REST).
+- **Authentication**: Clerk (JWT validation via `AuthPort` adapter).
+- **Database**: PostgreSQL (primary store), with Alembic migrations.
+- **Caching**: Redis (market data caching via `price_cache`).
+- **Background Jobs**: APScheduler (price refresh).
+- **State Management**: TanStack Query (frontend), Stateless Backend (REST).
