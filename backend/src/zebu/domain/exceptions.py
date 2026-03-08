@@ -185,6 +185,27 @@ class InsufficientSharesError(BusinessRuleViolationError):
         super().__init__(message)
 
 
+class InsufficientHistoricalDataError(BusinessRuleViolationError):
+    """Raised when historical price data is missing for a backtest.
+
+    Attributes:
+        ticker: The ticker with missing data
+        message: Human-readable error description
+    """
+
+    def __init__(self, ticker: str, message: str | None = None) -> None:
+        """Initialize InsufficientHistoricalDataError.
+
+        Args:
+            ticker: The ticker symbol with no available price data
+            message: Optional custom error message
+        """
+        self.ticker = ticker
+        if message is None:
+            message = f"No historical price data available for ticker: {ticker}"
+        super().__init__(message)
+
+
 # Authentication Exceptions
 
 
