@@ -29,11 +29,11 @@ export function RunBacktestForm({
     const now = new Date()
     const threeYearsAgo = new Date(now)
     threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3)
-    return threeYearsAgo.toISOString().split('T')[0] ?? ''
+    return threeYearsAgo.toISOString().split('T')[0]
   })
   const [endDate, setEndDate] = useState<string>(() => {
     const now = new Date()
-    return now.toISOString().split('T')[0] ?? ''
+    return now.toISOString().split('T')[0]
   })
   const [initialCash, setInitialCash] = useState('10000')
   const [errors, setErrors] = useState<Record<string, string>>({})
