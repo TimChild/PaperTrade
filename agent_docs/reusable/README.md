@@ -4,7 +4,7 @@ This directory contains reusable task templates that can be referenced repeatedl
 
 ## Purpose
 
-Unlike one-time tasks in `agent_tasks/`, these templates are designed to be:
+Unlike one-time tasks in `agent_docs/tasks/`, these templates are designed to be:
 - **Reusable**: Executed multiple times across the project lifecycle
 - **Standardized**: Consistent approach to recurring workflows
 - **Referenced**: Linked from orchestrator procedures and specific tasks
@@ -86,11 +86,11 @@ Check recent activity, open PRs, architecture docs, and project context before s
 Create an agent task that references the template:
 
 ```bash
-gh agent-task create --custom-agent qa -F agent_tasks/reusable/e2e_qa_validation.md
+gh agent-task create --custom-agent qa -F agent_docs/reusable/e2e_qa_validation.md
 ```
 
 ### Option 2: Reference in Orchestrator Procedures
-Orchestrator procedures (in `docs/ai-agents/procedures/`) can reference these templates as part of larger workflows.
+Orchestrator procedures (in `agent_docs/procedures/`) can reference these templates as part of larger workflows.
 
 ## Adding New Reusable Tasks
 
@@ -133,7 +133,7 @@ When creating a new reusable task template:
 
 ## Reusable vs One-Time Tasks
 
-| Aspect | Reusable (this dir) | One-Time (agent_tasks/) |
+| Aspect | Reusable (this dir) | One-Time (agent_docs/tasks/) |
 |--------|---------------------|-------------------------|
 | **Frequency** | Multiple uses | Single execution |
 | **Specificity** | Generic, adaptable | Specific issue/feature |
@@ -163,5 +163,5 @@ Review reusable templates quarterly:
 ## References
 
 - [../README.md](../README.md) - Main agent tasks directory
-- [../../docs/ai-agents/procedures/](../../docs/ai-agents/procedures/) - Orchestrator workflows
+- [../procedures/](../procedures/) - Orchestrator workflows
 - [../../AGENT_ORCHESTRATION.md](../../AGENT_ORCHESTRATION.md) - Agent coordination guide

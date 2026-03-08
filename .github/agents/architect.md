@@ -79,7 +79,7 @@ docs/architecture/
 
 ## Before Starting Work
 
-> 📖 **See**: [agent_tasks/reusable/before-starting-work.md](../../../agent_tasks/reusable/before-starting-work.md)
+> 📖 **See**: [agent_docs/reusable/before-starting-work.md](../../../agent_docs/reusable/before-starting-work.md)
 
 **Architect-specific additions**:
 - Review existing architecture plans in `architecture_plans/`
@@ -157,7 +157,7 @@ What becomes easier or more difficult to do because of this change?
 
 ## Architecture Layers Reference
 
-> 📖 **See**: [agent_tasks/reusable/architecture-principles.md](../../../agent_tasks/reusable/architecture-principles.md)
+> 📖 **See**: [agent_docs/reusable/architecture-principles.md](../../../agent_docs/reusable/architecture-principles.md)
 
 The reusable chunk includes:
 - Complete layer diagram (Domain → Application → Adapters → Infrastructure)
@@ -180,7 +180,7 @@ Use the Architect agent when:
 2. Clear specifications that backend-swe/frontend-swe can implement
 3. Diagrams in Mermaid format
 4. ADRs for significant decisions
-5. Progress documentation per [agent-progress-docs.md](../../../agent_tasks/reusable/agent-progress-docs.md)
+5. Progress documentation per [agent-progress-docs.md](../../../agent_docs/reusable/agent-progress-docs.md)
 
 ## Handoff to Implementation
 

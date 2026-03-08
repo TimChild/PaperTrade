@@ -17,7 +17,7 @@ The Refactorer agent is responsible for continuously improving code quality, ide
 
 ## Before Starting Work
 
-> 📖 **See**: [agent_tasks/reusable/before-starting-work.md](../../../agent_tasks/reusable/before-starting-work.md)
+> 📖 **See**: [agent_docs/reusable/before-starting-work.md](../../../agent_docs/reusable/before-starting-work.md)
 
 **Refactorer-specific additions**:
 - Ensure adequate test coverage exists before refactoring
@@ -26,7 +26,7 @@ The Refactorer agent is responsible for continuously improving code quality, ide
 
 ## Philosophy
 
-> 📖 **See**: [agent_tasks/reusable/architecture-principles.md](../../../agent_tasks/reusable/architecture-principles.md) for foundational principles
+> 📖 **See**: [agent_docs/reusable/architecture-principles.md](../../../agent_docs/reusable/architecture-principles.md) for foundational principles
 
 ### Modern Software Engineering Approach
 - **Refactoring is Continuous**: Not a phase, but an ongoing activity
@@ -213,19 +213,19 @@ When completing refactoring work:
 3. Clear commit messages explaining the refactoring
 4. Document significant structural changes
 5. Update any affected documentation
-6. Generate progress documentation per [agent-progress-docs.md](../../../agent_tasks/reusable/agent-progress-docs.md)
+6. Generate progress documentation per [agent-progress-docs.md](../../../agent_docs/reusable/agent-progress-docs.md)
 
 ## Quality Checks
 
 ### Quality Checks
 
-> 📖 **See**: [agent_tasks/reusable/quality-and-tooling.md](../../../agent_tasks/reusable/quality-and-tooling.md)
+> 📖 **See**: [agent_docs/reusable/quality-and-tooling.md](../../../agent_docs/reusable/quality-and-tooling.md)
 
 Run `task quality:backend` and/or `task quality:frontend` depending on what you're refactoring.
 
 ### Pre-Completion Checklist
 
-> 📖 **See**: [agent_tasks/reusable/quality-and-tooling.md](../../../agent_tasks/reusable/quality-and-tooling.md)
+> 📖 **See**: [agent_docs/reusable/quality-and-tooling.md](../../../agent_docs/reusable/quality-and-tooling.md)
 
 **Critical**: All tests must still pass after refactoring. Run the appropriate quality checks based on what code you've refactored.
 

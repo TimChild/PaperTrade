@@ -155,7 +155,7 @@ When referencing reusable chunks in agent files, use this format:
 ```markdown
 ## [Section Title]
 
-> 📖 **See**: [agent_tasks/reusable/chunk-name.md](../../../agent_tasks/reusable/chunk-name.md)
+> 📖 **See**: [agent_docs/reusable/chunk-name.md](../../../agent_docs/reusable/chunk-name.md)
 
 [Optional: Any file-specific additions or clarifications]
 ```
@@ -164,7 +164,7 @@ Example:
 ```markdown
 ## Before Starting Work
 
-> 📖 **See**: [agent_tasks/reusable/before-starting-work.md](../../../agent_tasks/reusable/before-starting-work.md)
+> 📖 **See**: [agent_docs/reusable/before-starting-work.md](../../../agent_docs/reusable/before-starting-work.md)
 
 **Backend-specific additions**:
 - Check `backend/pyproject.toml` for recent dependency changes

@@ -156,7 +156,7 @@ For orchestrators running comprehensive QA sessions.
    ```bash
    # Use reusable template
    gh agent-task create --custom-agent qa \
-     -F agent_tasks/reusable/e2e_qa_validation.md
+     -F agent_docs/reusable/e2e_qa_validation.md
 
    # Or create custom task focusing on recent changes
    ```
@@ -165,8 +165,8 @@ For orchestrators running comprehensive QA sessions.
 
 4. **Review Report**
    ```bash
-   ls -lt agent_tasks/progress/ | grep qa | head -1
-   cat agent_tasks/progress/YYYY-MM-DD_HH-MM-SS_e2e-qa-report.md
+   ls -lt agent_docs/progress/ | grep qa | head -1
+   cat agent_docs/progress/YYYY-MM-DD_HH-MM-SS_e2e-qa-report.md
    ```
 
 5. **Triage Findings**

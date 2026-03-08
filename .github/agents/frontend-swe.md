@@ -16,7 +16,7 @@ The Frontend SWE is responsible for building a responsive, high-performance fina
 
 ## Before Starting Work
 
-> 📖 **See**: [agent_tasks/reusable/before-starting-work.md](../../../agent_tasks/reusable/before-starting-work.md)
+> 📖 **See**: [agent_docs/reusable/before-starting-work.md](../../../agent_docs/reusable/before-starting-work.md)
 
 **Frontend-specific additions**:
 - Check `frontend/package.json` for recent dependency changes
@@ -351,11 +351,11 @@ When completing frontend work:
 3. Tests accompany new components
 4. Code passes ESLint and Prettier
 5. Responsive design considered
-6. Generate progress documentation per [agent-progress-docs.md](../../../agent_tasks/reusable/agent-progress-docs.md)
+6. Generate progress documentation per [agent-progress-docs.md](../../../agent_docs/reusable/agent-progress-docs.md)
 
 ## Architecture Principles
 
-> 📖 **See**: [agent_tasks/reusable/architecture-principles.md](../../../agent_tasks/reusable/architecture-principles.md)
+> 📖 **See**: [agent_docs/reusable/architecture-principles.md](../../../agent_docs/reusable/architecture-principles.md)
 
 Key principles for frontend work:
 - Keep UI components thin and focused
@@ -365,7 +365,7 @@ Key principles for frontend work:
 
 ## Quality Checks
 
-> 📖 **See**: [agent_tasks/reusable/quality-and-tooling.md](../../../agent_tasks/reusable/quality-and-tooling.md)
+> 📖 **See**: [agent_docs/reusable/quality-and-tooling.md](../../../agent_docs/reusable/quality-and-tooling.md)
 
 **Quick validation**: Run all frontend quality checks with:
 ```bash
@@ -374,7 +374,7 @@ task quality:frontend
 
 ## CRITICAL: Pre-Completion Validation
 
-> 📖 **See**: [agent_tasks/reusable/quality-and-tooling.md](../../../agent_tasks/reusable/quality-and-tooling.md)
+> 📖 **See**: [agent_docs/reusable/quality-and-tooling.md](../../../agent_docs/reusable/quality-and-tooling.md)
 
 **Before considering your work complete:**
 - Run all checks: `task quality:frontend`

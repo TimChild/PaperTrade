@@ -16,7 +16,7 @@ The Backend SWE is responsible for implementing robust, type-safe, and performan
 
 ## Before Starting Work
 
-> 📖 **See**: [agent_tasks/reusable/before-starting-work.md](../../../agent_tasks/reusable/before-starting-work.md)
+> 📖 **See**: [agent_docs/reusable/before-starting-work.md](../../../agent_docs/reusable/before-starting-work.md)
 
 **Backend-specific additions**:
 - Check `backend/pyproject.toml` for recent dependency changes
@@ -210,11 +210,11 @@ When completing backend work:
 3. Code passes ruff and pyright checks
 4. Follow conventional commit messages
 5. Document public APIs with docstrings
-6. Generate progress documentation per [agent-progress-docs.md](../../../agent_tasks/reusable/agent-progress-docs.md)
+6. Generate progress documentation per [agent-progress-docs.md](../../../agent_docs/reusable/agent-progress-docs.md)
 
 ## Architecture Principles
 
-> 📖 **See**: [agent_tasks/reusable/architecture-principles.md](../../../agent_tasks/reusable/architecture-principles.md)
+> 📖 **See**: [agent_docs/reusable/architecture-principles.md](../../../agent_docs/reusable/architecture-principles.md)
 
 Key principles for backend work:
 - Follow the dependency rule: Domain → Application → Adapters → Infrastructure
@@ -224,7 +224,7 @@ Key principles for backend work:
 
 ## Quality Checks
 
-> 📖 **See**: [agent_tasks/reusable/quality-and-tooling.md](../../../agent_tasks/reusable/quality-and-tooling.md)
+> 📖 **See**: [agent_docs/reusable/quality-and-tooling.md](../../../agent_docs/reusable/quality-and-tooling.md)
 
 **Quick validation**: Run all backend quality checks with:
 ```bash
@@ -233,7 +233,7 @@ task quality:backend
 
 ## CRITICAL: Pre-Completion Validation
 
-> 📖 **See**: [agent_tasks/reusable/quality-and-tooling.md](../../../agent_tasks/reusable/quality-and-tooling.md)
+> 📖 **See**: [agent_docs/reusable/quality-and-tooling.md](../../../agent_docs/reusable/quality-and-tooling.md)
 
 **Before considering your work complete:**
 - Run all checks: `task quality:backend`
