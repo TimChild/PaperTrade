@@ -10,6 +10,7 @@ from uuid import UUID, uuid4
 from zebu.application.commands.run_backtest import RunBacktestCommand
 from zebu.application.ports.backtest_run_repository import BacktestRunRepository
 from zebu.application.ports.portfolio_repository import PortfolioRepository
+from zebu.application.ports.snapshot_repository import SnapshotRepository
 from zebu.application.ports.strategy_repository import StrategyRepository
 from zebu.application.ports.transaction_repository import TransactionRepository
 from zebu.application.services.backtest_transaction_builder import (
@@ -23,6 +24,12 @@ from zebu.domain.entities.strategy import Strategy
 from zebu.domain.entities.transaction import Transaction, TransactionType
 from zebu.domain.exceptions import InvalidStrategyError
 from zebu.domain.services.strategies.buy_and_hold import BuyAndHoldStrategy
+from zebu.domain.services.strategies.dollar_cost_averaging import (
+    DollarCostAveragingStrategy,
+)
+from zebu.domain.services.strategies.moving_average_crossover import (
+    MovingAverageCrossoverStrategy,
+)
 from zebu.domain.services.strategies.protocol import TradingStrategy
 from zebu.domain.value_objects.backtest_status import BacktestStatus
 from zebu.domain.value_objects.money import Money
@@ -61,6 +68,7 @@ class BacktestExecutor:
         strategy_repo: StrategyRepository,
         backtest_run_repo: BacktestRunRepository,
         snapshot_service: SnapshotJobService,
+        snapshot_repo: SnapshotRepository,
         data_preparer: HistoricalDataPreparer,
     ) -> None:
         """Initialize executor with all required dependencies.
@@ -71,6 +79,7 @@ class BacktestExecutor:
             strategy_repo: Strategy persistence
             backtest_run_repo: BacktestRun persistence
             snapshot_service: Service for generating portfolio snapshots
+            snapshot_repo: Repository for querying snapshots during metric computation
             data_preparer: Service for pre-fetching historical price data
         """
         self._portfolio_repo = portfolio_repo
@@ -78,6 +87,7 @@ class BacktestExecutor:
         self._strategy_repo = strategy_repo
         self._backtest_run_repo = backtest_run_repo
         self._snapshot_service = snapshot_service
+        self._snapshot_repo = snapshot_repo
         self._data_preparer = data_preparer
 
     async def execute(self, command: RunBacktestCommand) -> BacktestRun:
@@ -212,14 +222,20 @@ class BacktestExecutor:
         await self._transaction_repo.save(deposit)
 
         # ── Phase 1: Pre-fetch price data ─────────────────────────────────────
+        trading_strategy = self._build_strategy(strategy)
+        warm_up_days = 0
+        if strategy.strategy_type == StrategyType.MOVING_AVERAGE_CROSSOVER:
+            slow_window = int(strategy.parameters.get("slow_window", 50))
+            warm_up_days = slow_window * 2
+
         price_map = await self._data_preparer.prepare(
             tickers=strategy.tickers,
             start_date=command.start_date,
             end_date=command.end_date,
+            warm_up_days=warm_up_days,
         )
 
         # ── Phase 2: Simulate ─────────────────────────────────────────────────
-        trading_strategy = self._build_strategy(strategy)
         builder = BacktestTransactionBuilder(
             portfolio_id=portfolio_id,
             initial_cash=initial_cash,
@@ -331,6 +347,50 @@ class BacktestExecutor:
                 tickers=strategy.tickers,
                 allocation={k: float(v) for k, v in allocation.items()},
             )
+
+        if strategy.strategy_type == StrategyType.DOLLAR_COST_AVERAGING:
+            frequency_days = strategy.parameters.get("frequency_days")
+            amount_per_period = strategy.parameters.get("amount_per_period")
+            allocation = strategy.parameters.get("allocation", {})
+            if not isinstance(frequency_days, int):
+                raise InvalidStrategyError(
+                    "DOLLAR_COST_AVERAGING requires integer 'frequency_days' parameter"
+                )
+            if amount_per_period is None:
+                raise InvalidStrategyError(
+                    "DOLLAR_COST_AVERAGING requires 'amount_per_period' parameter"
+                )
+            if not isinstance(allocation, dict):
+                raise InvalidStrategyError(
+                    "DOLLAR_COST_AVERAGING requires 'allocation' dict parameter"
+                )
+            return DollarCostAveragingStrategy(
+                tickers=strategy.tickers,
+                frequency_days=frequency_days,
+                amount_per_period=Decimal(str(amount_per_period)),
+                allocation={k: float(v) for k, v in allocation.items()},
+            )
+
+        if strategy.strategy_type == StrategyType.MOVING_AVERAGE_CROSSOVER:
+            fast_window = strategy.parameters.get("fast_window")
+            slow_window = strategy.parameters.get("slow_window")
+            invest_fraction = strategy.parameters.get("invest_fraction")
+            if not isinstance(fast_window, int) or not isinstance(slow_window, int):
+                raise InvalidStrategyError(
+                    "MOVING_AVERAGE_CROSSOVER requires integer 'fast_window' "
+                    "and 'slow_window' parameters"
+                )
+            if invest_fraction is None:
+                raise InvalidStrategyError(
+                    "MOVING_AVERAGE_CROSSOVER requires 'invest_fraction' parameter"
+                )
+            return MovingAverageCrossoverStrategy(
+                tickers=strategy.tickers,
+                fast_window=fast_window,
+                slow_window=slow_window,
+                invest_fraction=float(invest_fraction),
+            )
+
         raise InvalidStrategyError(
             f"Strategy type not supported: {strategy.strategy_type.value}"
         )
@@ -356,10 +416,8 @@ class BacktestExecutor:
             Dict with total_return_pct, max_drawdown_pct,
             annualized_return_pct, total_trades
         """
-        # Access the snapshot repo through the snapshot service
-        snapshot_repo = self._snapshot_service._snapshot_repo  # type: ignore[attr-defined]
-
-        snapshots = await snapshot_repo.get_range(
+        # Access snapshot repo directly (injected dependency)
+        snapshots = await self._snapshot_repo.get_range(
             portfolio_id=portfolio_id,
             start_date=start_date,
             end_date=end_date,
