@@ -1,8 +1,8 @@
 # Phase 4 Architecture: Trading Strategies & Backtesting
 
-**Status**: Proposed  
-**Author**: Architect Agent (Third Run)  
-**Date**: 2026-03-08  
+**Status**: Proposed
+**Author**: Architect Agent (Third Run)
+**Date**: 2026-03-08
 **Informed By**: PRs #198 and #199 (prior architect runs)
 
 ---
@@ -284,7 +284,7 @@ This service is responsible for ensuring all required price data exists **before
 
 ### BacktestTransactionBuilder
 
-This component maintains in-memory portfolio state and creates Transaction domain objects directly. It is **not** a service or handler — it is a stateful helper used only by `BacktestExecutor`.
+This component maintains in-memory portfolio state and creates Transaction domain objects using the shared `trade_factory` functions. It is **not** a service or handler — it is a stateful helper used only by `BacktestExecutor`.
 
 **State maintained:**
 - `cash_balance`: Decimal (starts at initial_cash)
@@ -295,15 +295,13 @@ This component maintains in-memory portfolio state and creates Transaction domai
 
 | Operation | Inputs | Outputs | Validation |
 |-----------|--------|---------|------------|
-| `apply_buy_signal` | signal, price_per_share | Transaction or None | cash_balance >= quantity × price |
-| `apply_sell_signal` | signal, price_per_share | Transaction or None | holdings[ticker] >= quantity |
+| `apply_buy_signal` | signal, price_per_share | Transaction or None | Delegates to `trade_factory.create_buy_transaction()` |
+| `apply_sell_signal` | signal, price_per_share | Transaction or None | Delegates to `trade_factory.create_sell_transaction()` |
 | `resolve_quantity` | signal with amount | quantity | amount / price (truncated to whole shares) |
 
-**Why this approach instead of calling `BuyStockHandler`:**
+The builder catches `InsufficientFundsError` / `InsufficientSharesError` from the trade factory and skips the signal (returns None) instead of raising — a backtest should not abort because a strategy generated a signal the portfolio can't afford.
 
-The existing `BuyStockHandler` calls `transaction_repository.get_by_portfolio()` on every trade to recalculate current balance. For 250 trades, that would be 250 DB reads even with in-memory repositories. The `BacktestTransactionBuilder` maintains state incrementally — O(1) per trade — and bulk-saves at the end (one DB write per transaction, batched).
-
-The "duplicated validation" concern is minimal: the validation logic is `if cash < cost: skip` — 1–2 lines per trade type. This is far less risky than wiring up the full handler infrastructure with partial in-memory state.
+**Why this approach:** See Decision 6 in Trade-offs. The shared `trade_factory` functions ensure all trade creation logic is defined once and used by both the existing handlers and the backtest builder. The builder adds only state tracking (cash/holdings) and bulk accumulation — no duplicated business rules.
 
 ---
 
@@ -320,6 +318,7 @@ The "duplicated validation" concern is minimal: the validation logic is `if cash
 | `POST` | `/backtests` | Run a backtest (synchronous v1) |
 | `GET` | `/backtests` | List user's backtest runs |
 | `GET` | `/backtests/{backtest_id}` | Get backtest run details |
+| `DELETE` | `/backtests/{backtest_id}` | Delete a backtest and its portfolio |
 
 Existing analytics endpoints work unchanged with `portfolio_id` from any `BacktestRun`.
 
@@ -435,7 +434,7 @@ total_trades: 12
 
 | Code | Condition |
 |------|-----------|
-| `400` | start_date >= end_date, end_date > today, initial_cash <= 0, date range > 10 years |
+| `400` | start_date >= end_date, end_date > today, initial_cash <= 0, date range > 3 years |
 | `401` | Unauthenticated |
 | `404` | strategy_id not found or belongs to another user |
 | `422` | Malformed request body |
@@ -495,6 +494,21 @@ total: 3
 
 ---
 
+### DELETE /backtests/{backtest_id}
+
+**Response 204:** No content.
+
+Deletes the `BacktestRun` record and its associated `BACKTEST` portfolio (including all transactions and snapshots). This is a cascading delete.
+
+**Error responses:**
+
+| Code | Condition |
+|------|-----------|
+| `401` | Unauthenticated |
+| `404` | Backtest not found or belongs to another user |
+
+---
+
 ### Portfolio List Changes
 
 The existing `GET /portfolios` response should include `portfolio_type` in each portfolio object (PAPER_TRADING | BACKTEST). No other changes to existing endpoints.
@@ -541,7 +555,7 @@ Index: `idx_strategy_user_id` on `(user_id)`
 | `annualized_return_pct` | NUMERIC(10,4) | NULLABLE |
 | `total_trades` | INTEGER | NULLABLE |
 
-Indexes: 
+Indexes:
 - `idx_backtest_run_user_id` on `(user_id)`
 - `idx_backtest_run_portfolio_id` on `(portfolio_id)` (unique)
 - `idx_backtest_run_strategy_id` on `(strategy_id)`
@@ -636,20 +650,22 @@ This fix must land before any backtest execution code is written.
 
 ### Phase 4.1 — Foundation (Week 1–2)
 
-**Goal:** Add new domain entities, fix snapshot bug, and create DB schema.
+**Goal:** Add new domain entities, fix snapshot bug, extract shared trade logic, and create DB schema.
 
 Steps:
 1. Fix `backfill_snapshots()` in `snapshot_job.py` to use `get_price_at()`
-2. Add `PortfolioType` enum to domain value objects
-3. Add `portfolio_type` field to `Portfolio` entity (with default `PAPER_TRADING`)
-4. Update `PortfolioModel` and `InMemoryPortfolioRepository`
-5. Create Migration 1: add `portfolio_type` to portfolios
-6. Create `Strategy` domain entity and `StrategyType` enum
-7. Create `BacktestRun` domain entity and `BacktestStatus` enum
-8. Create `TradeSignal` value object
-9. Create Migration 2: add strategies and backtest_runs tables
-10. Create `StrategyRepository` port + SQLModel implementation + in-memory implementation
-11. Create `BacktestRunRepository` port + SQLModel implementation + in-memory implementation
+2. Extract `trade_factory.py` — `create_buy_transaction()` and `create_sell_transaction()` as pure domain functions
+3. Refactor `BuyStockHandler` and `SellStockHandler` to call `trade_factory` functions (no behavior change, existing tests pass)
+4. Add `PortfolioType` enum to domain value objects
+5. Add `portfolio_type` field to `Portfolio` entity (with default `PAPER_TRADING`)
+6. Update `PortfolioModel` and `InMemoryPortfolioRepository`
+7. Create Migration 1: add `portfolio_type` to portfolios
+8. Create `Strategy` domain entity and `StrategyType` enum
+9. Create `BacktestRun` domain entity and `BacktestStatus` enum
+10. Create `TradeSignal` value object
+11. Create Migration 2: add strategies and backtest_runs tables
+12. Create `StrategyRepository` port + SQLModel implementation + in-memory implementation
+13. Create `BacktestRunRepository` port + SQLModel implementation + in-memory implementation
 
 ---
 
@@ -740,19 +756,69 @@ Steps:
 
 ---
 
-### Decision 6: Execution Model — BacktestTransactionBuilder ⬅ Key Decision
+### Decision 6: Execution Model — Shared Domain Functions + In-Memory Builder ⬅ Key Decision
 
-**Decision:** Use `BacktestTransactionBuilder` — a stateful in-memory helper that builds `Transaction` objects directly, then bulk-saves. Does **not** call `BuyStockHandler`.
+**Decision:** Extract the core trade creation logic from `BuyStockHandler` and `SellStockHandler` into shared pure domain functions, then use those functions in both the existing handlers and a new `BacktestTransactionBuilder`.
 
 **Alternatives considered:**
 
 | Approach | Pros | Cons |
 |----------|------|------|
-| A: Call `BuyStockHandler` with DB repos | Full handler reuse, handler validates | N DB reads per trade (250 × DB fetch), slow (~3–8s) |
-| B: Call `BuyStockHandler` with in-memory repos | Handler reuse, no DB reads | Must pre-create portfolio in DB, inject 4 in-memory repos through handler infrastructure, complex wiring |
-| C: `BacktestTransactionBuilder` (chosen) | O(1) per trade, simple, fast | Validation logic ~5 lines inline (minimal duplication) |
+| A: Call `BuyStockHandler` with DB repos | Full handler reuse | N DB reads per trade (250 × DB fetch), slow (~3–8s) |
+| B: Call `BuyStockHandler` with in-memory repos | Handler reuse, no DB reads | Complex wiring — inject in-memory repos through handler infrastructure, subtle interaction risks |
+| C: `BacktestTransactionBuilder` with inlined logic | O(1) per trade, simple, fast | Duplicates validation logic — maintenance risk if trade rules evolve |
+| **D: Shared domain functions + builder (chosen)** | **O(1) per trade, zero duplication, fast** | **Small refactor of existing handlers required** |
 
-**Justification for C:** The handlers' "validation" is arithmetic (`if cash < cost`). The complexity of injecting in-memory repositories through the existing handler infrastructure is higher than the ~5-line duplication. More importantly, Option B still has subtle risks: the in-memory `TransactionRepository` enforces `DuplicateTransactionError` by checking IDs, which could interfere with the bulk-save step. Option C gives full control.
+**How this works:**
+
+Today, `BuyStockHandler.execute()` does three things in sequence:
+1. **Fetch state** — load portfolio, load all transactions, calculate cash balance via `PortfolioCalculator`
+2. **Validate and create** — check `cash >= cost`, construct `Transaction` domain object with correct `cash_change`, `ticker`, `quantity`, `price_per_share`
+3. **Persist** — save the transaction to the repository
+
+Steps 1 and 3 are infrastructure concerns. Step 2 is pure domain logic. The refactor extracts step 2 into a pure domain function:
+
+```python
+# In domain/services/trade_factory.py (new)
+def create_buy_transaction(
+    portfolio_id: UUID,
+    ticker: Ticker,
+    quantity: Quantity,
+    price_per_share: Money,
+    cash_balance: Money,
+    timestamp: datetime,
+    notes: str | None = None,
+) -> Transaction:
+    """Create a validated BUY transaction.
+
+    Raises InsufficientFundsError if cash_balance < total_cost.
+    """
+    total_cost = price_per_share.multiply(quantity.shares)
+    if cash_balance < total_cost:
+        raise InsufficientFundsError(available=cash_balance, required=total_cost)
+    return Transaction(
+        id=uuid4(),
+        portfolio_id=portfolio_id,
+        transaction_type=TransactionType.BUY,
+        timestamp=timestamp,
+        cash_change=total_cost.negate(),
+        ticker=ticker,
+        quantity=quantity,
+        price_per_share=price_per_share,
+        notes=notes,
+    )
+```
+
+An equivalent `create_sell_transaction()` checks holdings.
+
+After the refactor:
+- `BuyStockHandler.execute()` calls `create_buy_transaction()` — no behavior change, same tests pass
+- `BacktestTransactionBuilder` calls `create_buy_transaction()` — zero duplicated validation
+- If trade rules ever change (e.g., adding fees, position limits), the change is made in one place
+
+The `BacktestTransactionBuilder` maintains in-memory state (`cash_balance`, `holdings` dict) and calls these shared functions, accumulating `Transaction` objects for bulk save.
+
+**Why not Option B (in-memory repos through handlers):** The existing handlers mix fetch + validate + persist into a single method. Making them work with in-memory repos requires either (a) creating a parallel construction path for handler instances, or (b) making repos runtime-switchable. Both are more complex than extracting a pure function. The shared function approach is a small, safe refactor that improves the codebase regardless of backtesting.
 
 ---
 
@@ -765,6 +831,8 @@ Steps:
 **Rationale:** The portfolio list page (`GET /backtests`) needs summary metrics for every backtest row. Running the full analytics pipeline (loading all snapshots, computing return %) per row in a list query would be O(N × analytics_cost). Pre-computing once at backtest completion and storing on `BacktestRun` makes the list endpoint O(1) per row.
 
 **Risk:** Metrics become stale if snapshots are modified. Mitigated: backtest portfolios are immutable after completion — no new transactions are added post-completion.
+
+**Scaling note:** If Phase 4b adds richer metrics (Sharpe ratio, alpha, beta, win rate), the summary fields on `BacktestRun` will grow. At that point, extracting a separate `BacktestMetrics` entity/table (one-to-one with `BacktestRun`) is the right move. For v1, 4 fields on the entity is fine.
 
 ---
 
@@ -799,7 +867,14 @@ backend/
     │   ├── value_objects/
     │   │   └── trade_signal.py                   # TradeSignal value object
     │   └── services/
-    │       └── historical_price_calculator.py    # SMA and other pure price calculations
+    │       ├── trade_factory.py                  # Shared create_buy/sell_transaction() (NEW — refactored from handlers)
+    │       ├── historical_price_calculator.py    # SMA and other pure price calculations
+    │       └── strategies/                       # Strategy implementations
+    │           ├── __init__.py
+    │           ├── protocol.py                   # StrategyProtocol (Python Protocol)
+    │           ├── buy_and_hold.py               # BuyAndHoldStrategy
+    │           ├── dollar_cost_averaging.py      # DollarCostAveragingStrategy
+    │           └── moving_average_crossover.py   # MovingAverageCrossoverStrategy
     │
     ├── application/
     │   ├── commands/
@@ -813,23 +888,15 @@ backend/
     │       ├── historical_data_preparer.py       # Pre-fetches price data for simulation
     │       └── backtest_executor.py              # Orchestrates end-to-end backtest execution
     │
-    ├── adapters/
-    │   ├── inbound/
-    │   │   └── api/
-    │   │       ├── strategies.py                 # /strategies endpoints
-    │   │       └── backtests.py                  # /backtests endpoints
-    │   └── outbound/
-    │       └── database/
-    │           ├── strategy_repository.py        # SQLModel StrategyRepository
-    │           └── backtest_run_repository.py    # SQLModel BacktestRunRepository
-    │
-    └── domain/
-        └── strategies/                           # Strategy implementations
-            ├── __init__.py
-            ├── protocol.py                       # StrategyProtocol (Python Protocol)
-            ├── buy_and_hold.py                   # BuyAndHoldStrategy
-            ├── dollar_cost_averaging.py          # DollarCostAveragingStrategy
-            └── moving_average_crossover.py       # MovingAverageCrossoverStrategy
+    └── adapters/
+        ├── inbound/
+        │   └── api/
+        │       ├── strategies.py                 # /strategies endpoints
+        │       └── backtests.py                  # /backtests endpoints
+        └── outbound/
+            └── database/
+                ├── strategy_repository.py        # SQLModel StrategyRepository
+                └── backtest_run_repository.py    # SQLModel BacktestRunRepository
 ```
 
 ### Files to modify
@@ -841,6 +908,9 @@ backend/
     │   └── entities/
     │       └── portfolio.py                      # Add portfolio_type field
     ├── application/
+    │   ├── commands/
+    │   │   ├── buy_stock.py                      # Refactor: use trade_factory.create_buy_transaction()
+    │   │   └── sell_stock.py                     # Refactor: use trade_factory.create_sell_transaction()
     │   └── services/
     │       └── snapshot_job.py                   # Fix backfill bug (get_price_at)
     ├── adapters/
@@ -925,7 +995,7 @@ These are genuine ambiguities that should be resolved during implementation, not
 
 **Question:** Should the date range be limited to prevent extremely long-running requests?
 
-**Recommendation:** Enforce a hard limit of 3 years maximum in the `POST /backtests` endpoint. Returns `400` if `end_date - start_date > 3 * 365 days`. This keeps cold-cache worst-case well under 10 seconds.
+**Decision (settled):** Enforce a hard limit of 3 years maximum in the `POST /backtests` endpoint. Returns `400` if `end_date - start_date > 3 * 365 days`. This keeps cold-cache worst-case well under 10 seconds. Already reflected in the API error table for `POST /backtests`.\n\nRaise to 5 or 10 years when/if async execution is implemented (Phase 4c).", "oldString": "### OQ-5: Maximum Date Range and Request Timeout\n\n**Question:** Should the date range be limited to prevent extremely long-running requests?\n\n**Recommendation:** Enforce a hard limit of 3 years maximum in the `POST /backtests` endpoint. Returns `400` if `end_date - start_date > 3 * 365 days`. This keeps cold-cache worst-case well under 10 seconds.
 
 ---
 

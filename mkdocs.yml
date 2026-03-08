@@ -36,6 +36,7 @@ nav:
       - Overview: architecture/README.md
       - Authentication: architecture/authentication.md
       - Technical Boundaries: architecture/technical-boundaries.md
+      - "Phase 4: Trading Strategies": architecture/phase4-trading-strategies.md
   - Planning:
       - Executive Summary: planning/executive-summary.md
       - Roadmap: planning/roadmap.md
@@ -67,7 +68,11 @@ nav:
 markdown_extensions:
   - admonition
   - pymdownx.details
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.highlight:
