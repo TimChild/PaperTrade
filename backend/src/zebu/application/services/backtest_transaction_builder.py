@@ -210,6 +210,5 @@ class BacktestTransactionBuilder:
         return sum(
             1
             for t in self._transactions
-            if t.transaction_type
-            in (TransactionType.BUY, TransactionType.SELL)
+            if t.transaction_type in (TransactionType.BUY, TransactionType.SELL)
         )

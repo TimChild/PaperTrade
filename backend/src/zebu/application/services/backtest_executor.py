@@ -96,9 +96,7 @@ class BacktestExecutor:
         # Fetch the strategy
         strategy = await self._strategy_repo.get(command.strategy_id)
         if strategy is None:
-            raise InvalidStrategyError(
-                f"Strategy not found: {command.strategy_id}"
-            )
+            raise InvalidStrategyError(f"Strategy not found: {command.strategy_id}")
 
         # Build strategy snapshot
         strategy_snapshot: dict[str, object] = {
@@ -231,8 +229,7 @@ class BacktestExecutor:
         while current_date <= command.end_date:
             # Skip dates with no price data (weekends/holidays)
             has_data = any(
-                current_date in price_map.get(t, {})
-                for t in strategy.tickers
+                current_date in price_map.get(t, {}) for t in strategy.tickers
             )
             if not has_data:
                 current_date += timedelta(days=1)

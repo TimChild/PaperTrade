@@ -203,6 +203,7 @@ class TestBacktestExecutor:
         portfolio = await portfolio_repo.get(result.portfolio_id)
         assert portfolio is not None
         from zebu.domain.value_objects.portfolio_type import PortfolioType
+
         assert portfolio.portfolio_type == PortfolioType.BACKTEST
 
     async def test_buy_and_hold_executes_trade_on_day1(self) -> None:

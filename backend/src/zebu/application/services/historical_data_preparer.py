@@ -92,9 +92,7 @@ class HistoricalDataPreparer:
                     ),
                 )
 
-            price_map[ticker_str] = {
-                pp.timestamp.date(): pp for pp in price_points
-            }
+            price_map[ticker_str] = {pp.timestamp.date(): pp for pp in price_points}
             logger.debug(
                 f"Loaded {len(price_map[ticker_str])} price points for {ticker_str}"
             )

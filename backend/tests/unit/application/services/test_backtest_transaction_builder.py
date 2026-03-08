@@ -4,14 +4,11 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
 
-import pytest
-
 from zebu.application.services.backtest_transaction_builder import (
     BacktestTransactionBuilder,
 )
 from zebu.domain.entities.transaction import TransactionType
 from zebu.domain.value_objects.money import Money
-from zebu.domain.value_objects.quantity import Quantity
 from zebu.domain.value_objects.trade_signal import TradeAction, TradeSignal
 
 
@@ -288,7 +285,7 @@ class TestBacktestTransactionBuilderState:
         )
         price = Money(Decimal("100.00"), "USD")
 
-        for i in range(3):
+        for _i in range(3):
             signal = _buy_signal_by_quantity("AAPL", Decimal("1"))
             builder.apply_signal(signal, price, _now())
 

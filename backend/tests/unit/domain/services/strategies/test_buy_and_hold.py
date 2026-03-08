@@ -2,9 +2,6 @@
 
 from datetime import date
 from decimal import Decimal
-from uuid import uuid4
-
-import pytest
 
 from zebu.domain.services.strategies.buy_and_hold import BuyAndHoldStrategy
 from zebu.domain.value_objects.trade_signal import TradeAction

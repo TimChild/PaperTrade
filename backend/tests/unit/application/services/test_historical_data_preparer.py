@@ -9,8 +9,8 @@ from zebu.adapters.outbound.market_data.in_memory_adapter import (
     InMemoryMarketDataAdapter,
 )
 from zebu.application.dtos.price_point import PricePoint
-from zebu.application.services.historical_data_preparer import HistoricalDataPreparer
 from zebu.application.exceptions import TickerNotFoundError
+from zebu.application.services.historical_data_preparer import HistoricalDataPreparer
 from zebu.domain.exceptions import InsufficientHistoricalDataError
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.ticker import Ticker
@@ -85,9 +85,7 @@ class TestHistoricalDataPreparer:
     async def test_raises_when_ticker_has_no_data(self) -> None:
         """Raises InsufficientHistoricalDataError if a ticker returns no data."""
         adapter = InMemoryMarketDataAdapter()
-        adapter.seed_price(
-            _make_price_point("AAPL", Decimal("100"), date(2024, 1, 2))
-        )
+        adapter.seed_price(_make_price_point("AAPL", Decimal("100"), date(2024, 1, 2)))
         # GOOGL not seeded at all
         preparer = HistoricalDataPreparer(market_data=adapter)
 
