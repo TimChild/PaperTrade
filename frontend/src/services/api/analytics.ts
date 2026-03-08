@@ -3,11 +3,19 @@
  */
 import { apiClient } from './client'
 
+export interface HoldingBreakdown {
+  ticker: string
+  quantity: number
+  price_per_share: number
+  value: number
+}
+
 export interface DataPoint {
   date: string
   total_value: number
   cash_balance: number
   holdings_value: number
+  holdings_breakdown?: HoldingBreakdown[]
 }
 
 export interface PerformanceMetrics {

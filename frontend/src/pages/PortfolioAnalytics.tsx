@@ -6,6 +6,7 @@ import { usePortfolio } from '@/hooks/usePortfolio'
 import { PerformanceChart } from '@/components/features/analytics/PerformanceChart'
 import { CompositionChart } from '@/components/features/analytics/CompositionChart'
 import { MetricsCards } from '@/components/features/analytics/MetricsCards'
+import { CompositionOverTimeChart } from '@/components/features/analytics/CompositionOverTimeChart'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { ErrorDisplay } from '@/components/ui/ErrorDisplay'
 
@@ -86,6 +87,16 @@ export function PortfolioAnalytics(): React.JSX.Element {
           </h3>
           <div className="rounded-lg bg-white p-3 sm:p-4 shadow dark:bg-gray-800">
             <PerformanceChart portfolioId={portfolioId} />
+          </div>
+        </section>
+
+        {/* Composition Over Time Chart */}
+        <section>
+          <h3 className="mb-3 sm:mb-4 text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+            Portfolio Composition Over Time
+          </h3>
+          <div className="rounded-lg bg-white p-3 sm:p-4 shadow dark:bg-gray-800">
+            <CompositionOverTimeChart portfolioId={portfolioId} />
           </div>
         </section>
 
