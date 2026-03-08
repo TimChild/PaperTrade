@@ -31,6 +31,9 @@ jobs:
           echo "Triggered by: ${{ github.actor }}"
           echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
+      - name: Configure git safe directory
+        run: git config --global --add safe.directory ${{ env.APP_DIR }}
+
       - name: Pull latest code
         working-directory: ${{ env.APP_DIR }}
         run: |
