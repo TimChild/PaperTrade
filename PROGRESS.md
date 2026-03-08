@@ -1,6 +1,6 @@
 # Zebu Development Progress
 
-**Last Updated**: January 25, 2026
+**Last Updated**: March 8, 2026
 
 ## Current Status
 
@@ -12,11 +12,20 @@
 | Phase 3a: SELL Orders | ✅ Complete | Complete trading loop |
 | Phase 3b: Authentication | ✅ Complete | Clerk integration |
 | Phase 3c: Analytics | ✅ Complete | 489+ tests, Charts & Insights |
-| **UX Polish** | ✅ **Complete** | Real-time prices, Charts working |
-| **Code Quality** | ✅ **Exceptional** | 0 ESLint suppressions, 800+ tests |
-| **Production Deployment** | ✅ **Live** | v1.2.0 deployed |
+| **UX Polish** | ✅ **Complete** | Real-time prices, Charts, Click-to-trade |
+| **Code Quality** | ✅ **Exceptional** | 0 ESLint suppressions |
+| **Production Deployment** | ✅ **Live** | zebutrader.com |
 | Infrastructure | ✅ Production-Ready | Docker, CI/CD, E2E testing |
 | **Phase 4: Trading Strategies** | ✅ **Complete** | 3 strategy types, full backtest pipeline |
+| **Phase 4 Frontend** | ✅ **Complete** | Strategy comparison UI, backtest charts |
+| **Total Tests** | ✅ **1,146** | 835 backend, 311 frontend |
+
+### Recent Work (March 8, 2026)
+- ✅ **Frontend Backtesting UI** (PR #207):
+  - Strategy creation and configuration forms for all three strategy types
+  - Backtest run management and result visualization
+  - Strategy comparison UI — side-by-side metrics across multiple backtest runs
+  - 311 frontend tests, deployed to production
 
 ### Recent Work (Jan 25, 2026)
 - ✅ **Frontend UX & Chart Fixes** (PR #180):
@@ -203,11 +212,11 @@
 - 📈 **Phase 5 Planning**: Gather user feedback to prioritize next features
   - Options: live paper-trading UI, strategy comparison views, notifications
 
-**Current State**: Production system live at zebutrader.com with weekend-aware caching, full trading strategy backtesting. Ready for beta users!
+**Current State**: Production system live at zebutrader.com with weekend-aware caching, full trading strategy backtesting with comparison UI, and 1,146 tests. Ready for beta users!
 
 ## Phase 4 Summary ✅ COMPLETE
 
-**Phase 4: Trading Strategies & Backtesting** — Full backtesting pipeline with three strategy types:
+**Phase 4: Trading Strategies & Backtesting** — Full backtesting pipeline with three strategy types and a complete frontend UI:
 
 #### Phase 4.1: Domain Model ✅ COMPLETE
 - ✅ `Strategy` entity with `StrategyType` value object (BUY_AND_HOLD, DOLLAR_COST_AVERAGING, MOVING_AVERAGE_CROSSOVER)
@@ -231,6 +240,13 @@
 - ✅ `InsufficientHistoricalDataError` → 503 response in `run_backtest` endpoint
 - ✅ Integration tests for all three strategy types (`test_backtest_strategies.py`)
 - ✅ Architecture doc and PROGRESS.md updated
+
+#### Phase 4 Frontend ✅ COMPLETE (PR #207)
+- ✅ Strategy creation form with parameter configuration per strategy type
+- ✅ Backtest run management (run, list, view results)
+- ✅ Backtest result charts (portfolio value over time, transaction markers)
+- ✅ Strategy comparison UI (side-by-side metrics across multiple backtest runs)
+- ✅ 311 frontend tests passing
 
 ## Phase 3 Summary
 
@@ -363,7 +379,7 @@ For detailed phase completion information and implementation details from Decemb
 
 | Metric | Value |
 |--------|-------|
-| Total Tests | 571 backend + 225 frontend = **796 tests** |
+| Total Tests | 835 backend + 311 frontend = **1,146 tests** |
 | Backend Coverage | 81%+ |
 | Frontend ESLint Suppressions | **0** (exceptional!) |
 | Architecture Compliance | 10/10 Clean Architecture |

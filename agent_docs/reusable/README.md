@@ -32,6 +32,21 @@ Execute all critical user workflows to validate application quality. Produces de
 
 These small, focused documents can be referenced from agent instruction files to reduce duplication:
 
+---
+
+#### [session_handoff.md](session_handoff.md)
+**For**: Orchestrators
+**Purpose**: Guide for creating a `resume-from-here.md` handoff document between sessions
+
+Template and best practices for capturing session state to enable seamless continuity across orchestration sessions.
+
+**When to use**:
+- End of a major work session
+- Before a planned break
+- After completing a milestone
+
+---
+
 #### [quality-and-tooling.md](quality-and-tooling.md)
 **For**: All coding agents
 **Purpose**: Consolidated reference for quality checks, Docker, and pre-completion validation
@@ -89,8 +104,8 @@ Create an agent task that references the template:
 gh agent-task create --custom-agent qa -F agent_docs/reusable/e2e_qa_validation.md
 ```
 
-### Option 2: Reference in Orchestrator Procedures
-Orchestrator procedures (in `agent_docs/procedures/`) can reference these templates as part of larger workflows.
+### Option 2: Reference in Orchestrator Workflows
+Reusable guides can be referenced from orchestrator task files as part of larger workflows.
 
 ## Adding New Reusable Tasks
 
@@ -162,6 +177,5 @@ Review reusable templates quarterly:
 
 ## References
 
-- [../README.md](../README.md) - Main agent tasks directory
-- [../procedures/](../procedures/) - Orchestrator workflows
+- [../README.md](../README.md) - Main agent_docs directory
 - [../../AGENT_ORCHESTRATION.md](../../AGENT_ORCHESTRATION.md) - Agent coordination guide
