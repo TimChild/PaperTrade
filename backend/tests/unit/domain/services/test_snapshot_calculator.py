@@ -211,3 +211,63 @@ class TestSnapshotCalculator:
 
         # Different snapshots should have different IDs
         assert snapshot1.id != snapshot2.id
+
+
+class TestSnapshotCalculatorBreakdown:
+    """Tests for SnapshotCalculator holdings_breakdown output."""
+
+    def test_calculate_snapshot_includes_breakdown(self) -> None:
+        """Should include per-holding breakdown in the snapshot."""
+        portfolio_id = uuid4()
+        snapshot_date = date.today()
+        holdings = [
+            ("AAPL", 10, Decimal("150.00")),
+            ("MSFT", 5, Decimal("300.00")),
+        ]
+
+        snapshot = SnapshotCalculator.calculate_snapshot(
+            portfolio_id=portfolio_id,
+            snapshot_date=snapshot_date,
+            cash_balance=Decimal("5000.00"),
+            holdings=holdings,
+        )
+
+        assert len(snapshot.holdings_breakdown) == 2
+        aapl = next(h for h in snapshot.holdings_breakdown if h.ticker == "AAPL")
+        msft = next(h for h in snapshot.holdings_breakdown if h.ticker == "MSFT")
+
+        assert aapl.quantity == 10
+        assert aapl.price_per_share == Decimal("150.00")
+        assert aapl.value == Decimal("1500.00")
+
+        assert msft.quantity == 5
+        assert msft.price_per_share == Decimal("300.00")
+        assert msft.value == Decimal("1500.00")
+
+    def test_calculate_snapshot_empty_holdings_has_empty_breakdown(self) -> None:
+        """Should return empty breakdown when no holdings."""
+        snapshot = SnapshotCalculator.calculate_snapshot(
+            portfolio_id=uuid4(),
+            snapshot_date=date.today(),
+            cash_balance=Decimal("10000.00"),
+            holdings=[],
+        )
+
+        assert snapshot.holdings_breakdown == []
+
+    def test_breakdown_values_match_holdings_value(self) -> None:
+        """Sum of breakdown values must equal holdings_value."""
+        holdings = [
+            ("AAPL", 7, Decimal("123.45")),
+            ("GOOGL", 3, Decimal("2567.89")),
+        ]
+
+        snapshot = SnapshotCalculator.calculate_snapshot(
+            portfolio_id=uuid4(),
+            snapshot_date=date.today(),
+            cash_balance=Decimal("1000.00"),
+            holdings=holdings,
+        )
+
+        breakdown_total = sum(h.value for h in snapshot.holdings_breakdown)
+        assert breakdown_total == snapshot.holdings_value

@@ -6,7 +6,7 @@ from uuid import uuid4
 
 import pytest
 
-from zebu.domain.entities.portfolio_snapshot import PortfolioSnapshot
+from zebu.domain.entities.portfolio_snapshot import HoldingBreakdown, PortfolioSnapshot
 from zebu.domain.exceptions import InvalidPortfolioError
 
 
@@ -299,3 +299,145 @@ class TestPortfolioSnapshotRepresentation:
         assert str(portfolio_id) in repr_str
         assert "2024-01-15" in repr_str
         assert "10000.00" in repr_str
+
+
+class TestHoldingBreakdown:
+    """Tests for HoldingBreakdown dataclass."""
+
+    def test_holding_breakdown_construction(self) -> None:
+        """Should create HoldingBreakdown with valid data."""
+        breakdown = HoldingBreakdown(
+            ticker="AAPL",
+            quantity=10,
+            price_per_share=Decimal("150.00"),
+            value=Decimal("1500.00"),
+        )
+
+        assert breakdown.ticker == "AAPL"
+        assert breakdown.quantity == 10
+        assert breakdown.price_per_share == Decimal("150.00")
+        assert breakdown.value == Decimal("1500.00")
+
+    def test_holding_breakdown_is_frozen(self) -> None:
+        """HoldingBreakdown should be immutable."""
+        breakdown = HoldingBreakdown(
+            ticker="AAPL",
+            quantity=10,
+            price_per_share=Decimal("150.00"),
+            value=Decimal("1500.00"),
+        )
+
+        with pytest.raises((AttributeError, TypeError)):
+            breakdown.ticker = "MSFT"  # type: ignore[misc]
+
+
+class TestPortfolioSnapshotWithBreakdown:
+    """Tests for PortfolioSnapshot with holdings_breakdown field."""
+
+    def test_create_snapshot_with_breakdown(self) -> None:
+        """Should create snapshot with holdings_breakdown."""
+        portfolio_id = uuid4()
+        snapshot_date = date.today()
+        breakdown = [
+            HoldingBreakdown(
+                ticker="AAPL",
+                quantity=10,
+                price_per_share=Decimal("150.00"),
+                value=Decimal("1500.00"),
+            ),
+            HoldingBreakdown(
+                ticker="MSFT",
+                quantity=5,
+                price_per_share=Decimal("300.00"),
+                value=Decimal("1500.00"),
+            ),
+        ]
+
+        snapshot = PortfolioSnapshot.create(
+            portfolio_id=portfolio_id,
+            snapshot_date=snapshot_date,
+            cash_balance=Decimal("7000.00"),
+            holdings_value=Decimal("3000.00"),
+            holdings_count=2,
+            holdings_breakdown=breakdown,
+        )
+
+        assert snapshot.holdings_breakdown == breakdown
+        assert len(snapshot.holdings_breakdown) == 2
+
+    def test_create_snapshot_without_breakdown_defaults_to_empty(self) -> None:
+        """Should default holdings_breakdown to empty list when not provided."""
+        snapshot = PortfolioSnapshot.create(
+            portfolio_id=uuid4(),
+            snapshot_date=date.today(),
+            cash_balance=Decimal("10000.00"),
+            holdings_value=Decimal("0.00"),
+            holdings_count=0,
+        )
+
+        assert snapshot.holdings_breakdown == []
+
+    def test_snapshot_breakdown_sum_must_match_holdings_value(self) -> None:
+        """Should reject breakdown where sum doesn't equal holdings_value."""
+        breakdown = [
+            HoldingBreakdown(
+                ticker="AAPL",
+                quantity=10,
+                price_per_share=Decimal("150.00"),
+                value=Decimal("1500.00"),
+            ),
+        ]
+
+        with pytest.raises(
+            InvalidPortfolioError, match="sum of holdings_breakdown values"
+        ):
+            PortfolioSnapshot.create(
+                portfolio_id=uuid4(),
+                snapshot_date=date.today(),
+                cash_balance=Decimal("5000.00"),
+                holdings_value=Decimal("2000.00"),  # Wrong: breakdown sums to 1500
+                holdings_count=1,
+                holdings_breakdown=breakdown,
+            )
+
+    def test_empty_breakdown_with_nonzero_holdings_value_is_allowed(self) -> None:
+        """Empty breakdown with non-zero holdings_value should be allowed (backward compat)."""
+        snapshot = PortfolioSnapshot.create(
+            portfolio_id=uuid4(),
+            snapshot_date=date.today(),
+            cash_balance=Decimal("5000.00"),
+            holdings_value=Decimal("3000.00"),
+            holdings_count=2,
+            holdings_breakdown=None,
+        )
+
+        # Old snapshots have no breakdown data but still valid
+        assert snapshot.holdings_breakdown == []
+        assert snapshot.holdings_value == Decimal("3000.00")
+
+    def test_direct_construction_with_breakdown(self) -> None:
+        """Should construct PortfolioSnapshot directly with breakdown."""
+        snapshot_id = uuid4()
+        portfolio_id = uuid4()
+        breakdown = [
+            HoldingBreakdown(
+                ticker="AAPL",
+                quantity=10,
+                price_per_share=Decimal("150.00"),
+                value=Decimal("1500.00"),
+            ),
+        ]
+
+        snapshot = PortfolioSnapshot(
+            id=snapshot_id,
+            portfolio_id=portfolio_id,
+            snapshot_date=date.today(),
+            total_value=Decimal("6500.00"),
+            cash_balance=Decimal("5000.00"),
+            holdings_value=Decimal("1500.00"),
+            holdings_count=1,
+            created_at=datetime.now(UTC),
+            holdings_breakdown=breakdown,
+        )
+
+        assert snapshot.holdings_breakdown == breakdown
