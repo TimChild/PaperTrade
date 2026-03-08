@@ -80,17 +80,17 @@ export function MetricsCards({
       {cards.map((card) => (
         <div
           key={card.testId}
-          className="rounded-lg bg-white p-4 shadow"
+          className="rounded-lg bg-white p-4 shadow dark:bg-gray-800"
           data-testid={card.testId}
         >
-          <p className="text-sm text-gray-500">{card.label}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{card.label}</p>
           <p
             className={`text-xl font-semibold ${
               card.trend === 'up'
-                ? 'text-green-600'
+                ? 'text-green-600 dark:text-green-400'
                 : card.trend === 'down'
-                  ? 'text-red-600'
-                  : ''
+                  ? 'text-red-600 dark:text-red-400'
+                  : 'text-gray-900 dark:text-white'
             }`}
           >
             {card.trend === 'down' && '-'}
