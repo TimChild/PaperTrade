@@ -1,0 +1,118 @@
+# Task 200b: Phase 4 Architecture Design — Refined (Third Run)
+
+**Agent**: architect
+**Priority**: High
+
+## Project Context
+
+Zebu is a paper trading platform where users practice trading strategies without real money. It follows Clean Architecture (Ports & Adapters) with a Python/FastAPI backend and React/TypeScript frontend.
+
+**What exists today (Phases 1–3):**
+- Users create portfolios, deposit cash, buy/sell stocks at current or historical prices
+- Daily portfolio snapshots track value over time (now with per-holding breakdown)
+- Performance analytics: line charts, composition pie charts, composition-over-time stacked area charts
+- Market data from Alpha Vantage with 3-tier caching (Redis → PostgreSQL → API)
+- All domain entities are pure and immutable; holdings are derived from transactions via pure functions
+- An `as_of` parameter already exists on trade commands for executing trades at historical dates/prices
+
+## Objective
+
+Design the architecture for Phase 4: users define trading strategies and execute them over historical periods (e.g., 3 months of 2025), rapidly generating all the trades that strategy would have produced. This lets users test ideas before committing to them in their paper portfolio.
+
+The design should answer: what new domain concepts are needed, how does execution work, how do results integrate with the existing analytics system, and what's the implementation plan?
+
+## What To Investigate
+
+Thoroughly explore the current codebase before designing. Key areas:
+
+- **Trade execution flow**: Commands in `backend/src/zebu/application/commands/` — how `as_of` works, what validation happens, whether existing handlers can be reused or need wrapping
+- **Domain model**: Entities in `backend/src/zebu/domain/entities/` — how Portfolio, Transaction, and Holding relate, what would need to change
+- **Market data**: `backend/src/zebu/application/ports/market_data_port.py` and adapters — what historical data methods exist, rate limits, caching behavior
+- **Portfolio calculator**: `backend/src/zebu/domain/services/portfolio_calculator.py` — pure computation over transactions, potential for reuse
+- **Snapshot system**: `backend/src/zebu/application/services/snapshot_job.py` — daily snapshots, backfill capability, known gap where backfill uses current prices instead of historical
+- **Architecture patterns**: How dependency injection works, how ports/adapters compose, what in-memory implementations exist for testing
+
+## Known Context From Prior Audit
+
+These facts were confirmed by investigation — use them as starting points, not constraints:
+
+- The `as_of` mechanism means existing trade handlers could potentially be reused for backtesting
+- `PortfolioCalculator` is pure static (no I/O) — holdings derived from transactions
+- `MarketDataPort` has `get_price_at(ticker, timestamp)` and `get_price_history(ticker, start, end, interval)` already
+- All ports use Python `Protocol` with in-memory implementations available
+- Alpha Vantage free tier: 5 calls/min, 500/day — but each call returns ~20 years of daily data, persisted permanently in PostgreSQL
+- `backfill_snapshots()` has a known bug: uses current prices instead of historical — acknowledged in a code comment
+- No way to distinguish backtest portfolios from regular paper-trading portfolios currently
+
+## Guidance From Two Prior Architecture Runs
+
+Two architect agents already produced designs (PRs #198 and #199). This third run should produce the best possible design informed by the strengths and weaknesses of both. Here is what we learned:
+
+### Decisions to carry forward (these are settled)
+
+1. **Backtest portfolios as real Portfolio records** — Add a `portfolio_type` field (PAPER_TRADING | BACKTEST) to Portfolio. This enables full reuse of existing analytics (snapshots, performance charts, holdings, composition). Both prior designs agreed on this. The alternative (separate BacktestResult entity) was correctly rejected by both.
+
+2. **Predefined strategy templates for v1** — Three strategy types with configurable parameters, no custom rule DSL. Both agreed. The right strategy types are: Buy & Hold, Dollar-Cost Averaging / Periodic Investment, and Moving Average Crossover.
+
+3. **Synchronous execution for v1** — Backtest runs within the HTTP request lifecycle. Both agreed async adds too much complexity for v1. The API shape (returning a backtest_id) naturally evolves to async later.
+
+4. **Pre-fetch all price data before the simulation loop** — Call `get_price_history()` once per ticker before simulation starts, store in an in-memory dict. This isolates failure (rate limits) from the simulation, and guarantees the loop always completes. One prior run called this component `HistoricalDataPreparer` or `DataReadinessService` — give it a clear name.
+
+5. **Fix `backfill_snapshots()` as a hard prerequisite** — Must use `get_price_at()` instead of `get_current_price()` for historical dates. Not optional.
+
+### Decisions that need resolution (the two prior designs disagreed)
+
+6. **Execution model — this is the critical decision.** One design called existing `BuyStockHandler`/`SellStockHandler` per trade signal (clean reuse, but O(n²) from re-reading portfolio state per trade, estimated 3-8s for 1yr). The other built transactions in-memory and bulk-wrote at the end (fast ~500ms for 1yr, but duplicates balance validation logic). Think carefully about this. Is there a middle path? For example: could the executor maintain an in-memory adapter (implementing the repository ports) that the existing handlers operate against, getting both reuse AND performance? Or is the direct in-memory approach simply better? Justify your choice with analysis.
+
+7. **BacktestMetrics entity — store computed metrics or derive on-the-fly?** One design stored `total_return_pct`, `max_drawdown_pct`, etc. in a dedicated `backtest_metrics` table (avoids recomputation, good for list views). The other relied entirely on existing analytics endpoints (no new table, simpler model). Which is better for v1? Consider: the portfolio list page needs to show summary metrics for each backtest without calling the full analytics pipeline per row.
+
+8. **Signal evaluation interface — single vs. list return.** One design returned `TradeSignal | None` (one signal per day), the other returned `list[TradeSignal]` (multi-ticker ready). The list approach seems better for future extensibility. Consider also how the signal interface should handle amount-based investing (DCA: "invest $500") vs. quantity-based ("buy 10 shares").
+
+### Documentation quality expectations
+
+Include ALL of these in the final document:
+
+- **Explicit error codes** on all API endpoints (400, 404, 409, 503, etc.)
+- **File layout appendix** showing exactly where new files go in the existing directory structure
+- **Open questions section** — surface genuine ambiguities rather than presenting everything as decided. Examples from prior run: Should fractional shares be supported? Should strategy deletion cascade or block? How does SMA handle the warm-up period?
+- **Mermaid diagrams** for ER relationships, execution sequence, and high-level architecture
+- **Performance estimates** with clear methodology (what assumptions, what bottleneck)
+- **Migration strategy** — one migration or multiple? Justify.
+
+## Design Areas To Address
+
+1. **Strategy Definition** — How users define what a strategy does. Consider the full spectrum from simple predefined templates to flexible user-defined rules. What's the right starting point for a v1?
+
+2. **Backtest Execution** — How a strategy gets evaluated against historical data to produce trades. Think about performance, data access patterns, and whether to reuse or wrap existing trade infrastructure.
+
+3. **Results & Portfolio Model** — How backtest results relate to the existing portfolio/transaction/snapshot model. Should backtests produce real portfolio records? Something separate? A hybrid?
+
+4. **Analytics Integration** — How users view and compare backtest results. Can the existing performance/composition analytics system be reused?
+
+5. **Data Readiness** — How to handle the case where historical price data hasn't been fetched yet for tickers in a strategy.
+
+6. **API Design** — What new endpoints are needed and how they fit alongside existing ones.
+
+7. **Implementation Phases** — What to build first (MVP) vs later. Consider what delivers value fastest.
+
+## Deliverable
+
+A design document placed in `docs/architecture/phase4-trading-strategies.md` containing:
+
+1. **Domain model** — New entities/value objects, relationships to existing model (diagrams welcome)
+2. **Execution flow** — How a backtest runs from request to results (sequence diagram)
+3. **API design** — New endpoints with request/response shapes and error codes
+4. **Data model** — New tables/columns needed, migration strategy
+5. **Performance analysis** — Expected scale, optimization approach, clear methodology
+6. **Implementation plan** — Phased breakdown, what to build first
+7. **Trade-offs** — Key decisions with rationale, alternatives considered
+8. **File layout** — Where new files go in the existing directory structure
+9. **Open questions** — Genuine ambiguities that should be resolved during implementation
+
+## Constraints
+
+- Preserve Clean Architecture (dependency rule, pure domain layer)
+- Don't break existing paper-trading functionality
+- Reuse existing infrastructure where it makes sense — but don't force it if a different approach is better
+- Design doc only — no implementation code
+- Backend architecture only (frontend will be designed separately)
