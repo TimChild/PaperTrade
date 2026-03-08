@@ -99,6 +99,7 @@ def _build_executor(
         strategy_repo=strategy_repo,
         backtest_run_repo=backtest_run_repo,
         snapshot_service=snapshot_service,
+        snapshot_repo=snapshot_repo,
         data_preparer=data_preparer,
     )
 

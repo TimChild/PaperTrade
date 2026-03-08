@@ -65,6 +65,7 @@ from zebu.application.queries.get_portfolio_holdings import (
     GetPortfolioHoldingsQuery,
 )
 from zebu.domain.exceptions import InvalidPortfolioError, PortfolioNotFoundError
+from zebu.domain.value_objects.portfolio_type import PortfolioType
 from zebu.domain.value_objects.ticker import Ticker
 
 router = APIRouter(prefix="/portfolios", tags=["portfolios"])
@@ -229,9 +230,21 @@ async def list_portfolios(
         default=20, ge=1, le=100, description="Max portfolios to return"
     ),
     offset: int = Query(default=0, ge=0, description="Number of portfolios to skip"),
+    include_backtest: bool = Query(
+        default=False,
+        description="Include BACKTEST portfolios in the response",
+    ),
 ) -> list[PortfolioResponse]:
-    """Get all portfolios for the current user."""
+    """Get all portfolios for the current user.
+
+    By default, BACKTEST portfolios are excluded.  Pass
+    ``include_backtest=true`` to include them.
+    """
     portfolios = await portfolio_repo.get_by_user(current_user)
+    if not include_backtest:
+        portfolios = [
+            p for p in portfolios if p.portfolio_type != PortfolioType.BACKTEST
+        ]
     paginated = portfolios[offset : offset + limit]
 
     return [
