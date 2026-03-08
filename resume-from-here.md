@@ -7,77 +7,51 @@
 
 **Production is deployed and healthy** at `192.168.4.112` (Proxmox VM). All services running.
 
-**No open PRs.** All PRs have been merged or closed. The repository is clean.
+**Phase 4 (Trading Strategies & Backtesting) is COMPLETE.** Deployed to production.
 
-## ⚠️ Recent Production Issue (RESOLVED)
+**No open PRs.** Repository is clean on main.
 
-**Issue**: Analytics page completely broken after PR #195 merge — all charts showing "Failed to load" errors.
+**Test count**: 831 backend tests passing, 4 skipped.
 
-**Root Cause**:
-- PR #195's database migration (`holdings_breakdown` column) was never applied to production
-- Alembic `env.py` was not respecting `DATABASE_URL` environment variable
-- All production deployments were using SQLite URL from `alembic.ini`
+## What Was Done This Session (March 8, 2026)
 
-**Resolution** (completed 2026-03-08):
-1. Manually added missing column: `ALTER TABLE portfolio_snapshots ADD COLUMN holdings_breakdown JSONB;`
-2. Created `alembic_version` table and recorded current migration state
-3. Fixed `migrations/env.py` to check and override with `DATABASE_URL` env var
-4. Deployed fix (commit `8d1d967`)
-5. Created deployment checklist at `docs/deployment/migration-checklist.md`
+### Phase 4 Implementation — Complete
 
-**Prevention**:
-- Always run `alembic upgrade head` after deploying code in production
-- Follow checklist in `docs/deployment/migration-checklist.md`
-- Consider automating migrations in deployment script
+All phases implemented via GitHub Copilot agents (`gh agent-task create`), orchestrated from local VS Code:
 
-### What Was Done This Session (March 7–8, 2026)
+| PR | Phase | Description |
+|----|-------|-------------|
+| #201 | 4.1 prereq | `trade_factory.py` extraction, `backfill_snapshots()` bug fix |
+| #202 | 4.1 | Domain entities, value objects, migrations, repos |
+| #203 | 4.2 | `BacktestExecutor`, `BacktestTransactionBuilder`, `HistoricalDataPreparer`, Buy & Hold strategy, CRUD API endpoints |
+| #204 | 4.3 | DCA + MA Crossover strategies, encapsulation fix, strategy parameter validation, portfolio type filtering |
+| #205 | — | Dark mode fix for analytics performance summary cards |
+| #206 | 4.4 | Ticker validation, 503 error handling, integration tests, docs |
 
-1. **Bug fixes** (pushed directly to main):
-   - `snapshot_job.py` — was silently dropping holdings when price lookups failed. Now raises `MarketDataUnavailableError`. Cleaned 75 bad snapshots from production DB.
-   - Analytics API — Pydantic serialized `Decimal` as JSON strings, breaking charts/tooltips/stats. Fixed with `JsonFloat = Annotated[Decimal, PlainSerializer(float)]` pattern. Added Y-axis auto-scaling.
+### Orchestration Guide Updated
 
-2. **Merged PRs**:
-   - **#192** — Backend: deterministic weekend cache tests + batch portfolio balances endpoint
-   - **#193** — Frontend: click-to-trade from price charts, holdings price polish, 5-min auto-refetch
-   - **#194** — Docs reorg: `agent_tasks/` → `agent_docs/tasks/`, MkDocs config, GitHub Pages workflow
-   - **#195** — Backend: `HoldingBreakdown` domain entity, JSON column on snapshots, API extension
-   - **#196** — Frontend: `CompositionOverTimeChart.tsx` stacked area chart using snapshot breakdown data
-   - **#200** — Architecture: Phase 4 design document for trading strategies & backtesting (reviewed, revised)
+`agent_docs/orchestration-guide.md` updated with learnings:
+- Task scoping guidance (scope by functional area, not micro-tasks)
+- Fix-forward pattern (address small quality issues in next task, don't accumulate)
+- Effective review workflow (checkout, read key files, run tests, check CI)
+- Parallel execution patterns (local sub-agents for quick UI fixes while backend agents run)
 
-3. **Closed PRs** (superseded):
-   - **#197** — Empty duplicate of #196
-   - **#198, #199** — Earlier architect runs superseded by #200
-   - **#174** — Stale price data granularity design from January
+## What's Next
 
-## What's Next: Phase 4 — Trading Strategies & Backtesting
+Phase 4 is done. Potential next work:
 
-The architecture design is finalized in `docs/architecture/phase4-trading-strategies.md`. Read that document before starting implementation.
+1. **Frontend for backtesting** — UI to create strategies, run backtests, view results. No frontend for Phase 4 was built — only backend API endpoints exist. This would be the natural next step.
+2. **Strategy comparison views** — Compare multiple backtest runs side by side
+3. **Live paper-trading UI improvements** — Based on user feedback
+4. **`full-stack-swe.md` agent** — TODO to create a combined frontend+backend agent for cross-cutting tasks
+5. **Production deployment automation** — Consider running `alembic upgrade head` automatically in deploy script
 
-### Implementation Order (from the design doc)
+### Key Architecture Reference
 
-**Prerequisite**: Fix `backfill_snapshots()` bug — must use `get_price_at()` for historical dates instead of `get_current_price()`. Located in `backend/src/zebu/application/services/snapshot_job.py`.
-
-**Phase 4.1 — Foundation**:
-1. Extract `trade_factory.py` — shared pure domain functions (`create_buy_transaction()`, `create_sell_transaction()`) used by both existing handlers and new backtest builder
-2. Refactor `BuyStockHandler` and `SellStockHandler` to call trade_factory (no behavior change)
-3. Add `PortfolioType` enum + field to `Portfolio` entity
-4. Create `Strategy` and `BacktestRun` domain entities
-5. Create `TradeSignal` value object
-6. Alembic migrations (portfolio_type column, new tables)
-7. Repository ports + implementations (SQL + in-memory)
-
-**Phase 4.2 — Execution Engine**: `HistoricalDataPreparer`, `BacktestTransactionBuilder`, `BacktestExecutor`, Buy & Hold strategy, API endpoints
-
-**Phase 4.3 — More Strategies**: Strategy CRUD endpoints, DCA strategy, MA Crossover strategy
-
-**Phase 4.4 — Polish**: Ticker validation, date range guards, error handling, integration tests
-
-### Key Architecture Decisions (settled)
-
-- Backtest portfolios are real `Portfolio` records with `portfolio_type = BACKTEST`
-- All existing analytics endpoints work for backtest portfolios with zero changes
-- Execution uses in-memory `BacktestTransactionBuilder` with **shared domain functions** (not duplicated logic)
-- Three strategy types: Buy & Hold, Dollar-Cost Averaging, Moving Average Crossover
+- Design doc: `docs/architecture/phase4-trading-strategies.md`
+- Backend API endpoints: `POST/GET/DELETE /api/v1/strategies`, `POST/GET/DELETE /api/v1/backtests`
+- Portfolio filtering: `GET /api/v1/portfolios?include_backtest=true` (backtest portfolios excluded by default)
+- Orchestration guide: `agent_docs/orchestration-guide.md`
 - Synchronous execution for v1 (3-year max date range)
 - Pre-fetch all price data before simulation loop
 - Summary metrics stored on `BacktestRun` entity (not a separate table for v1)
