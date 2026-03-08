@@ -1,0 +1,11 @@
+name: Test Self-Hosted Runner
+on: workflow_dispatch
+
+jobs:
+  test:
+    runs-on: [self-hosted, proxmox]
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Hello from $(hostname)!"
+      - run: docker ps
+      - run: task --version
