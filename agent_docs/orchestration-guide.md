@@ -211,7 +211,7 @@ task lint           # Run linters
 | `.github/agents/*.md` | Role-specific agent instructions |
 | `Taskfile.yml` | Commands (`task --list`) |
 | `agent_docs/mcp-tools.md` | MCP tools reference |
-| `agent_docs/procedures/*.md` | Orchestrator testing and validation procedures |
+| `agent_docs/reusable/*.md` | Reusable templates and procedures (incl. session_handoff.md) |
 
 ## Best Practices
 

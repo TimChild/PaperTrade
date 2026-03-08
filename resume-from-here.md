@@ -5,70 +5,48 @@
 
 ## Current State
 
-**Production is deployed and healthy** at `192.168.4.112` (Proxmox VM). All services running.
+**Production is deployed and healthy** at `192.168.4.112` (Proxmox VM). All services running at zebutrader.com.
 
-**Phase 4 (Trading Strategies & Backtesting) is COMPLETE.** Deployed to production.
+**All phases (1–4) are COMPLETE and deployed to production**, including the Phase 4 frontend backtesting UI.
 
 **No open PRs.** Repository is clean on main.
 
-**Test count**: 831 backend tests passing, 4 skipped.
+**Test count**: 835 backend tests passing (4 skipped), 311 frontend tests.
 
-## What Was Done This Session (March 8, 2026)
+## What Was Done (March 8, 2026)
 
-### Phase 4 Implementation — Complete
+### PR #207 — Frontend Backtesting UI (Merged)
+- Strategy creation and configuration forms (Buy & Hold, DCA, MA Crossover)
+- Backtest run management: trigger runs, list history, view detailed results
+- Performance chart showing portfolio value over time with trade markers
+- Strategy comparison UI: side-by-side metrics for multiple backtest runs
 
-All phases implemented via GitHub Copilot agents (`gh agent-task create`), orchestrated from local VS Code:
+### Documentation Cleanup (PR #208)
+- BACKLOG.md rewritten — completed items removed, only actual backlog remains
+- PROGRESS.md updated — Phase 4 frontend added, test counts corrected (1,146 total)
+- README.md updated — feature list reflects all completed phases, Python version corrected
+- `session_handoff.md` moved from `agent_docs/procedures/` to `agent_docs/reusable/`
+- `agent_docs/procedures/` directory removed
 
-| PR | Phase | Description |
-|----|-------|-------------|
-| #201 | 4.1 prereq | `trade_factory.py` extraction, `backfill_snapshots()` bug fix |
-| #202 | 4.1 | Domain entities, value objects, migrations, repos |
-| #203 | 4.2 | `BacktestExecutor`, `BacktestTransactionBuilder`, `HistoricalDataPreparer`, Buy & Hold strategy, CRUD API endpoints |
-| #204 | 4.3 | DCA + MA Crossover strategies, encapsulation fix, strategy parameter validation, portfolio type filtering |
-| #205 | — | Dark mode fix for analytics performance summary cards |
-| #206 | 4.4 | Ticker validation, 503 error handling, integration tests, docs |
+## Current Focus Areas
 
-### Orchestration Guide Updated
+1. **CD pipeline automation** — `alembic upgrade head` should run automatically in deploy script
+2. **Live strategy execution** — next major feature (scheduled paper-trading based on saved strategies)
+3. **Error monitoring** — Sentry for frontend, structlog already in place for backend
 
-`agent_docs/orchestration-guide.md` updated with learnings:
-- Task scoping guidance (scope by functional area, not micro-tasks)
-- Fix-forward pattern (address small quality issues in next task, don't accumulate)
-- Effective review workflow (checkout, read key files, run tests, check CI)
-- Parallel execution patterns (local sub-agents for quick UI fixes while backend agents run)
-
-## What's Next
-
-Phase 4 is done. Potential next work:
-
-1. **Frontend for backtesting** — UI to create strategies, run backtests, view results. No frontend for Phase 4 was built — only backend API endpoints exist. This would be the natural next step.
-2. **Strategy comparison views** — Compare multiple backtest runs side by side
-3. **Live paper-trading UI improvements** — Based on user feedback
-4. **`full-stack-swe.md` agent** — TODO to create a combined frontend+backend agent for cross-cutting tasks
-5. **Production deployment automation** — Consider running `alembic upgrade head` automatically in deploy script
-
-### Key Architecture Reference
+## Key Architecture Reference
 
 - Design doc: `docs/architecture/phase4-trading-strategies.md`
-- Backend API endpoints: `POST/GET/DELETE /api/v1/strategies`, `POST/GET/DELETE /api/v1/backtests`
+- Backend API: `POST/GET/DELETE /api/v1/strategies`, `POST/GET/DELETE /api/v1/backtests`
 - Portfolio filtering: `GET /api/v1/portfolios?include_backtest=true` (backtest portfolios excluded by default)
 - Orchestration guide: `agent_docs/orchestration-guide.md`
-- Synchronous execution for v1 (3-year max date range)
-- Pre-fetch all price data before simulation loop
-- Summary metrics stored on `BacktestRun` entity (not a separate table for v1)
-
-### Open Questions (see design doc Section 10)
-
-Fractional shares, MA warm-up period, strategy deletion behavior, failure cleanup, concurrent backtests, backtest portfolio immutability, rate limit handling.
 
 ## Useful Commands
 
-- `task docs:serve` — Serve MkDocs locally (uses `uvx`, no install needed)
-- `task quality:backend` — Format + lint + type check + test backend
-- `task quality:frontend` — Format + lint + type check + test frontend
-- `task proxmox-vm:deploy` — Deploy to production
-- `task proxmox-vm:status` — Check production health
-
-## Test Counts (as of this session)
-
-- Backend: ~717 tests passing
-- Frontend: ~263 tests passing
+```bash
+task docs:serve           # Serve MkDocs locally
+task quality:backend      # Format + lint + type check + test backend
+task quality:frontend     # Format + lint + type check + test frontend
+task proxmox-vm:deploy    # Deploy to production
+task proxmox-vm:status    # Check production health
+```

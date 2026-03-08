@@ -4,9 +4,9 @@
 
 A stock market emulation platform for practicing trading strategies without risking real money.
 
-> **Status**: ✅ Phase 2 Complete - Real market data integration with Alpha Vantage
+> **Status**: ✅ Phase 4 Complete — Trading Strategies & Backtesting deployed
 >
-> **Latest**: Comprehensive documentation package available (Jan 4, 2026)
+> **Latest**: Frontend backtesting UI and strategy comparison complete (March 8, 2026)
 
 ## 📚 Documentation
 
@@ -34,12 +34,12 @@ A stock market emulation platform for practicing trading strategies without risk
 Zebu allows users to:
 - ✅ Start with virtual cash and practice investing
 - ✅ Create unlimited portfolios with different strategies
-- ✅ Execute BUY trades with real-time market data
+- ✅ Execute BUY and SELL trades with real-time market data
 - ✅ Track holdings, cash balances, and complete transaction history
 - ✅ Trade US and international stocks (UK, Canada, Germany, China, etc.)
-- 📋 SELL trades and portfolio rebalancing (Phase 3 - Q1 2026)
-- 📋 Backtest strategies against historical data (Phase 3)
-- 📋 Implement automated trading algorithms (Phase 4)
+- ✅ View analytics charts and performance metrics
+- ✅ Backtest strategies against historical data (Buy & Hold, DCA, Moving Average Crossover)
+- ✅ Compare backtest results side-by-side
 
 ## Philosophy
 
@@ -78,7 +78,7 @@ Dependencies point INWARD only
 ### Backend
 | Component | Technology |
 |-----------|------------|
-| Language | Python 3.12+ |
+| Language | Python 3.13+ |
 | Framework | FastAPI |
 | ORM | SQLModel |
 | Database | PostgreSQL (prod) / SQLite (dev) |
@@ -481,10 +481,10 @@ uv run pytest --cov=papertrade --cov-report=html
 
 #### Test Statistics
 
-- **Backend**: 220+ tests (195 unit, 26 integration)
-- **Frontend**: 30+ tests (23 unit, 7 E2E)
-- **Total**: 250+ tests ensuring quality
-- **Coverage**: 90%+ on critical paths
+- **Backend**: 835+ tests (unit + integration)
+- **Frontend**: 311+ tests (unit + E2E)
+- **Total**: 1,146+ tests ensuring quality
+- **Coverage**: 81%+ on critical paths
 
 ### Linting & Type Checking
 
@@ -570,11 +570,11 @@ task ci:fast
 
 See [project_plan.md](docs/planning/project_plan.md) for detailed development phases:
 
-1. **Phase 0**: Foundation (current) - Project setup, CI/CD, tooling
-2. **Phase 1**: The Ledger MVP - Basic portfolio and trade tracking
-3. **Phase 2**: Reality Injection - Real market data integration
-4. **Phase 3**: Time Machine - Historical backtesting
-5. **Phase 4**: Automation - Algorithmic trading support
+1. **Phase 0**: Foundation ✅ — Project setup, CI/CD, tooling
+2. **Phase 1**: The Ledger ✅ — Basic portfolio and trade tracking
+3. **Phase 2**: Reality Injection ✅ — Real market data integration
+4. **Phase 3**: Time Machine ✅ — Historical data, analytics, authentication
+5. **Phase 4**: Automation ✅ — Backtesting with three strategy types, comparison UI
 
 ## Contributing
 
