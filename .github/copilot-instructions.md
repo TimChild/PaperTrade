@@ -112,6 +112,10 @@ Configured secrets for CI/CD and Copilot agents:
 - Agent workflow docs go in `agent_docs/` (tasks, progress, reusable chunks, procedures)
 - Do not mix them. If in doubt, it's agent-facing.
 
+## Orchestrating Multi-Agent Work
+
+When coordinating a large body of work (e.g., a multi-phase feature) with a human user, see **[agent_docs/orchestration-guide.md](../agent_docs/orchestration-guide.md)** for best practices on task scoping, agent assignment, PR review standards, and parallel execution.
+
 ## Available Agents
 
 Refer to individual agent files in `.github/agents/` for specific role instructions:
