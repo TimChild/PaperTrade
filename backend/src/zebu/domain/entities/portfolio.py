@@ -1,10 +1,11 @@
 """Portfolio entity - Aggregate root for trading activity."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from uuid import UUID
 
 from zebu.domain.exceptions import InvalidPortfolioError
+from zebu.domain.value_objects.portfolio_type import PortfolioType
 
 
 @dataclass(frozen=True)
@@ -23,6 +24,7 @@ class Portfolio:
         user_id: Owner of the portfolio (immutable)
         name: Display name for portfolio (1-100 characters, immutable)
         created_at: When portfolio was created (UTC timezone, immutable)
+        portfolio_type: Whether this is a paper-trading or backtest portfolio
 
     Raises:
         InvalidPortfolioError: If invariants are violated
@@ -32,6 +34,7 @@ class Portfolio:
     user_id: UUID
     name: str
     created_at: datetime
+    portfolio_type: PortfolioType = field(default=PortfolioType.PAPER_TRADING)
 
     def __post_init__(self) -> None:
         """Validate Portfolio invariants after initialization."""

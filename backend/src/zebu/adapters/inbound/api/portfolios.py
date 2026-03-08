@@ -98,6 +98,7 @@ class PortfolioResponse(BaseModel):
     user_id: UUID
     name: str
     created_at: str  # ISO 8601 format
+    portfolio_type: str
 
 
 class DepositRequest(BaseModel):
@@ -239,6 +240,7 @@ async def list_portfolios(
             user_id=p.user_id,
             name=p.name,
             created_at=p.created_at.isoformat(),
+            portfolio_type=p.portfolio_type.value,
         )
         for p in paginated
     ]
@@ -311,6 +313,7 @@ async def get_portfolio(
         user_id=portfolio_dto.user_id,
         name=portfolio_dto.name,
         created_at=portfolio_dto.created_at.isoformat(),
+        portfolio_type=portfolio_dto.portfolio_type.value,
     )
 
 

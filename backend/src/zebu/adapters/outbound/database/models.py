@@ -6,19 +6,24 @@ to/from domain entities.
 
 from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import TypedDict
+from typing import Any, TypedDict
 from uuid import UUID
 
 from sqlmodel import JSON, Column, Field, Index, SQLModel
 
+from zebu.domain.entities.backtest_run import BacktestRun
 from zebu.domain.entities.portfolio import Portfolio
 from zebu.domain.entities.portfolio_snapshot import (
     HoldingBreakdown,
     PortfolioSnapshot,
 )
+from zebu.domain.entities.strategy import Strategy
 from zebu.domain.entities.transaction import Transaction, TransactionType
+from zebu.domain.value_objects.backtest_status import BacktestStatus
 from zebu.domain.value_objects.money import Money
+from zebu.domain.value_objects.portfolio_type import PortfolioType
 from zebu.domain.value_objects.quantity import Quantity
+from zebu.domain.value_objects.strategy_type import StrategyType
 from zebu.domain.value_objects.ticker import Ticker
 
 
@@ -52,6 +57,7 @@ class PortfolioModel(SQLModel, table=True):
     created_at: datetime
     updated_at: datetime
     version: int = Field(default=1)
+    portfolio_type: str = Field(default="PAPER_TRADING")
 
     def to_domain(self) -> Portfolio:
         """Convert database model to domain entity.
@@ -67,6 +73,7 @@ class PortfolioModel(SQLModel, table=True):
             user_id=self.user_id,
             name=self.name,
             created_at=created_at_utc,
+            portfolio_type=PortfolioType(self.portfolio_type),
         )
 
     @classmethod
@@ -96,6 +103,7 @@ class PortfolioModel(SQLModel, table=True):
             created_at=created_at_naive,
             updated_at=updated_at_naive,
             version=1,
+            portfolio_type=portfolio.portfolio_type.value,
         )
 
 
@@ -341,4 +349,209 @@ class PortfolioSnapshotModel(SQLModel, table=True):
             holdings_count=snapshot.holdings_count,
             created_at=created_at_naive,
             holdings_breakdown=breakdown_json,
+        )
+
+
+class StrategyModel(SQLModel, table=True):
+    """Database model for Strategy entity.
+
+    Attributes:
+        id: Primary key (UUID)
+        user_id: Owner of the strategy - indexed for get_by_user queries
+        name: Human-readable strategy name
+        strategy_type: Algorithm type string (e.g. 'BUY_AND_HOLD')
+        tickers: JSON array of ticker symbols
+        parameters: JSON object of algorithm-specific configuration
+        created_at: Timestamp of strategy creation
+    """
+
+    __tablename__ = "strategies"  # type: ignore[assignment]
+    __table_args__ = (Index("idx_strategy_user_id", "user_id"),)
+
+    id: UUID = Field(primary_key=True)
+    user_id: UUID = Field(index=True)
+    name: str = Field(max_length=100)
+    strategy_type: str = Field(max_length=50)
+    tickers: list[str] = Field(  # type: ignore[assignment]
+        sa_column=Column(JSON, nullable=False)
+    )
+    parameters: dict[str, Any] = Field(  # type: ignore[assignment]
+        sa_column=Column(JSON, nullable=False)
+    )
+    created_at: datetime
+
+    def to_domain(self) -> Strategy:
+        """Convert database model to domain entity.
+
+        Returns:
+            Strategy domain entity
+        """
+        created_at_utc = self.created_at.replace(tzinfo=UTC)
+        return Strategy(
+            id=self.id,
+            user_id=self.user_id,
+            name=self.name,
+            strategy_type=StrategyType(self.strategy_type),
+            tickers=list(self.tickers),
+            parameters=dict(self.parameters),
+            created_at=created_at_utc,
+        )
+
+    @classmethod
+    def from_domain(cls, strategy: Strategy) -> "StrategyModel":
+        """Convert domain entity to database model.
+
+        Args:
+            strategy: Domain Strategy entity
+
+        Returns:
+            StrategyModel for database persistence
+        """
+        if strategy.created_at.tzinfo:
+            created_at_naive = strategy.created_at.astimezone(UTC).replace(tzinfo=None)
+        else:
+            created_at_naive = strategy.created_at
+
+        return cls(
+            id=strategy.id,
+            user_id=strategy.user_id,
+            name=strategy.name,
+            strategy_type=strategy.strategy_type.value,
+            tickers=strategy.tickers,
+            parameters=strategy.parameters,
+            created_at=created_at_naive,
+        )
+
+
+class BacktestRunModel(SQLModel, table=True):
+    """Database model for BacktestRun entity.
+
+    Attributes:
+        id: Primary key (UUID)
+        user_id: Owner of the run - indexed
+        strategy_id: Optional reference to the strategy entity
+        portfolio_id: Portfolio created for this backtest
+        strategy_snapshot: JSON copy of strategy config at run time
+        backtest_name: Human-readable label
+        start_date: Start of simulation window
+        end_date: End of simulation window
+        initial_cash: Starting cash balance in USD
+        status: Lifecycle status string
+        created_at: When the run was created
+        completed_at: When the run finished (nullable)
+        error_message: Failure reason (nullable)
+        total_return_pct: Percentage return (nullable, set on completion)
+        max_drawdown_pct: Maximum drawdown (nullable, set on completion)
+        annualized_return_pct: Annualized return (nullable, set on completion)
+        total_trades: Number of trades executed (nullable, set on completion)
+    """
+
+    __tablename__ = "backtest_runs"  # type: ignore[assignment]
+    __table_args__ = (
+        Index("idx_backtest_run_user_id", "user_id"),
+        Index("idx_backtest_run_portfolio_id", "portfolio_id"),
+        Index("idx_backtest_run_strategy_id", "strategy_id"),
+    )
+
+    id: UUID = Field(primary_key=True)
+    user_id: UUID = Field(index=True)
+    strategy_id: UUID | None = Field(default=None)
+    portfolio_id: UUID = Field(index=True)
+    strategy_snapshot: dict[str, Any] = Field(  # type: ignore[assignment]
+        sa_column=Column(JSON, nullable=False)
+    )
+    backtest_name: str = Field(max_length=100)
+    start_date: date
+    end_date: date
+    initial_cash: Decimal = Field(max_digits=15, decimal_places=2)
+    status: str = Field(max_length=20)
+    created_at: datetime
+    completed_at: datetime | None = Field(default=None)
+    error_message: str | None = Field(default=None, max_length=500)
+    total_return_pct: Decimal | None = Field(
+        default=None, max_digits=15, decimal_places=4
+    )
+    max_drawdown_pct: Decimal | None = Field(
+        default=None, max_digits=15, decimal_places=4
+    )
+    annualized_return_pct: Decimal | None = Field(
+        default=None, max_digits=15, decimal_places=4
+    )
+    total_trades: int | None = Field(default=None)
+
+    def to_domain(self) -> BacktestRun:
+        """Convert database model to domain entity.
+
+        Returns:
+            BacktestRun domain entity
+        """
+        created_at_utc = self.created_at.replace(tzinfo=UTC)
+        completed_at_utc: datetime | None = None
+        if self.completed_at is not None:
+            completed_at_utc = self.completed_at.replace(tzinfo=UTC)
+
+        return BacktestRun(
+            id=self.id,
+            user_id=self.user_id,
+            strategy_id=self.strategy_id,
+            portfolio_id=self.portfolio_id,
+            strategy_snapshot=dict(self.strategy_snapshot),
+            backtest_name=self.backtest_name,
+            start_date=self.start_date,
+            end_date=self.end_date,
+            initial_cash=self.initial_cash,
+            status=BacktestStatus(self.status),
+            created_at=created_at_utc,
+            completed_at=completed_at_utc,
+            error_message=self.error_message,
+            total_return_pct=self.total_return_pct,
+            max_drawdown_pct=self.max_drawdown_pct,
+            annualized_return_pct=self.annualized_return_pct,
+            total_trades=self.total_trades,
+        )
+
+    @classmethod
+    def from_domain(cls, backtest_run: BacktestRun) -> "BacktestRunModel":
+        """Convert domain entity to database model.
+
+        Args:
+            backtest_run: Domain BacktestRun entity
+
+        Returns:
+            BacktestRunModel for database persistence
+        """
+        if backtest_run.created_at.tzinfo:
+            created_at_naive = backtest_run.created_at.astimezone(UTC).replace(
+                tzinfo=None
+            )
+        else:
+            created_at_naive = backtest_run.created_at
+
+        completed_at_naive: datetime | None = None
+        if backtest_run.completed_at is not None:
+            if backtest_run.completed_at.tzinfo:
+                completed_at_naive = backtest_run.completed_at.astimezone(UTC).replace(
+                    tzinfo=None
+                )
+            else:
+                completed_at_naive = backtest_run.completed_at
+
+        return cls(
+            id=backtest_run.id,
+            user_id=backtest_run.user_id,
+            strategy_id=backtest_run.strategy_id,
+            portfolio_id=backtest_run.portfolio_id,
+            strategy_snapshot=backtest_run.strategy_snapshot,
+            backtest_name=backtest_run.backtest_name,
+            start_date=backtest_run.start_date,
+            end_date=backtest_run.end_date,
+            initial_cash=backtest_run.initial_cash,
+            status=backtest_run.status.value,
+            created_at=created_at_naive,
+            completed_at=completed_at_naive,
+            error_message=backtest_run.error_message,
+            total_return_pct=backtest_run.total_return_pct,
+            max_drawdown_pct=backtest_run.max_drawdown_pct,
+            annualized_return_pct=backtest_run.annualized_return_pct,
+            total_trades=backtest_run.total_trades,
         )

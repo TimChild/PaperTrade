@@ -207,3 +207,32 @@ class TestPortfolioStringRepresentation:
         assert "Portfolio" in repr_str
         assert "Test Portfolio" in repr_str
         assert str(portfolio.id) in repr_str
+
+
+class TestPortfolioType:
+    """Tests for Portfolio.portfolio_type field."""
+
+    def test_default_portfolio_type_is_paper_trading(self) -> None:
+        """Default portfolio_type should be PAPER_TRADING."""
+        from zebu.domain.value_objects.portfolio_type import PortfolioType
+
+        portfolio = Portfolio(
+            id=uuid4(),
+            user_id=uuid4(),
+            name="Test",
+            created_at=datetime.now(UTC),
+        )
+        assert portfolio.portfolio_type == PortfolioType.PAPER_TRADING
+
+    def test_can_create_with_backtest_type(self) -> None:
+        """Should be able to create a portfolio with BACKTEST type."""
+        from zebu.domain.value_objects.portfolio_type import PortfolioType
+
+        portfolio = Portfolio(
+            id=uuid4(),
+            user_id=uuid4(),
+            name="Backtest Portfolio",
+            created_at=datetime.now(UTC),
+            portfolio_type=PortfolioType.BACKTEST,
+        )
+        assert portfolio.portfolio_type == PortfolioType.BACKTEST
