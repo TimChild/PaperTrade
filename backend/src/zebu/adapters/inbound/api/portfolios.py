@@ -263,9 +263,7 @@ async def get_all_balances(
         return []
 
     query = GetPortfolioBalancesQuery(portfolio_ids=portfolio_ids)
-    handler = GetPortfolioBalancesHandler(
-        portfolio_repo, transaction_repo, market_data
-    )
+    handler = GetPortfolioBalancesHandler(portfolio_repo, transaction_repo, market_data)
     result = await handler.execute(query)
 
     return [

@@ -572,3 +572,173 @@ class TestCalculateSnapshotForPortfolio:
         assert results["succeeded"] == 0
         assert results["failed"] == 1
         assert len(snapshot_repo._snapshots) == 0
+
+
+class TestBackfillUsesHistoricalPrices:
+    """Tests that backfill uses get_price_at for historical dates."""
+
+    @pytest.mark.asyncio
+    async def test_backfill_historical_date_uses_get_price_at(self) -> None:
+        """Test backfilling a historical date uses get_price_at."""
+        # Arrange
+        portfolio_repo = InMemoryPortfolioRepository()
+        transaction_repo = InMemoryTransactionRepository()
+        snapshot_repo = InMemorySnapshotRepository()
+        market_data = InMemoryMarketDataAdapter()
+
+        user_id = uuid4()
+        portfolio = Portfolio(
+            id=uuid4(),
+            user_id=user_id,
+            name="Test Portfolio",
+            created_at=datetime.now(UTC),
+        )
+        await portfolio_repo.save(portfolio)
+
+        # Add deposit
+        deposit = Transaction(
+            id=uuid4(),
+            portfolio_id=portfolio.id,
+            transaction_type=TransactionType.DEPOSIT,
+            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+            cash_change=Money(Decimal("10000.00"), "USD"),
+        )
+        await transaction_repo.save(deposit)
+
+        # Add buy transaction
+        ticker = Ticker("AAPL")
+        buy = Transaction(
+            id=uuid4(),
+            portfolio_id=portfolio.id,
+            transaction_type=TransactionType.BUY,
+            timestamp=datetime(2024, 1, 2, tzinfo=UTC),
+            cash_change=Money(Decimal("-1500.00"), "USD"),
+            ticker=ticker,
+            quantity=Quantity(Decimal("10")),
+            price_per_share=Money(Decimal("150.00"), "USD"),
+        )
+        await transaction_repo.save(buy)
+
+        # Seed a historical price for AAPL on 2024-01-10
+        from zebu.application.dtos.price_point import PricePoint
+        from zebu.domain.value_objects.money import Money as MoneyVO
+
+        historical_price = PricePoint(
+            ticker=ticker,
+            price=MoneyVO(Decimal("160.00"), "USD"),
+            timestamp=datetime(2024, 1, 10, 12, 0, 0, tzinfo=UTC),
+            source="database",
+            interval="1day",
+        )
+        market_data.seed_price(historical_price)
+
+        service = SnapshotJobService(
+            portfolio_repo=portfolio_repo,
+            transaction_repo=transaction_repo,
+            snapshot_repo=snapshot_repo,
+            market_data=market_data,
+        )
+
+        historical_date = date(2024, 1, 10)
+
+        # Act
+        results = await service.backfill_snapshots(
+            portfolio_id=portfolio.id,
+            start_date=historical_date,
+            end_date=historical_date,
+        )
+
+        # Assert
+        assert results["succeeded"] == 1
+        assert len(snapshot_repo._snapshots) == 1
+        snapshot = snapshot_repo._snapshots[0]
+
+        # Cash: 10000 - 1500 = 8500
+        # Holdings: 10 * 160 (historical price) = 1600
+        # Total: 8500 + 1600 = 10100
+        assert snapshot.cash_balance == Decimal("8500.00")
+        assert snapshot.holdings_value == Decimal("1600.00")
+        assert snapshot.total_value == Decimal("10100.00")
+
+    @pytest.mark.asyncio
+    async def test_backfill_historical_date_fails_without_historical_price(
+        self,
+    ) -> None:
+        """Test backfill fails when no historical price is available.
+
+        If only a current price is seeded (with a recent timestamp), backfill
+        for a past date should fail because get_price_at won't find a matching
+        price at or before the historical date.
+        """
+        # Arrange
+        portfolio_repo = InMemoryPortfolioRepository()
+        transaction_repo = InMemoryTransactionRepository()
+        snapshot_repo = InMemorySnapshotRepository()
+        market_data = InMemoryMarketDataAdapter()
+
+        user_id = uuid4()
+        portfolio = Portfolio(
+            id=uuid4(),
+            user_id=user_id,
+            name="Test Portfolio",
+            created_at=datetime.now(UTC),
+        )
+        await portfolio_repo.save(portfolio)
+
+        # Add deposit + buy
+        deposit = Transaction(
+            id=uuid4(),
+            portfolio_id=portfolio.id,
+            transaction_type=TransactionType.DEPOSIT,
+            timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+            cash_change=Money(Decimal("10000.00"), "USD"),
+        )
+        await transaction_repo.save(deposit)
+
+        ticker = Ticker("AAPL")
+        buy = Transaction(
+            id=uuid4(),
+            portfolio_id=portfolio.id,
+            transaction_type=TransactionType.BUY,
+            timestamp=datetime(2024, 1, 2, tzinfo=UTC),
+            cash_change=Money(Decimal("-1500.00"), "USD"),
+            ticker=ticker,
+            quantity=Quantity(Decimal("10")),
+            price_per_share=Money(Decimal("150.00"), "USD"),
+        )
+        await transaction_repo.save(buy)
+
+        # Seed only a "current" price with a very recent timestamp (not historical)
+        from zebu.application.dtos.price_point import PricePoint
+        from zebu.domain.value_objects.money import Money as MoneyVO
+
+        current_price = PricePoint(
+            ticker=ticker,
+            price=MoneyVO(Decimal("170.00"), "USD"),
+            timestamp=datetime.now(UTC),
+            source="database",
+            interval="1day",
+        )
+        market_data.seed_price(current_price)
+
+        service = SnapshotJobService(
+            portfolio_repo=portfolio_repo,
+            transaction_repo=transaction_repo,
+            snapshot_repo=snapshot_repo,
+            market_data=market_data,
+        )
+
+        # Backfill for a date well before the seeded price
+        historical_date = date(2024, 1, 10)
+
+        # Act
+        results = await service.backfill_snapshots(
+            portfolio_id=portfolio.id,
+            start_date=historical_date,
+            end_date=historical_date,
+        )
+
+        # Assert - should fail because no historical price exists for that date
+        assert results["processed"] == 1
+        assert results["succeeded"] == 0
+        assert results["failed"] == 1
