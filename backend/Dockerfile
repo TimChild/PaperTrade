@@ -28,6 +28,9 @@ WORKDIR /app
 # Copy dependency files first for better layer caching
 COPY pyproject.toml uv.lock README.md ./
 
+# Copy version source file (needed by hatch dynamic versioning during install)
+COPY src/zebu/__init__.py ./src/zebu/__init__.py
+
 # Install dependencies
 # In CI environments with SSL certificate issues, we use pip as a more reliable fallback
 # Production deployments can use uv for faster builds when SSL is properly configured

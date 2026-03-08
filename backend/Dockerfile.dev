@@ -26,6 +26,9 @@ WORKDIR /app
 # Copy dependency files for caching
 COPY --chown=appuser:appuser pyproject.toml README.md ./
 
+# Copy version source file (needed by hatch dynamic versioning during install)
+COPY --chown=appuser:appuser src/zebu/__init__.py ./src/zebu/__init__.py
+
 # Install dependencies including dev dependencies
 # Note: In CI/CD environments (GitHub Actions), SSL certificate verification may fail
 # due to self-signed certificates in the certificate chain. The --trusted-host flags
