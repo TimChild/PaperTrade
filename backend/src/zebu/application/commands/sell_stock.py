@@ -3,16 +3,13 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from zebu.application.ports.portfolio_repository import PortfolioRepository
 from zebu.application.ports.transaction_repository import TransactionRepository
-from zebu.domain.entities.transaction import Transaction, TransactionType
-from zebu.domain.exceptions import (
-    InsufficientSharesError,
-    InvalidPortfolioError,
-)
+from zebu.domain.exceptions import InvalidPortfolioError
 from zebu.domain.services.portfolio_calculator import PortfolioCalculator
+from zebu.domain.services.trade_factory import create_sell_transaction
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.quantity import Quantity
 from zebu.domain.value_objects.ticker import Ticker
@@ -103,42 +100,26 @@ class SellStockHandler:
             command.price_per_share_amount, command.price_per_share_currency
         )
 
-        # Calculate total proceeds
-        total_proceeds = price_per_share.multiply(quantity.shares)
-
         # Get all transactions to calculate current holdings
         transactions = await self._transaction_repository.get_by_portfolio(
             command.portfolio_id
         )
 
-        # Calculate current holding for this ticker
-        holding = PortfolioCalculator.calculate_holding_for_ticker(transactions, ticker)
-
-        # Validate sufficient shares
-        if holding is None or holding.quantity < quantity:
-            owned_quantity = holding.quantity if holding else Quantity(Decimal("0"))
-            raise InsufficientSharesError(
-                ticker=ticker.symbol,
-                available=owned_quantity,
-                required=quantity,
-            )
-
-        # Generate transaction ID
-        transaction_id = uuid4()
-
         # Use as_of timestamp if provided, otherwise use current time
         effective_timestamp = command.as_of if command.as_of else datetime.now(UTC)
 
-        # Create SELL transaction (positive cash_change)
-        transaction = Transaction(
-            id=transaction_id,
+        # Get holding quantity for validation
+        holding = PortfolioCalculator.calculate_holding_for_ticker(transactions, ticker)
+        holding_quantity = holding.quantity if holding else Quantity(Decimal("0"))
+
+        # Create validated SELL transaction using shared domain function
+        transaction = create_sell_transaction(
             portfolio_id=command.portfolio_id,
-            transaction_type=TransactionType.SELL,
-            timestamp=effective_timestamp,
-            cash_change=total_proceeds,  # Positive for sale
             ticker=ticker,
             quantity=quantity,
             price_per_share=price_per_share,
+            current_holding_quantity=holding_quantity,
+            timestamp=effective_timestamp,
             notes=command.notes,
         )
 
@@ -146,5 +127,6 @@ class SellStockHandler:
         await self._transaction_repository.save(transaction)
 
         return SellStockResult(
-            transaction_id=transaction_id, total_proceeds=total_proceeds
+            transaction_id=transaction.id,
+            total_proceeds=price_per_share.multiply(quantity.shares),
         )

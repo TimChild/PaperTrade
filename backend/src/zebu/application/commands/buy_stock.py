@@ -3,13 +3,13 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from zebu.application.ports.portfolio_repository import PortfolioRepository
 from zebu.application.ports.transaction_repository import TransactionRepository
-from zebu.domain.entities.transaction import Transaction, TransactionType
-from zebu.domain.exceptions import InsufficientFundsError, InvalidPortfolioError
+from zebu.domain.exceptions import InvalidPortfolioError
 from zebu.domain.services.portfolio_calculator import PortfolioCalculator
+from zebu.domain.services.trade_factory import create_buy_transaction
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.quantity import Quantity
 from zebu.domain.value_objects.ticker import Ticker
@@ -100,9 +100,6 @@ class BuyStockHandler:
             command.price_per_share_amount, command.price_per_share_currency
         )
 
-        # Calculate total cost
-        total_cost = price_per_share.multiply(quantity.shares)
-
         # Get all transactions to calculate current balance
         transactions = await self._transaction_repository.get_by_portfolio(
             command.portfolio_id
@@ -111,33 +108,24 @@ class BuyStockHandler:
         # Calculate current balance
         current_balance = PortfolioCalculator.calculate_cash_balance(transactions)
 
-        # Validate sufficient funds
-        if current_balance < total_cost:
-            raise InsufficientFundsError(
-                available=current_balance,
-                required=total_cost,
-            )
-
-        # Generate transaction ID
-        transaction_id = uuid4()
-
         # Use as_of timestamp if provided, otherwise use current time
         effective_timestamp = command.as_of if command.as_of else datetime.now(UTC)
 
-        # Create BUY transaction (negative cash_change)
-        transaction = Transaction(
-            id=transaction_id,
+        # Create validated BUY transaction using shared domain function
+        transaction = create_buy_transaction(
             portfolio_id=command.portfolio_id,
-            transaction_type=TransactionType.BUY,
-            timestamp=effective_timestamp,
-            cash_change=total_cost.negate(),  # Negative for purchase
             ticker=ticker,
             quantity=quantity,
             price_per_share=price_per_share,
+            cash_balance=current_balance,
+            timestamp=effective_timestamp,
             notes=command.notes,
         )
 
         # Persist transaction
         await self._transaction_repository.save(transaction)
 
-        return BuyStockResult(transaction_id=transaction_id, total_cost=total_cost)
+        return BuyStockResult(
+            transaction_id=transaction.id,
+            total_cost=price_per_share.multiply(quantity.shares),
+        )

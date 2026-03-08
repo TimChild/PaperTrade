@@ -5,7 +5,7 @@ snapshots for analytics and performance tracking.
 """
 
 import logging
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID
 
@@ -194,17 +194,31 @@ class SnapshotJobService:
         # Calculate holdings from transactions
         holdings = PortfolioCalculator.calculate_holdings(transactions)
 
-        # Get current prices for all holdings
+        # Get prices for all holdings (historical or current)
         holdings_data: list[tuple[str, int, Decimal]] = []
         failed_tickers: list[str] = []
+        is_historical = snapshot_date < date.today()
         for holding in holdings:
             if holding.quantity.shares > 0:
                 try:
-                    # For historical snapshots, we'd need get_price_at(ticker, date)
-                    # For daily snapshots, current price is fine
-                    price_point = await self._market_data.get_current_price(
-                        holding.ticker
-                    )
+                    if is_historical:
+                        # Use historical price for backfill dates
+                        snapshot_dt = datetime(
+                            snapshot_date.year,
+                            snapshot_date.month,
+                            snapshot_date.day,
+                            12,
+                            0,
+                            0,
+                            tzinfo=UTC,
+                        )
+                        price_point = await self._market_data.get_price_at(
+                            holding.ticker, snapshot_dt
+                        )
+                    else:
+                        price_point = await self._market_data.get_current_price(
+                            holding.ticker
+                        )
                     holdings_data.append(
                         (
                             holding.ticker.symbol,
