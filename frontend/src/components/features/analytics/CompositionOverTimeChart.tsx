@@ -47,7 +47,7 @@ function buildChartData(
     date: string
     cash_balance: number
     holdings_value: number
-    holdings_breakdown: { ticker: string; value: number }[]
+    holdings_breakdown?: { ticker: string; value: number }[]
   }[]
 ): { rows: ChartRow[]; keys: string[] } {
   // Collect all unique ticker/segment keys across all data points
@@ -214,10 +214,10 @@ export function CompositionOverTimeChart({
                 borderRadius: '8px',
                 color: 'hsl(var(--foreground))',
               }}
-              formatter={(value: number | undefined, name: string) =>
+              formatter={(value: number | undefined, name: string | undefined) =>
                 value !== undefined
-                  ? [formatCurrency(value), name]
-                  : ['---', name]
+                  ? [formatCurrency(value), name ?? '']
+                  : ['---', name ?? '']
               }
               labelFormatter={(label) => formatDate(label, 'long')}
             />

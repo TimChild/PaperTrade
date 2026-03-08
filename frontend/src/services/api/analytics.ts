@@ -15,7 +15,7 @@ export interface DataPoint {
   total_value: number
   cash_balance: number
   holdings_value: number
-  holdings_breakdown: HoldingBreakdown[]
+  holdings_breakdown?: HoldingBreakdown[]
 }
 
 export interface PerformanceMetrics {
