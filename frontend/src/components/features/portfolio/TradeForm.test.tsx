@@ -657,9 +657,7 @@ describe('TradeForm', () => {
     })
 
     it('should not enable backtest mode when initialDate is empty', () => {
-      renderWithProviders(
-        <TradeForm onSubmit={mockOnSubmit} initialDate="" />
-      )
+      renderWithProviders(<TradeForm onSubmit={mockOnSubmit} initialDate="" />)
 
       const backtestToggle = screen.getByTestId(
         'backtest-mode-toggle'

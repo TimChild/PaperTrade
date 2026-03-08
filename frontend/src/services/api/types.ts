@@ -106,3 +106,56 @@ export interface StructuredErrorDetail {
   // Fields for market_data_unavailable
   reason?: string
 }
+
+// Strategy types
+export type StrategyType =
+  | 'BUY_AND_HOLD'
+  | 'DOLLAR_COST_AVERAGING'
+  | 'MOVING_AVERAGE_CROSSOVER'
+
+export interface StrategyResponse {
+  id: string
+  user_id: string
+  name: string
+  strategy_type: StrategyType
+  tickers: string[]
+  parameters: Record<string, unknown>
+  created_at: string
+}
+
+export interface CreateStrategyRequest {
+  name: string
+  strategy_type: StrategyType
+  tickers: string[]
+  parameters: Record<string, unknown>
+}
+
+// Backtest types
+export type BacktestStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED'
+
+export interface BacktestRunResponse {
+  id: string
+  user_id: string
+  strategy_id: string | null
+  portfolio_id: string
+  backtest_name: string
+  start_date: string
+  end_date: string
+  initial_cash: string // decimal string
+  status: BacktestStatus
+  created_at: string
+  completed_at: string | null
+  error_message: string | null
+  total_return_pct: string | null // decimal string (e.g. "12.5" means 12.5%)
+  max_drawdown_pct: string | null
+  annualized_return_pct: string | null
+  total_trades: number | null
+}
+
+export interface RunBacktestRequest {
+  strategy_id: string
+  backtest_name: string
+  start_date: string // YYYY-MM-DD
+  end_date: string
+  initial_cash: number
+}

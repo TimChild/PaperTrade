@@ -214,7 +214,10 @@ export function CompositionOverTimeChart({
                 borderRadius: '8px',
                 color: 'hsl(var(--foreground))',
               }}
-              formatter={(value: number | undefined, name: string | undefined) =>
+              formatter={(
+                value: number | undefined,
+                name: string | undefined
+              ) =>
                 value !== undefined
                   ? [formatCurrency(value), name ?? '']
                   : ['---', name ?? '']
