@@ -6,16 +6,29 @@ to/from domain entities.
 
 from datetime import UTC, date, datetime
 from decimal import Decimal
+from typing import TypedDict
 from uuid import UUID
 
-from sqlmodel import Field, Index, SQLModel
+from sqlmodel import JSON, Column, Field, Index, SQLModel
 
 from zebu.domain.entities.portfolio import Portfolio
-from zebu.domain.entities.portfolio_snapshot import PortfolioSnapshot
+from zebu.domain.entities.portfolio_snapshot import (
+    HoldingBreakdown,
+    PortfolioSnapshot,
+)
 from zebu.domain.entities.transaction import Transaction, TransactionType
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.quantity import Quantity
 from zebu.domain.value_objects.ticker import Ticker
+
+
+class HoldingBreakdownDict(TypedDict):
+    """JSON-serializable representation of a HoldingBreakdown."""
+
+    ticker: str
+    quantity: int
+    price_per_share: str
+    value: str
 
 
 class PortfolioModel(SQLModel, table=True):
@@ -232,6 +245,7 @@ class PortfolioSnapshotModel(SQLModel, table=True):
         holdings_value: Total value of all holdings
         holdings_count: Number of unique stocks held
         created_at: When snapshot was calculated
+        holdings_breakdown: Per-holding value breakdown (JSON, nullable for old rows)
     """
 
     __tablename__ = "portfolio_snapshots"  # type: ignore[assignment]  # SQLModel requires string literal for __tablename__
@@ -248,6 +262,10 @@ class PortfolioSnapshotModel(SQLModel, table=True):
     holdings_value: Decimal = Field(max_digits=15, decimal_places=2)
     holdings_count: int
     created_at: datetime
+    holdings_breakdown: list[HoldingBreakdownDict] | None = Field(
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+    )
 
     def to_domain(self) -> PortfolioSnapshot:
         """Convert database model to domain entity.
@@ -258,6 +276,19 @@ class PortfolioSnapshotModel(SQLModel, table=True):
         # Database stores naive UTC datetimes - add UTC timezone back
         created_at_utc = self.created_at.replace(tzinfo=UTC)
 
+        # Convert JSON dicts back to HoldingBreakdown domain objects
+        breakdown: list[HoldingBreakdown] = []
+        if self.holdings_breakdown:
+            breakdown = [
+                HoldingBreakdown(
+                    ticker=item["ticker"],
+                    quantity=item["quantity"],
+                    price_per_share=Decimal(item["price_per_share"]),
+                    value=Decimal(item["value"]),
+                )
+                for item in self.holdings_breakdown
+            ]
+
         return PortfolioSnapshot(
             id=self.id,
             portfolio_id=self.portfolio_id,
@@ -267,6 +298,7 @@ class PortfolioSnapshotModel(SQLModel, table=True):
             holdings_value=self.holdings_value,
             holdings_count=self.holdings_count,
             created_at=created_at_utc,
+            holdings_breakdown=breakdown,
         )
 
     @classmethod
@@ -286,6 +318,19 @@ class PortfolioSnapshotModel(SQLModel, table=True):
             # Assume naive datetimes are already UTC (per domain contract)
             created_at_naive = snapshot.created_at
 
+        # Convert HoldingBreakdown domain objects to plain dicts for JSON storage
+        breakdown_json: list[HoldingBreakdownDict] | None = None
+        if snapshot.holdings_breakdown:
+            breakdown_json = [
+                {
+                    "ticker": h.ticker,
+                    "quantity": h.quantity,
+                    "price_per_share": str(h.price_per_share),
+                    "value": str(h.value),
+                }
+                for h in snapshot.holdings_breakdown
+            ]
+
         return cls(
             id=snapshot.id,
             portfolio_id=snapshot.portfolio_id,
@@ -295,4 +340,5 @@ class PortfolioSnapshotModel(SQLModel, table=True):
             holdings_value=snapshot.holdings_value,
             holdings_count=snapshot.holdings_count,
             created_at=created_at_naive,
+            holdings_breakdown=breakdown_json,
         )

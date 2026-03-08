@@ -7,6 +7,7 @@ from sqlmodel import SQLModel
 # Import all SQLModel models to ensure they're registered with metadata
 from zebu.adapters.outbound.database.models import (  # noqa: F401
     PortfolioModel,
+    PortfolioSnapshotModel,
     TransactionModel,
 )
 from zebu.adapters.outbound.models.price_history import (  # noqa: F401

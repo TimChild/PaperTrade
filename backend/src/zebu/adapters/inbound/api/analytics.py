@@ -51,6 +51,15 @@ SnapshotJobDep = Annotated[SnapshotJobService, Depends(get_snapshot_job)]
 JsonFloat = Annotated[Decimal, PlainSerializer(float)]
 
 
+class HoldingBreakdownSchema(BaseModel):
+    """Per-holding value breakdown at snapshot time."""
+
+    ticker: str
+    quantity: int
+    price_per_share: JsonFloat
+    value: JsonFloat
+
+
 class DataPointSchema(BaseModel):
     """Snapshot data point for performance chart."""
 
@@ -58,6 +67,7 @@ class DataPointSchema(BaseModel):
     total_value: JsonFloat
     cash_balance: JsonFloat
     holdings_value: JsonFloat
+    holdings_breakdown: list[HoldingBreakdownSchema]
 
 
 class MetricsSchema(BaseModel):
@@ -100,6 +110,15 @@ class PerformanceResponse(BaseModel):
                     total_value=snapshot.total_value,
                     cash_balance=snapshot.cash_balance,
                     holdings_value=snapshot.holdings_value,
+                    holdings_breakdown=[
+                        HoldingBreakdownSchema(
+                            ticker=h.ticker,
+                            quantity=h.quantity,
+                            price_per_share=h.price_per_share,
+                            value=h.value,
+                        )
+                        for h in snapshot.holdings_breakdown
+                    ],
                 )
                 for snapshot in result.data_points
             ],

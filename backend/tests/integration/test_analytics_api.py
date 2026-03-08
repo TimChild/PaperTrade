@@ -429,3 +429,137 @@ def test_analytics_endpoints_enforce_ownership(
         headers=auth_headers_b,
     )
     assert comp_response.status_code == 401  # Unauthorized (invalid token)
+
+
+@pytest.mark.asyncio
+async def test_performance_data_points_include_holdings_breakdown(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    default_user_id: UUID,
+    test_engine: "AsyncEngine",  # type: ignore[name-defined]
+) -> None:
+    """Test performance data points include per-holding breakdown."""
+    from zebu.adapters.outbound.database.snapshot_repository import (
+        SQLModelSnapshotRepository,
+    )
+    from zebu.domain.entities.portfolio_snapshot import HoldingBreakdown
+
+    # Create portfolio
+    response = client.post(
+        "/api/v1/portfolios",
+        headers=auth_headers,
+        json={
+            "name": "Breakdown Test Portfolio",
+            "initial_deposit": "10000.00",
+            "currency": "USD",
+        },
+    )
+    portfolio_id = UUID(response.json()["portfolio_id"])
+
+    breakdown = [
+        HoldingBreakdown(
+            ticker="AAPL",
+            quantity=10,
+            price_per_share=Decimal("150.00"),
+            value=Decimal("1500.00"),
+        ),
+        HoldingBreakdown(
+            ticker="MSFT",
+            quantity=5,
+            price_per_share=Decimal("300.00"),
+            value=Decimal("1500.00"),
+        ),
+    ]
+
+    async with AsyncSession(test_engine, expire_on_commit=False) as session:
+        snapshot_repo = SQLModelSnapshotRepository(session)
+        today = date.today()
+
+        snapshot = PortfolioSnapshot.create(
+            portfolio_id=portfolio_id,
+            snapshot_date=today,
+            cash_balance=Decimal("7000.00"),
+            holdings_value=Decimal("3000.00"),
+            holdings_count=2,
+            holdings_breakdown=breakdown,
+        )
+        await snapshot_repo.save(snapshot)
+        await session.commit()
+
+    # Get performance data
+    perf_response = client.get(
+        f"/api/v1/portfolios/{portfolio_id}/performance?range=1W",
+        headers=auth_headers,
+    )
+
+    assert perf_response.status_code == 200
+    data = perf_response.json()
+
+    assert len(data["data_points"]) == 1
+    data_point = data["data_points"][0]
+
+    # Verify breakdown is included
+    assert "holdings_breakdown" in data_point
+    assert len(data_point["holdings_breakdown"]) == 2
+
+    tickers = {item["ticker"] for item in data_point["holdings_breakdown"]}
+    assert tickers == {"AAPL", "MSFT"}
+
+    aapl = next(h for h in data_point["holdings_breakdown"] if h["ticker"] == "AAPL")
+    assert aapl["quantity"] == 10
+    assert aapl["price_per_share"] == 150.0
+    assert aapl["value"] == 1500.0
+
+
+@pytest.mark.asyncio
+async def test_old_snapshot_without_breakdown_returns_empty_list(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    default_user_id: UUID,
+    test_engine: "AsyncEngine",  # type: ignore[name-defined]
+) -> None:
+    """Test backward compatibility: old snapshots return empty holdings_breakdown."""
+    from zebu.adapters.outbound.database.snapshot_repository import (
+        SQLModelSnapshotRepository,
+    )
+
+    # Create portfolio
+    response = client.post(
+        "/api/v1/portfolios",
+        headers=auth_headers,
+        json={
+            "name": "Old Snapshot Portfolio",
+            "initial_deposit": "10000.00",
+            "currency": "USD",
+        },
+    )
+    portfolio_id = UUID(response.json()["portfolio_id"])
+
+    async with AsyncSession(test_engine, expire_on_commit=False) as session:
+        snapshot_repo = SQLModelSnapshotRepository(session)
+        today = date.today()
+
+        # Create snapshot without breakdown (backward compat)
+        snapshot = PortfolioSnapshot.create(
+            portfolio_id=portfolio_id,
+            snapshot_date=today,
+            cash_balance=Decimal("5000.00"),
+            holdings_value=Decimal("5000.00"),
+            holdings_count=2,
+            # No holdings_breakdown provided
+        )
+        await snapshot_repo.save(snapshot)
+        await session.commit()
+
+    perf_response = client.get(
+        f"/api/v1/portfolios/{portfolio_id}/performance?range=1W",
+        headers=auth_headers,
+    )
+
+    assert perf_response.status_code == 200
+    data = perf_response.json()
+    assert len(data["data_points"]) == 1
+    data_point = data["data_points"][0]
+
+    # Old snapshot returns empty breakdown list
+    assert data_point["holdings_breakdown"] == []

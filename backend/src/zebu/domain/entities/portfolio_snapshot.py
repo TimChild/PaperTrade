@@ -1,11 +1,28 @@
 """Portfolio snapshot entity - Daily snapshot of portfolio value for analytics."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
 from zebu.domain.exceptions import InvalidPortfolioError
+
+
+@dataclass(frozen=True)
+class HoldingBreakdown:
+    """Value of a single holding at snapshot time.
+
+    Attributes:
+        ticker: Stock ticker symbol
+        quantity: Number of shares held
+        price_per_share: Price per share at snapshot time
+        value: Total value (quantity * price_per_share)
+    """
+
+    ticker: str
+    quantity: int
+    price_per_share: Decimal
+    value: Decimal
 
 
 @dataclass(frozen=True)
@@ -24,12 +41,14 @@ class PortfolioSnapshot:
         holdings_value: Total value of all stock holdings
         holdings_count: Number of unique stocks held
         created_at: When this snapshot was calculated
+        holdings_breakdown: Per-holding value breakdown at snapshot time
 
     Invariants:
         - total_value == cash_balance + holdings_value (always)
         - snapshot_date <= today (cannot snapshot future)
         - All monetary values are non-negative
         - holdings_count >= 0
+        - sum(h.value for h in holdings_breakdown) == holdings_value when non-empty
     """
 
     id: UUID
@@ -40,6 +59,7 @@ class PortfolioSnapshot:
     holdings_value: Decimal
     holdings_count: int
     created_at: datetime
+    holdings_breakdown: list[HoldingBreakdown] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         """Validate PortfolioSnapshot invariants after initialization."""
@@ -79,6 +99,15 @@ class PortfolioSnapshot:
                 f"holdings_count cannot be negative. Got {self.holdings_count}"
             )
 
+        # Validate holdings_breakdown sum matches holdings_value when non-empty
+        if self.holdings_breakdown:
+            breakdown_total = sum(h.value for h in self.holdings_breakdown)
+            if breakdown_total != self.holdings_value:
+                raise InvalidPortfolioError(
+                    f"sum of holdings_breakdown values must equal holdings_value. "
+                    f"Expected {self.holdings_value}, got {breakdown_total}"
+                )
+
     @classmethod
     def create(
         cls,
@@ -87,6 +116,7 @@ class PortfolioSnapshot:
         cash_balance: Decimal,
         holdings_value: Decimal,
         holdings_count: int,
+        holdings_breakdown: list[HoldingBreakdown] | None = None,
     ) -> "PortfolioSnapshot":
         """Factory method to create a new snapshot.
 
@@ -96,6 +126,7 @@ class PortfolioSnapshot:
             cash_balance: Available cash
             holdings_value: Total value of holdings
             holdings_count: Number of unique stocks
+            holdings_breakdown: Per-holding value breakdown (optional)
 
         Returns:
             New PortfolioSnapshot with auto-generated ID and timestamp
@@ -109,6 +140,7 @@ class PortfolioSnapshot:
             holdings_value=holdings_value,
             holdings_count=holdings_count,
             created_at=datetime.now(UTC),
+            holdings_breakdown=holdings_breakdown or [],
         )
 
     def __eq__(self, other: object) -> bool:
