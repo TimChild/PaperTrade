@@ -9,6 +9,27 @@
 
 **No open PRs.** All PRs have been merged or closed. The repository is clean.
 
+## ⚠️ Recent Production Issue (RESOLVED)
+
+**Issue**: Analytics page completely broken after PR #195 merge — all charts showing "Failed to load" errors.
+
+**Root Cause**: 
+- PR #195's database migration (`holdings_breakdown` column) was never applied to production
+- Alembic `env.py` was not respecting `DATABASE_URL` environment variable
+- All production deployments were using SQLite URL from `alembic.ini`
+
+**Resolution** (completed 2026-03-08):
+1. Manually added missing column: `ALTER TABLE portfolio_snapshots ADD COLUMN holdings_breakdown JSONB;`
+2. Created `alembic_version` table and recorded current migration state
+3. Fixed `migrations/env.py` to check and override with `DATABASE_URL` env var
+4. Deployed fix (commit `8d1d967`)
+5. Created deployment checklist at `docs/deployment/migration-checklist.md`
+
+**Prevention**: 
+- Always run `alembic upgrade head` after deploying code in production
+- Follow checklist in `docs/deployment/migration-checklist.md`
+- Consider automating migrations in deployment script
+
 ### What Was Done This Session (March 7–8, 2026)
 
 1. **Bug fixes** (pushed directly to main):
