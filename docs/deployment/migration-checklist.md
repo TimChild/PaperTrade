@@ -15,11 +15,11 @@ This checklist ensures database migrations are properly applied during deploymen
    ```bash
    # Start local database
    task docker:up
-   
+
    # Run migrations
    cd backend
    alembic upgrade head
-   
+
    # Verify current version
    alembic current
    ```
@@ -87,15 +87,15 @@ If migration fails:
    ```
 
 3. **Manual Migration (Last Resort)**
-   
+
    If Alembic fails and you must manually apply schema changes:
-   
+
    ```bash
    # 1. Apply schema change manually
    ssh root@192.168.4.112 "cd /opt/papertrade && \
      docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db \
      psql -U papertrade -d papertrade_dev -c 'ALTER TABLE ...'
-   
+
    # 2. Update alembic_version table
    # Get revision ID from migration file (e.g., a6a5412b5d02)
    ssh root@192.168.4.112 "cd /opt/papertrade && \

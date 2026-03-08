@@ -13,7 +13,7 @@
 
 **Issue**: Analytics page completely broken after PR #195 merge — all charts showing "Failed to load" errors.
 
-**Root Cause**: 
+**Root Cause**:
 - PR #195's database migration (`holdings_breakdown` column) was never applied to production
 - Alembic `env.py` was not respecting `DATABASE_URL` environment variable
 - All production deployments were using SQLite URL from `alembic.ini`
@@ -25,7 +25,7 @@
 4. Deployed fix (commit `8d1d967`)
 5. Created deployment checklist at `docs/deployment/migration-checklist.md`
 
-**Prevention**: 
+**Prevention**:
 - Always run `alembic upgrade head` after deploying code in production
 - Follow checklist in `docs/deployment/migration-checklist.md`
 - Consider automating migrations in deployment script
