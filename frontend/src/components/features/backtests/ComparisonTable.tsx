@@ -18,25 +18,21 @@ function getReturnHighlights(
   const validValues = values.filter((v): v is number => v !== null)
   if (validValues.length < 2) return values.map(() => 'none')
 
-  const best = higherIsBetter
+  // When higherIsBetter=true, Math.max is the best value.
+  // When higherIsBetter=false (lower is better), Math.min is the best value.
+  const bestValue = higherIsBetter
     ? Math.max(...validValues)
-    : Math.max(...validValues) // for drawdown, closest to 0 = max (least negative)
-  const worst = higherIsBetter
-    ? Math.min(...validValues)
     : Math.min(...validValues)
+  const worstValue = higherIsBetter
+    ? Math.min(...validValues)
+    : Math.max(...validValues)
 
-  if (best === worst) return values.map(() => 'none')
+  if (bestValue === worstValue) return values.map(() => 'none')
 
   return values.map((v): HighlightType => {
     if (v === null) return 'none'
-    if (higherIsBetter) {
-      if (v === best) return 'best'
-      if (v === worst) return 'worst'
-    } else {
-      // For max drawdown: closest to 0 (highest/least negative) is best
-      if (v === best) return 'best'
-      if (v === worst) return 'worst'
-    }
+    if (v === bestValue) return 'best'
+    if (v === worstValue) return 'worst'
     return 'none'
   })
 }
@@ -80,7 +76,8 @@ export function ComparisonTable({
     annualizedReturnValues,
     true
   )
-  const maxDrawdownHighlights = getReturnHighlights(maxDrawdownValues, false)
+  // For max drawdown, higher (closer to 0) is better (-2% > -15%)
+  const maxDrawdownHighlights = getReturnHighlights(maxDrawdownValues, true)
 
   return (
     <div

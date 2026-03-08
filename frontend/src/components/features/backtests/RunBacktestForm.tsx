@@ -22,14 +22,19 @@ export function RunBacktestForm({
 }: RunBacktestFormProps): React.JSX.Element {
   const [strategyId, setStrategyId] = useState('')
   const [backtestName, setBacktestName] = useState('')
+
+  // Both dates are derived from the same `now` snapshot to avoid
+  // edge-case inconsistencies when the component mounts near midnight.
   const [startDate, setStartDate] = useState<string>(() => {
-    const d = new Date()
-    d.setFullYear(d.getFullYear() - 3)
-    return d.toISOString().split('T')[0] ?? ''
+    const now = new Date()
+    const threeYearsAgo = new Date(now)
+    threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3)
+    return threeYearsAgo.toISOString().split('T')[0] ?? ''
   })
-  const [endDate, setEndDate] = useState<string>(
-    () => new Date().toISOString().split('T')[0] ?? ''
-  )
+  const [endDate, setEndDate] = useState<string>(() => {
+    const now = new Date()
+    return now.toISOString().split('T')[0] ?? ''
+  })
   const [initialCash, setInitialCash] = useState('10000')
   const [errors, setErrors] = useState<Record<string, string>>({})
 
