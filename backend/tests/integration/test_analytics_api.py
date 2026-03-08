@@ -213,9 +213,9 @@ async def test_get_performance_different_time_ranges(
         assert perf_response.status_code == 200
         data = perf_response.json()
         assert data["range"] == time_range
-        assert len(data["data_points"]) == expected_count, (
-            f"Range {time_range} should have {expected_count} snapshots"
-        )
+        assert (
+            len(data["data_points"]) == expected_count
+        ), f"Range {time_range} should have {expected_count} snapshots"
 
 
 def test_get_performance_invalid_portfolio(
