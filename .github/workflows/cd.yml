@@ -12,7 +12,6 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Gate: only deploy if CI passed (ci.yml runs on the same push)
   deploy:
     name: Deploy to Production
     runs-on: [self-hosted, proxmox]
@@ -21,7 +20,7 @@ jobs:
     timeout-minutes: 15
 
     env:
-      APP_DIR: /opt/papertrade
+      COMPOSE_PROJECT_NAME: papertrade
 
     steps:
       - name: Display deploy info
@@ -31,65 +30,48 @@ jobs:
           echo "Triggered by: ${{ github.actor }}"
           echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-      - name: Configure git safe directory
-        run: git config --global --add safe.directory ${{ env.APP_DIR }}
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Pull latest code
-        working-directory: ${{ env.APP_DIR }}
+      - name: Copy production env file
         run: |
-          git fetch origin main
-          git checkout main
-          git reset --hard origin/main
+          if [ -f /opt/papertrade/.env ]; then
+            cp /opt/papertrade/.env .env
+            echo "Copied production .env"
+          else
+            echo "No .env file found at /opt/papertrade/.env"
+            exit 1
+          fi
 
       - name: Build and deploy
-        working-directory: ${{ env.APP_DIR }}
         run: |
           docker compose -f docker-compose.yml -f docker-compose.prod.yml build
           docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
       - name: Wait for services to be healthy
-        working-directory: ${{ env.APP_DIR }}
         run: |
           echo "Waiting for services to become healthy..."
 
-          # Wait for PostgreSQL
           echo "  Waiting for PostgreSQL..."
           timeout 30 bash -c 'until docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db pg_isready -U papertrade 2>/dev/null; do sleep 1; done'
-          echo "  ✅ PostgreSQL ready"
+          echo "  PostgreSQL ready"
 
-          # Wait for Redis
           echo "  Waiting for Redis..."
           timeout 30 bash -c 'until docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T redis redis-cli ping 2>/dev/null | grep -q PONG; do sleep 1; done'
-          echo "  ✅ Redis ready"
+          echo "  Redis ready"
 
-          # Wait for Backend
           echo "  Waiting for backend..."
           timeout 60 bash -c 'until curl -sf http://localhost:8000/health; do sleep 2; done'
-          echo "  ✅ Backend ready"
+          echo "  Backend ready"
 
-          # Wait for Frontend
           echo "  Waiting for frontend..."
           timeout 60 bash -c 'until curl -sf http://localhost:80/ > /dev/null; do sleep 2; done'
-          echo "  ✅ Frontend ready"
+          echo "  Frontend ready"
 
-          echo ""
-          echo "✅ All services healthy!"
+          echo "All services healthy!"
 
       - name: Verify deployment
-        working-directory: ${{ env.APP_DIR }}
         run: |
           echo "Deployment summary:"
           echo "  Commit: $(git rev-parse --short HEAD)"
-          echo "  Version: $(git describe --always --dirty)"
           docker compose -f docker-compose.yml -f docker-compose.prod.yml ps --format "table {{.Name}}\t{{.Status}}"
-
-      - name: Rollback on failure
-        if: failure()
-        working-directory: ${{ env.APP_DIR }}
-        run: |
-          echo "⚠️ Deployment failed - attempting rollback..."
-          # Roll back to previous commit
-          git reset --hard HEAD~1
-          docker compose -f docker-compose.yml -f docker-compose.prod.yml build
-          docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-          echo "Rollback complete. Previous version restored."
