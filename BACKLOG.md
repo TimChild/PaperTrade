@@ -6,17 +6,24 @@ Minor improvements, tech debt, and enhancements that don't block main developmen
 
 ## Active Backlog
 
-### 🔄 In Progress (Agent Tasks)
+### ✅ Recently Completed (This Session - March 7, 2026)
 
-1. **Backend Quality Fixes** — Task 192, PR #192 (backend-swe agent)
-   - Fix 2 weekend cache validation tests
-   - Investigate and fix 50-portfolio performance issue
-   - **Status**: Agent running
+1. **Backend Quality Fixes** — PR #192 (merged)
+   - Deterministic weekend cache tests (fixed date mocking)
+   - Batch portfolio balances endpoint (eliminates N+1 queries)
 
-2. **Frontend UX Improvements** — Task 193, PR #193 (frontend-swe agent)
-   - Verify & polish real-time holdings prices
-   - Interactive click-to-trade from charts
-   - **Status**: Agent running
+2. **Frontend UX Improvements** — PR #193 (merged)
+   - Click-to-trade from price charts
+   - Holdings price loading polish (separate skeletons, mobile P&L)
+   - 5-min auto-refetch for batch prices
+
+3. **Snapshot Job Bug Fix** — pushed to main
+   - Fixed silent data loss when price lookups fail
+   - Cleaned 75 bad snapshots from production DB
+
+4. **Analytics Decimal Serialization** — pushed to main
+   - Fixed Decimal→string JSON serialization (chart, tooltip, stats all broken)
+   - Added Y-axis auto-scaling to performance chart
 
 ### 🔄 Medium Priority
 
@@ -32,18 +39,6 @@ Minor improvements, tech debt, and enhancements that don't block main developmen
    - Scheduling/execution engine
    - Risk management / position limits
    - **Status**: Needs architect design doc before implementation
-
-### 🔄 High Priority (Previously)
-
-1. **Fix Weekend Cache Validation Tests** — ⬆️ Moved to Task 192
-   - **Status**: In progress (backend-swe agent)
-
-2. **Investigate Slow App Performance with ~50 Portfolios** — ⬆️ Moved to Task 192
-   - **Status**: In progress (backend-swe agent)
-     - Review frontend rendering performance with large lists
-   - **Effort**: ~2-4 hours for investigation
-   - **Found**: 2026-01-25 during E2E test debugging
-   - **Status**: Not started
 
 ## Monitoring & Observability ✅ COMPLETE
 
@@ -68,28 +63,15 @@ These are polished, user-facing features that would significantly improve the ex
    - **Fixed**: Tooltip type safety issue and Y-axis domain calculation (PR #166)
    - **Quality**: 122 new tests added, comprehensive edge case coverage
 
-2. **Interactive Click-to-Trade from Charts** - ~2-3 hours
-   - **Problem**: Manual entry of ticker and date when looking at charts
-   - **Solution**: Click on any stock chart to auto-fill trade form
-   - **Implementation**:
-     - Add onClick handler to price chart points
-     - Extract clicked date and ticker
-     - Scroll to trade form and populate ticker + date fields
-     - Optional: Populate price from chart data
-   - **UX Flow**: Click chart → Trade form appears with pre-filled data → Just enter quantity
-   - **Benefit**: Reduces friction for "what-if" trades and backtesting
+2. ~~**Interactive Click-to-Trade from Charts**~~ ✅ **COMPLETE** (PR #193)
+   - **Status**: Click any chart point → trade form auto-populates with ticker + date
+   - **Implementation**: `subscribeClick` on Lightweight Charts, reuses quickSellState pattern
+   - **Quality**: Tests added for chart click callback and TradeForm date prop
 
-2. **Show Real-Time Stock Prices in Holdings** - ~1-2 hours
-   - **Problem**: Holdings table shows "Using average cost (current price unavailable)" with asterisk
-   - **Impact**: Users can't see if their stocks went up or down
-   - **Solution**: Fetch current prices from Alpha Vantage for each holding, display in "Current Price" column
-   - **Implementation**:
-     - ✅ Batch price endpoint already exists: `GET /api/v1/prices/batch?tickers=AAPL,MSFT`
-     - Update frontend holdings query to call batch endpoint
-     - Display current prices in Holdings table
-     - Show P&L indicators (green/red) for gains/losses
-   - **Note**: Depends on weekend price fix being complete (PR #158 merged)
-   - **Found**: Manual UI testing (2026-01-07)
+2. ~~**Show Real-Time Stock Prices in Holdings**~~ ✅ **COMPLETE** (PR #193)
+   - **Status**: Batch prices load with separate skeleton, 5-min auto-refetch
+   - **Features**: Mobile P&L indicator (▲/▼), better price unavailable tooltip
+   - **Quality**: Tests for loading states and price display
 
 3. ~~**Add Toast Notifications for Trade Actions**~~ ✅ **COMPLETE** (PR #163)
    - **Status**: Centralized toast utility with react-hot-toast
