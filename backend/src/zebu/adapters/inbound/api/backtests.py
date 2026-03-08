@@ -39,7 +39,7 @@ from zebu.application.services.backtest_executor import BacktestExecutor
 from zebu.application.services.historical_data_preparer import HistoricalDataPreparer
 from zebu.application.services.snapshot_job import SnapshotJobService
 from zebu.domain.entities.backtest_run import BacktestRun
-from zebu.domain.exceptions import InvalidStrategyError
+from zebu.domain.exceptions import InsufficientHistoricalDataError, InvalidStrategyError
 from zebu.infrastructure.database import SessionDep
 
 router = APIRouter(prefix="/backtests", tags=["backtests"])
@@ -196,6 +196,11 @@ async def run_backtest(
     except InvalidStrategyError as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except InsufficientHistoricalDataError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(exc),
         ) from exc
 

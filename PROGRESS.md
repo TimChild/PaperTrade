@@ -16,6 +16,7 @@
 | **Code Quality** | ✅ **Exceptional** | 0 ESLint suppressions, 800+ tests |
 | **Production Deployment** | ✅ **Live** | v1.2.0 deployed |
 | Infrastructure | ✅ Production-Ready | Docker, CI/CD, E2E testing |
+| **Phase 4: Trading Strategies** | ✅ **Complete** | 3 strategy types, full backtest pipeline |
 
 ### Recent Work (Jan 25, 2026)
 - ✅ **Frontend UX & Chart Fixes** (PR #180):
@@ -199,9 +200,37 @@
 - 🔄 **Optimize Caching**: Consider implementing market holiday calendar
   - Current: Handles weekends, not holidays (acceptable for MVP)
   - Future: Full NYSE/NASDAQ holiday calendar support
-- 📈 **Phase 4 Planning**: Gather user feedback to prioritize advanced features
+- 📈 **Phase 5 Planning**: Gather user feedback to prioritize next features
+  - Options: live paper-trading UI, strategy comparison views, notifications
 
-**Current State**: Production system live at zebutrader.com with weekend-aware caching. Ready for beta users!
+**Current State**: Production system live at zebutrader.com with weekend-aware caching, full trading strategy backtesting. Ready for beta users!
+
+## Phase 4 Summary ✅ COMPLETE
+
+**Phase 4: Trading Strategies & Backtesting** — Full backtesting pipeline with three strategy types:
+
+#### Phase 4.1: Domain Model ✅ COMPLETE
+- ✅ `Strategy` entity with `StrategyType` value object (BUY_AND_HOLD, DOLLAR_COST_AVERAGING, MOVING_AVERAGE_CROSSOVER)
+- ✅ `BacktestRun` entity with status tracking and performance metrics fields
+- ✅ Strategy algorithm implementations: `BuyAndHoldStrategy`, `DollarCostAveragingStrategy`, `MovingAverageCrossoverStrategy`
+- ✅ `TradeSignal` value object
+
+#### Phase 4.2: Execution Engine ✅ COMPLETE
+- ✅ `BacktestExecutor` — orchestrates full simulation pipeline
+- ✅ `HistoricalDataPreparer` — prefetches and caches historical price data
+- ✅ `BacktestTransactionBuilder` — converts trade signals to transactions
+- ✅ `RunBacktestCommand` for input validation
+
+#### Phase 4.3: API Layer ✅ COMPLETE
+- ✅ `POST /strategies`, `GET /strategies`, `GET /strategies/{id}`, `DELETE /strategies/{id}`
+- ✅ `POST /backtests` (synchronous run), `GET /backtests`, `GET /backtests/{id}`, `DELETE /backtests/{id}`
+- ✅ Portfolio filtering by type (`?portfolio_type=BACKTEST`)
+
+#### Phase 4.4: Polish & Integration Tests ✅ COMPLETE
+- ✅ Ticker validation against supported tickers in `create_strategy` endpoint (422 for unsupported)
+- ✅ `InsufficientHistoricalDataError` → 503 response in `run_backtest` endpoint
+- ✅ Integration tests for all three strategy types (`test_backtest_strategies.py`)
+- ✅ Architecture doc and PROGRESS.md updated
 
 ## Phase 3 Summary
 
