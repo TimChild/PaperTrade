@@ -401,7 +401,7 @@ class TestPortfolioSnapshotWithBreakdown:
             )
 
     def test_empty_breakdown_with_nonzero_holdings_value_is_allowed(self) -> None:
-        """Empty breakdown with non-zero holdings_value should be allowed (backward compat)."""
+        """Empty breakdown with non-zero holdings_value is allowed."""
         snapshot = PortfolioSnapshot.create(
             portfolio_id=uuid4(),
             snapshot_date=date.today(),
