@@ -83,7 +83,9 @@ export function MetricsCards({
           className="rounded-lg bg-white p-4 shadow dark:bg-gray-800"
           data-testid={card.testId}
         >
-          <p className="text-sm text-gray-500 dark:text-gray-400">{card.label}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {card.label}
+          </p>
           <p
             className={`text-xl font-semibold ${
               card.trend === 'up'

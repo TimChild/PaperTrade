@@ -407,12 +407,8 @@ describe('HoldingsTable', () => {
         wrapper: createWrapper(),
       })
 
-      expect(
-        screen.getByTestId('holding-pnl-mobile-AAPL')
-      ).toBeInTheDocument()
-      expect(
-        screen.getByTestId('holding-pnl-mobile-MSFT')
-      ).toBeInTheDocument()
+      expect(screen.getByTestId('holding-pnl-mobile-AAPL')).toBeInTheDocument()
+      expect(screen.getByTestId('holding-pnl-mobile-MSFT')).toBeInTheDocument()
     })
 
     it('should show up arrow for positive P&L', () => {

@@ -1,9 +1,19 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  NavLink,
+} from 'react-router-dom'
 import { SignedIn, SignedOut, SignIn, UserButton } from '@clerk/clerk-react'
 import { Toaster } from 'react-hot-toast'
 import { Dashboard } from '@/pages/Dashboard'
 import { PortfolioDetail } from '@/pages/PortfolioDetail'
 import { PortfolioAnalytics } from '@/pages/PortfolioAnalytics'
+import { Strategies } from '@/pages/Strategies'
+import { Backtests } from '@/pages/Backtests'
+import { BacktestResult } from '@/pages/BacktestResult'
+import { CompareBacktests } from '@/pages/CompareBacktests'
 import { Debug } from '@/pages/Debug'
 import { NotFound } from '@/pages/NotFound'
 import { DashboardVariantA } from '@/pages/__prototypes__/DashboardVariantA'
@@ -88,6 +98,34 @@ function AuthenticatedApp() {
             </div>
           </header>
 
+          {/* Navigation tabs */}
+          <nav className="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              <div className="flex gap-0">
+                {[
+                  { to: '/dashboard', label: 'Portfolios', end: true },
+                  { to: '/strategies', label: 'Strategies', end: false },
+                  { to: '/backtests', label: 'Backtests', end: false },
+                ].map(({ to, label, end }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    end={end}
+                    className={({ isActive }) =>
+                      `px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                        isActive
+                          ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                          : 'border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                      }`
+                    }
+                  >
+                    {label}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
+          </nav>
+
           {/* Main content */}
           <main className="flex-1">
             <Routes>
@@ -98,6 +136,10 @@ function AuthenticatedApp() {
                 path="/portfolio/:id/analytics"
                 element={<PortfolioAnalytics />}
               />
+              <Route path="/strategies" element={<Strategies />} />
+              <Route path="/backtests" element={<Backtests />} />
+              <Route path="/backtests/:id" element={<BacktestResult />} />
+              <Route path="/compare" element={<CompareBacktests />} />
               {/* Prototype routes (dev only) */}
               {import.meta.env.DEV && (
                 <>
