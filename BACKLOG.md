@@ -27,11 +27,11 @@ Minor improvements, tech debt, and enhancements that don't block main developmen
 
 ### 🔄 Medium Priority
 
-1. **Documentation Reorganization** — Task 194 (DRAFT)
+1. **Documentation Reorganization** — PR #194 (In Progress)
    - Separate human-facing docs (`docs/`) from agent-facing docs (`agent_docs/`)
-   - Add MkDocs configuration and deploy docs site on Proxmox
+   - Add MkDocs configuration and deploy docs site to GitHub Pages
    - Establish clear conventions that all agents follow
-   - **Status**: Draft task written, not started
+   - **Status**: Agent task launched (quality-infra agent)
 
 2. **Phase 4: Automated Trading Strategies** — Planning needed
    - Architecture design for strategy definition and execution
@@ -89,26 +89,9 @@ These are polished, user-facing features that would significantly improve the ex
 
 These improve the analytics/insights capabilities:
 
-1. **Stacked Area Chart - Portfolio Composition Over Time** - ~4-6 hours
+1. **Stacked Area Chart - Portfolio Composition Over Time** — PR #195 backend (In Progress), #196 frontend (Waiting)
    - **Problem**: Current analytics show total value over time (line chart) and current composition (pie chart), but not composition over time
-   - **Current State**:
-     - ✅ Backend: Daily snapshots already capture `total_value`, `cash_balance`, `holdings_value` per day
-     - ✅ Backend: `PerformanceChart` shows total portfolio value over time
-     - ✅ Backend: `CompositionChart` shows current asset allocation (pie chart)
-   - **Goal**: Show how portfolio composition changed over time (similar to pie chart but stacked over time)
-   - **Solution**: Create stacked area chart showing cash + individual stock holdings
-   - **Implementation**:
-     - **Backend**: Extend snapshot to include per-ticker breakdown
-       - Add `holdings_breakdown: dict[str, Decimal]` to `PortfolioSnapshot`
-       - Calculate value of each ticker at snapshot time
-       - Store in `portfolio_snapshots` table as JSON column
-     - **Backend**: Update `/portfolios/{id}/performance` endpoint to include breakdown
-     - **Frontend**: New `PortfolioCompositionOverTime` component using Recharts `AreaChart`
-       - Each ticker gets its own area (different color)
-       - Cash at bottom, stocks stacked on top
-       - Total height = portfolio value
-   - **Benefit**: See how diversification changed, when you added/removed positions
-   - **Note**: This is a bigger change requiring schema migration
+   - **Status**: Backend agent task (#195) launched — adds per-holding breakdown to snapshots. Frontend task (#196) will launch after #195 merges.
 
 2. **Calculate Portfolio Value Over Time in Backend** - ✅ **ALREADY IMPLEMENTED**
    - **Current State**:
