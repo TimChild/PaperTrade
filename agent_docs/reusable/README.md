@@ -28,6 +28,19 @@ Execute all critical user workflows to validate application quality. Produces de
 
 **See**: [docs/testing/e2e-guide.md](../../docs/testing/e2e-guide.md)
 
+---
+
+#### [docs_tidy.md](docs_tidy.md)
+**Agent**: docs-refactorer (or any agent)
+**Purpose**: Periodic cleanup of BACKLOG.md, PROGRESS.md, and README.md
+
+Prune completed items from backlog, add milestone entries to progress, sync feature lists.
+
+**When to use**:
+- After completing a major milestone or phase
+- Monthly maintenance or every ~5 PRs merged
+- Before session handoffs
+
 ### Reusable Guidance Chunks
 
 These small, focused documents can be referenced from agent instruction files to reduce duplication:

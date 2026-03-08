@@ -18,9 +18,20 @@
 | Infrastructure | ✅ Production-Ready | Docker, CI/CD, E2E testing |
 | **Phase 4: Trading Strategies** | ✅ **Complete** | 3 strategy types, full backtest pipeline |
 | **Phase 4 Frontend** | ✅ **Complete** | Strategy comparison UI, backtest charts |
+| **Infrastructure** | ✅ **Complete** | CD pipeline, self-hosted runner, versioning |
 | **Total Tests** | ✅ **1,146** | 835 backend, 311 frontend |
 
 ### Recent Work (March 8, 2026)
+- ✅ **CD Pipeline & Versioning**:
+  - Self-hosted GitHub Actions runner (`papertrade-proxmox`) on production VM
+  - Automatic deploy to production on push to main (`.github/workflows/cd.yml`)
+  - Hatch dynamic versioning from `__init__.py` (backend v1.0.0, frontend v1.0.0)
+  - Health checks, concurrency control, `[skip deploy]` support
+  - Docker builds fixed for hatch version source compatibility
+- ✅ **Docs Cleanup** (PR #208):
+  - BACKLOG.md pruned to only incomplete items
+  - PROGRESS.md updated with Phase 4 milestone
+  - Skipped test stubs removed (831 passed, 0 skipped)
 - ✅ **Frontend Backtesting UI** (PR #207):
   - Strategy creation and configuration forms for all three strategy types
   - Backtest run management and result visualization

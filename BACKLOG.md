@@ -51,9 +51,9 @@ Incomplete items only. Completed work is tracked in PROGRESS.md.
 
 ## Infrastructure
 
-### CD Pipeline Automation
-- Automate `alembic upgrade head` in the production deploy script
-- Eliminate the manual migration step from the deployment runbook
+### Alembic in CD Pipeline
+- Automate `alembic upgrade head` in the CD workflow (currently not run on deploy)
+- **Priority**: MEDIUM — needed when next migration is added
 
 ### Error Monitoring
 - Add Sentry (or equivalent) for frontend error tracking — 5K errors/month on free tier
