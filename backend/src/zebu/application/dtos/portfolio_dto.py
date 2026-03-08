@@ -5,6 +5,7 @@ from datetime import datetime
 from uuid import UUID
 
 from zebu.domain.entities.portfolio import Portfolio
+from zebu.domain.value_objects.portfolio_type import PortfolioType
 
 
 @dataclass(frozen=True)
@@ -19,12 +20,14 @@ class PortfolioDTO:
         user_id: Owner of the portfolio
         name: Display name for portfolio
         created_at: When portfolio was created (ISO 8601 format)
+        portfolio_type: Whether this is a paper-trading or backtest portfolio
     """
 
     id: UUID
     user_id: UUID
     name: str
     created_at: datetime
+    portfolio_type: PortfolioType
 
     @staticmethod
     def from_entity(portfolio: Portfolio) -> "PortfolioDTO":
@@ -41,4 +44,5 @@ class PortfolioDTO:
             user_id=portfolio.user_id,
             name=portfolio.name,
             created_at=portfolio.created_at,
+            portfolio_type=portfolio.portfolio_type,
         )

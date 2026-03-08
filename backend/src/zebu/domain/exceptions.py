@@ -72,6 +72,18 @@ class InvalidTransactionError(InvalidEntityError):
     pass
 
 
+class InvalidStrategyError(InvalidEntityError):
+    """Raised when Strategy entity invariants are violated."""
+
+    pass
+
+
+class InvalidBacktestRunError(InvalidEntityError):
+    """Raised when BacktestRun entity invariants are violated."""
+
+    pass
+
+
 # Business Rule Violation Exceptions
 
 
