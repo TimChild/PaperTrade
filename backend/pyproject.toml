@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "zebu"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Stock market emulation platform for practicing trading strategies"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -36,6 +36,10 @@ dev = [
     "fakeredis[lua]>=2.24.0",
     "respx>=0.22.0",
 ]
+
+[tool.hatch.version]
+source = "code"
+path = "src/zebu/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/zebu"]
