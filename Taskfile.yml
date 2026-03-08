@@ -685,3 +685,8 @@ tasks:
     desc: "Destroy VM (WARNING: destructive)"
     cmds:
       - bash scripts/proxmox-vm/destroy.sh
+
+  docs:serve:
+    desc: "Serve MkDocs documentation locally"
+    cmds:
+      - uvx --with pymdown-extensions --with mkdocs-material mkdocs serve
