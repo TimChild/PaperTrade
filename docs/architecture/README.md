@@ -67,6 +67,7 @@ The backend is strictly layered. **Dependencies point inward only**.
 
 - **[Technical Boundaries & Limitations](technical-boundaries.md)**: Current system constraints and known edge cases (e.g., No Limit Orders, Rate Limits).
 - **[Authentication Architecture](authentication.md)**: Details on Clerk integration and JWT validation.
+- **[Phase 4: Trading Strategies & Backtesting](phase4-trading-strategies.md)**: Architecture design for automated strategy definition and historical backtesting.
 - **[Archived Designs](archived/)**: Historical design documents and superseded plans.
 
 ## Key Decisions
