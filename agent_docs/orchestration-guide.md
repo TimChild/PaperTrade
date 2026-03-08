@@ -162,14 +162,22 @@ gh pr merge <PR_NUMBER> --squash --delete-branch  # Merge
 Run independent tasks simultaneously:
 
 ```bash
-# Quick fix + major work
-gh agent-task create --custom-agent backend-swe -F agent_docs/tasks/008_refinements.md
-gh agent-task create --custom-agent backend-swe -F agent_docs/tasks/007_major-feature.md
+# GitHub agent for backend + local sub-agent for quick frontend fix
+gh agent-task create --custom-agent backend-swe -F agent_docs/tasks/008_major-feature.md
+# Meanwhile, use a local sub-agent for a quick visual fix
 ```
 
-**Safe to parallelize**: Different layers, different tech stacks, quick fixes + major work.
+**Safe to parallelize**:
+- Different layers (backend agent + frontend local fix)
+- Different tech stacks
+- Independent features that don't touch the same files
 
-**Don't parallelize**: Dependent tasks, same files/modules.
+**Don't parallelize**:
+- Sequential phases where later work depends on earlier decisions
+- Tasks touching the same modules (merge conflicts guaranteed)
+- Tasks that share domain concepts being designed for the first time
+
+**Local sub-agents for quick wins:** Small visual fixes (CSS, dark mode, layout tweaks) can be dispatched as local sub-agents while GitHub agents work on larger backend tasks. This keeps momentum without blocking on CI.
 
 ## MCP Tools
 
@@ -207,6 +215,27 @@ task lint           # Run linters
 
 ## Best Practices
 
+### Task Scoping
+
+Task scope has a major impact on quality and orchestrator overhead. Prefer fewer, larger tasks over many micro-tasks.
+
+**Right-sizing tasks:**
+- **Scope by functional area**, not by individual file or function. A single task should cover a coherent set of changes (e.g., "all domain entities + repos + migrations" rather than "entity A", "entity B", "migrations").
+- **Agents are capable** — they can handle 500–2000 line PRs with multiple files. Don't underestimate them.
+- **PR management is expensive** — each PR requires review, CI wait, merge, conflict resolution. Fewer PRs = less overhead.
+- **Context matters** — work that shares context (e.g., entities that reference each other, strategies that share a protocol) should go to a single agent so it can make internally consistent decisions.
+
+**Anti-pattern: micro-splitting**
+```
+# ❌ Too granular — 3 PRs for tightly coupled work
+Task A: Create Strategy entity
+Task B: Create BacktestRun entity
+Task C: Add migrations for both
+
+# ✅ One coherent task
+Task: Domain entities, migrations, and repositories for backtesting
+```
+
 ### Task Creation
 - **Be explicit about quality requirements** - reference architecture docs, testing standards
 - **Detailed requirements with examples** - show what good looks like
@@ -223,9 +252,29 @@ task lint           # Run linters
 - Test coverage: 80%+ for new code
 ```
 
+### Fix-Forward Pattern
+
+When a review identifies small quality issues that don't warrant rejecting a PR, use the **fix-forward** pattern:
+
+1. Fix trivially on the branch yourself (e.g., lint issues, formatting) and push
+2. For design issues, include them as **Priority 1** in the next agent task
+3. Document the issue clearly so it's addressed before new feature work begins
+
+**Example from Phase 4:** PR #203 used `self._snapshot_service._snapshot_repo` (private attribute access). Rather than rejecting an otherwise excellent PR, this was documented and made Priority 1 in the Phase 4.3 task. The next agent fixed it before implementing new strategies.
+
+**Key principle:** Don't let small issues accumulate. Every task should leave the codebase slightly better than it found it.
+
 ### Reviewing Agent Work
 
 **Use evaluation standards from 'Orchestrator Mindset' section above.** Merge at 9/10 or higher.
+
+**Effective review workflow:**
+1. Get file list and stats: `GH_PAGER="" gh pr view <PR> --json files,additions,deletions`
+2. Checkout locally: `GH_PAGER="" gh pr checkout <PR>`
+3. Read key implementation files (focus on orchestration logic, not boilerplate)
+4. Run tests locally: `cd backend && uv run pytest tests/ -x -q`
+5. Check CI: `GH_PAGER="" gh pr view <PR> --json statusCheckRollup`
+6. If minor issues found, fix and push directly rather than requesting changes
 
 ### Requesting Changes from Agents
 Tag agent in PR comments with `@copilot`:
@@ -337,6 +386,12 @@ git push --force-with-lease
 **Evaluation Before Action** (Task #134): Audited "React Patterns" tech debt → Found only 1 ESLint suppression across 98 files. Skipped refactor, celebrated exceptional quality. *Lesson: Verify assumptions with data.*
 
 **Diagnostic Tasks** (Task #133): E2E failures → Agent found missing Playwright browsers. Orchestrator fixed directly (1-line change). *Lesson: Simple fixes don't need agent tasks.*
+
+**Task Scoping** (Phase 4 Trading Strategies): Initially split Phase 4.1 into 3 micro-tasks (entity A, entity B, migrations). User corrected — merged into one comprehensive task. Result: single agent produced a coherent, internally consistent PR covering all domain entities, value objects, migrations, repos, and tests. Subsequent phases (4.2, 4.3, 4.4) each scoped as one task per functional area. *Lesson: Agents handle large, coherent tasks better than fragmented micro-tasks. PR management overhead is real.*
+
+**Fix-Forward Quality** (Phase 4.2 → 4.3): PR #203 review found a private attribute access (`_snapshot_service._snapshot_repo`). Rather than reject, it was merged and the fix was Priority 1 in the next task. Agent addressed it first in PR #204 before adding new strategies. *Lesson: Document quality issues and fix them forward — don't let them accumulate.*
+
+**Parallel Frontend/Backend** (Phase 4.3): While backend GitHub agent worked on DCA + MA strategies, a local sub-agent fixed dark mode styling on analytics cards in ~2 minutes. Both PRs merged independently. *Lesson: Use local agents for quick visual fixes while major work runs remotely.*
 
 **Protecting Standards**: Agent proposed `# type: ignore` → Rejected, requested proper types. *Lesson: Quality standards compound - one exception becomes ten.*
 
