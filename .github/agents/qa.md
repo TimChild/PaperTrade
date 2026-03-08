@@ -83,7 +83,7 @@ Use Playwright MCP tools:
 Create report in `agent_progress_docs/` with findings and evidence.
 
 ### 4. Create Follow-up Tasks
-For each failure, create task file in `agent_tasks/` and assign to appropriate agent.
+For each failure, create task file in `agent_docs/tasks/` and assign to appropriate agent.
 
 ## Severity Guidelines
 - **Critical**: Core feature broken, data loss risk
@@ -100,4 +100,4 @@ For each failure, create task file in `agent_tasks/` and assign to appropriate a
 
 ## References
 - `orchestrator_procedures/playwright_e2e_testing.md` - E2E testing guide
-- `docs/ai-agents/orchestration-guide.md` - Agent coordination
+- `agent_docs/orchestration-guide.md` - Agent coordination

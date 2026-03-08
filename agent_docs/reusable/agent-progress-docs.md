@@ -15,7 +15,7 @@
 ## File Format
 
 ```
-agent_tasks/progress/YYYY-MM-DD_HH-MM-SS_short-description.md
+agent_docs/progress/YYYY-MM-DD_HH-MM-SS_short-description.md
 ```
 
 Get timestamp: `date "+%Y-%m-%d_%H-%M-%S"`
@@ -27,7 +27,7 @@ Get timestamp: `date "+%Y-%m-%d_%H-%M-%S"`
 
 **Date**: YYYY-MM-DD
 **Agent**: [backend-swe|frontend-swe|architect|quality-infra|refactorer]
-**Related Task**: agent_tasks/NNN_task-name.md
+**Related Task**: agent_docs/tasks/NNN_task-name.md
 
 ## Task Summary
 Brief description of what was accomplished.

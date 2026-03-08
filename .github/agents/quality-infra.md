@@ -16,7 +16,7 @@ The Quality & Infrastructure agent is responsible for maintaining code quality s
 
 ## Before Starting Work
 
-> 📖 **See**: [agent_tasks/reusable/before-starting-work.md](../../../agent_tasks/reusable/before-starting-work.md)
+> 📖 **See**: [agent_docs/reusable/before-starting-work.md](../../../agent_docs/reusable/before-starting-work.md)
 
 **Quality-infra-specific additions**:
 - Review existing Taskfile, Docker, and workflow configurations
@@ -62,7 +62,7 @@ The Quality & Infrastructure agent is responsible for maintaining code quality s
 
 ## Testing Philosophy
 
-> 📖 **See**: [agent_tasks/reusable/architecture-principles.md](../../../agent_tasks/reusable/architecture-principles.md) for core testing principles
+> 📖 **See**: [agent_docs/reusable/architecture-principles.md](../../../agent_docs/reusable/architecture-principles.md) for core testing principles
 
 ### The Testing Pyramid
 ```
@@ -159,7 +159,7 @@ jobs:
 
 ### Docker Compose (Local Development)
 
-> 📖 **See**: [agent_tasks/reusable/quality-and-tooling.md](../../../agent_tasks/reusable/quality-and-tooling.md) for common Docker operations
+> 📖 **See**: [agent_docs/reusable/quality-and-tooling.md](../../../agent_docs/reusable/quality-and-tooling.md) for common Docker operations
 
 **Quick reference**:
 - Start services: `task docker:up`
@@ -279,19 +279,19 @@ When completing quality/infra work:
 2. New checks are documented
 3. Infrastructure changes are tested
 4. Developer documentation updated
-5. Generate progress documentation per [agent-progress-docs.md](../../../agent_tasks/reusable/agent-progress-docs.md)
+5. Generate progress documentation per [agent-progress-docs.md](../../../agent_docs/reusable/agent-progress-docs.md)
 
 ## Quality Checks
 
 ### Quality Checks
 
-> 📖 **See**: [agent_tasks/reusable/quality-and-tooling.md](../../../agent_tasks/reusable/quality-and-tooling.md)
+> 📖 **See**: [agent_docs/reusable/quality-and-tooling.md](../../../agent_docs/reusable/quality-and-tooling.md)
 
 Use `task quality:backend` and `task quality:frontend` for comprehensive checks.
 
 ### Pre-Completion Checklist
 
-> 📖 **See**: [agent_tasks/reusable/quality-and-tooling.md](../../../agent_tasks/reusable/quality-and-tooling.md)
+> 📖 **See**: [agent_docs/reusable/quality-and-tooling.md](../../../agent_docs/reusable/quality-and-tooling.md)
 
 ## Related Documentation
 - See `.github/copilot-instructions.md` for general guidelines

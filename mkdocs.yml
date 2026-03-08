@@ -1,0 +1,86 @@
+site_name: Zebu - Paper Trading Platform
+site_description: Practice trading strategies without risking real money
+site_url: https://timchild.github.io/PaperTrade/
+repo_url: https://github.com/TimChild/PaperTrade
+repo_name: TimChild/PaperTrade
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+docs_dir: docs
+
+nav:
+  - Home: README.md
+  - User Guide: USER_GUIDE.md
+  - Architecture:
+      - Overview: architecture/README.md
+      - Authentication: architecture/authentication.md
+      - Technical Boundaries: architecture/technical-boundaries.md
+  - Planning:
+      - Executive Summary: planning/executive-summary.md
+      - Roadmap: planning/roadmap.md
+      - Features: planning/features.md
+      - Project Strategy: planning/project_strategy.md
+      - Future Ideas: planning/future-ideas.md
+      - Deployment Strategy: planning/deployment_strategy.md
+  - Deployment:
+      - Overview: deployment/README.md
+      - Domain Setup: deployment/domain-setup.md
+      - Production Checklist: deployment/production-checklist.md
+      - Proxmox VM Deployment: deployment/proxmox-vm-deployment.md
+  - Testing:
+      - Overview: testing/README.md
+      - E2E Guide: testing/e2e-guide.md
+      - Standards: testing/standards.md
+  - Design System:
+      - Components: design-system/components.md
+      - Tokens: design-system/tokens.md
+  - Monitoring:
+      - Overview: monitoring/README.md
+      - Setup: monitoring/setup.md
+      - Alerts: monitoring/alerts.md
+      - Runbook: monitoring/runbook.md
+  - Reference:
+      - Overview: reference/README.md
+      - External Resources: reference/external-resources.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - tables
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/TimChild/PaperTrade

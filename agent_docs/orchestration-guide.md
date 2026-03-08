@@ -123,7 +123,7 @@ git checkout main && git pull origin main
 
 ```bash
 # Naming: NNN_short-description.md
-agent_tasks/029_implement-feature.md
+agent_docs/tasks/029_implement-feature.md
 ```
 
 Include: objective, context, requirements, file structure, success criteria, references.
@@ -131,11 +131,11 @@ Include: objective, context, requirements, file structure, success criteria, ref
 ### 2. Commit & Start Agent
 
 ```bash
-git add agent_tasks/029_*.md
+git add agent_docs/tasks/029_*.md
 git commit -m "chore: add task 029"
 git push origin main
 
-gh agent-task create --custom-agent backend-swe -F agent_tasks/029_implement-feature.md
+gh agent-task create --custom-agent backend-swe -F agent_docs/tasks/029_implement-feature.md
 ```
 
 ### Available Agents
@@ -163,8 +163,8 @@ Run independent tasks simultaneously:
 
 ```bash
 # Quick fix + major work
-gh agent-task create --custom-agent backend-swe -F agent_tasks/008_refinements.md
-gh agent-task create --custom-agent backend-swe -F agent_tasks/007_major-feature.md
+gh agent-task create --custom-agent backend-swe -F agent_docs/tasks/008_refinements.md
+gh agent-task create --custom-agent backend-swe -F agent_docs/tasks/007_major-feature.md
 ```
 
 **Safe to parallelize**: Different layers, different tech stacks, quick fixes + major work.
@@ -199,11 +199,11 @@ task lint           # Run linters
 | `.github/copilot-instructions.md` | Agent guidelines, MCP setup |
 | `docs/planning/project_plan.md` | Development phases |
 | `docs/planning/project_strategy.md` | Architecture decisions |
-| `agent_tasks/*.md` | Task definitions |
+| `agent_docs/tasks/*.md` | Task definitions |
 | `.github/agents/*.md` | Role-specific agent instructions |
 | `Taskfile.yml` | Commands (`task --list`) |
-| `docs/ai-agents/mcp-tools.md` | MCP tools reference |
-| `docs/ai-agents/procedures/*.md` | Orchestrator testing and validation procedures |
+| `agent_docs/mcp-tools.md` | MCP tools reference |
+| `agent_docs/procedures/*.md` | Orchestrator testing and validation procedures |
 
 ## Best Practices
 
@@ -295,7 +295,7 @@ GH_PAGER="" gh issue create \
 # For agent tasks
 GH_PAGER="" gh agent-task create \
   --custom-agent backend-swe \
-  -F agent_tasks/029_task.md
+  -F agent_docs/tasks/029_task.md
 ```
 
 **Why**: Long command-line strings cause terminal parsing issues and quote escaping problems. Temp files avoid these issues entirely.
@@ -312,7 +312,7 @@ GH_PAGER="" gh agent-task list
 ### Agent Task Fails
 ```bash
 ls .github/agents/       # Check agent exists
-git log agent_tasks/     # Verify committed
+git log agent_docs/tasks/     # Verify committed
 gh auth status           # Check auth
 ```
 

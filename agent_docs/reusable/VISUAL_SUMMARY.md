@@ -3,7 +3,7 @@
 ## What We Created
 
 ```
-agent_tasks/reusable/
+agent_docs/reusable/
 ├── README.md                      (updated - comprehensive index)
 ├── pre-completion-checklist.md    (existing - already good)
 ├── e2e_qa_validation.md           (existing - complete task template)
@@ -120,7 +120,7 @@ Progress Documentation     8 files (ref)       ~30
 # .github/agents/backend-swe.md (235 lines)
 
 ## Before Starting Work
-1. Check agent_tasks/progress/
+1. Check agent_docs/progress/
 2. Check open PRs: gh pr list
 3. Review architecture docs
 4. Read existing code
@@ -139,7 +139,7 @@ task test:backend
 # .github/agents/backend-swe.md (~212 lines)
 
 ## Before Starting Work
-> 📖 **See**: [agent_tasks/reusable/before-starting-work.md](...)
+> 📖 **See**: [agent_docs/reusable/before-starting-work.md](...)
 
 **Backend-specific additions**:
 - Check backend/pyproject.toml for dependencies
@@ -166,7 +166,7 @@ task test:backend
 
 **After**:
 ```
-1. Update agent_tasks/reusable/git-workflow.md
+1. Update agent_docs/reusable/git-workflow.md
 2. Done! ✅
    (All 8 files reference the same source)
 ```

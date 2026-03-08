@@ -6,7 +6,7 @@ Zebu is a stock market emulation platform where users can practice trading strat
 
 ## Core Principles
 
-> 📖 **See**: [agent_tasks/reusable/architecture-principles.md](../agent_tasks/reusable/architecture-principles.md)
+> 📖 **See**: [agent_docs/reusable/architecture-principles.md](../agent_docs/reusable/architecture-principles.md)
 
 The reusable chunk covers:
 - Modern Software Engineering mindset (iterative, empirical, managing complexity)
@@ -34,7 +34,7 @@ The reusable chunk covers:
 
 ## Agent Progress Documentation
 
-> 📖 **See**: [agent_tasks/reusable/agent-progress-docs.md](../agent_tasks/reusable/agent-progress-docs.md)
+> 📖 **See**: [agent_docs/reusable/agent-progress-docs.md](../agent_docs/reusable/agent-progress-docs.md)
 
 **For PR-based coding agents only** (not for orchestration sessions).
 
@@ -74,7 +74,7 @@ The reusable chunk covers:
 
 ## Git & GitHub Workflows
 
-> 📖 **See**: [agent_tasks/reusable/git-workflow.md](../agent_tasks/reusable/git-workflow.md)
+> 📖 **See**: [agent_docs/reusable/git-workflow.md](../agent_docs/reusable/git-workflow.md)
 
 **Environment-Specific Workflows:**
 
@@ -106,6 +106,12 @@ Configured secrets for CI/CD and Copilot agents:
 | `CLERK_PUBLISHABLE_KEY` | Secret | Clerk authentication (frontend) |
 | `E2E_CLERK_USER_EMAIL` | Variable | E2E test user email |
 
+## Documentation Convention
+
+- Human-facing docs go in `docs/` (published via MkDocs to GitHub Pages)
+- Agent workflow docs go in `agent_docs/` (tasks, progress, reusable chunks, procedures)
+- Do not mix them. If in doubt, it's agent-facing.
+
 ## Available Agents
 
 Refer to individual agent files in `.github/agents/` for specific role instructions:
@@ -118,7 +124,7 @@ Refer to individual agent files in `.github/agents/` for specific role instructi
 
 ## MCP Tools (Model Context Protocol)
 
-Configuration: `.vscode/mcp.json` | Full reference: `docs/ai-agents/mcp-tools.md`
+Configuration: `.vscode/mcp.json` | Full reference: `agent_docs/mcp-tools.md`
 
 ### Session Setup (Required)
 
@@ -129,7 +135,7 @@ pylancePythonEnvironments(workspaceRoot: "file:///Users/timchild/github/PaperTra
 
 For detailed quality checks, Docker management, and pre-completion checklists:
 
-> 📖 **See**: [agent_tasks/reusable/quality-and-tooling.md](../agent_tasks/reusable/quality-and-tooling.md)
+> 📖 **See**: [agent_docs/reusable/quality-and-tooling.md](../agent_docs/reusable/quality-and-tooling.md)
 
 **Quick reference**:
 - `task quality:backend` - Format + lint + test backend
@@ -140,7 +146,7 @@ For detailed quality checks, Docker management, and pre-completion checklists:
 
 ## MCP Tools (Model Context Protocol)
 
-Configuration: `.vscode/mcp.json` | Full reference: `docs/ai-agents/mcp-tools.md`
+Configuration: `.vscode/mcp.json` | Full reference: `agent_docs/mcp-tools.md`
 
 **Quick reference**:
 

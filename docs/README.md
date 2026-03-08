@@ -7,7 +7,7 @@
 | [../README.md](../README.md) | Project overview and quick start |
 | [USER_GUIDE.md](USER_GUIDE.md) | Step-by-step user guide |
 | [testing/README.md](testing/README.md) | Testing quick reference |
-| [ai-agents/mcp-tools.md](ai-agents/mcp-tools.md) | MCP tools for AI assistants |
+| [../agent_docs/mcp-tools.md](../agent_docs/mcp-tools.md) | MCP tools for AI assistants |
 
 ## Planning Documentation
 
@@ -64,12 +64,12 @@ Technical guides and external resources:
 
 | Document | Purpose |
 |----------|---------|
-| [ai-agents/orchestration-guide.md](ai-agents/orchestration-guide.md) | Orchestrator workflow and procedures |
-| [ai-agents/mcp-tools.md](ai-agents/mcp-tools.md) | Model Context Protocol tools reference |
+| [../agent_docs/orchestration-guide.md](../agent_docs/orchestration-guide.md) | Orchestrator workflow and procedures |
+| [../agent_docs/mcp-tools.md](../agent_docs/mcp-tools.md) | Model Context Protocol tools reference |
 | [../.github/copilot-instructions.md](../.github/copilot-instructions.md) | General agent guidelines |
 | [../.github/agents/](../.github/agents/) | Role-specific instructions |
-| [../agent_tasks/](../agent_tasks/) | Task definitions |
-| [../agent_tasks/progress/](../agent_tasks/progress/) | PR documentation |
+| [../agent_docs/tasks/](../agent_docs/tasks/) | Task definitions |
+| [../agent_docs/progress/](../agent_docs/progress/) | PR documentation |
 
 ## Archive
 

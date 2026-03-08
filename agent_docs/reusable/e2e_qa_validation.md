@@ -303,7 +303,7 @@ kill $(cat temp/frontend.pid) 2>/dev/null || true
 
 ## Deliverable: Test Report
 
-Create a comprehensive test report in `agent_tasks/progress/` following this format:
+Create a comprehensive test report in `agent_docs/progress/` following this format:
 
 ```markdown
 # E2E QA Test Report - [DATE]
@@ -415,7 +415,7 @@ Brief overview of testing session - overall health, major issues found, recommen
 ## Follow-up Actions
 
 For each **FAIL** finding:
-1. Create a task in `agent_tasks/` with format `XXX_[issue-description].md`
+1. Create a task in `agent_docs/tasks/` with format `XXX_[issue-description].md`
 2. Include:
    - Link to QA report
    - Reproducible steps
@@ -429,7 +429,7 @@ Example task file:
 
 **Priority**: P0 (Critical)
 **Agent**: backend-swe
-**Related QA Report**: agent_tasks/progress/YYYY-MM-DD_HH-MM-SS_e2e-qa-report.md
+**Related QA Report**: agent_docs/progress/YYYY-MM-DD_HH-MM-SS_e2e-qa-report.md
 
 ## Issue
 
@@ -472,7 +472,7 @@ Trade should either:
 
 This QA task is complete when:
 - ✅ All test scenarios executed
-- ✅ Comprehensive test report created in `agent_tasks/progress/`
+- ✅ Comprehensive test report created in `agent_docs/progress/`
 - ✅ All failures documented with evidence
 - ✅ Follow-up tasks created for critical/high issues
 - ✅ Severity assessment provided for all findings

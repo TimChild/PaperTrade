@@ -5,8 +5,8 @@
 ## 1. Check Recent Agent Activity
 
 ```bash
-ls -lt agent_tasks/progress/ | head -10
-find agent_tasks/progress/ -name "*keyword*"
+ls -lt agent_docs/progress/ | head -10
+find agent_docs/progress/ -name "*keyword*"
 ```
 
 ## 2. Check Open PRs
@@ -50,7 +50,7 @@ Familiarize yourself with:
 
 ```bash
 GH_PAGER="" gh pr list && \
-ls -lt agent_tasks/progress/ | head -5 && \
+ls -lt agent_docs/progress/ | head -5 && \
 ls -la docs/architecture/ && \
 echo "✓ Pre-work checks complete"
 ```
