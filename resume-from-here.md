@@ -11,7 +11,7 @@
 
 **No open PRs.** Repository is clean on main.
 
-**Test count**: 835 backend tests passing (4 skipped), 311 frontend tests.
+**Test count**: 831 backend tests passing (0 skipped), 311 frontend tests.
 
 ## What Was Done (March 8, 2026)
 

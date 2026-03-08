@@ -35,11 +35,6 @@ Incomplete items only. Completed work is tracked in PROGRESS.md.
 
 ## Technical Debt
 
-### Implement Skipped Scheduler Tests — ~4-6 hours
-- 4 tests in `tests/unit/infrastructure/test_scheduler.py` are skipped
-- Reasons: "Requires database setup", "timing-dependent", "complex integration"
-- Solution: Proper mocking for market data, event-based assertions, split complex tests
-
 ### Admin Authentication TODOs — ~2-4 hours
 - 6 TODO comments in `analytics.py` endpoints: analytics endpoints marked "Admin only" but no auth check implemented
 - Affected endpoints: `/analytics/backtest`, `/analytics/recalculate/{portfolio_id}`, `/analytics/recalculate-all`
