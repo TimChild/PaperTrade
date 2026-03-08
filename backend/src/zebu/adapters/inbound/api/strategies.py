@@ -14,7 +14,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field
 
-from zebu.adapters.inbound.api.dependencies import CurrentUserDep
+from zebu.adapters.inbound.api.dependencies import CurrentUserDep, MarketDataDep
 from zebu.adapters.outbound.database.strategy_repository import (
     SQLModelStrategyRepository,
 )
@@ -78,6 +78,7 @@ async def create_strategy(
     request: CreateStrategyRequest,
     current_user: CurrentUserDep,
     session: SessionDep,
+    market_data: MarketDataDep,
 ) -> StrategyResponse:
     """Create a new trading strategy template."""
     try:
@@ -183,6 +184,15 @@ async def create_strategy(
                     "MOVING_AVERAGE_CROSSOVER 'invest_fraction' must be > 0 and <= 1.0"
                 ),
             )
+
+    # Validate tickers against supported tickers
+    supported = {t.symbol for t in await market_data.get_supported_tickers()}
+    unsupported = [t for t in request.tickers if t not in supported]
+    if unsupported:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Unsupported tickers: {', '.join(unsupported)}",
+        )
 
     try:
         strategy = Strategy(

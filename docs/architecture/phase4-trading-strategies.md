@@ -1,9 +1,24 @@
 # Phase 4 Architecture: Trading Strategies & Backtesting
 
-**Status**: Proposed
+**Status**: ✅ Complete (all phases 4.1–4.4 delivered)
 **Author**: Architect Agent (Third Run)
 **Date**: 2026-03-08
 **Informed By**: PRs #198 and #199 (prior architect runs)
+
+---
+
+## Implementation Status
+
+All phases have been implemented and merged:
+
+- **Phase 4.1** – Domain model: `Strategy`, `BacktestRun`, value objects, strategy algorithms (Buy & Hold, DCA, MA Crossover)
+- **Phase 4.2** – Execution engine: `BacktestExecutor`, `HistoricalDataPreparer`, `BacktestTransactionBuilder`
+- **Phase 4.3** – API layer: strategies CRUD, backtest run endpoint, portfolio filtering by type
+- **Phase 4.4** – Polish: ticker validation against supported tickers, 503 error handling for missing data, integration tests for all strategy types
+
+### Notes on Deviations
+- No deviations from the original architecture plan were required.
+- The `InsufficientHistoricalDataError` 503 response and ticker validation were added as polish items after the core implementation was complete.
 
 ---
 
