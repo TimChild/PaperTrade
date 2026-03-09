@@ -48,13 +48,21 @@ jobs:
           docker compose -f docker-compose.yml -f docker-compose.prod.yml build
           docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
+      - name: Wait for database to be ready
+        run: |
+          echo "Waiting for PostgreSQL..."
+          timeout 30 bash -c 'until docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db pg_isready -U papertrade 2>/dev/null; do sleep 1; done'
+          echo "PostgreSQL ready"
+
+      - name: Run database migrations
+        run: |
+          echo "Running Alembic migrations..."
+          docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T backend alembic upgrade head
+          echo "Migrations complete"
+
       - name: Wait for services to be healthy
         run: |
-          echo "Waiting for services to become healthy..."
-
-          echo "  Waiting for PostgreSQL..."
-          timeout 30 bash -c 'until docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db pg_isready -U papertrade 2>/dev/null; do sleep 1; done'
-          echo "  PostgreSQL ready"
+          echo "Waiting for remaining services..."
 
           echo "  Waiting for Redis..."
           timeout 30 bash -c 'until docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T redis redis-cli ping 2>/dev/null | grep -q PONG; do sleep 1; done'

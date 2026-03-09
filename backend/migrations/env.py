@@ -1,8 +1,10 @@
+import asyncio
 import os
 from logging.config import fileConfig
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
+from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlmodel import SQLModel
 
 # Import all SQLModel models to ensure they're registered with metadata
@@ -39,10 +41,11 @@ if config.config_file_name is not None:
 # Use SQLModel metadata for autogenerate support
 target_metadata = SQLModel.metadata
 
-# other values from the config, defined by the needs of env.py,
-# can be acquired:
-# my_important_option = config.get_main_option("my_important_option")
-# ... etc.
+
+def _is_async_url() -> bool:
+    """Check if the configured database URL uses an async driver."""
+    url = config.get_main_option("sqlalchemy.url") or ""
+    return "+asyncpg" in url
 
 
 def run_migrations_offline() -> None:
@@ -70,12 +73,7 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    """Run migrations in 'online' mode.
-
-    In this scenario we need to create an Engine
-    and associate a connection with the context.
-
-    """
+    """Run migrations in 'online' mode (sync driver)."""
     connectable = engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
@@ -89,7 +87,31 @@ def run_migrations_online() -> None:
             context.run_migrations()
 
 
+async def run_migrations_online_async() -> None:
+    """Run migrations in 'online' mode (async driver like asyncpg)."""
+    connectable = async_engine_from_config(
+        config.get_section(config.config_ini_section, {}),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
+
+    async with connectable.connect() as connection:
+        await connection.run_sync(do_run_migrations)
+
+    await connectable.dispose()
+
+
+def do_run_migrations(connection: object) -> None:
+    """Run migrations within a sync callback from async connection."""
+    context.configure(connection=connection, target_metadata=target_metadata)
+
+    with context.begin_transaction():
+        context.run_migrations()
+
+
 if context.is_offline_mode():
     run_migrations_offline()
+elif _is_async_url():
+    asyncio.run(run_migrations_online_async())
 else:
     run_migrations_online()
