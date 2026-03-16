@@ -87,10 +87,8 @@ def upgrade() -> None:
             sa.text(
                 """
                 INSERT INTO ticker_watchlist (ticker, priority)
-                SELECT :ticker, :priority
-                WHERE NOT EXISTS (
-                    SELECT 1 FROM ticker_watchlist WHERE ticker = :ticker
-                )
+                VALUES (:ticker, :priority)
+                ON CONFLICT (ticker) DO NOTHING
                 """
             ).bindparams(ticker=ticker, priority=priority)
         )

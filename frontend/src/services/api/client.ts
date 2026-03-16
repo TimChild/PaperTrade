@@ -22,10 +22,11 @@ function shouldPreferSameOriginApi(
     const currentUrl = new URL(windowOrigin)
     const configuredUrl = new URL(configuredBaseUrl, windowOrigin)
 
+    // Keep this narrow: we are only overriding the known broken production
+    // subdomain path for zebutrader.com, not redefining cross-origin support.
     return (
       currentUrl.hostname === 'zebutrader.com' &&
-      configuredUrl.hostname === 'api.zebutrader.com' &&
-      configuredUrl.origin !== currentUrl.origin
+      configuredUrl.hostname === 'api.zebutrader.com'
     )
   } catch {
     return false
