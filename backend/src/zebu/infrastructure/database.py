@@ -9,7 +9,6 @@ from collections.abc import AsyncGenerator
 from typing import Annotated, Any
 
 from fastapi import Depends
-from sqlalchemy import inspect
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -18,7 +17,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 # For development/testing: SQLite (default)
 # For production/Docker: PostgreSQL (configured via DATABASE_URL environment variable)
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./papertrade.db")
-DB_AUTO_CREATE = os.getenv("DB_AUTO_CREATE", "").lower() in {"1", "true", "yes"}
 
 
 # Create async engine
@@ -39,44 +37,16 @@ async_session_maker = async_sessionmaker(
 )
 
 
-def should_auto_create_schema(
-    *,
-    database_url: str,
-    db_auto_create: bool,
-    has_alembic_version_table: bool,
-) -> bool:
-    """Decide whether SQLModel should bootstrap tables on startup.
-
-    SQLite always uses ``create_all()``. PostgreSQL normally relies on Alembic,
-    but legacy or brand-new databases without an ``alembic_version`` table still
-    need the original bootstrap behavior so later migrations have the core tables
-    they expect.
-    """
-    if "sqlite" in database_url or db_auto_create:
-        return True
-
-    return not has_alembic_version_table
-
-
 async def init_db() -> None:
     """Initialize database by creating all tables.
 
-    This should be called on application startup.
-    SQLite always uses SQLModel's create_all. PostgreSQL prefers Alembic, but
-    still bootstraps core tables when no alembic history exists yet.
+    SQLite uses SQLModel's create_all for lightweight local/test setups.
+    PostgreSQL environments rely on Alembic migrations for schema management.
     """
+    if "sqlite" not in DATABASE_URL:
+        return
+
     async with engine.begin() as conn:
-        has_alembic_version_table = await conn.run_sync(
-            lambda sync_conn: inspect(sync_conn).has_table("alembic_version")
-        )
-
-        if not should_auto_create_schema(
-            database_url=DATABASE_URL,
-            db_auto_create=DB_AUTO_CREATE,
-            has_alembic_version_table=has_alembic_version_table,
-        ):
-            return
-
         await conn.run_sync(SQLModel.metadata.create_all)
 
 

@@ -263,21 +263,30 @@ Interpretation:
 After PR #209 was opened, CI exposed one more important issue in the new Docker migration
 flow:
 
-- a brand-new PostgreSQL database could fail during Alembic upgrade because part of the
-  historical migration chain still assumes core tables already exist
-- specifically, the `a6a5412b5d02` migration tries to alter `portfolio_snapshots` before
-  Alembic has ever created that table from scratch
+- a brand-new PostgreSQL database could fail during Alembic upgrade because the migration
+  history did not yet describe the full schema from zero
+- historically, the original core portfolio tables were created by application startup
+  `create_all()`, while Alembic only covered later additions like price history,
+  watchlist, and strategy/backtest tables
 
-Follow-up fix applied:
+Proper fix applied:
 
-- `init_db()` now uses SQLModel `create_all()` for PostgreSQL only when the database does
-  **not** yet have an `alembic_version` table
-- this preserves the fresh-database bootstrap behavior older migrations still depend on,
-  while still keeping migrated PostgreSQL databases on the Alembic path
+- added a true Alembic baseline migration for the original core portfolio tables
+- rewired the revision chain so a blank PostgreSQL database can be built from
+  `alembic upgrade head`
+- removed PostgreSQL startup `create_all()` behavior from `init_db()`
+- made the small historical follow-up migrations tolerant of already-existing tables or
+  columns, which helps old dev databases created under the legacy bootstrap path
 
-This is a pragmatic compatibility fix, not the final ideal state. Long term, the
-migration history should be normalized so a blank PostgreSQL database can be built purely
-from Alembic without any startup bootstrap behavior.
+Validated locally:
+
+- fresh temporary Docker project with a blank PostgreSQL volume upgraded successfully
+  through the full Alembic chain
+- authenticated local smoke test then passed end-to-end on top of that freshly
+  initialized database
+
+This is the much better long-term state: Alembic now owns PostgreSQL initialization and
+migrations instead of splitting responsibility with runtime startup code.
 
 ### Additional Root Causes Found
 
