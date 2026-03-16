@@ -258,6 +258,27 @@ Interpretation:
 - switching production frontend API traffic back to same-origin `/api/v1` is likely the
   fastest user-visible fix, assuming the deployed frontend is rebuilt/redeployed correctly
 
+### Fresh-DB Migration Follow-up
+
+After PR #209 was opened, CI exposed one more important issue in the new Docker migration
+flow:
+
+- a brand-new PostgreSQL database could fail during Alembic upgrade because part of the
+  historical migration chain still assumes core tables already exist
+- specifically, the `a6a5412b5d02` migration tries to alter `portfolio_snapshots` before
+  Alembic has ever created that table from scratch
+
+Follow-up fix applied:
+
+- `init_db()` now uses SQLModel `create_all()` for PostgreSQL only when the database does
+  **not** yet have an `alembic_version` table
+- this preserves the fresh-database bootstrap behavior older migrations still depend on,
+  while still keeping migrated PostgreSQL databases on the Alembic path
+
+This is a pragmatic compatibility fix, not the final ideal state. Long term, the
+migration history should be normalized so a blank PostgreSQL database can be built purely
+from Alembic without any startup bootstrap behavior.
+
 ### Additional Root Causes Found
 
 #### 1. Local/Postgres schema drift risk
