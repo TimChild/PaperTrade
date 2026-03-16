@@ -1,3 +1,5 @@
+/* global console, fetch, process, URL, window */
+
 import { createClerkClient } from '@clerk/backend'
 import { chromium } from '@playwright/test'
 
