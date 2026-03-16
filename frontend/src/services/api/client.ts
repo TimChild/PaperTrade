@@ -4,12 +4,58 @@
 import axios, { AxiosError } from 'axios'
 import type { ErrorResponse } from './types'
 
-// Use relative URL in production (proxied by nginx), localhost in development
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  (import.meta.env.MODE === 'production'
-    ? '/api/v1'
-    : 'http://localhost:8000/api/v1')
+type ApiBaseUrlOptions = {
+  mode?: string
+  configuredBaseUrl?: string
+  windowOrigin?: string
+}
+
+function shouldPreferSameOriginApi(
+  configuredBaseUrl: string,
+  windowOrigin: string | undefined
+): boolean {
+  if (!windowOrigin) {
+    return false
+  }
+
+  try {
+    const currentUrl = new URL(windowOrigin)
+    const configuredUrl = new URL(configuredBaseUrl, windowOrigin)
+
+    return (
+      currentUrl.hostname === 'zebutrader.com' &&
+      configuredUrl.hostname === 'api.zebutrader.com' &&
+      configuredUrl.origin !== currentUrl.origin
+    )
+  } catch {
+    return false
+  }
+}
+
+export function resolveApiBaseUrl({
+  mode = import.meta.env.MODE,
+  configuredBaseUrl = import.meta.env.VITE_API_BASE_URL,
+  windowOrigin = typeof window !== 'undefined' ? window.location.origin : undefined,
+}: ApiBaseUrlOptions = {}): string {
+  if (mode === 'production') {
+    if (!configuredBaseUrl) {
+      return '/api/v1'
+    }
+
+    if (shouldPreferSameOriginApi(configuredBaseUrl, windowOrigin)) {
+      console.warn(
+        'Cross-origin production API URL detected; using same-origin /api/v1 instead.'
+      )
+      return '/api/v1'
+    }
+
+    return configuredBaseUrl
+  }
+
+  return configuredBaseUrl || 'http://localhost:8000/api/v1'
+}
+
+const API_BASE_URL = resolveApiBaseUrl()
 
 // Global token setter for Clerk authentication
 // This will be called from AuthProvider which has access to Clerk's useAuth

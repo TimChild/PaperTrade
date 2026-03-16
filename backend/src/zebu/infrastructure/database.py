@@ -17,6 +17,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 # For development/testing: SQLite (default)
 # For production/Docker: PostgreSQL (configured via DATABASE_URL environment variable)
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./papertrade.db")
+DB_AUTO_CREATE = os.getenv("DB_AUTO_CREATE", "").lower() in {"1", "true", "yes"}
 
 
 # Create async engine
@@ -41,8 +42,12 @@ async def init_db() -> None:
     """Initialize database by creating all tables.
 
     This should be called on application startup.
-    In production, use Alembic migrations instead.
+    SQLite and explicitly opted-in environments use SQLModel's create_all.
+    PostgreSQL environments should rely on Alembic migrations instead.
     """
+    if "sqlite" not in DATABASE_URL and not DB_AUTO_CREATE:
+        return
+
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
 

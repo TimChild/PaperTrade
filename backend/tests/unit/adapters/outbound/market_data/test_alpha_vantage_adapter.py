@@ -84,6 +84,40 @@ def create_price_point(
     )
 
 
+class TestHistoricalOutputsizeSelection:
+    """Tests for choosing Alpha Vantage historical output size."""
+
+    def test_recent_range_uses_compact(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+    ) -> None:
+        """Recent history requests should use compact mode."""
+        now = datetime(2026, 3, 15, 12, 0, 0, tzinfo=UTC)
+        start = datetime(2026, 2, 15, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 2, 28, 23, 59, 59, tzinfo=UTC)
+
+        result = alpha_vantage_adapter._select_daily_history_outputsize(
+            start, end, now=now
+        )
+
+        assert result == "compact"
+
+    def test_old_range_uses_full(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+    ) -> None:
+        """Older backtest windows should use full mode."""
+        now = datetime(2026, 3, 15, 12, 0, 0, tzinfo=UTC)
+        start = datetime(2024, 1, 2, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2024, 1, 10, 23, 59, 59, tzinfo=UTC)
+
+        result = alpha_vantage_adapter._select_daily_history_outputsize(
+            start, end, now=now
+        )
+
+        assert result == "full"
+
+
 class TestCacheCompletenessComplete:
     """Tests for complete cache scenarios (should return cached data)."""
 

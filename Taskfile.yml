@@ -141,6 +141,52 @@ tasks:
       - sh: docker ps | grep -q papertrade-db-1
         msg: "Database container not running. Run 'task docker:up' first."
 
+  smoke:auth:local:
+    desc: "Run authenticated smoke test against the local app (supports -- --mode full)"
+    dir: "{{.FRONTEND_DIR}}"
+    deps:
+      - docker:up:all
+    env:
+      SMOKE_APP_URL: http://localhost:5173/dashboard
+      SMOKE_API_BASE_URL: http://localhost:8000/api/v1
+      SMOKE_CLERK_SECRET_KEY:
+        sh: grep "^CLERK_SECRET_KEY=" ../.env | cut -d= -f2- || echo ""
+      SMOKE_USER_EMAIL:
+        sh: grep "^E2E_CLERK_USER_EMAIL=" ../.env | cut -d= -f2- || echo ""
+    cmds:
+      - echo "Running local authenticated smoke test..."
+      - node scripts/authenticated-smoke.mjs {{.CLI_ARGS}}
+    preconditions:
+      - sh: test -f package.json
+        msg: "Frontend not found"
+      - sh: test -n "$(grep "^CLERK_SECRET_KEY=" ../.env 2>/dev/null)"
+        msg: "CLERK_SECRET_KEY missing from .env"
+      - sh: test -n "$(grep "^E2E_CLERK_USER_EMAIL=" ../.env 2>/dev/null)"
+        msg: "E2E_CLERK_USER_EMAIL missing from .env"
+
+  smoke:auth:prod:
+    desc: "Run authenticated smoke test against production (requires exported env vars, supports -- --mode full)"
+    dir: "{{.FRONTEND_DIR}}"
+    env:
+      SMOKE_APP_URL:
+        sh: printenv SMOKE_APP_URL || echo "https://zebutrader.com/dashboard"
+      SMOKE_API_BASE_URL:
+        sh: printenv SMOKE_API_BASE_URL || echo "https://zebutrader.com/api/v1"
+      SMOKE_CLERK_SECRET_KEY:
+        sh: printenv SMOKE_CLERK_SECRET_KEY || echo ""
+      SMOKE_USER_EMAIL:
+        sh: printenv SMOKE_USER_EMAIL || echo ""
+    cmds:
+      - echo "Running production authenticated smoke test..."
+      - node scripts/authenticated-smoke.mjs {{.CLI_ARGS}}
+    preconditions:
+      - sh: test -f package.json
+        msg: "Frontend not found"
+      - sh: test -n "$SMOKE_CLERK_SECRET_KEY"
+        msg: "Export SMOKE_CLERK_SECRET_KEY before running this task"
+      - sh: test -n "$SMOKE_USER_EMAIL"
+        msg: "Export SMOKE_USER_EMAIL before running this task"
+
   lint:
     desc: "Run all linters (backend and frontend)"
     cmds:
@@ -210,6 +256,7 @@ tasks:
     desc: "Start all services in development mode (PostgreSQL, Redis, Backend, Frontend)"
     cmds:
       - docker compose up -d
+      - task: db:migrate:docker
       - echo "✓ All services started in development mode"
       - 'echo "  - PostgreSQL: localhost:5432"'
       - 'echo "  - Redis: localhost:6379"'
@@ -619,6 +666,18 @@ tasks:
   db:shell:prod:
     desc: "Open PostgreSQL shell (production database)"
     cmd: docker compose -f docker-compose.prod.yml exec db psql -U papertrade -d papertrade
+
+  db:migrate:docker:
+    desc: "Run database migrations inside the backend Docker container"
+    cmds:
+      - |
+        echo "Running Docker-backed Alembic migrations..."
+        timeout 60 bash -c 'until docker compose exec -T backend curl -f http://localhost:8000/health >/dev/null 2>&1; do sleep 2; done'
+        docker compose exec -T backend alembic upgrade head
+        echo "✓ Docker migrations complete"
+    preconditions:
+      - sh: docker compose ps backend 2>/dev/null | grep -q "Up"
+        msg: "Backend container not running. Run 'task docker:up:all' first."
 
   db:migrate:
     desc: "Run database migrations"
