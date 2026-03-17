@@ -96,7 +96,7 @@ This checklist ensures your Zebu deployment is production-ready. Complete all it
 
 - [ ] **Environment Configuration**
   - [ ] All required environment variables set in `.env`
-  - [ ] `VITE_API_BASE_URL` points to production API domain
+  - [ ] `VITE_API_BASE_URL` prefers same-origin `/api/v1` when frontend is proxied through nginx
   - [ ] `CORS_ORIGINS` includes all production domains
   - [ ] Alpha Vantage API key valid and rate limits configured
   - [ ] Logging level appropriate (`INFO` for production)
@@ -153,6 +153,7 @@ This checklist ensures your Zebu deployment is production-ready. Complete all it
   - [ ] API accessible (`https://api.yourdomain.com/health`)
   - [ ] CORS headers present in responses
   - [ ] Authentication working (Clerk integration)
+  - [ ] Authenticated smoke test passes against production
   - [ ] API documentation accessible (if intended to be public)
 
 - [ ] **Database**

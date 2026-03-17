@@ -40,9 +40,12 @@ async_session_maker = async_sessionmaker(
 async def init_db() -> None:
     """Initialize database by creating all tables.
 
-    This should be called on application startup.
-    In production, use Alembic migrations instead.
+    SQLite uses SQLModel's create_all for lightweight local/test setups.
+    PostgreSQL environments rely on Alembic migrations for schema management.
     """
+    if "sqlite" not in DATABASE_URL:
+        return
+
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
 

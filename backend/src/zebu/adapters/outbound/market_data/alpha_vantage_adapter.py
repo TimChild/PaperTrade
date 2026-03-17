@@ -780,11 +780,15 @@ class AlphaVantageAdapter:
 
             # Fetch from API
             try:
-                api_history = await self._fetch_daily_history_from_api(ticker)
+                outputsize = self._select_daily_history_outputsize(start, end)
+                api_history = await self._fetch_daily_history_from_api(
+                    ticker, outputsize=outputsize
+                )
 
                 log.info(
                     "Alpha Vantage API fetch successful",
                     total_points_fetched=len(api_history),
+                    outputsize=outputsize,
                     fetched_range=(
                         f"{api_history[0].timestamp.date()} to "
                         f"{api_history[-1].timestamp.date()}"
@@ -879,6 +883,29 @@ class AlphaVantageAdapter:
             0,
             tzinfo=UTC,
         )
+
+    def _select_daily_history_outputsize(
+        self,
+        start: datetime,
+        end: datetime,
+        now: datetime | None = None,
+    ) -> str:
+        """Choose the Alpha Vantage output size needed for a daily history request.
+
+        Alpha Vantage's ``compact`` mode only includes roughly the latest
+        100 trading days. Older backtests need ``full`` to cover historical
+        windows reliably.
+        """
+        current_time = now or datetime.now(UTC)
+        requested_days = (end.date() - start.date()).days + 1
+
+        if requested_days > 90:
+            return "full"
+
+        if start < current_time - timedelta(days=90):
+            return "full"
+
+        return "compact"
 
     def _deduplicate_daily_prices(self, prices: list[PricePoint]) -> list[PricePoint]:
         """Deduplicate price points by trading day, preferring market close entries.
@@ -1120,10 +1147,15 @@ class AlphaVantageAdapter:
             # Historical data - long TTL
             return 7 * 24 * 3600  # 7 days
 
-    async def _fetch_daily_history_from_api(self, ticker: Ticker) -> list[PricePoint]:
+    async def _fetch_daily_history_from_api(
+        self,
+        ticker: Ticker,
+        outputsize: str = "compact",
+    ) -> list[PricePoint]:
         """Fetch daily historical price data from Alpha Vantage API.
 
-        Uses TIME_SERIES_DAILY endpoint to get up to 100 days of historical data.
+        Uses TIME_SERIES_DAILY endpoint. ``compact`` returns roughly the latest
+        100 trading days, while ``full`` returns the full available history.
         Stores all fetched data in the price repository for future use.
 
         Args:
@@ -1141,12 +1173,7 @@ class AlphaVantageAdapter:
             "function": "TIME_SERIES_DAILY",
             "symbol": ticker.symbol,
             "apikey": self.api_key,
-            # Last 100 TRADING days (~4-5 months of calendar time,
-            # excluding weekends/holidays)
-            "outputsize": "compact",
-            # Note: "compact" is limited to 100 data points.
-            # For older data, use "full" (requires premium API key).
-            # Requests beyond this range will return partial results.
+            "outputsize": outputsize,
         }
 
         last_error: Exception | None = None
