@@ -84,6 +84,7 @@ Use the `Agent` tool with the matching `subagent_type` (or have the user invoke 
 | `docs-tidy` | BACKLOG / PROGRESS / README maintenance |
 | `orchestrate-zebu` | PR-review criteria, parallel-execution safety, task scoping |
 | `audit-mode` | "Audit mode" report format, P-tier calibration, multi-agent audit dispatch pattern |
+| `claude-infra-sync` | Detect drift in `CLAUDE.md`/`.claude/` against the actual repo (run end-of-Phase) |
 
 ## Task workflow
 
