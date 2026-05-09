@@ -48,6 +48,7 @@ class ErrorCode(str, Enum):
     INVALID_PORTFOLIO = "invalid_portfolio"
     INVALID_TRANSACTION = "invalid_transaction"
     INVALID_STRATEGY = "invalid_strategy"
+    INVALID_EXPLORATION_TASK = "invalid_exploration_task"
 
     # Application — market data
     TICKER_NOT_FOUND = "ticker_not_found"

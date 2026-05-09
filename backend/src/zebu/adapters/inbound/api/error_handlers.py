@@ -21,6 +21,7 @@ from zebu.application.exceptions import (
     MarketDataUnavailableError,
     TickerNotFoundError,
 )
+from zebu.domain.entities.exploration_task import InvalidExplorationTaskError
 from zebu.domain.exceptions import (
     InsufficientFundsError,
     InsufficientSharesError,
@@ -160,6 +161,17 @@ def register_exception_handlers(app: FastAPI) -> None:
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
             code=ErrorCode.INVALID_STRATEGY,
+        )
+
+    @app.exception_handler(InvalidExplorationTaskError)
+    async def handle_invalid_exploration_task(  # pyright: ignore[reportUnusedFunction]
+        request: Request, exc: InvalidExplorationTaskError
+    ) -> JSONResponse:
+        """Handle InvalidExplorationTaskError -> 422 Unprocessable Entity."""
+        return _error_json(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+            code=ErrorCode.INVALID_EXPLORATION_TASK,
         )
 
     @app.exception_handler(TickerNotFoundError)

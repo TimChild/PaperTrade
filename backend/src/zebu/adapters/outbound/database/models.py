@@ -13,6 +13,12 @@ from uuid import UUID
 from sqlmodel import JSON, Column, Field, Index, SQLModel, UniqueConstraint
 
 from zebu.domain.entities.backtest_run import BacktestRun
+from zebu.domain.entities.exploration_task import (
+    ExplorationConstraints,
+    ExplorationFindings,
+    ExplorationTask,
+    ExplorationTaskStatus,
+)
 from zebu.domain.entities.portfolio import Portfolio
 from zebu.domain.entities.portfolio_snapshot import (
     HoldingBreakdown,
@@ -770,6 +776,258 @@ class StrategyActivationModel(SQLModel, table=True):
             frequency=activation.frequency.value,
             last_executed_at=last_executed_at_naive,
             last_error=activation.last_error,
+            created_at=created_at_naive,
+            updated_at=updated_at_naive,
+        )
+
+
+class ExplorationTaskConstraintsDict(TypedDict, total=False):
+    """JSON-serializable form of ExplorationConstraints stored in `constraints`.
+
+    All fields are optional (``total=False``) so a row with no constraints
+    set serialises as ``{}``. ``strategy_type_whitelist`` is stored as a
+    list of strategy-type string values; the to_domain conversion rebuilds
+    ``StrategyType`` enum members.
+    """
+
+    max_backtests: int | None
+    allow_live_activation: bool
+    strategy_type_whitelist: list[str] | None
+
+
+class ExplorationTaskFindingsDict(TypedDict, total=False):
+    """JSON-serializable form of ExplorationFindings stored in `findings`.
+
+    UUIDs are serialised as their canonical hex strings; the to_domain
+    conversion rebuilds the UUID objects.
+    """
+
+    summary: str
+    backtest_run_ids: list[str]
+    strategy_ids: list[str]
+    notes: list[str] | None
+
+
+def _constraints_to_dict(
+    constraints: ExplorationConstraints | None,
+) -> ExplorationTaskConstraintsDict | None:
+    """Serialise ExplorationConstraints to a JSON dict (or None)."""
+    if constraints is None:
+        return None
+    payload: ExplorationTaskConstraintsDict = {
+        "max_backtests": constraints.max_backtests,
+        "allow_live_activation": constraints.allow_live_activation,
+        "strategy_type_whitelist": (
+            [t.value for t in constraints.strategy_type_whitelist]
+            if constraints.strategy_type_whitelist is not None
+            else None
+        ),
+    }
+    return payload
+
+
+def _constraints_from_dict(
+    raw: ExplorationTaskConstraintsDict | None,
+) -> ExplorationConstraints | None:
+    """Deserialise a JSON dict into ExplorationConstraints (or None)."""
+    if raw is None:
+        return None
+    whitelist_raw = raw.get("strategy_type_whitelist")
+    whitelist: list[StrategyType] | None
+    if whitelist_raw is None:
+        whitelist = None
+    else:
+        whitelist = [StrategyType(value) for value in whitelist_raw]
+    return ExplorationConstraints(
+        max_backtests=raw.get("max_backtests"),
+        allow_live_activation=raw.get("allow_live_activation", True),
+        strategy_type_whitelist=whitelist,
+    )
+
+
+def _findings_to_dict(
+    findings: ExplorationFindings | None,
+) -> ExplorationTaskFindingsDict | None:
+    """Serialise ExplorationFindings to a JSON dict (or None)."""
+    if findings is None:
+        return None
+    payload: ExplorationTaskFindingsDict = {
+        "summary": findings.summary,
+        "backtest_run_ids": [str(run_id) for run_id in findings.backtest_run_ids],
+        "strategy_ids": [str(s_id) for s_id in findings.strategy_ids],
+        "notes": findings.notes,
+    }
+    return payload
+
+
+def _findings_from_dict(
+    raw: ExplorationTaskFindingsDict | None,
+) -> ExplorationFindings | None:
+    """Deserialise a JSON dict into ExplorationFindings (or None)."""
+    if raw is None:
+        return None
+    summary = raw.get("summary")
+    if summary is None:
+        # Defensive — should not happen since summary is required, but a
+        # missing field shouldn't crash the loader silently.
+        raise ValueError(
+            "ExplorationTask.findings JSON missing required 'summary' field"
+        )
+    backtest_run_ids = [UUID(value) for value in raw.get("backtest_run_ids", [])]
+    strategy_ids = [UUID(value) for value in raw.get("strategy_ids", [])]
+    notes = raw.get("notes")
+    return ExplorationFindings(
+        summary=summary,
+        backtest_run_ids=backtest_run_ids,
+        strategy_ids=strategy_ids,
+        notes=notes,
+    )
+
+
+class ExplorationTaskModel(SQLModel, table=True):
+    """Database model for ExplorationTask entity.
+
+    Tasks are the agent-platform queue: humans create them, agents claim
+    them atomically, work them, submit findings. The composite index on
+    ``(status, created_at)`` makes the "next OPEN task" query the queue is
+    built around fast even at large row counts.
+
+    Foreign-key behaviour:
+
+    * ``target_portfolio_id`` references ``portfolios.id`` with ``ON DELETE
+      SET NULL``: if a portfolio is deleted while a task referencing it is
+      still open, the task survives but loses its portfolio binding. The
+      FK constraint is declared in the Alembic migration.
+    * ``created_by`` deliberately has **no FK** — users live in Clerk; this
+      column matches the convention already used for ``portfolios.user_id``,
+      ``strategies.user_id``, and ``backtest_runs.user_id``.
+
+    Attributes:
+        id: Primary key (UUID).
+        created_by: ID of the user (Clerk-derived UUID) who created the
+            task.
+        prompt: Free-form prompt text (max 4000 characters at the domain
+            level; the column allows longer for future-proofing).
+        status: ExplorationTaskStatus value (string).
+        target_portfolio_id: Optional portfolio reference (FK, SET NULL on
+            delete).
+        tickers: JSON array of ticker symbol strings, ``None`` if no ticker
+            scope.
+        constraints: JSON object form of ExplorationConstraints, ``None``
+            if no constraints.
+        claimed_by: Free-form agent identifier set when the task is
+            claimed.
+        claimed_at: Timestamp the task was claimed (naive UTC for
+            Postgres TIMESTAMP).
+        findings: JSON object form of ExplorationFindings, populated when
+            the task transitions to DONE.
+        created_at: Creation timestamp (naive UTC).
+        updated_at: Last-transition timestamp (naive UTC).
+    """
+
+    __tablename__ = "exploration_tasks"  # type: ignore[assignment]
+    __table_args__ = (
+        Index("idx_exploration_task_status_created", "status", "created_at"),
+        Index("idx_exploration_task_created_by", "created_by"),
+        Index("idx_exploration_task_portfolio_id", "target_portfolio_id"),
+    )
+
+    id: UUID = Field(primary_key=True)
+    created_by: UUID = Field(index=False)  # Index supplied by composite above
+    prompt: str = Field(max_length=4000)
+    status: str = Field(max_length=20)
+    target_portfolio_id: UUID | None = Field(default=None)
+    tickers: list[str] | None = Field(  # type: ignore[assignment]
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+    )
+    constraints: ExplorationTaskConstraintsDict | None = Field(  # type: ignore[assignment]
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+    )
+    claimed_by: str | None = Field(default=None, max_length=200)
+    claimed_at: datetime | None = Field(default=None)
+    findings: ExplorationTaskFindingsDict | None = Field(  # type: ignore[assignment]
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+    )
+    created_at: datetime
+    updated_at: datetime
+
+    def to_domain(self) -> ExplorationTask:
+        """Convert database model to domain entity.
+
+        Raises:
+            ValueError: If the row's ``status`` is not a valid
+                ``ExplorationTaskStatus`` value or its ``findings`` JSON is
+                shape-broken (e.g. missing required ``summary``).
+        """
+        # Database stores naive UTC datetimes - add UTC timezone back
+        created_at_utc = self.created_at.replace(tzinfo=UTC)
+        updated_at_utc = self.updated_at.replace(tzinfo=UTC)
+        claimed_at_utc: datetime | None = None
+        if self.claimed_at is not None:
+            claimed_at_utc = self.claimed_at.replace(tzinfo=UTC)
+
+        tickers: list[Ticker] | None
+        if self.tickers is None:
+            tickers = None
+        else:
+            tickers = [Ticker(symbol) for symbol in self.tickers]
+
+        return ExplorationTask(
+            id=self.id,
+            created_by=self.created_by,
+            prompt=self.prompt,
+            status=ExplorationTaskStatus(self.status),
+            created_at=created_at_utc,
+            updated_at=updated_at_utc,
+            target_portfolio_id=self.target_portfolio_id,
+            tickers=tickers,
+            constraints=_constraints_from_dict(self.constraints),
+            claimed_by=self.claimed_by,
+            claimed_at=claimed_at_utc,
+            findings=_findings_from_dict(self.findings),
+        )
+
+    @classmethod
+    def from_domain(cls, task: ExplorationTask) -> "ExplorationTaskModel":
+        """Convert domain entity to database model."""
+        # Strip timezone for PostgreSQL TIMESTAMP WITHOUT TIME ZONE columns
+        if task.created_at.tzinfo:
+            created_at_naive = task.created_at.astimezone(UTC).replace(tzinfo=None)
+        else:
+            created_at_naive = task.created_at
+
+        if task.updated_at.tzinfo:
+            updated_at_naive = task.updated_at.astimezone(UTC).replace(tzinfo=None)
+        else:
+            updated_at_naive = task.updated_at
+
+        claimed_at_naive: datetime | None = None
+        if task.claimed_at is not None:
+            if task.claimed_at.tzinfo:
+                claimed_at_naive = task.claimed_at.astimezone(UTC).replace(tzinfo=None)
+            else:
+                claimed_at_naive = task.claimed_at
+
+        tickers_json: list[str] | None
+        if task.tickers is None:
+            tickers_json = None
+        else:
+            tickers_json = [t.symbol for t in task.tickers]
+
+        return cls(
+            id=task.id,
+            created_by=task.created_by,
+            prompt=task.prompt,
+            status=task.status.value,
+            target_portfolio_id=task.target_portfolio_id,
+            tickers=tickers_json,
+            constraints=_constraints_to_dict(task.constraints),
+            claimed_by=task.claimed_by,
+            claimed_at=claimed_at_naive,
+            findings=_findings_to_dict(task.findings),
             created_at=created_at_naive,
             updated_at=updated_at_naive,
         )
