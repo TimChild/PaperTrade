@@ -2,6 +2,10 @@
 
 Tests the transaction repository with a real SQLite database to verify
 append-only semantics and query operations.
+
+Note: a portfolio row must exist before any transaction can reference it
+(``transactions.portfolio_id`` has a FK to ``portfolios.id``). Helper
+``insert_portfolio`` from the integration conftest takes care of that.
 """
 
 from datetime import datetime
@@ -10,6 +14,7 @@ from uuid import uuid4
 
 import pytest
 
+from tests.integration._helpers import insert_portfolio
 from zebu.adapters.outbound.database.transaction_repository import (
     DuplicateTransactionError,
     SQLModelTransactionRepository,
@@ -28,9 +33,10 @@ class TestSQLModelTransactionRepository:
         """Test saving and retrieving a transaction."""
         # Arrange
         repo = SQLModelTransactionRepository(session)
+        portfolio_id = await insert_portfolio(session, uuid4())
         transaction = Transaction(
             id=uuid4(),
-            portfolio_id=uuid4(),
+            portfolio_id=portfolio_id,
             transaction_type=TransactionType.DEPOSIT,
             timestamp=datetime.now(),
             cash_change=Money(Decimal("1000.00"), "USD"),
@@ -60,9 +66,11 @@ class TestSQLModelTransactionRepository:
         # Arrange
         repo = SQLModelTransactionRepository(session)
         transaction_id = uuid4()
+        portfolio_id_1 = await insert_portfolio(session, uuid4())
+        portfolio_id_2 = await insert_portfolio(session, uuid4())
         transaction1 = Transaction(
             id=transaction_id,
-            portfolio_id=uuid4(),
+            portfolio_id=portfolio_id_1,
             transaction_type=TransactionType.DEPOSIT,
             timestamp=datetime.now(),
             cash_change=Money(Decimal("1000.00"), "USD"),
@@ -78,7 +86,7 @@ class TestSQLModelTransactionRepository:
         # Try to save again with same ID
         transaction2 = Transaction(
             id=transaction_id,
-            portfolio_id=uuid4(),
+            portfolio_id=portfolio_id_2,
             transaction_type=TransactionType.DEPOSIT,
             timestamp=datetime.now(),
             cash_change=Money(Decimal("500.00"), "USD"),
@@ -96,7 +104,7 @@ class TestSQLModelTransactionRepository:
         """Test transactions are returned in chronological order."""
         # Arrange
         repo = SQLModelTransactionRepository(session)
-        portfolio_id = uuid4()
+        portfolio_id = await insert_portfolio(session, uuid4())
 
         import time
 
@@ -139,7 +147,7 @@ class TestSQLModelTransactionRepository:
         """Test pagination works correctly."""
         # Arrange
         repo = SQLModelTransactionRepository(session)
-        portfolio_id = uuid4()
+        portfolio_id = await insert_portfolio(session, uuid4())
 
         # Create 5 transactions
         transactions = []
@@ -177,7 +185,7 @@ class TestSQLModelTransactionRepository:
         """Test filtering by transaction type."""
         # Arrange
         repo = SQLModelTransactionRepository(session)
-        portfolio_id = uuid4()
+        portfolio_id = await insert_portfolio(session, uuid4())
 
         deposit = Transaction(
             id=uuid4(),
@@ -223,7 +231,7 @@ class TestSQLModelTransactionRepository:
         """Test counting transactions for a portfolio."""
         # Arrange
         repo = SQLModelTransactionRepository(session)
-        portfolio_id = uuid4()
+        portfolio_id = await insert_portfolio(session, uuid4())
 
         # Create 3 transactions
         for _i in range(3):
@@ -252,7 +260,7 @@ class TestSQLModelTransactionRepository:
         """Test counting with transaction type filter."""
         # Arrange
         repo = SQLModelTransactionRepository(session)
-        portfolio_id = uuid4()
+        portfolio_id = await insert_portfolio(session, uuid4())
 
         deposit1 = Transaction(
             id=uuid4(),
@@ -307,9 +315,10 @@ class TestSQLModelTransactionRepository:
         """Test saving a BUY transaction with ticker, quantity, and price."""
         # Arrange
         repo = SQLModelTransactionRepository(session)
+        portfolio_id = await insert_portfolio(session, uuid4())
         transaction = Transaction(
             id=uuid4(),
-            portfolio_id=uuid4(),
+            portfolio_id=portfolio_id,
             transaction_type=TransactionType.BUY,
             timestamp=datetime.now(),
             cash_change=Money(Decimal("-150.00"), "USD"),
@@ -343,8 +352,8 @@ class TestGetByPortfolios:
         """Test that transactions are grouped by portfolio_id."""
         # Arrange
         repo = SQLModelTransactionRepository(session)
-        portfolio_id_1 = uuid4()
-        portfolio_id_2 = uuid4()
+        portfolio_id_1 = await insert_portfolio(session, uuid4())
+        portfolio_id_2 = await insert_portfolio(session, uuid4())
 
         t1 = Transaction(
             id=uuid4(),
@@ -403,7 +412,10 @@ class TestGetByPortfolios:
     async def test_get_by_portfolios_missing_portfolio_excluded(self, session):
         """Test that portfolio IDs with no transactions are excluded from result."""
         repo = SQLModelTransactionRepository(session)
-        portfolio_id = uuid4()
+        portfolio_id = await insert_portfolio(session, uuid4())
+        # ``missing_id`` deliberately has NO portfolio row — exercise the
+        # "portfolio doesn't exist (or has no transactions)" branch. Since
+        # we never insert a transaction for ``missing_id``, no FK violation.
         missing_id = uuid4()
 
         t1 = Transaction(
@@ -428,7 +440,7 @@ class TestGetByPortfolios:
     async def test_get_by_portfolios_returns_chronological_order(self, session):
         """Test that transactions within each portfolio are sorted chronologically."""
         repo = SQLModelTransactionRepository(session)
-        portfolio_id = uuid4()
+        portfolio_id = await insert_portfolio(session, uuid4())
 
         t1 = Transaction(
             id=uuid4(),
@@ -469,7 +481,7 @@ class TestSaveAll:
     async def test_save_all_inserts_all_transactions(self, session):
         """Bulk save persists every transaction in the batch."""
         repo = SQLModelTransactionRepository(session)
-        portfolio_id = uuid4()
+        portfolio_id = await insert_portfolio(session, uuid4())
 
         batch = [
             Transaction(
@@ -503,7 +515,7 @@ class TestSaveAll:
     async def test_save_all_duplicate_id_raises(self, session):
         """A duplicate ID inside the batch raises DuplicateTransactionError."""
         repo = SQLModelTransactionRepository(session)
-        portfolio_id = uuid4()
+        portfolio_id = await insert_portfolio(session, uuid4())
 
         existing = Transaction(
             id=uuid4(),

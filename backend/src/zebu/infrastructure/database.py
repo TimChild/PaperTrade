@@ -9,6 +9,7 @@ from collections.abc import AsyncGenerator
 from typing import Annotated, Any
 
 from fastapi import Depends
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -27,9 +28,37 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./papertrade.db")
 DB_ECHO = os.getenv("DB_ECHO", "false").lower() == "true"
 engine_kwargs: dict[str, Any] = {"echo": DB_ECHO}
 if "sqlite" in DATABASE_URL:
+    # SQLite has no real pool; just allow cross-thread access.
     engine_kwargs["connect_args"] = {"check_same_thread": False}
+else:
+    # Postgres / async-network DB pool config:
+    # - pool_pre_ping: validate connections before checkout, recover from
+    #   server-side idle timeouts and DB restarts during deploys.
+    # - pool_recycle: proactively recycle connections every 30 min to avoid
+    #   accumulating long-lived idle connections.
+    # - pool_size / max_overflow: tunable via env for scale-up; defaults
+    #   chosen for a single-node Phase B workload (FastAPI + scheduler).
+    engine_kwargs["pool_pre_ping"] = True
+    engine_kwargs["pool_recycle"] = int(os.getenv("DB_POOL_RECYCLE", "1800"))
+    engine_kwargs["pool_size"] = int(os.getenv("DB_POOL_SIZE", "10"))
+    engine_kwargs["max_overflow"] = int(os.getenv("DB_MAX_OVERFLOW", "20"))
 
 engine = create_async_engine(DATABASE_URL, **engine_kwargs)
+
+
+# SQLite has FK enforcement disabled by default; turn it on so dev/test
+# behaves like production Postgres (which always enforces declared FKs).
+# The decorator registers _enable_sqlite_fks as a connection event handler;
+# it's not called directly from this module (hence the pyright suppression).
+if "sqlite" in DATABASE_URL:
+
+    @event.listens_for(engine.sync_engine, "connect")
+    def _enable_sqlite_fks(  # pyright: ignore[reportUnusedFunction]
+        dbapi_connection: object, _record: object
+    ) -> None:
+        cursor = dbapi_connection.cursor()  # type: ignore[attr-defined]
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 
 # Session factory for creating database sessions

@@ -10,7 +10,7 @@ from decimal import Decimal
 from typing import TypedDict
 from uuid import UUID
 
-from sqlmodel import JSON, Column, Field, Index, SQLModel
+from sqlmodel import JSON, Column, Field, Index, SQLModel, UniqueConstraint
 
 from zebu.domain.entities.backtest_run import BacktestRun
 from zebu.domain.entities.portfolio import Portfolio
@@ -58,6 +58,8 @@ class PortfolioModel(SQLModel, table=True):
     __table_args__ = (Index("idx_portfolio_user_id", "user_id"),)
 
     id: UUID = Field(primary_key=True)
+    # NOTE: user_id intentionally has NO foreign key — users live in Clerk
+    # (external auth provider), there is no `users` table in this schema.
     user_id: UUID = Field(index=True)
     name: str = Field(max_length=100)
     created_at: datetime
@@ -142,7 +144,13 @@ class TransactionModel(SQLModel, table=True):
     )
 
     id: UUID = Field(primary_key=True)
-    portfolio_id: UUID = Field(index=True)
+    # FK to portfolios.id with ON DELETE CASCADE — transactions are
+    # owned by their portfolio and removed when the portfolio is deleted.
+    portfolio_id: UUID = Field(
+        index=True,
+        foreign_key="portfolios.id",
+        ondelete="CASCADE",
+    )
     transaction_type: str = Field(max_length=20)
     timestamp: datetime
     cash_change_amount: Decimal = Field(max_digits=15, decimal_places=2)
@@ -264,12 +272,21 @@ class PortfolioSnapshotModel(SQLModel, table=True):
 
     __tablename__ = "portfolio_snapshots"  # type: ignore[assignment]  # SQLModel requires string literal for __tablename__
     __table_args__ = (
+        UniqueConstraint(
+            "portfolio_id", "snapshot_date", name="uq_snapshot_portfolio_date"
+        ),
         Index("idx_snapshot_portfolio_date", "portfolio_id", "snapshot_date"),
         Index("idx_snapshot_date", "snapshot_date"),
     )
 
     id: UUID = Field(primary_key=True)
-    portfolio_id: UUID = Field(index=False)  # Index covered by composite index
+    # FK to portfolios.id with ON DELETE CASCADE — snapshots are
+    # owned by their portfolio and removed when the portfolio is deleted.
+    portfolio_id: UUID = Field(
+        index=False,  # Index covered by composite index
+        foreign_key="portfolios.id",
+        ondelete="CASCADE",
+    )
     snapshot_date: date
     total_value: Decimal = Field(max_digits=15, decimal_places=2)
     cash_balance: Decimal = Field(max_digits=15, decimal_places=2)
@@ -375,6 +392,8 @@ class StrategyModel(SQLModel, table=True):
     __table_args__ = (Index("idx_strategy_user_id", "user_id"),)
 
     id: UUID = Field(primary_key=True)
+    # NOTE: user_id intentionally has NO foreign key — users live in Clerk
+    # (external auth provider), there is no `users` table in this schema.
     user_id: UUID = Field(index=True)
     name: str = Field(max_length=100)
     strategy_type: str = Field(max_length=50)
@@ -466,9 +485,24 @@ class BacktestRunModel(SQLModel, table=True):
     )
 
     id: UUID = Field(primary_key=True)
+    # NOTE: user_id intentionally has NO foreign key — users live in Clerk
+    # (external auth provider), there is no `users` table in this schema.
     user_id: UUID = Field(index=True)
-    strategy_id: UUID | None = Field(default=None)
-    portfolio_id: UUID = Field(index=True)
+    # FK to strategies.id with ON DELETE SET NULL — soft reference: a deleted
+    # strategy must not erase backtest history; the run's strategy_snapshot
+    # column already preserves the configuration that was used.
+    strategy_id: UUID | None = Field(
+        default=None,
+        foreign_key="strategies.id",
+        ondelete="SET NULL",
+    )
+    # FK to portfolios.id with ON DELETE CASCADE — every backtest run owns
+    # its own (synthetic) portfolio; deleting that portfolio removes the run.
+    portfolio_id: UUID = Field(
+        index=True,
+        foreign_key="portfolios.id",
+        ondelete="CASCADE",
+    )
     strategy_snapshot: dict[str, object] = Field(  # type: ignore[assignment]
         sa_column=Column(JSON, nullable=False)
     )
