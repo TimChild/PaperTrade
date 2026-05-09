@@ -253,7 +253,7 @@ npx lighthouse http://localhost:4173/ --view
 - [ ] Form labels and ARIA correct
 
 **Quality:**
-- [ ] All tests passing (796+ tests)
+- [ ] All tests passing (current count in PROGRESS.md)
 - [ ] Linting clean (0 errors)
 - [ ] TypeScript compiles
 - [ ] No console errors in production

@@ -228,7 +228,7 @@ These limitations are acceptable for Stage 1 validation phase.
 - **SSL**: ACM (AWS Certificate Manager)
 - **Secrets**: AWS Secrets Manager
 - **Monitoring**: CloudWatch + CloudWatch Logs
-- **Infrastructure as Code**: AWS CDK (already scaffolded)
+- **Infrastructure as Code**: AWS CDK (aspirational — not yet scaffolded; current production runs on Proxmox VM, see Stage 1)
 
 ### Architecture Diagram
 

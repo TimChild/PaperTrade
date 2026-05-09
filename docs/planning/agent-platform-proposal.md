@@ -41,7 +41,7 @@ This doc is the plan. It's structured as phases A–G so it can be picked off in
 - **Live**: zebutrader.com (Proxmox VM, `192.168.4.112`)
 - **Version**: v1.0.0, Phase 4 (trading strategies + backtesting) complete
 - **CD**: push-to-main auto-deploys via self-hosted runner `papertrade-proxmox`
-- **Tests**: 831 backend + 311 frontend = 1,146 (March 8, 2026)
+- **Tests**: 831 backend + 311 frontend = 1,142 (March 8, 2026)
 - **Open PRs / issues**: zero
 
 ### Code map (relevant to this proposal)
@@ -456,7 +456,7 @@ Possible parallelization:
 ## Appendix — Key file pointers
 
 - This proposal: `docs/planning/agent-platform-proposal.md`
-- Existing phase plan template: `docs/planning/phase4-technical-plan.md`
+- Phase 4 architecture (canonical): `docs/architecture/phase4-trading-strategies.md`
 - Live-exec task spec: `agent_docs/tasks/210_live_strategy_execution.md`
 - Auth code: `backend/src/zebu/adapters/auth/`, `backend/src/zebu/adapters/inbound/api/dependencies.py`
 - Strategy domain: `backend/src/zebu/domain/entities/strategy.py`, `backend/src/zebu/domain/services/strategies/protocol.py`

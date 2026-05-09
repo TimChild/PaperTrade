@@ -45,7 +45,7 @@ task quality                   # Run all quality checks (lint + test)
 | Integration | ~30 | <5s | `backend/tests/integration/` |
 | E2E | ~20 | <30s | `frontend/tests/e2e/` |
 
-**Total**: 796+ tests (571 backend + 225 frontend)
+> Test counts shown above are illustrative shape only. The reconciled current count lives in [PROGRESS.md](../../PROGRESS.md) — treat that as the source of truth.
 
 ## Running Tests
 

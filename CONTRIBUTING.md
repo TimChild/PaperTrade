@@ -234,9 +234,9 @@ assert result.trade_id is not None
 ### Running Tests
 
 ```bash
-task test           # All tests (483 total)
-task test:backend   # Backend (402 tests)
-task test:frontend  # Frontend (81 tests)
+task test           # All tests
+task test:backend   # Backend
+task test:frontend  # Frontend
 task test:e2e       # End-to-end (Playwright)
 ```
 

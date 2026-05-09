@@ -28,7 +28,7 @@ Zebu follows Clean Architecture and Modern Software Engineering (Dave Farley) pr
 ```
 ┌─────────────────────────────────────────┐
 │           Infrastructure                │
-│  (Docker, AWS CDK, DB Config)           │
+│  (Docker, DB Config, Scheduler)         │
 ├─────────────────────────────────────────┤
 │              Adapters                   │
 │  ┌─────────────┐    ┌─────────────┐     │
