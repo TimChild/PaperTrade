@@ -13,10 +13,59 @@ on:
     branches:
       - main
 
+# Cancel in-flight runs on the same ref (PR or branch) when a new commit lands.
+# Keep `main` runs serialized so a deploy-eligible run is never cancelled.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
+  # Detect which parts of the tree changed. Heavy jobs gate on this so that
+  # docs-only PRs (and similar) skip backend/frontend/e2e work. Security jobs
+  # (secret-scan) ignore this and always run.
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      e2e: ${{ steps.filter.outputs.e2e }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Filter changed paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          # On `push` events, paths-filter compares against the previous commit;
+          # on `pull_request` it compares against the base branch automatically.
+          filters: |
+            backend:
+              - 'backend/**'
+              - 'docker-compose.yml'
+              - 'docker-compose.prod.yml'
+              - 'Taskfile.yml'
+              - '.github/workflows/ci.yml'
+            frontend:
+              - 'frontend/**'
+              - 'docker-compose.yml'
+              - 'docker-compose.prod.yml'
+              - 'Taskfile.yml'
+              - '.github/workflows/ci.yml'
+            e2e:
+              - 'backend/**'
+              - 'frontend/**'
+              - 'docker-compose.yml'
+              - 'docker-compose.prod.yml'
+              - 'Taskfile.yml'
+              - '.github/workflows/ci.yml'
+
   backend-checks:
     name: Backend Checks
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.backend == 'true' || github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout code
@@ -36,9 +85,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ hashFiles('backend/uv.lock') }}
+          key: ${{ runner.os }}-py3.13-uv-${{ hashFiles('backend/uv.lock') }}
           restore-keys: |
-            ${{ runner.os }}-uv-
+            ${{ runner.os }}-py3.13-uv-
 
       - name: Install Task
         uses: arduino/setup-task@v2
@@ -53,6 +102,19 @@ jobs:
 
       - name: Install dependencies
         run: task setup:backend
+
+      - name: Run pip-audit (backend)
+        # Audits the resolved environment for known vulnerabilities via OSV.dev.
+        # Currently warn-only because the deps audit (P0-2 / P1-2) flagged ~9
+        # outstanding PyPI advisories that land in their own PR; flip
+        # `continue-on-error` to `false` once those are cleared so this becomes
+        # a real merge gate (tracks deps.P2-3).
+        working-directory: ./backend
+        run: |
+          uvx --from 'pip-audit==2.9.0' pip-audit \
+            --strict \
+            --vulnerability-service osv
+        continue-on-error: true
 
       - name: Run quality checks
         run: task quality:backend
@@ -69,6 +131,8 @@ jobs:
   frontend-checks:
     name: Frontend Checks
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true' || github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout code
@@ -115,7 +179,19 @@ jobs:
   e2e-tests:
     name: E2E Tests
     runs-on: ubuntu-latest
-    needs: [backend-checks, frontend-checks]
+    needs: [changes, backend-checks, frontend-checks]
+    # Run when either side changed, but tolerate the other side being skipped
+    # (e.g. backend-only PR → frontend-checks skipped → e2e should still run
+    # to catch API-contract regressions). Use `always()` so a skipped need
+    # doesn't auto-skip this job, and gate explicitly on the upstreams not
+    # having FAILED.
+    if: |
+      always() &&
+      (needs.changes.outputs.e2e == 'true' || github.ref == 'refs/heads/main') &&
+      needs.backend-checks.result != 'failure' &&
+      needs.backend-checks.result != 'cancelled' &&
+      needs.frontend-checks.result != 'failure' &&
+      needs.frontend-checks.result != 'cancelled'
 
     steps:
       - name: Checkout code
@@ -142,9 +218,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ hashFiles('backend/uv.lock') }}
+          key: ${{ runner.os }}-py3.13-uv-${{ hashFiles('backend/uv.lock') }}
           restore-keys: |
-            ${{ runner.os }}-uv-
+            ${{ runner.os }}-py3.13-uv-
 
       - name: Install Task
         uses: arduino/setup-task@v2
@@ -191,3 +267,23 @@ jobs:
           name: playwright-report
           path: frontend/playwright-report/
           retention-days: 30
+
+  secret-scan:
+    name: Secret Scan (gitleaks)
+    runs-on: ubuntu-latest
+    # Always runs — even on docs-only PRs — because that's exactly when stray
+    # tokens are most likely to slip in.
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Need full history so gitleaks can scan all commits in a PR.
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GITLEAKS_LICENSE is only required for GitHub orgs; this is a
+          # personal repo, so it can be omitted. If/when the repo moves to an
+          # org account, set GITLEAKS_LICENSE in repo secrets.
