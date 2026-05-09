@@ -249,3 +249,6 @@ playwright/.auth/
 playwright-report/
 test-results/
 *.DS_Store
+
+# Claude Code agent worktrees (created by the harness during isolated agent runs)
+.claude/worktrees/

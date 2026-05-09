@@ -9,7 +9,7 @@ Builds the React/TypeScript dashboard. Strict TS, TanStack Query for server stat
 
 ## Stack
 
-TypeScript (strict), React 18+, Vite, TanStack Query, Zustand, Tailwind, Vitest, Playwright.
+TypeScript (strict), React 19+, Vite, TanStack Query, Zustand, Tailwind, Vitest, Playwright.
 
 ## Before starting
 
@@ -59,7 +59,7 @@ export function PortfolioCard({
   portfolio,
   onSelect,
   className,
-}: PortfolioCardProps): JSX.Element {
+}: PortfolioCardProps): React.JSX.Element {
   const handleClick = () => onSelect?.(portfolio.id);
   return (
     <Card className={className} onClick={handleClick} data-testid={`portfolio-card-${portfolio.id}`}>
