@@ -32,20 +32,22 @@ from zebu.domain.entities.strategy import Strategy
 from zebu.domain.value_objects.backtest_status import BacktestStatus
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.price_point import PricePoint
+from zebu.domain.value_objects.strategy_parameters import BuyAndHoldParameters
 from zebu.domain.value_objects.strategy_type import StrategyType
 from zebu.domain.value_objects.ticker import Ticker
 
 
 def _make_strategy(user_id, tickers=None, allocation=None):
     tickers = tickers or ["AAPL"]
-    allocation = allocation or {"AAPL": 1.0}
+    raw_allocation = allocation or {"AAPL": 1.0}
+    decimal_allocation = {k: Decimal(str(v)) for k, v in raw_allocation.items()}
     return Strategy(
         id=uuid4(),
         user_id=user_id,
         name="Test Strategy",
         strategy_type=StrategyType.BUY_AND_HOLD,
         tickers=tickers,
-        parameters={"allocation": allocation},
+        parameters=BuyAndHoldParameters(allocation=decimal_allocation),
         created_at=datetime.now(UTC),
     )
 

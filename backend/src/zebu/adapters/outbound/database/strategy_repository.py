@@ -75,7 +75,7 @@ class SQLModelStrategyRepository:
             existing.name = strategy.name
             existing.strategy_type = strategy.strategy_type.value
             existing.tickers = strategy.tickers  # type: ignore[assignment]
-            existing.parameters = strategy.parameters  # type: ignore[assignment]
+            existing.parameters = dict(strategy.parameters.to_dict())  # type: ignore[assignment]
             if existing.created_at.tzinfo is not None:
                 existing.created_at = existing.created_at.replace(tzinfo=None)
             self._session.add(existing)

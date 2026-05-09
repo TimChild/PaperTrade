@@ -1,12 +1,18 @@
 """Tests for Strategy entity."""
 
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from uuid import uuid4
 
 import pytest
 
 from zebu.domain.entities.strategy import Strategy
 from zebu.domain.exceptions import InvalidStrategyError
+from zebu.domain.value_objects.strategy_parameters import (
+    BuyAndHoldParameters,
+    DcaParameters,
+    MaCrossoverParameters,
+)
 from zebu.domain.value_objects.strategy_type import StrategyType
 
 
@@ -18,7 +24,7 @@ def _make_strategy(**overrides: object) -> Strategy:
         "name": "My Strategy",
         "strategy_type": StrategyType.BUY_AND_HOLD,
         "tickers": ["AAPL"],
-        "parameters": {"lookback_days": 30},
+        "parameters": BuyAndHoldParameters(allocation={"AAPL": Decimal("1")}),
         "created_at": datetime.now(UTC) - timedelta(minutes=1),
     }
     defaults.update(overrides)
@@ -38,7 +44,12 @@ class TestStrategyConstruction:
     def test_valid_construction_with_multiple_tickers(self) -> None:
         """Should accept up to 10 tickers."""
         tickers = [f"T{i}" for i in range(10)]
-        strategy = _make_strategy(tickers=tickers)
+        # Allocation must sum to 1.0; spread evenly across 10 tickers.
+        allocation = {t: Decimal("0.1") for t in tickers}
+        strategy = _make_strategy(
+            tickers=tickers,
+            parameters=BuyAndHoldParameters(allocation=allocation),
+        )
         assert len(strategy.tickers) == 10
 
     def test_name_empty_raises_error(self) -> None:
@@ -76,6 +87,39 @@ class TestStrategyConstruction:
         future = datetime.now(UTC) + timedelta(hours=1)
         with pytest.raises(InvalidStrategyError, match="cannot be in the future"):
             _make_strategy(created_at=future)
+
+    def test_parameters_type_must_match_strategy_type(self) -> None:
+        """Should raise when parameters concrete type does not match strategy_type."""
+        # BuyAndHoldParameters but strategy_type is DOLLAR_COST_AVERAGING
+        with pytest.raises(InvalidStrategyError, match="does not match strategy_type"):
+            _make_strategy(
+                strategy_type=StrategyType.DOLLAR_COST_AVERAGING,
+                parameters=BuyAndHoldParameters(allocation={"AAPL": Decimal("1")}),
+            )
+
+    def test_dca_strategy_with_dca_parameters_is_valid(self) -> None:
+        """DCA strategy paired with DcaParameters constructs successfully."""
+        strategy = _make_strategy(
+            strategy_type=StrategyType.DOLLAR_COST_AVERAGING,
+            parameters=DcaParameters(
+                frequency_days=30,
+                amount_per_period=Decimal("100"),
+                allocation={"AAPL": Decimal("1")},
+            ),
+        )
+        assert strategy.strategy_type == StrategyType.DOLLAR_COST_AVERAGING
+
+    def test_ma_crossover_strategy_with_typed_parameters_is_valid(self) -> None:
+        """MA crossover strategy paired with MaCrossoverParameters is valid."""
+        strategy = _make_strategy(
+            strategy_type=StrategyType.MOVING_AVERAGE_CROSSOVER,
+            parameters=MaCrossoverParameters(
+                fast_window=10,
+                slow_window=20,
+                invest_fraction=Decimal("0.5"),
+            ),
+        )
+        assert strategy.strategy_type == StrategyType.MOVING_AVERAGE_CROSSOVER
 
 
 class TestStrategyEquality:

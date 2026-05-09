@@ -93,7 +93,9 @@ class SQLModelBacktestRunRepository:
             self._session.add(model)
         else:
             existing.status = backtest_run.status.value
-            existing.strategy_snapshot = backtest_run.strategy_snapshot  # type: ignore[assignment]
+            existing.strategy_snapshot = dict(  # type: ignore[assignment]
+                backtest_run.strategy_snapshot.to_dict()
+            )
             existing.error_message = backtest_run.error_message
             existing.total_return_pct = backtest_run.total_return_pct
             existing.max_drawdown_pct = backtest_run.max_drawdown_pct

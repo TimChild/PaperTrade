@@ -7,6 +7,14 @@ from zebu.domain.value_objects.performance_metrics import PerformanceMetrics
 from zebu.domain.value_objects.portfolio_type import PortfolioType
 from zebu.domain.value_objects.price_point import PricePoint
 from zebu.domain.value_objects.quantity import Quantity
+from zebu.domain.value_objects.strategy_parameters import (
+    BuyAndHoldParameters,
+    DcaParameters,
+    MaCrossoverParameters,
+    StrategyParameters,
+    parameters_from_dict,
+)
+from zebu.domain.value_objects.strategy_snapshot import StrategySnapshot
 from zebu.domain.value_objects.strategy_type import StrategyType
 from zebu.domain.value_objects.ticker import Ticker
 from zebu.domain.value_objects.trade_signal import TradeAction, TradeSignal
@@ -14,13 +22,19 @@ from zebu.domain.value_objects.trade_signal import TradeAction, TradeSignal
 __all__ = [
     "Allocation",
     "BacktestStatus",
+    "BuyAndHoldParameters",
+    "DcaParameters",
+    "MaCrossoverParameters",
     "Money",
     "PerformanceMetrics",
     "PortfolioType",
     "PricePoint",
     "Quantity",
+    "StrategyParameters",
+    "StrategySnapshot",
     "StrategyType",
     "Ticker",
     "TradeAction",
     "TradeSignal",
+    "parameters_from_dict",
 ]

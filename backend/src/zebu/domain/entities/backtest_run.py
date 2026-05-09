@@ -3,12 +3,12 @@
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any
 from uuid import UUID
 
 from zebu.domain.exceptions import InvalidBacktestRunError
 from zebu.domain.value_objects.backtest_status import BacktestStatus
 from zebu.domain.value_objects.money import Money
+from zebu.domain.value_objects.strategy_snapshot import StrategySnapshot
 
 
 @dataclass(frozen=True)
@@ -26,7 +26,7 @@ class BacktestRun:
         user_id: Owner of the run
         strategy_id: Reference to the strategy entity (None if strategy was deleted)
         portfolio_id: Portfolio created for this backtest
-        strategy_snapshot: Complete copy of strategy config at time of run
+        strategy_snapshot: Typed snapshot of strategy config at time of run
         backtest_name: Human-readable label (1-100 characters)
         start_date: First date of the simulation window (inclusive)
         end_date: Last date of the simulation window (inclusive)
@@ -48,7 +48,7 @@ class BacktestRun:
     user_id: UUID
     strategy_id: UUID | None
     portfolio_id: UUID
-    strategy_snapshot: dict[str, Any]  # noqa: ANN401
+    strategy_snapshot: StrategySnapshot
     backtest_name: str
     start_date: date
     end_date: date

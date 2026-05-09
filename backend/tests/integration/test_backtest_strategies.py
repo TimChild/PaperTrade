@@ -36,6 +36,11 @@ from zebu.domain.value_objects.backtest_status import BacktestStatus
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.portfolio_type import PortfolioType
 from zebu.domain.value_objects.price_point import PricePoint
+from zebu.domain.value_objects.strategy_parameters import (
+    BuyAndHoldParameters,
+    DcaParameters,
+    MaCrossoverParameters,
+)
 from zebu.domain.value_objects.strategy_type import StrategyType
 from zebu.domain.value_objects.ticker import Ticker
 
@@ -129,7 +134,7 @@ class TestBuyAndHoldIntegration:
             name="Buy and Hold Test",
             strategy_type=StrategyType.BUY_AND_HOLD,
             tickers=["AAPL"],
-            parameters={"allocation": {"AAPL": 1.0}},
+            parameters=BuyAndHoldParameters(allocation={"AAPL": Decimal("1")}),
             created_at=datetime.now(UTC),
         )
 
@@ -205,11 +210,11 @@ class TestDCAIntegration:
             name="DCA Test",
             strategy_type=StrategyType.DOLLAR_COST_AVERAGING,
             tickers=["MSFT"],
-            parameters={
-                "frequency_days": 7,
-                "amount_per_period": Decimal("1000"),
-                "allocation": {"MSFT": 1.0},
-            },
+            parameters=DcaParameters(
+                frequency_days=7,
+                amount_per_period=Decimal("1000"),
+                allocation={"MSFT": Decimal("1")},
+            ),
             created_at=datetime.now(UTC),
         )
 
@@ -314,11 +319,11 @@ class TestMovingAverageCrossoverIntegration:
             name="MA Crossover Test",
             strategy_type=StrategyType.MOVING_AVERAGE_CROSSOVER,
             tickers=[ticker],
-            parameters={
-                "fast_window": 3,
-                "slow_window": 5,
-                "invest_fraction": 1.0,
-            },
+            parameters=MaCrossoverParameters(
+                fast_window=3,
+                slow_window=5,
+                invest_fraction=Decimal("1"),
+            ),
             created_at=datetime.now(UTC),
         )
 
