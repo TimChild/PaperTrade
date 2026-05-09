@@ -21,15 +21,16 @@
 
 ## TL;DR
 
-Zebu is a healthy, deployed v1.0.0 platform with strong agent-orchestrated dev practices — but those practices were built for **GitHub Copilot Coding Agents** (PR-by-PR work), not for **Claude Code** (interactive, MCP-aware, scheduled). To get to "long-running agents trying out trading strategies, with the app as the human-facing GUI," we need three workstreams that can run loosely in parallel:
+Zebu is a healthy, deployed v1.0.0 platform with strong agent-orchestrated dev practices — but those practices were built for **GitHub Copilot Coding Agents** (PR-by-PR work), not for **Claude Code** (interactive, MCP-aware, scheduled). The codebase shipped fast under earlier (less capable) agents, which means **structural debt and quality risks have probably accumulated** that are worth surfacing before adding major new feature surface. To get to "long-running agents trying out trading strategies, with the app as the human-facing GUI," we need four workstreams that can run loosely in parallel:
 
-1. **Modernize Claude infrastructure** (1–2 sessions) — bootstrap `CLAUDE.md`, migrate `.github/agents/` → `.claude/agents/`, codify reusable chunks as skills, fix internal staleness.
-2. **Implement live strategy execution + machine identity** (Task #210, plus an API-key auth path) — already scoped in `agent_docs/tasks/210_live_strategy_execution.md`; extend it so agents can drive it, not just the scheduler.
-3. **Build the agent-facing surface** — an MCP server on top of the existing FastAPI backend, plus a new "exploration task" concept so the human queues "go try X" via the GUI and agents pick those up.
+1. **Modernize Claude infrastructure** (✅ done 2026-05-09 — Phase A) — `CLAUDE.md`, `.claude/agents/`, `.claude/skills/`, removed Copilot-flavored duplication.
+2. **Codebase health audit & foundation refactor** (Phase B — new) — multi-agent thorough audit of architecture, tests, CI flakiness, code quality, security, docs. Output: prioritized findings → critical fixes → foundation refactors. Treat it like a "team of senior SWEs joins the project" pass. **Important: this is foundational; agent-platform write-side work shouldn't ship until B's findings are addressed or accepted as known debt.**
+3. **Live strategy execution + machine identity** (Phase C — Task #210, plus an API-key auth path) — already scoped in `agent_docs/tasks/210_live_strategy_execution.md`; extend so agents can drive it.
+4. **Agent-facing surface** (Phases D–G) — MCP server, agent-authored strategies (parameter sweeps + **agent-in-the-loop strategies** that wake an agent on conditions to make decisions), long-running agent harness, GUI for observability.
 
-Once those land we get the loop the user described: **human in GUI → "explore strategies for AAPL/MSFT"** → **looped/scheduled agents pick up tasks via MCP** → **agents iterate strategies, run backtests, optionally activate live** → **human reviews progress in GUI**.
+Once those land we get the loop the user described: **human in GUI → free-form prompt: "explore mean-reversion on tech stocks, watch for FOMC reactions"** → **looped / scheduled agents pick up tasks via MCP** → **agents pull context (prices, holdings, news headlines, web search), iterate strategies, run backtests, optionally activate live with self-callbacks for ambiguous moments** → **human reviews progress in GUI**.
 
-This doc is the plan. It's structured as phases A–F so it can be picked off incrementally.
+This doc is the plan. It's structured as phases A–G so it can be picked off incrementally.
 
 ---
 
@@ -81,13 +82,18 @@ This doc is the plan. It's structured as phases A–F so it can be picked off in
 
 Concretely, the daily loop should look like:
 
-1. **Human (GUI)**: "I want to explore mean-reversion strategies on AAPL/MSFT/NVDA, with paper-trading portfolio P." → adds an `ExplorationTask` to the queue.
+1. **Human (GUI)**: free-form prompt — "I want to explore mean-reversion strategies on AAPL/MSFT/NVDA in paper-trading portfolio P, paying attention to recent earnings reactions." → adds an `ExplorationTask` to the queue.
 2. **Looped agent (Claude Code)**: wakes up, calls MCP `list_open_exploration_tasks`, picks one.
-3. **Agent**: calls `get_price_history` / `get_portfolio_state` for context, designs a strategy variant, calls `run_backtest`, evaluates results.
-4. **Agent**: if backtest looks good, optionally calls `activate_strategy` to put it into live paper-trading rotation; logs findings via `submit_exploration_finding`.
-5. **Human (GUI)**: opens dashboard, sees: "Agent X tried 3 variants of MA-crossover on AAPL last night; #2 had 14% return vs 9% baseline; live-active on portfolio P."
+3. **Agent gathers context broadly** — not just trading data:
+   - Trading data: `get_price_history`, `get_portfolio_state`, `list_strategies`, `list_backtests`
+   - Market context: news headlines, web search, earnings calendars, macro context
+   - Past attempts: prior `ExplorationTask` findings on similar tickers / themes
+4. **Agent designs and tests** strategy variants, calls `run_backtest`, evaluates results, iterates.
+5. **Agent activates** — if a variant looks good, calls `activate_strategy` to put it into live paper-trading rotation. May configure the strategy with **self-callback conditions** (Phase E, agent-in-the-loop): "if drawdown > 5% over 3 days, or unusual volume spike, wake me up to investigate before executing the next signal."
+6. **Agent logs findings** via `submit_exploration_finding`.
+7. **Human (GUI)**: opens dashboard, sees: "Agent X tried 3 variants of MA-crossover on AAPL last night; #2 had 14% return vs 9% baseline; live-active on portfolio P with a self-callback on 5% drawdown."
 
-That loop is the bare minimum the user described, and it has clean phase boundaries we can ship incrementally.
+That loop has clean phase boundaries we can ship incrementally — and the "agent-in-the-loop strategies" concept means agents aren't just *authors* of fully-autonomous rules, they can also stay involved at decision points where their judgment beats hard-coded logic.
 
 ---
 
@@ -114,7 +120,17 @@ Task #210 (`agent_docs/tasks/210_live_strategy_execution.md`) covers the schedul
 
 ### 3.4 Strategy authorability gap
 
-Today, only three hard-coded strategy types exist (`BUY_AND_HOLD`, `DOLLAR_COST_AVERAGING`, `MOVING_AVERAGE_CROSSOVER`). For agents to "try various strategies," either we expand the hard-coded set, or — more interestingly — we let agents author parameter combinations within an existing type *and* propose new strategy types as code (which then go through the normal PR pipeline). The first lane unlocks 80% of the value with 20% of the work.
+Today, only three hard-coded strategy types exist (`BUY_AND_HOLD`, `DOLLAR_COST_AVERAGING`, `MOVING_AVERAGE_CROSSOVER`). For agents to "try various strategies," we have a progression of agent freedom levels — each unlocking more interesting behavior:
+
+1. **Parameter sweeps within existing types** — agents iterate `(fast_window, slow_window, invest_fraction)` for MA-crossover, `(frequency_days, amount_per_period, allocation)` for DCA. Pure configuration, no code. **Cheapest, unlocks 60–70% of the early value.**
+2. **Agent-in-the-loop strategies** — strategies that include conditions which trigger an *agent wake-up call* mid-execution. Examples:
+   - "If drawdown > 5% over 3 days → wake me up to decide whether to keep holding or exit."
+   - "If implied volatility spikes > 50% in 1 day on any holding → wake me up to investigate."
+   - "If a holding's earnings are within 2 trading days → wake me up to decide BUY/SELL/HOLD."
+   The strategy provides scaffolding (which tickers, which conditions, what context to pass); the *agent* handles the judgment at trigger time using the full breadth of tools (price history, news, web search, prior findings). This is the most interesting freedom lane — it gets us hybrid rule+judgment trading, which is closer to how a thoughtful human investor actually operates than either pure rules or pure agent-driven trading. **New domain concept needed: `StrategyConditionTrigger` (or similar) — a structured rule that fires an agent wake-up via MCP / scheduled remote agent.**
+3. **Agent-authored new strategy types as code** — when an agent wants to try a fundamentally new strategy *type* (not just new parameters), it drafts a PR that adds a new `StrategyType` enum value + handler. Goes through normal review (`backend-swe` + `architect` agents). **Naturally bounds agent capability** — they can iterate freely on parameters and on agent-in-loop conditions, but new strategy types still get human review.
+
+Phases E and F in the plan below ship these lanes progressively. Lane 1 (parameter sweeps) ships in Phase E using existing APIs. Lane 3 (new strategy types via PR) is an ongoing capability that opens up once Phase B's foundation refactors land. Lane 2 (agent-in-the-loop) ships in Phase F alongside the long-running agent harness — they're naturally coupled, since the harness IS the wake-up mechanism.
 
 ### 3.5 Agent-observability gap
 
@@ -129,95 +145,110 @@ Grafana Cloud is wired for production logs but there's no view of "what has each
 
 ---
 
-## 4. The Plan — Six Phases
+## 4. The Plan — Seven Phases
 
-Phases A–F. **A and the early parts of B/C can run in parallel** if you want (I'll flag where).
+Phases A–G. **A is done; B is foundational; C–G build the agent platform.** Some parallelism is possible (flagged per phase) but the recommended ordering for risk-management reasons is A → B → C → D → E → F → G.
 
-### Phase A — Modernize Claude infrastructure
+### Phase A — Modernize Claude infrastructure ✅ DONE
 
-**Goal**: Make a fresh Claude Code session productive in seconds, with role specialization and shared conventions auto-loaded.
+Shipped 2026-05-09. See top-of-doc status callout for the file-by-file list. Bootstrapped `CLAUDE.md`, migrated 7 specialist agents to `.claude/agents/`, created 6 procedural skills under `.claude/skills/`, promoted Clean Architecture rules to a published doc, removed Copilot-flavored duplication, fixed staleness markers, bootstrapped project memory.
+
+**Effort**: ~4 hours, one session.
+**Risk**: Low — additive; nothing broken.
+
+### Phase B — Codebase health audit & foundation refactor (NEW)
+
+**Goal**: Treat this like a team of senior SWEs joining the project to do a thorough evaluation and any necessary refactor — get the project on a solid foundation before adding major new feature surface. The codebase shipped fast under earlier (less capable) agents, which means **structural debt and quality risks have probably accumulated**. Surface them, fix the critical ones, accept the rest as known debt.
 
 **Tasks**:
 
-A1. **Bootstrap `CLAUDE.md`** (project root) — single source of truth that links to:
-- Architecture overview (delegates to `docs/architecture/README.md`)
-- Tooling (`task` commands)
-- Test layout
-- Conventions (commit format, no `Any` / `any`, etc.)
-- Where everything lives
+B1. **Comprehensive multi-agent audit pass** — dispatch specialist agents in parallel against different audit dimensions, each producing a findings report under `agent_docs/audits/2026-05-NN/<dimension>.md`:
 
-A2. **Migrate `.github/agents/*` → `.claude/agents/*`**:
-- Convert each role file (architect, backend-swe, frontend-swe, qa, quality-infra, refactorer, docs-refactorer) to a Claude Code agent definition with proper YAML frontmatter (name, description, model, tools).
-- Trim Copilot-specific bits (e.g., `COPILOT_AGENT_ENVIRONMENT` checks); replace with Claude-Code-specific tool restrictions.
-- Keep the architectural-compliance content — it's repo-agnostic gold.
-- Leave `.github/agents/` for Copilot agents if you still use them; reference both from `CLAUDE.md`. **Don't delete eagerly.**
+| Dimension | Agent | Focus |
+|---|---|---|
+| Architecture | `architect` | Clean Architecture compliance — find any Domain → Infrastructure leaks, missing repository ports, side effects in domain logic, primitive obsession |
+| Backend code quality | `backend-swe` (audit mode) | Type-checker suppressions, `Any` usage, long methods, premature/missing abstractions, error handling patterns, async correctness |
+| Frontend code quality | `frontend-swe` (audit mode) | `any` usage, `useEffect`-as-state-sync anti-patterns, ESLint suppressions, accessibility, key prop usage, data-testid coverage |
+| Test quality & flakiness | `quality-infra` | Behavior-vs-implementation tests, mock placement (boundaries only?), flaky-test root causes, coverage of critical paths, test-pyramid balance |
+| CI infrastructure | `quality-infra` | Why CI has been flaky, self-hosted runner reliability, cache strategy, parallelism, dependency caching, secret rotation, artifact lifecycle |
+| Domain model | `architect` + `refactorer` | Entity naming, invariant enforcement, value-object opportunities, domain-language coherence |
+| API design | `backend-swe` + `architect` | REST consistency, error response shape, pagination/filtering patterns, OpenAPI completeness |
+| Security | `quality-infra` | Auth coverage (BACKLOG mentions admin-auth TODOs), input validation, output encoding, secret management, dependency vulnerabilities |
+| Database | `backend-swe` | Migration history hygiene, index coverage (BACKLOG mentions transaction indexes), query performance hot spots, connection pooling |
+| Documentation | `docs-refactorer` | Onboarding usability, runbook completeness, accuracy vs. current code, dead links, archive-vs-delete pass |
+| Dependencies | `quality-infra` | Outdated packages, unused dependencies, security advisories, license compatibility |
 
-A3. **Promote `agent_docs/reusable/*` → `.claude/skills/`**:
-- Each reusable chunk becomes a small skill with a `SKILL.md`.
-- High value: `before-starting-work`, `quality-and-tooling`, `git-workflow`, `e2e_qa_validation`.
-- These then auto-surface in the skill picker.
+Output: a single consolidated report at `agent_docs/audits/2026-05-NN/SUMMARY.md` with **prioritized findings** (P0 critical / P1 high / P2 medium / P3 nice-to-have). All findings cite specific files / lines.
 
-A4. **Codify the orchestration playbook** as a skill — `.claude/skills/orchestrate-zebu/SKILL.md`. Wraps the relevant parts of `agent_docs/orchestration-guide.md` (the rejection criteria, the parallel-execution safety rules, the task-creation workflow) so the orchestrator behavior is invokable, not just readable.
+B2. **P0 critical fixes** — anything that blocks future work or is actively broken (e.g., the persistent CI flakiness if we still have it; any architectural violations that would propagate into Phase C+ code; security gaps that matter once agents can hit the API).
 
-A5. **Fix staleness**:
-- Delete `resume-from-here.md` (it explicitly says to)
-- Reconcile test counts across PROGRESS / README / roadmap
-- Update `roadmap.md` to reflect Phase 4 complete + this proposal as Phase 5
+B3. **High-value foundation refactors** — P1 findings selected for fixing now because (a) they make Phase C–G work easier or (b) they're cheap. Track the rest as P2/P3 backlog with explicit deferral notes.
 
-A6. **Add a project memory bootstrap** — write the first round of `~/.claude/projects/-Users-timchild-github-PaperTrade/memory/` entries so future sessions have user/project/reference memories pre-loaded (architecture choice rationale, prod URL, agent-doc conventions).
+B4. **Test-quality pass** — convert any obviously implementation-focused tests to behavior-focused. Move misplaced mocks. Eliminate flaky tests at root cause (don't just retry-mark them). Goal: zero skipped tests, zero quarantined tests, deterministic on every run.
 
-**Effort**: 1 working session (an afternoon).
-**Owner**: Claude Code (interactive, with you steering).
-**Risk**: Low — additive; nothing breaks.
-**Parallelizable with**: Phase B early steps.
+B5. **CI / infra hardening** — based on B1 audit findings. Fix any flakiness root causes. Document the self-hosted runner setup so we'd know how to rebuild it. Add observability so future flakiness is diagnosable.
 
-### Phase B — Live strategy execution + machine identity
+B6. **Documentation pass** — `docs-refactorer` agent: kill stale docs, archive chronological artifacts, sync onboarding doc with actual setup, fix all internal cross-links.
+
+**Owner**: orchestrator (Claude Code) dispatching the specialist agents above in parallel. Tim reviews the consolidated findings and signs off on what fixes get prioritized.
+
+**Effort**: 2–4 weeks depending on findings volume. The audit pass itself can be highly parallelized (~1 session of orchestrator time + parallel agent runs). Critical fixes and foundation refactors are the variable cost.
+
+**Risk**: Medium — refactors can introduce regressions. Mitigated by: existing test suite as safety net, refactorer-agent constraint that all tests stay green, P0/P1 prioritization to avoid over-scope.
+
+**Parallelizable with**: Phase A (already done). The **audit pass (B1) can run while early Phase C scoping happens**; but **B2/B3 critical fixes should land before Phase C/D ships** to avoid building new features on questionable foundations.
+
+**Important non-goal**: this is **not** a full rewrite. Aggressive deletion of stale code (`docs-refactorer`-style) is welcome, but feature parity must be preserved. Agents should not "improve" by removing functionality.
+
+### Phase C — Live strategy execution + machine identity
 
 **Goal**: Land Task #210 *and* give agents a way to authenticate.
 
 **Tasks**:
 
-B1. **Implement Task #210 as currently scoped** — domain entity, repo, scheduler job, API endpoints, frontend UI.
+C1. **Implement Task #210 as currently scoped** — domain entity, repo, scheduler job, API endpoints, frontend UI.
 - Per the existing task file, this is 4 phases inside #210. Backend SWE first, then frontend.
 
-B2. **Add API-key auth path** alongside Clerk:
+C2. **Add API-key auth path** alongside Clerk:
 - New `AuthPort` implementation `ApiKeyAuthAdapter` that maps a hashed key → `AuthenticatedUser`
 - Stored in a new `api_keys` table (Alembic migration)
 - The middleware tries `Authorization: Bearer <jwt>` (Clerk) first, falls back to `Authorization: ApiKey <key>` or `X-API-Key: <key>`
 - New endpoints (Clerk-gated) for the human to mint/revoke keys: `POST /api-keys`, `GET /api-keys`, `DELETE /api-keys/{id}`
 - Each key carries a label and scopes — at minimum `read`, `trade`, `admin`
 
-B3. **Manual `run-now` endpoint surfaces an "agent-triggered" path** — Task #210 already includes `POST /activations/{id}/run-now`; ensure it's invokable with API-key auth (not just Clerk).
+C3. **Manual `run-now` endpoint surfaces an "agent-triggered" path** — Task #210 already includes `POST /activations/{id}/run-now`; ensure it's invokable with API-key auth (not just Clerk).
 
-B4. **`ExplorationTask` entity & queue** (the new thing this proposal adds beyond #210):
-- A new domain entity representing "human-queued exploration request" — fields: `id`, `created_by`, `target_portfolio_id`, `tickers`, `notes` (free-form prompt for the agent), `constraints` (e.g., "MA-crossover only", "max 5 backtests"), `status` (`open|in_progress|done|abandoned`), `claimed_by` (agent identifier), timestamps.
+C4. **`ExplorationTask` entity & queue** (the new thing this proposal adds beyond #210):
+- A new domain entity representing "human-queued exploration request" — fields: `id`, `created_by`, `target_portfolio_id`, `tickers` (optional — could be empty for free-form), `prompt` (free-form user request — primary input), `constraints` (optional structured limits), `status` (`open|in_progress|done|abandoned`), `claimed_by` (agent identifier), timestamps.
+- **Per resolved Q7**: prompt is **free-form from day one**, accepting initial limitations on what agents can act on. Constraints are optional structured guardrails (e.g., "don't activate live trading on this exploration"), not the primary input.
 - Endpoints: `POST/GET/DELETE /exploration-tasks`, `POST /exploration-tasks/{id}/claim`, `POST /exploration-tasks/{id}/findings`.
 - This is **the** key new abstraction — without it, agents have no input from the human.
 
-**Effort**: ~1–2 weeks (Task #210 alone is multi-day; B2/B4 add ~3–4 days).
-**Owner**: Backend SWE agent (parallel sub-tasks: #210 in flight, B2 + B4 as new sibling tasks).
+**Effort**: ~1–2 weeks (Task #210 alone is multi-day; C2/C4 add ~3–4 days).
+**Owner**: Backend SWE agent (parallel sub-tasks: #210 in flight, C2 + C4 as new sibling tasks).
 **Risk**: Medium — touches auth and adds a new domain concept.
-**Parallelizable with**: Phase A; parts of Phase C can begin once B2 lands.
+**Depends on**: Phase B critical/foundation fixes — don't build write-side auth on a foundation we know has gaps.
+**Parallelizable with**: Phase D once C2 lands.
 
-### Phase C — MCP server
+### Phase D — MCP server
 
 **Goal**: Expose the backend as named MCP tools so Claude Code agents can call it directly.
 
 **Tasks**:
 
-C1. **Decide MCP topology**. Options:
+D1. **Decide MCP topology**. Options (per resolved Q6: `*.apps.exowatt.com` is **off the table** — this is a personal project that must never touch company infra):
 
 | Option | What | Pros | Cons |
 |---|---|---|---|
 | **In-tree** | MCP server inside the existing FastAPI repo as a separate process (`backend/src/zebu/adapters/inbound/mcp/`) | Shares domain code, single deploy | Adds runtime complexity to a stable service |
-| **Sidecar repo** | A small standalone repo (`zebu-mcp`) that calls the backend via HTTP using API key | Clean separation, can be developed independently, easy to deploy as a `*.apps.exowatt.com`-style internal app | Two services to deploy |
-| **Thin local-only MCP** | Stdio-based MCP that runs on the developer's machine and proxies to `https://zebutrader.com` with a personal API key | Zero infra change; instantly usable | Can't be shared, no central state |
+| **Sidecar repo on personal Proxmox** | A small standalone repo (`zebu-mcp`) that calls the backend via HTTP using API key, deployed alongside the existing zebu services on Tim's Proxmox VM | Clean separation; can be developed independently; durable URL for non-local consumers | Two services to deploy |
+| **Thin local-only stdio MCP** | Stdio MCP that runs on the developer's machine and proxies to `https://zebutrader.com` with a personal API key | Zero infra change; instantly usable | Can't be shared, no central state |
 
-**Recommendation**: start **(c) thin local-only**, graduate to **(b) sidecar** once we know what tools we actually want. (a) is over-engineering until proven.
+**Recommendation**: start **(c) thin local-only**, graduate to **(b) sidecar on personal Proxmox** once we know what tools we actually want. (a) is over-engineering until proven.
 
-C2. **MCP tools** (first cut — the surface area an agent actually needs):
+D2. **MCP tools** (first cut — read tools should cover both **trading-data context** AND **broader research context**):
 
-Read tools:
+**Read tools — trading data**:
 
 - `list_supported_tickers`
 - `get_price_history(ticker, start, end, interval)`
@@ -226,8 +257,19 @@ Read tools:
 - `list_backtests(strategy_id)`, `get_backtest_result(id)`
 - `list_active_strategies()`
 - `list_exploration_tasks(status?)`, `get_exploration_task(id)`
+- `list_findings(filter?)` — search prior `ExplorationTask` findings (lessons compounded)
 
-Write tools:
+**Read tools — broader research context** (per user feedback, agents need more than trading data):
+
+- `web_search(query)` — proxy to a public web search provider (e.g., Brave or DuckDuckGo API) so agents can find context, headlines, analysis.
+- `fetch_news(ticker?, since?, sources?)` — pull headlines tied to a ticker or general market news (e.g., via Alpha Vantage News & Sentiment API or similar)
+- `fetch_url(url)` — fetch and clean a specific URL (research reports, SEC filings, etc.)
+- `get_earnings_calendar(ticker?, date_range?)` — upcoming earnings dates for context
+- *(future)* `get_sec_filing(ticker, type)`, `get_macro_indicator(name)`
+
+These broader tools may live in a *separate* MCP server (composable) rather than the Zebu MCP — Claude Code can attach multiple MCP servers, so we don't have to bundle them. **Decision deferred** to D-execution time: bundle vs. compose.
+
+**Write tools**:
 
 - `create_strategy(type, params, tickers, name)`
 - `run_backtest(strategy_id, start, end, initial_cash)`
@@ -235,107 +277,122 @@ Write tools:
 - `claim_exploration_task(task_id)` / `submit_exploration_finding(task_id, summary, links)`
 - `note(text)` — freeform note attached to an exploration run, for the human dashboard
 
-C3. **Build it with the `claude-api` skill** patterns and document the auth flow (uses an API key minted in B2).
+D3. **Build it with the `claude-api` skill** patterns and document the auth flow (uses an API key minted in C2).
 
-C4. **Integration test** — a smoke test that runs the MCP server locally, connects from Claude Code, lists supported tickers, and runs one backtest end-to-end.
+D4. **Integration test** — a smoke test that runs the MCP server locally, connects from Claude Code, lists supported tickers, runs one backtest end-to-end.
 
-**Effort**: 2–3 days.
-**Owner**: Claude Code (you + me) — this is the kind of work that benefits from interactive iteration.
+**Effort**: 3–4 days for the trading-data MCP. Broader research tools add ~1–2 days each but can ship incrementally.
+**Owner**: Claude Code (you + me) — interactive iteration.
 **Risk**: Low — additive, behind an API key, doesn't affect production traffic.
-**Parallelizable with**: tail end of Phase B.
+**Parallelizable with**: tail end of Phase C (read-only tools can be built before Phase C's write capabilities ship).
 
-### Phase D — Agent-authored strategies (parameter sweep first)
+### Phase E — Agent-authored strategies (parameter sweeps + new types via PR)
 
-**Goal**: Let agents actually generate value by exploring within the existing strategy types.
+**Goal**: Let agents generate value by exploring within existing strategy types (Lane 1 from §3.4) and proposing new types as code (Lane 3). Lane 2 (agent-in-the-loop) ships in Phase F.
 
 **Tasks**:
 
-D1. **Parameter sweep in the existing strategy types** — agents propose `(fast_window, slow_window, invest_fraction)` combinations for MA-crossover; `(frequency_days, amount_per_period, allocation)` combinations for DCA; etc. Run backtests, compare. This is *just* using existing APIs — no new domain code.
+E1. **Parameter sweep in existing strategy types** — agents propose `(fast_window, slow_window, invest_fraction)` combinations for MA-crossover; `(frequency_days, amount_per_period, allocation)` combinations for DCA; etc. Run backtests, compare. Pure use of existing APIs — no new domain code.
 
-D2. **Strategy comparison report** as a new `submit_exploration_finding` payload type — structured output the GUI can render.
+E2. **Structured `submit_exploration_finding` payload** — agents return a typed result the GUI can render: chosen parameters, backtest summary metrics, comparison to baseline, agent's qualitative reasoning, confidence.
 
-D3. **Optional**: define a "strategy proposal" workflow where an agent that wants to try a *new* strategy type drafts a PR (using the backend-swe role agent from Phase A) that adds a new `StrategyType` enum value + handler. Goes through the normal review pipeline. This naturally bounds agent capability — they can iterate freely on parameters but new strategy types still get human review.
+E3. **"New strategy type via PR" workflow** — when an agent wants to try a fundamentally new strategy type, it drafts a PR (using `backend-swe`) adding a new `StrategyType` enum value + handler + tests. Goes through the normal review pipeline. Naturally bounds agent capability: parameters / agent-in-loop conditions are free; new strategy types get human review. **Depends on Phase B foundation** so the agent isn't extending a shaky base.
 
 **Effort**: 1 week of agent-loop time (mostly running, not coding).
 **Owner**: Looped Claude Code agent.
-**Risk**: Low — bounded by the existing strategy types and backtest engine.
-**Depends on**: Phase B (#210 + ExplorationTask) and Phase C (MCP).
+**Risk**: Low — bounded by existing strategy types and backtest engine.
+**Depends on**: Phase B (audit done), Phase C (Task #210 + ExplorationTask), Phase D (MCP).
 
-### Phase E — Long-running agent harness
+### Phase F — Long-running agent harness + agent-in-the-loop strategies
 
-**Goal**: Decide how the agents *actually* run on a recurring basis.
+**Goal**: Decide how agents *actually* run on a recurring basis, AND add the most interesting strategy capability — strategies that wake an agent on conditions to make decisions (Lane 2 from §3.4).
 
 **Tasks**:
 
-E1. **Pick a runtime model**. Options:
+F1. **Pick a runtime model**. Options:
 
-- **`/loop` interval** on a developer machine — quickest to set up, ties up that machine
+- **`/loop` interval** on a developer machine — quickest, ties up that machine
 - **`/loop` dynamic** with `ScheduleWakeup` — model-paced, better for "check back later when something is queued"
-- **Scheduled remote agent** (`/schedule`) on Anthropic infrastructure — runs without local machine; this is closest to the user's "long running agent" intent
+- **Scheduled remote agent** (`/schedule`) on Anthropic infrastructure — runs without a local machine; closest to "long-running agent" intent
 - **Cron-driven local Claude Code via Claude Agent SDK** — most control, more setup
 
-**Recommendation**: scheduled remote agents (`/schedule`) for the production loop, with `/loop` for ad-hoc local runs while iterating.
+**Recommendation**: scheduled remote agents (`/schedule`) for production loops, with `/loop` for ad-hoc local runs while iterating. (Per resolved Q4.)
 
-E2. **First scheduled agent**: `zebu-strategy-explorer`
-- Runs every 6 hours (or daily after market close)
-- Pulls open `ExplorationTask`s from the MCP, claims one, executes parameter sweep, submits findings
-- On error, surfaces it via `note()` so the human sees it next time they open the GUI
+F2. **First scheduled agent**: `zebu-strategy-explorer` — runs daily after market close, pulls open `ExplorationTask`s from the MCP, claims one, executes parameter sweep (Phase E1), submits findings.
 
-E3. **Concurrency / safety guardrails**:
-- Tasks must be `claim`ed (atomic) so two agents don't fight for the same one
+F3. **`StrategyConditionTrigger` domain concept** — the new entity that makes Lane 2 work:
+- Fields: `id`, `activation_id` (FK to `StrategyActivation`), `condition_type` (e.g., `DRAWDOWN_THRESHOLD`, `VOLATILITY_SPIKE`, `EARNINGS_PROXIMITY`, `CUSTOM_RULE`), `condition_params` (dict), `agent_prompt` (free-form: what should the woken agent investigate / decide?), `cooldown` (don't re-fire within N hours), `last_fired_at`, `status`.
+- Evaluated by the scheduler each tick alongside the `StrategyExecutionService`.
+- When fired, **invokes a remote agent via the Anthropic Agent API** (or queues an `ExplorationTask` flagged `urgent` for the next harness wake-up) with the strategy context, the trigger context, and the configured `agent_prompt`.
+- The agent's response can be: BUY signal, SELL signal, HOLD, modify-strategy, or "needs human" (escalate to dashboard notification).
+
+F4. **API + UI for configuring triggers** — when activating a strategy, user can attach one or more triggers from a library (cooldown, drawdown, vol spike, earnings) and add a free-form `agent_prompt`. Power-users can write custom-rule triggers.
+
+F5. **Concurrency / safety guardrails**:
+
+- Tasks must be `claim`-ed atomically so two agents don't fight for the same one
 - Per-agent rate limits on backtest creation (so a runaway agent doesn't fill the DB)
-- A "kill switch" env var or admin endpoint that disables `claim_exploration_task`
+- Per-portfolio per-day cap on agent-initiated trade volume
+- "Kill switch" env var or admin endpoint that disables `claim_exploration_task` and trigger-based agent invocation
+- All agent-initiated transactions tagged with `agent_id` and `exploration_task_id` / `trigger_id` for full audit trail
 
-**Effort**: 2–3 days once Phase D works.
-**Owner**: Claude Code + you (deciding cadence and guardrails).
-**Risk**: Medium — first time we have non-interactive agents writing data into the system, even if it's paper money.
+**Effort**: 1–2 weeks. F1+F2 are quick (2–3 days). F3+F4 are the substantive new feature (~1 week). F5 is woven through.
+**Owner**: Claude Code (orchestrator) + `backend-swe` for F3 + `frontend-swe` for F4.
+**Risk**: Medium-High — first time non-interactive agents make real (paper) trading decisions. Mitigations: full audit trail, kill switch, per-portfolio caps, paper-trading-only.
+**Depends on**: Phases C, D, E.
 
-### Phase F — GUI for agent observability
+### Phase G — GUI for agent observability
 
 **Goal**: Close the loop — the human can see what agents have done.
 
 **Tasks**:
 
-F1. **Agent-runs view** in the frontend — list `ExplorationTask`s, their status, the agent that claimed each, and the findings.
+G1. **Agent-runs view** — list `ExplorationTask`s, their status, the agent that claimed each, and the findings.
 
-F2. **Strategy comparison view** — already exists for backtests (PR #207). Extend it to show "this strategy was authored by agent X exploring task Y" so the provenance is visible.
+G2. **Strategy comparison view** extension — already exists for backtests (PR #207). Extend to show "this strategy was authored by agent X exploring task Y" and "this strategy has N agent-in-loop triggers" so provenance and decision-points are visible.
 
-F3. **Activity timeline** — for a given portfolio, show all agent-driven actions chronologically. Backed by existing transaction history + new agent-runs metadata.
+G3. **Activity timeline** — for a given portfolio, all agent-driven actions chronologically. Backed by transaction history + agent-runs metadata + trigger-fire log.
 
-F4. **Manual "ask an agent" button** — file an `ExplorationTask` directly from the GUI without going through MCP. This makes the human ↔ agent loop tight.
+G4. **Manual "ask an agent" button** — file an `ExplorationTask` directly from the GUI without going through MCP. Tightens the human ↔ agent loop.
 
-**Effort**: 1 week of frontend work.
+G5. **Trigger-fire log view** — show every time an agent-in-loop trigger fired, what the agent decided, why, and what trade (if any) resulted. The audit-trail surface that makes agent-in-loop trustworthy.
+
+**Effort**: 1–2 weeks of frontend work.
 **Owner**: Frontend SWE agent.
-**Depends on**: Phases B + D for data; Phase A for the `.claude/agents/frontend-swe` to be in good shape.
+**Depends on**: Phases C + E + F for data; Phase A for the `frontend-swe` definition.
 
 ---
 
-## 5. Quick Wins (this session, if you want)
+## 5. Quick Wins ✅ DONE
 
-These are small, low-risk, and unblock everything else:
+All shipped in the same 2026-05-09 session as Phase A:
 
-- [ ] **Delete `resume-from-here.md`** — it explicitly says to delete after reading.
-- [ ] **Bootstrap `CLAUDE.md`** at the repo root (Phase A1).
-- [ ] **Create the first project memory entries** (Phase A6).
-- [ ] **Update `roadmap.md`** to mark Phase 4 complete and link to this proposal as Phase 5 candidate.
-- [ ] **Reconcile test counts** in PROGRESS / README (one source of truth).
-- [ ] **Add this proposal to the docs site nav** (`mkdocs.yml`).
-
-If we do nothing else today, those six are an hour of work and leave the project measurably cleaner.
+- [x] Delete `resume-from-here.md`
+- [x] Bootstrap `CLAUDE.md`
+- [x] Create the first project memory entries
+- [x] Update `roadmap.md` to mark Phase 4 complete and add Phase 5 pointing to this proposal
+- [x] Reconcile test counts in PROGRESS / README / roadmap to 831 / 311 / 1,142
+- [x] Add this proposal to the docs site nav (`mkdocs.yml`)
 
 ---
 
-## 6. Open Questions / Decisions for You
+## 6. Decisions
 
-These are real choice points — I have a recommendation on each but want your call before committing:
+Resolved on 2026-05-09 review pass:
 
-1. **MCP topology** — local-stdio first, sidecar later? *(my rec: yes)*
-2. **API-key vs M2M Clerk** for agent auth? *(my rec: API key — simpler, single-user app)*
-3. ~~Should `.github/agents/*` stay or be deleted after migration to `.claude/agents/`?~~ **DECIDED 2026-05-09**: deleted, along with `.github/copilot-instructions.md`. Single source of truth in `.claude/`.
-4. **Agent runtime**: scheduled remote agents vs. local `/loop`? *(my rec: remote for production, local for iteration)*
-5. **Open-source plan** — `roadmap.md` mentions possibly OSS in 2027. Should the agent platform be designed with that in mind (avoid hard-coding personal API keys, etc.)? *(my rec: design as if OSS-ready; it's mostly free)*
-6. **Proxmox vs apps.exowatt.com** for the MCP sidecar (when we get to Phase C option b) — do you want it in your existing Proxmox setup, or deployed as a `*.apps.exowatt.com` internal app?
-7. **Scope of "exploration tasks"** — should they be user-defined free-form prompts ("agent, do something interesting") or constrained to a known schema (ticker list + strategy-type whitelist + budget)? *(my rec: constrained schema first; expand later)*
+| # | Question | Resolution |
+|---|---|---|
+| Q1 | MCP topology — local-stdio first, sidecar later? | ✅ **YES**: start with thin local-stdio, graduate to sidecar on personal Proxmox once tool surface stabilizes |
+| Q2 | API-key vs M2M Clerk for agent auth? | ✅ **API key** — simpler, single-user-personal-project fits the model |
+| Q3 | Should `.github/agents/*` stay or be deleted after migration? | ✅ **DELETED** — single source of truth in `.claude/`, no diverging instructions |
+| Q4 | Agent runtime: scheduled remote vs. local `/loop`? | ✅ **Remote `/schedule` for production, `/loop` for iteration** |
+| Q5 | OSS-readiness for agent-platform design? | ✅ **Design as if OSS-ready from day one** — no hard-coded personal credentials in code; secrets via env. Worth open-sourcing one day |
+| Q6 | Where to host MCP sidecar (when we get there) — personal Proxmox or `*.apps.exowatt.com`? | ✅ **Personal Proxmox ONLY**. This is a personal side project on personal time; **must never touch company infrastructure** (no `*.apps.exowatt.com`, no shared Exowatt services). Codified in user-memory `user_zebu_is_personal.md` |
+| Q7 | `ExplorationTask` scope — free-form prompts or constrained schema? | ✅ **Free-form prompts from day one**, accepting initial limitations on what agents can act on. Constraints are optional structured guardrails, not the primary input |
+
+These decisions are baked into Phases B–G above.
+
+**Remaining open**: none currently. New questions can be added back here if discovered during execution.
 
 ---
 
@@ -373,12 +430,18 @@ Migration policy: **copy first, delete later** — don't remove `.github/agents/
 
 ## 8. What I'd Start With (recommendation)
 
-**Phase A is done** as of 2026-05-09 (see status callout at the top). The next session can pick up either of two starting points:
+**Phase A is done.** The next priority is **Phase B (codebase health audit & foundation refactor)** — this is the user-flagged "team of senior SWEs joins the project" stream. Before adding the major new feature surface in Phases C–G, we need to know what structural debt and quality risks we're standing on, fix the critical ones, and accept the rest as known.
 
-- **Phase C (MCP read-only prototype)** — *recommended*. A thin local-stdio MCP exposing the read tools (`list_strategies`, `get_portfolio_state`, `get_price_history`, `list_backtests`) lets us validate the agent-loop ergonomics with zero risk *before* Task #210 lands write capabilities. That feedback should shape #210's API.
-- **Phase B (Task #210 + API-key auth + ExplorationTask)** — if you'd rather get the live-execution machinery done first and then layer the MCP on top.
+**Recommended ordering**: A → **B** → C → D → E → F → G.
 
-Personal pick: **Phase C → Phase B → Phase D → Phase E → Phase F**.
+Within Phase B, the most efficient first move is the **B1 audit pass** — it's highly parallelizable (specialist agents per dimension, all running concurrently) and produces the prioritized findings doc that drives everything else. Tim reviews the consolidated findings, decides what's P0/P1, and we go from there.
+
+Possible parallelization:
+
+- B1 (audit) is the gating step. Once findings exist, **B2/B3/B4/B5/B6 can run in parallel** with each other (different agents, different files).
+- A small **Phase D read-only MCP prototype** could be built in parallel with later parts of Phase B if it doesn't interfere with refactor in flight — useful for validating the MCP ergonomics before Phase C decides API surface.
+
+**Avoid**: starting Phase C (Task #210 + auth + ExplorationTask) before B2's P0 fixes are in. We don't want to ship live-execution and machine identity on a foundation we know has gaps.
 
 ---
 
