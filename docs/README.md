@@ -64,12 +64,12 @@ Technical guides and external resources:
 
 | Document | Purpose |
 |----------|---------|
-| [../agent_docs/orchestration-guide.md](../agent_docs/orchestration-guide.md) | Orchestrator workflow and procedures |
+| [../CLAUDE.md](../CLAUDE.md) | Top-level project conventions for Claude |
+| [../.claude/agents/](../.claude/agents/) | Specialist agent definitions |
+| [../.claude/skills/](../.claude/skills/) | Project-local skills (orchestrate-zebu, quality-checks, etc.) |
 | [../agent_docs/mcp-tools.md](../agent_docs/mcp-tools.md) | Model Context Protocol tools reference |
-| [../.github/copilot-instructions.md](../.github/copilot-instructions.md) | General agent guidelines |
-| [../.github/agents/](../.github/agents/) | Role-specific instructions |
-| [../agent_docs/tasks/](../agent_docs/tasks/) | Task definitions |
-| [../agent_docs/progress/](../agent_docs/progress/) | PR documentation |
+| [../agent_docs/tasks/](../agent_docs/tasks/) | Numbered task definitions |
+| [../agent_docs/progress/](../agent_docs/progress/) | PR / session progress reports |
 
 ## Archive
 

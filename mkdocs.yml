@@ -34,12 +34,14 @@ nav:
   - User Guide: USER_GUIDE.md
   - Architecture:
       - Overview: architecture/README.md
+      - Principles: architecture/principles.md
       - Authentication: architecture/authentication.md
       - Technical Boundaries: architecture/technical-boundaries.md
       - "Phase 4: Trading Strategies": architecture/phase4-trading-strategies.md
   - Planning:
       - Executive Summary: planning/executive-summary.md
       - Roadmap: planning/roadmap.md
+      - "Phase 5: Agent Platform Proposal": planning/agent-platform-proposal.md
       - Features: planning/features.md
       - Project Strategy: planning/project_strategy.md
       - Future Ideas: planning/future-ideas.md

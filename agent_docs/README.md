@@ -1,41 +1,40 @@
 # Agent Documentation (`agent_docs/`)
 
-This directory contains **agent-facing documentation** — files intended for AI coding agents,
-not for human readers browsing the project.
+Workspace for AI-agent task tracking and progress reports. Not published to the docs site.
 
 ## Convention
 
 | Directory | Audience | Published |
-|-----------|----------|-----------|
+|---|---|---|
 | `docs/` | Human developers | Yes (MkDocs → GitHub Pages) |
-| `agent_docs/` | AI agents | No |
-
-**Rule**: If a document is primarily consumed by an AI agent (task definitions, reusable workflow
-chunks, progress reports, orchestration procedures), it belongs here. If it's for human developers,
-it belongs in `docs/`.
+| `agent_docs/` | AI agents (task workspace) | No |
+| `.claude/agents/` | Specialist agent definitions | No |
+| `.claude/skills/` | Project-local skills (procedural knowledge) | No |
+| `CLAUDE.md` (root) | Top-level project conventions for Claude | No |
 
 ## Structure
 
 ```
 agent_docs/
-  README.md               # This file — explains the convention
-  orchestration-guide.md  # How to orchestrate AI coding agents
-  mcp-tools.md            # MCP tools reference for agents
-  tasks/                  # Task definitions (current + archive)
-    archive/              # Completed tasks
-  progress/               # Agent progress reports from PRs
-  reusable/               # Reusable workflow chunks (included by agent instructions)
-  procedures/             # Orchestration procedures (session handoff, QA validation)
+  README.md          # This file
+  mcp-tools.md       # MCP tools reference for development sessions
+  tasks/             # Numbered task specs (NNN_short_name.md)
+    archive/         # Completed / superseded tasks
+  progress/          # Dated session reports (YYYY-MM-DD_HH-MM-SS_*.md)
 ```
 
-## Agent Instructions (not here)
+## Task workflow
 
-Agent role definitions live in `.github/agents/` — GitHub requires that location.
-Global agent instructions live in `.github/copilot-instructions.md`.
+1. Write a spec at `agent_docs/tasks/NNN_short_name.md` (next number is **211** — most recent is `210_live_strategy_execution.md`)
+2. Spec sections: Overview, Context, Architecture, Implementation Plan, Testing Strategy, Success Criteria, Agent Assignment, References
+3. After completion, write a progress report at `agent_docs/progress/YYYY-MM-DD_HH-MM-SS_short-description.md`
 
-## For Human Developers
+## For human developers
 
-If you're a human developer, start with:
-1. [README.md](../README.md) — Project overview and quick start
-2. [CONTRIBUTING.md](../CONTRIBUTING.md) — Development workflow and guidelines
-3. [docs/](../docs/) — All human-facing documentation
+Start with:
+
+1. [CLAUDE.md](../CLAUDE.md) — top-level project conventions
+2. [README.md](../README.md) — project overview and quick start
+3. [CONTRIBUTING.md](../CONTRIBUTING.md) — development workflow
+4. [docs/](../docs/) — published human-facing documentation
+5. [docs/planning/agent-platform-proposal.md](../docs/planning/agent-platform-proposal.md) — active forward plan

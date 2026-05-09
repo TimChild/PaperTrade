@@ -386,10 +386,12 @@ Production images use multi-stage builds to minimize size and attack surface.
 
 ```
 Zebu/
+├── .claude/
+│   ├── agents/              # Specialist agent definitions
+│   └── skills/              # Project-local skills
+├── CLAUDE.md                # Top-level conventions for Claude
 ├── .github/
-│   ├── agents/              # Copilot agent instructions
-│   ├── workflows/           # CI/CD pipelines
-│   └── copilot-instructions.md
+│   └── workflows/           # CI/CD pipelines
 ├── backend/
 │   ├── src/zebu/
 │   │   ├── domain/          # Pure business logic
@@ -481,9 +483,9 @@ uv run pytest --cov=papertrade --cov-report=html
 
 #### Test Statistics
 
-- **Backend**: 835+ tests (unit + integration)
-- **Frontend**: 311+ tests (unit + E2E)
-- **Total**: 1,146+ tests ensuring quality
+- **Backend**: 831 tests (unit + integration)
+- **Frontend**: 311 tests (unit + E2E)
+- **Total**: 1,142 tests ensuring quality
 - **Coverage**: 81%+ on critical paths
 
 ### Linting & Type Checking
@@ -562,7 +564,7 @@ task ci:fast
 ### Creating a PR
 
 1. Create a feature branch: `git checkout -b feat/your-feature`
-2. Make changes following our [coding standards](.github/copilot-instructions.md)
+2. Make changes following our [coding standards](CLAUDE.md)
 3. Ensure all tests pass
 4. Submit PR using our [template](.github/PULL_REQUEST_TEMPLATE.md)
 
@@ -579,7 +581,7 @@ See [project_plan.md](docs/planning/project_plan.md) for detailed development ph
 ## Contributing
 
 We welcome contributions! Please:
-1. Read the [copilot instructions](.github/copilot-instructions.md) for coding standards
+1. Read [CLAUDE.md](CLAUDE.md) for coding standards and architecture
 2. Check the [project strategy](docs/planning/project_strategy.md) for architectural guidance
 3. Follow our PR template when submitting changes
 
