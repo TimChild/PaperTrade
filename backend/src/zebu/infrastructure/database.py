@@ -20,9 +20,12 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./papertrade.db")
 
 
 # Create async engine
-# echo=True logs all SQL statements (useful for development)
+# DB_ECHO controls SQL statement logging (default: false).
+# Set DB_ECHO=true for local debugging only — never in production
+# (full queries + bind params are logged on every statement).
 # SQLite-specific connect_args only applied when using SQLite
-engine_kwargs: dict[str, Any] = {"echo": True}
+DB_ECHO = os.getenv("DB_ECHO", "false").lower() == "true"
+engine_kwargs: dict[str, Any] = {"echo": DB_ECHO}
 if "sqlite" in DATABASE_URL:
     engine_kwargs["connect_args"] = {"check_same_thread": False}
 
