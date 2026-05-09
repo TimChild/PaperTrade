@@ -1,0 +1,8 @@
+# actionlint config — see https://github.com/rhysd/actionlint/blob/main/docs/config.md
+self-hosted-runner:
+  # Custom labels used by the `papertrade-proxmox` self-hosted runner.
+  # Without this entry actionlint emits a `runner-label` warning for every
+  # `runs-on: [self-hosted, proxmox]` line. The runner ops are documented in
+  # docs/deployment/runner-runbook.md.
+  labels:
+    - proxmox

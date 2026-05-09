@@ -6,17 +6,38 @@ on:
       - main
   workflow_dispatch:
 
-# Only one deploy at a time
+# Only one deploy at a time. The reusable runner-prep job below inherits this
+# concurrency group, so prune+deploy run as a single serialized unit per ref.
 concurrency:
   group: production-deploy
   cancel-in-progress: false
 
 jobs:
+  # Reusable hardening pass: docker / cache prune, disk-floor enforcement,
+  # structured log markers. See `.github/workflows/_runner-prep.yml`. Defined
+  # as a separate job so its result is its own gating step in the GitHub UI
+  # and a low-disk failure is obviously distinct from a deploy failure.
+  prep:
+    name: Runner Prep
+    if: "!contains(github.event.head_commit.message, '[skip deploy]')"
+    uses: ./.github/workflows/_runner-prep.yml
+    with:
+      min-free-gb: 10
+      uv-cache-cap-gb: 5
+      npm-cache-cap-gb: 3
+      prune-docker-until-hours: 72
+      fail-on-low-disk: true
+
   deploy:
     name: Deploy to Production
+    needs: prep
     runs-on: [self-hosted, proxmox]
-    # Skip deploy if commit message contains [skip deploy]
-    if: "!contains(github.event.head_commit.message, '[skip deploy]')"
+    # Skip deploy if commit message contains [skip deploy]. Belt-and-braces
+    # with the same guard on the prep job so we don't even prune for a skipped
+    # deploy.
+    if: |
+      !contains(github.event.head_commit.message, '[skip deploy]') &&
+      needs.prep.outputs.status == 'ok'
     timeout-minutes: 15
 
     env:
@@ -24,62 +45,107 @@ jobs:
 
     steps:
       - name: Display deploy info
+        # Pipe head_commit.message through an env var instead of expanding it
+        # directly in the shell script — avoids the script-injection class of
+        # bug if a malicious commit message contained shell metacharacters.
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          COMMIT_SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
+          FREE_GB: ${{ needs.prep.outputs.free-gb }}
         run: |
-          echo "Deploying commit: ${{ github.sha }}"
-          echo "Message: ${{ github.event.head_commit.message }}"
-          echo "Triggered by: ${{ github.actor }}"
+          echo "::group::Setup"
+          echo "STEP=deploy-info COMMIT=${COMMIT_SHA} ACTOR=${ACTOR}"
+          echo "Deploying commit: ${COMMIT_SHA}"
+          echo "Message: ${COMMIT_MESSAGE}"
+          echo "Triggered by: ${ACTOR}"
+          echo "Runner free disk (post-prep): ${FREE_GB}G"
           echo "Timestamp: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo "STATUS=ok STEP=deploy-info"
+          echo "::endgroup::"
 
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Copy production env file
+        # The prod `.env` is host-managed at /opt/papertrade/.env so secrets
+        # never enter GitHub. Failing loudly here is preferable to deploying
+        # with a stale or empty env file.
         run: |
+          echo "::group::Setup: load production env"
           if [ -f /opt/papertrade/.env ]; then
             cp /opt/papertrade/.env .env
-            echo "Copied production .env"
+            echo "STATUS=ok STEP=load-env SOURCE=/opt/papertrade/.env"
           else
-            echo "No .env file found at /opt/papertrade/.env"
+            echo "STATUS=fail STEP=load-env REASON=missing-env-file"
+            echo "FAILED: No .env file found at /opt/papertrade/.env"
+            echo "::endgroup::"
             exit 1
           fi
+          echo "::endgroup::"
 
       - name: Build and deploy
         run: |
+          echo "::group::Build"
+          echo "STEP=build CMD=docker-compose-build"
           docker compose -f docker-compose.yml -f docker-compose.prod.yml build
+          echo "STATUS=ok STEP=build"
+          echo "::endgroup::"
+          echo "::group::Deploy: docker compose up"
+          echo "STEP=deploy CMD=docker-compose-up"
           docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+          echo "STATUS=ok STEP=deploy"
+          echo "::endgroup::"
 
       - name: Wait for database to be ready
         run: |
-          echo "Waiting for PostgreSQL..."
+          echo "::group::Migrations: wait for postgres"
+          echo "STEP=db-wait TIMEOUT=30s"
           timeout 30 bash -c 'until docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db pg_isready -U papertrade 2>/dev/null; do sleep 1; done'
-          echo "PostgreSQL ready"
+          echo "STATUS=ok STEP=db-wait"
+          echo "::endgroup::"
 
       - name: Run database migrations
         run: |
-          echo "Running Alembic migrations..."
+          echo "::group::Migrations: alembic upgrade head"
+          echo "STEP=db-migrate CMD=alembic-upgrade-head"
           docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T backend alembic upgrade head
-          echo "Migrations complete"
+          echo "STATUS=ok STEP=db-migrate"
+          echo "::endgroup::"
 
       - name: Wait for services to be healthy
         run: |
-          echo "Waiting for remaining services..."
-
-          echo "  Waiting for Redis..."
+          echo "::group::Health checks"
+          echo "STEP=health-redis TIMEOUT=30s"
           timeout 30 bash -c 'until docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T redis redis-cli ping 2>/dev/null | grep -q PONG; do sleep 1; done'
-          echo "  Redis ready"
+          echo "STATUS=ok STEP=health-redis"
 
-          echo "  Waiting for backend..."
+          echo "STEP=health-backend TIMEOUT=60s"
           timeout 60 bash -c 'until curl -sf http://localhost:8000/health; do sleep 2; done'
-          echo "  Backend ready"
+          echo "STATUS=ok STEP=health-backend"
 
-          echo "  Waiting for frontend..."
+          echo "STEP=health-frontend TIMEOUT=60s"
           timeout 60 bash -c 'until curl -sf http://localhost:80/ > /dev/null; do sleep 2; done'
-          echo "  Frontend ready"
-
-          echo "All services healthy!"
+          echo "STATUS=ok STEP=health-frontend"
+          echo "::endgroup::"
 
       - name: Verify deployment
         run: |
-          echo "Deployment summary:"
-          echo "  Commit: $(git rev-parse --short HEAD)"
+          echo "::group::Verify"
+          echo "STEP=verify COMMIT=$(git rev-parse --short HEAD)"
           docker compose -f docker-compose.yml -f docker-compose.prod.yml ps --format "table {{.Name}}\t{{.Status}}"
+          echo "STATUS=ok STEP=verify"
+          echo "STATUS=ok STEP=deploy-complete"
+          echo "::endgroup::"
+
+      - name: Post-deploy cleanup
+        # Cheap insurance against disk fill-up between deploys: anything dangling
+        # right now is by definition not used by the freshly-started stack.
+        # Failure here must NOT block the deploy — the deploy already succeeded.
+        if: always()
+        run: |
+          echo "::group::Post-deploy cleanup"
+          echo "STEP=post-cleanup CMD=image-prune-dangling"
+          docker image prune -f || true
+          echo "STATUS=ok STEP=post-cleanup"
+          echo "::endgroup::"

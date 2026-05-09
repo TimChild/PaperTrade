@@ -599,6 +599,25 @@ docker run -d \
 
 ---
 
+## Runner maintenance
+
+The Proxmox VM also hosts the **`papertrade-proxmox`** GitHub Actions self-hosted runner that drives `cd.yml`. The runner is **automatically hardened on every deploy** by `.github/workflows/_runner-prep.yml` — Docker prune, uv/npm cache caps, and a 10 GB free-disk floor are enforced before any deploy step runs.
+
+For host-side operations the workflow can't perform — checking runner-process health, reading `journalctl`, rotating registration credentials, recovering from a low-disk state, or planning routine maintenance — see the dedicated **[Runner Runbook](./runner-runbook.md)**.
+
+Quick reference:
+
+| Task | Where it lives |
+|---|---|
+| Per-deploy disk / cache hygiene | `.github/workflows/_runner-prep.yml` (automatic) |
+| Structured log markers (`::group::`, `STATUS=ok\|fail`) | `.github/workflows/cd.yml` (automatic) |
+| Runner health checks, log locations, baselines | [Runner Runbook → Health checks](./runner-runbook.md#health-checks-do-this-first) |
+| Recovery from a wedged / out-of-disk runner | [Runner Runbook → Recovery](./runner-runbook.md#recovery-from-a-bad-state) |
+| Rotating runner credentials | [Runner Runbook → Rotating runner credentials](./runner-runbook.md#rotating-runner-credentials) |
+| Workspace / concurrency isolation rules | [Runner Runbook → Workspace isolation](./runner-runbook.md#workspace-isolation) |
+
+---
+
 ## CI/CD Integration
 
 The deployment scripts are designed to work in CI/CD environments like GitHub Actions.

@@ -1,0 +1,187 @@
+name: Runner Prep (reusable)
+
+# Reusable workflow that runs before any heavy job on the self-hosted runner.
+# It enforces the disk/cache hygiene the runner cannot enforce on its own and
+# emits structured log markers so an agent tailing the run can reason about
+# failures.
+#
+# Goals (Wave 4-B audit, ci.P1-1 / ci.P1-3):
+#   1. Cap total disk usage by pruning stale Docker images / volumes.
+#   2. Trim oversized uv / npm caches (per-job cache hits don't help if the
+#      cache itself is consuming the disk).
+#   3. Verify >=10GB free before signalling "ok"; fail loudly otherwise so the
+#      caller bails before burning a deploy slot.
+#   4. Wrap every action in `::group::` markers and emit a single
+#      `STATUS=ok|fail STEP=<name>` trailer line per logical chunk.
+#
+# Concurrency: the caller workflow already provides the concurrency group
+# (`production-deploy` for cd.yml). This reusable workflow inherits that
+# guarantee, so two concurrent prep runs on the same runner cannot race.
+
+on:
+  workflow_call:
+    inputs:
+      min-free-gb:
+        description: "Minimum free disk in GB the runner must have AFTER cleanup. Caller fails if not met."
+        required: false
+        type: number
+        default: 10
+      uv-cache-cap-gb:
+        description: "Maximum size for ~/.cache/uv before forced clear (GB)."
+        required: false
+        type: number
+        default: 5
+      npm-cache-cap-gb:
+        description: "Maximum size for ~/.npm before forced clear (GB)."
+        required: false
+        type: number
+        default: 3
+      prune-docker-until-hours:
+        description: "Prune images / build cache older than this many hours."
+        required: false
+        type: number
+        default: 72
+      fail-on-low-disk:
+        description: "If true, fail the job when free disk < min-free-gb after cleanup. If false, only warn."
+        required: false
+        type: boolean
+        default: true
+    outputs:
+      free-gb:
+        description: "Free disk in GB on / after cleanup."
+        value: ${{ jobs.prep.outputs.free-gb }}
+      status:
+        description: "Either 'ok' or 'fail'. Caller can gate downstream steps on this."
+        value: ${{ jobs.prep.outputs.status }}
+
+jobs:
+  prep:
+    name: Runner Prep
+    runs-on: [self-hosted, proxmox]
+    # Hard cap so a runaway prune never blocks deploys longer than expected.
+    timeout-minutes: 10
+    outputs:
+      free-gb: ${{ steps.disk.outputs.free-gb }}
+      status: ${{ steps.summary.outputs.status }}
+
+    steps:
+      - name: Snapshot runner state (before)
+        # Single grep-friendly summary line per prep run. Agents can match on
+        # `RUNNER_STATE=before` to see the starting condition.
+        run: |
+          echo "::group::Runner state (before cleanup)"
+          echo "RUNNER_STATE=before HOST=$(hostname) TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo "--- df -h / ---"
+          df -h / || true
+          echo "--- docker system df ---"
+          docker system df || true
+          echo "--- uv cache size ---"
+          du -sh "${HOME}/.cache/uv" 2>/dev/null || echo "no uv cache"
+          echo "--- npm cache size ---"
+          du -sh "${HOME}/.npm" 2>/dev/null || echo "no npm cache"
+          echo "STATUS=ok STEP=snapshot-before"
+          echo "::endgroup::"
+
+      - name: Prune Docker (images, volumes, build cache)
+        # `docker system prune -af` removes ALL unused images regardless of
+        # `until=` filter, so we use granular prunes instead. We keep volumes
+        # we know are in use (postgres data, redis data) — these are referenced
+        # by the running compose stack so prune skips them automatically.
+        run: |
+          echo "::group::Docker prune"
+          echo "STEP=docker-prune CMD=image-prune-stale"
+          docker image prune -af --filter "until=${{ inputs.prune-docker-until-hours }}h" || echo "image prune partial fail"
+          echo "STEP=docker-prune CMD=builder-prune-stale"
+          docker builder prune -af --filter "until=${{ inputs.prune-docker-until-hours }}h" || echo "builder prune partial fail"
+          echo "STEP=docker-prune CMD=volume-prune-dangling"
+          docker volume prune -f || echo "volume prune partial fail"
+          echo "STEP=docker-prune CMD=container-prune-stopped"
+          docker container prune -f || echo "container prune partial fail"
+          echo "STATUS=ok STEP=docker-prune"
+          echo "::endgroup::"
+
+      - name: Cap uv cache
+        run: |
+          echo "::group::uv cache hygiene"
+          UV_CACHE="${HOME}/.cache/uv"
+          if [ -d "${UV_CACHE}" ]; then
+            SIZE_GB=$(du -sBG "${UV_CACHE}" 2>/dev/null | awk '{ gsub("G","",$1); print $1 }')
+            CAP=${{ inputs.uv-cache-cap-gb }}
+            echo "uv cache size: ${SIZE_GB}G (cap: ${CAP}G)"
+            if [ "${SIZE_GB:-0}" -ge "${CAP}" ]; then
+              echo "STEP=uv-cache CMD=clear (over cap)"
+              rm -rf "${UV_CACHE}"
+              echo "STATUS=ok STEP=uv-cache ACTION=cleared"
+            else
+              echo "STATUS=ok STEP=uv-cache ACTION=keep"
+            fi
+          else
+            echo "STATUS=ok STEP=uv-cache ACTION=absent"
+          fi
+          echo "::endgroup::"
+
+      - name: Cap npm cache
+        run: |
+          echo "::group::npm cache hygiene"
+          NPM_CACHE="${HOME}/.npm"
+          if [ -d "${NPM_CACHE}" ]; then
+            SIZE_GB=$(du -sBG "${NPM_CACHE}" 2>/dev/null | awk '{ gsub("G","",$1); print $1 }')
+            CAP=${{ inputs.npm-cache-cap-gb }}
+            echo "npm cache size: ${SIZE_GB}G (cap: ${CAP}G)"
+            if [ "${SIZE_GB:-0}" -ge "${CAP}" ]; then
+              echo "STEP=npm-cache CMD=clear (over cap)"
+              rm -rf "${NPM_CACHE}"
+              echo "STATUS=ok STEP=npm-cache ACTION=cleared"
+            else
+              echo "STATUS=ok STEP=npm-cache ACTION=keep"
+            fi
+          else
+            echo "STATUS=ok STEP=npm-cache ACTION=absent"
+          fi
+          echo "::endgroup::"
+
+      - name: Verify free disk
+        id: disk
+        run: |
+          echo "::group::Disk check"
+          # `df --output=avail -BG /` would be cleanest but isn't portable on
+          # all Debians. Use POSIX df + awk instead.
+          FREE_GB=$(df -BG / | awk 'NR==2 { gsub("G","",$4); print $4 }')
+          MIN_GB=${{ inputs.min-free-gb }}
+          echo "Free disk on /: ${FREE_GB}G (required: ${MIN_GB}G)"
+          echo "free-gb=${FREE_GB}" >> "${GITHUB_OUTPUT}"
+
+          if [ "${FREE_GB:-0}" -lt "${MIN_GB}" ]; then
+            echo "STATUS=fail STEP=disk-check FREE=${FREE_GB} REQUIRED=${MIN_GB}"
+            echo "FAILED: Runner has ${FREE_GB}G free; need >=${MIN_GB}G."
+            echo "Hint: SSH to runner host and run \`docker system prune -af --volumes\`, or rotate the runner."
+            echo "::endgroup::"
+            if [ "${{ inputs.fail-on-low-disk }}" = "true" ]; then
+              exit 1
+            fi
+          else
+            echo "STATUS=ok STEP=disk-check FREE=${FREE_GB}"
+            echo "::endgroup::"
+          fi
+
+      - name: Snapshot runner state (after) and emit summary
+        id: summary
+        if: always()
+        run: |
+          echo "::group::Runner state (after cleanup)"
+          echo "RUNNER_STATE=after HOST=$(hostname) TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo "--- df -h / ---"
+          df -h / || true
+          echo "--- docker system df ---"
+          docker system df || true
+          echo "::endgroup::"
+
+          # Status: 'ok' if disk check passed, 'fail' otherwise. The disk-check
+          # step is the gating one — every other step is best-effort cleanup.
+          if [ "${{ steps.disk.outcome }}" = "success" ]; then
+            echo "status=ok" >> "${GITHUB_OUTPUT}"
+            echo "STATUS=ok STEP=runner-prep RESULT=ready"
+          else
+            echo "status=fail" >> "${GITHUB_OUTPUT}"
+            echo "STATUS=fail STEP=runner-prep RESULT=blocked"
+          fi
