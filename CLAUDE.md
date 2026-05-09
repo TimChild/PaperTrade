@@ -83,6 +83,7 @@ Use the `Agent` tool with the matching `subagent_type` (or have the user invoke 
 | `e2e-qa-validation` | Comprehensive QA test scenarios + report template |
 | `docs-tidy` | BACKLOG / PROGRESS / README maintenance |
 | `orchestrate-zebu` | PR-review criteria, parallel-execution safety, task scoping |
+| `audit-mode` | "Audit mode" report format, P-tier calibration, multi-agent audit dispatch pattern |
 
 ## Task workflow
 

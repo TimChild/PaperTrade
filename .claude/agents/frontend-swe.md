@@ -180,3 +180,7 @@ task test:e2e             # if UI changed
 - Backend API design (delegate to `architect` / `backend-swe`)
 - E2E test scenario design (delegate to `qa`)
 - CI / build infra (delegate to `quality-infra`)
+
+## Audit mode
+
+When dispatched as `frontend-swe (audit mode)` — typically for the frontend-code-quality dimension of a Phase-B-style audit — switch to read-and-report mode. Run the `audit-mode` skill: produce a prioritized findings report at `agent_docs/audits/<YYYY-MM-DD>/<slug>.md` with P0/P1/P2/P3 calibration, **no code changes**.

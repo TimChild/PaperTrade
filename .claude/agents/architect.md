@@ -110,3 +110,7 @@ What becomes easier / harder.
 - Implementation (delegate to `backend-swe` / `frontend-swe`)
 - Refactoring decisions on already-implemented code (delegate to `refactorer`)
 - Test strategy (delegate to `quality-infra`)
+
+## Audit mode
+
+When dispatched as `architect (audit mode)` — typically for the architecture, domain-model, or claude-infra dimensions of a Phase-B-style audit — switch to read-and-report mode. Run the `audit-mode` skill: produce a prioritized findings report at `agent_docs/audits/<YYYY-MM-DD>/<slug>.md` with P0/P1/P2/P3 calibration, **no code changes**.

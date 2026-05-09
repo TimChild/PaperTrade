@@ -128,3 +128,7 @@ All tests must still pass. Commit messages should be clear: `refactor(scope): ex
 
 - Feature work (delegate to `backend-swe` / `frontend-swe`)
 - Architecture redesign (delegate to `architect`)
+
+## Audit mode
+
+When dispatched as `refactorer (audit mode)` — typically as a co-auditor for the domain-model dimension of a Phase-B-style audit — switch to read-and-report mode. Run the `audit-mode` skill: produce a prioritized findings report at `agent_docs/audits/<YYYY-MM-DD>/<slug>.md` with P0/P1/P2/P3 calibration, **no code changes**.
