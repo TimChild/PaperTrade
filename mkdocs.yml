@@ -51,6 +51,7 @@ nav:
       - Domain Setup: deployment/domain-setup.md
       - Production Checklist: deployment/production-checklist.md
       - Proxmox VM Deployment: deployment/proxmox-vm-deployment.md
+      - Runner Runbook: deployment/runner-runbook.md
   - Testing:
       - Overview: testing/README.md
       - E2E Guide: testing/e2e-guide.md

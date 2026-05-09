@@ -13,6 +13,7 @@ This directory contains comprehensive guides for deploying Zebu to production en
 | **[Proxmox VM Deployment](./proxmox-vm-deployment.md)** | Complete deployment guide for Proxmox | **Start here** for production deployment |
 | **[Domain & SSL Setup](./domain-setup.md)** | Configure custom domain with HTTPS | After initial deployment |
 | **[Production Checklist](./production-checklist.md)** | Verification and best practices | Before going live |
+| **[Runner Runbook](./runner-runbook.md)** | Self-hosted GitHub Actions runner ops | When CD is broken, runner is unhealthy, or rotating credentials |
 
 ---
 
