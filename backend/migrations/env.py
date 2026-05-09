@@ -12,6 +12,7 @@ from zebu.adapters.outbound.database.models import (  # noqa: F401
     BacktestRunModel,
     PortfolioModel,
     PortfolioSnapshotModel,
+    StrategyActivationModel,
     StrategyModel,
     TransactionModel,
 )

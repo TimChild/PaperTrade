@@ -19,8 +19,11 @@ from zebu.domain.entities.portfolio_snapshot import (
     PortfolioSnapshot,
 )
 from zebu.domain.entities.strategy import Strategy
+from zebu.domain.entities.strategy_activation import StrategyActivation
 from zebu.domain.entities.transaction import Transaction, TransactionType
 from zebu.domain.exceptions import InvalidStrategyError
+from zebu.domain.value_objects.activation_frequency import ActivationFrequency
+from zebu.domain.value_objects.activation_status import ActivationStatus
 from zebu.domain.value_objects.backtest_status import BacktestStatus
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.portfolio_type import PortfolioType
@@ -619,4 +622,154 @@ class BacktestRunModel(SQLModel, table=True):
             max_drawdown_pct=backtest_run.max_drawdown_pct,
             annualized_return_pct=backtest_run.annualized_return_pct,
             total_trades=backtest_run.total_trades,
+        )
+
+
+class StrategyActivationModel(SQLModel, table=True):
+    """Database model for StrategyActivation entity.
+
+    A StrategyActivation links a Strategy to a Portfolio for live execution.
+
+    Foreign keys:
+
+    - ``strategy_id`` -> ``strategies.id`` ON DELETE CASCADE — an activation
+      has no purpose once its strategy is gone.
+    - ``portfolio_id`` -> ``portfolios.id`` ON DELETE CASCADE — same: trade
+      target gone, activation should disappear with it.
+
+    The ``user_id`` column has NO foreign key. Users live in Clerk (external
+    auth provider); there is no ``users`` table in this schema. This matches
+    the convention set by Alembic ``d26cec7cdf69`` (PR #224).
+
+    Attributes:
+        id: Primary key (UUID).
+        user_id: Owner of the activation. Indexed via the composite
+            ``(user_id, status)`` index for ``list_for_user`` queries.
+        strategy_id: FK to ``strategies.id``.
+        portfolio_id: FK to ``portfolios.id``.
+        status: Lifecycle status string (matches :class:`ActivationStatus`).
+        frequency: Cadence string (matches :class:`ActivationFrequency`).
+        last_executed_at: Timestamp of last execution attempt (nullable until
+            first run).
+        last_error: Failure reason when ``status='ERROR'`` (nullable).
+        created_at: When the activation was first created.
+        updated_at: When the activation was last mutated.
+    """
+
+    __tablename__ = "strategy_activations"  # type: ignore[assignment]
+    __table_args__ = (
+        # Composite index supports the most-common query
+        # (``list_for_user`` filtered by status) without needing a sequential
+        # scan over all activations.
+        Index(
+            "idx_strategy_activation_user_status",
+            "user_id",
+            "status",
+        ),
+        Index("idx_strategy_activation_strategy_id", "strategy_id"),
+        Index("idx_strategy_activation_portfolio_id", "portfolio_id"),
+    )
+
+    id: UUID = Field(primary_key=True)
+    # NOTE: user_id intentionally has NO foreign key — users live in Clerk
+    # (external auth provider); there is no ``users`` table in this schema.
+    user_id: UUID
+    # FK to strategies.id with ON DELETE CASCADE — an activation has no
+    # purpose without its strategy, so removing the strategy removes the
+    # activation. The Alembic migration declares the same constraint.
+    strategy_id: UUID = Field(
+        foreign_key="strategies.id",
+        ondelete="CASCADE",
+    )
+    # FK to portfolios.id with ON DELETE CASCADE — same rationale: no
+    # trade target, no activation.
+    portfolio_id: UUID = Field(
+        foreign_key="portfolios.id",
+        ondelete="CASCADE",
+    )
+    status: str = Field(max_length=20)
+    frequency: str = Field(max_length=30)
+    last_executed_at: datetime | None = Field(default=None)
+    last_error: str | None = Field(default=None, max_length=500)
+    created_at: datetime
+    updated_at: datetime
+
+    def to_domain(self) -> StrategyActivation:
+        """Convert database model to domain entity.
+
+        Returns:
+            StrategyActivation domain entity with timezone-aware timestamps.
+
+        Raises:
+            InvalidStrategyActivationError: If a row's ``status`` /
+                ``frequency`` value drifts from the enum (e.g. an
+                older row referring to a removed status).
+        """
+        # Database stores naive UTC datetimes - add UTC timezone back.
+        created_at_utc = self.created_at.replace(tzinfo=UTC)
+        updated_at_utc = self.updated_at.replace(tzinfo=UTC)
+        last_executed_at_utc: datetime | None = None
+        if self.last_executed_at is not None:
+            last_executed_at_utc = self.last_executed_at.replace(tzinfo=UTC)
+
+        return StrategyActivation(
+            id=self.id,
+            user_id=self.user_id,
+            strategy_id=self.strategy_id,
+            portfolio_id=self.portfolio_id,
+            status=ActivationStatus(self.status),
+            frequency=ActivationFrequency(self.frequency),
+            last_executed_at=last_executed_at_utc,
+            last_error=self.last_error,
+            created_at=created_at_utc,
+            updated_at=updated_at_utc,
+        )
+
+    @classmethod
+    def from_domain(cls, activation: StrategyActivation) -> "StrategyActivationModel":
+        """Convert domain entity to database model.
+
+        Args:
+            activation: Domain StrategyActivation entity.
+
+        Returns:
+            StrategyActivationModel for database persistence with naive UTC
+            timestamps (PostgreSQL ``TIMESTAMP WITHOUT TIME ZONE``).
+        """
+        # Strip timezone for PostgreSQL TIMESTAMP WITHOUT TIME ZONE columns.
+        # Convert to UTC first if needed, then strip timezone.
+        if activation.created_at.tzinfo:
+            created_at_naive = activation.created_at.astimezone(UTC).replace(
+                tzinfo=None
+            )
+        else:
+            created_at_naive = activation.created_at
+
+        if activation.updated_at.tzinfo:
+            updated_at_naive = activation.updated_at.astimezone(UTC).replace(
+                tzinfo=None
+            )
+        else:
+            updated_at_naive = activation.updated_at
+
+        last_executed_at_naive: datetime | None = None
+        if activation.last_executed_at is not None:
+            if activation.last_executed_at.tzinfo:
+                last_executed_at_naive = activation.last_executed_at.astimezone(
+                    UTC
+                ).replace(tzinfo=None)
+            else:
+                last_executed_at_naive = activation.last_executed_at
+
+        return cls(
+            id=activation.id,
+            user_id=activation.user_id,
+            strategy_id=activation.strategy_id,
+            portfolio_id=activation.portfolio_id,
+            status=activation.status.value,
+            frequency=activation.frequency.value,
+            last_executed_at=last_executed_at_naive,
+            last_error=activation.last_error,
+            created_at=created_at_naive,
+            updated_at=updated_at_naive,
         )
