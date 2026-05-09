@@ -16,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, PlainSerializer
 
 from zebu.adapters.inbound.api.dependencies import (
+    AdminUserDep,
     CurrentUserDep,
     MarketDataDep,
     PortfolioRepositoryDep,
@@ -284,26 +285,31 @@ async def backfill_portfolio_snapshots(
     end_date: date,
     snapshot_job: SnapshotJobDep,
     current_user_id: CurrentUserDep,
+    portfolio_repo: PortfolioRepositoryDep,
 ) -> dict[str, str | dict[str, int]]:
     """Backfill historical snapshots for a portfolio.
 
     Generates snapshots for each day in the specified date range.
     Useful for new portfolios or fixing gaps in snapshot history.
 
-    **Admin only** (TODO: Add admin authentication)
+    Authenticated; only the portfolio's owner can backfill its snapshots.
+    A user attempting to backfill someone else's portfolio receives 404
+    (consistent with the rest of the portfolio routes — we don't disclose
+    existence to non-owners).
 
     Args:
         portfolio_id: Portfolio to backfill
         start_date: Start of date range (inclusive)
         end_date: End of date range (inclusive)
         snapshot_job: Snapshot job service (injected)
-        current_user_id: Current user ID (injected, for future admin check)
+        current_user_id: Current user ID (injected) — must match portfolio owner
+        portfolio_repo: Portfolio repository (injected) — used for ownership check
 
     Returns:
         dict with results: {"status": "completed", "results": {...}}
 
     Raises:
-        HTTPException: 404 if portfolio not found
+        HTTPException: 404 if portfolio not found OR caller does not own it
         HTTPException: 400 if date range is invalid
         HTTPException: 501 if service not configured
     """
@@ -314,8 +320,16 @@ async def backfill_portfolio_snapshots(
             detail=f"start_date ({start_date}) must be <= end_date ({end_date})",
         )
 
-    # TODO: Add admin authentication check
-    # TODO: Verify user owns the portfolio
+    # Ownership check: load the portfolio and reject anyone but the owner.
+    # Non-owners get 404 (not 403) to avoid leaking existence — this matches
+    # the pattern used elsewhere for portfolio sub-resources (e.g.
+    # /portfolios/{id}/performance in this same router).
+    portfolio = await portfolio_repo.get(portfolio_id)
+    if portfolio is None or portfolio.user_id != current_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Portfolio not found: {portfolio_id}",
+        )
 
     logger.info(
         f"Backfill requested for portfolio {portfolio_id} "
@@ -330,7 +344,7 @@ async def backfill_portfolio_snapshots(
         )
         return {"status": "completed", "results": results}
     except ValueError as e:
-        # Portfolio not found
+        # Portfolio not found inside the job (e.g. concurrent delete)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e),
@@ -348,23 +362,29 @@ admin_router = APIRouter(prefix="/analytics", tags=["analytics-admin"])
 
 
 @admin_router.post("/prices/refresh", status_code=201)
-async def trigger_price_refresh() -> dict[str, str]:
+async def trigger_price_refresh(
+    admin_user_id: AdminUserDep,
+) -> dict[str, str]:
     """Manually trigger price refresh job for active stocks.
 
     Refreshes prices for all active tickers (from watchlist and recent trades).
     This is the same job that runs on the scheduled cron.
 
-    **Admin only** (TODO: Add admin authentication)
+    Admin only — caller must have a Clerk user ID listed in the
+    `ADMIN_USER_IDS` env var allowlist. Non-admin authenticated callers
+    receive 403; unauthenticated callers receive 401.
+
+    Args:
+        admin_user_id: Verified admin user ID (injected, gates the route)
 
     Returns:
         dict with status: {"status": "completed", "message": "..."}
 
     Raises:
-        HTTPException: 500 if refresh fails
+        HTTPException: 401 if unauthenticated, 403 if not admin,
+            500 if refresh fails
     """
-    # TODO: Add admin authentication check when auth is implemented
-
-    logger.info("Manual price refresh triggered")
+    logger.info("Manual price refresh triggered by admin %s", admin_user_id)
 
     try:
         from zebu.infrastructure.scheduler import (
@@ -391,26 +411,29 @@ async def trigger_price_refresh() -> dict[str, str]:
 @admin_router.post("/snapshots/daily", status_code=201)
 async def trigger_daily_snapshots(
     snapshot_job: SnapshotJobDep,
+    admin_user_id: AdminUserDep,
 ) -> dict[str, str | dict[str, int]]:
     """Manually trigger daily snapshot job for all portfolios.
 
     Calculates snapshots for all portfolios for today's date.
     Snapshots are upserted (updated if already exist).
 
-    **Admin only** (TODO: Add admin authentication)
+    Admin only — caller must have a Clerk user ID listed in the
+    `ADMIN_USER_IDS` env var allowlist. Non-admin authenticated callers
+    receive 403; unauthenticated callers receive 401.
 
     Args:
         snapshot_job: Snapshot job service (injected)
+        admin_user_id: Verified admin user ID (injected, gates the route)
 
     Returns:
         dict with results: {"status": "completed", "results": {...}}
 
     Raises:
-        HTTPException: 501 if service not configured
+        HTTPException: 401 if unauthenticated, 403 if not admin,
+            501 if service not configured
     """
-    # TODO: Add admin authentication check when auth is implemented
-
-    logger.info("Manual daily snapshot triggered")
+    logger.info("Manual daily snapshot triggered by admin %s", admin_user_id)
 
     try:
         results = await snapshot_job.run_daily_snapshot()

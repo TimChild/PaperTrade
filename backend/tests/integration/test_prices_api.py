@@ -2,16 +2,40 @@
 
 These tests verify that the price endpoints work correctly end-to-end,
 including proper error handling and response formatting.
+
+All endpoints require Bearer-token auth (added in Wave 1-A security fixes
+— see audits/2026-05-09/api-design.md P0-1). The two operationally-
+sensitive endpoints (POST /fetch-historical, GET /debug/cache/{ticker})
+additionally require admin allowlist membership.
 """
 
+from collections.abc import Iterator
+
+import pytest
 from fastapi.testclient import TestClient
+
+
+@pytest.fixture
+def admin_auth_headers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> Iterator[dict[str, str]]:
+    """Provide admin Bearer headers for tests that hit admin-only routes.
+
+    Adds the default test user ("test-user-default") to the
+    `ADMIN_USER_IDS` env var allowlist for the duration of the test, so
+    the same Bearer token used for normal-user requests grants admin
+    access here.
+    """
+    monkeypatch.setenv("ADMIN_USER_IDS", "test-user-default")
+    yield {"Authorization": "Bearer test-token-default"}
 
 
 def test_get_current_price_aapl(
     client: TestClient,
+    auth_headers: dict[str, str],
 ) -> None:
     """Test fetching current price for AAPL."""
-    response = client.get("/api/v1/prices/AAPL")
+    response = client.get("/api/v1/prices/AAPL", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -32,10 +56,11 @@ def test_get_current_price_aapl(
 
 def test_get_current_price_invalid_ticker(
     client: TestClient,
+    auth_headers: dict[str, str],
 ) -> None:
     """Test fetching price for non-existent ticker returns 404."""
     # Use a valid ticker format that doesn't exist in our test data
-    response = client.get("/api/v1/prices/XXXX")
+    response = client.get("/api/v1/prices/XXXX", headers=auth_headers)
 
     assert response.status_code == 404
     data = response.json()
@@ -44,9 +69,10 @@ def test_get_current_price_invalid_ticker(
 
 def test_get_supported_tickers(
     client: TestClient,
+    auth_headers: dict[str, str],
 ) -> None:
     """Test getting list of supported tickers."""
-    response = client.get("/api/v1/prices/")
+    response = client.get("/api/v1/prices/", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -65,26 +91,32 @@ def test_get_supported_tickers(
 
 def test_get_price_history_missing_parameters(
     client: TestClient,
+    auth_headers: dict[str, str],
 ) -> None:
     """Test price history endpoint requires start and end parameters."""
     # Missing both start and end
-    response = client.get("/api/v1/prices/AAPL/history")
+    response = client.get("/api/v1/prices/AAPL/history", headers=auth_headers)
     assert response.status_code == 422  # Validation error
 
     # Missing end parameter
-    response = client.get("/api/v1/prices/AAPL/history?start=2024-01-01T00:00:00Z")
+    response = client.get(
+        "/api/v1/prices/AAPL/history?start=2024-01-01T00:00:00Z",
+        headers=auth_headers,
+    )
     assert response.status_code == 422
 
 
 def test_get_price_history_valid_request(
     client: TestClient,
+    auth_headers: dict[str, str],
 ) -> None:
     """Test price history endpoint with valid parameters."""
     response = client.get(
         "/api/v1/prices/AAPL/history"
         "?start=2024-01-01T00:00:00Z"
         "&end=2024-12-31T23:59:59Z"
-        "&interval=1day"
+        "&interval=1day",
+        headers=auth_headers,
     )
 
     assert response.status_code == 200
@@ -107,6 +139,7 @@ def test_get_price_history_valid_request(
 
 def test_get_price_history_valid_interval_accepted(
     client: TestClient,
+    auth_headers: dict[str, str],
 ) -> None:
     """Test price history endpoint accepts valid intervals.
 
@@ -117,7 +150,8 @@ def test_get_price_history_valid_interval_accepted(
         "/api/v1/prices/AAPL/history"
         "?start=2024-01-01T00:00:00Z"
         "&end=2024-12-31T23:59:59Z"
-        "&interval=1day"
+        "&interval=1day",
+        headers=auth_headers,
     )
 
     # Should succeed (may return empty list if no data)
@@ -126,13 +160,15 @@ def test_get_price_history_valid_interval_accepted(
 
 def test_get_price_history_invalid_date_range(
     client: TestClient,
+    auth_headers: dict[str, str],
 ) -> None:
     """Test price history endpoint rejects end before start."""
     # End date before start date
     response = client.get(
         "/api/v1/prices/AAPL/history"
         "?start=2024-12-31T00:00:00Z"
-        "&end=2024-01-01T00:00:00Z"
+        "&end=2024-01-01T00:00:00Z",
+        headers=auth_headers,
     )
 
     assert response.status_code == 400
@@ -142,6 +178,7 @@ def test_get_price_history_invalid_date_range(
 
 def test_check_historical_data_available(
     client: TestClient,
+    auth_headers: dict[str, str],
 ) -> None:
     """Test checking historical data availability when data exists."""
     # AAPL has seeded data in conftest (timestamp = now)
@@ -151,7 +188,10 @@ def test_check_historical_data_available(
     now = datetime.now(UTC)
     # Format as ISO 8601 with Z suffix (FastAPI expects this format)
     date_str = now.replace(microsecond=0).isoformat().replace("+00:00", "Z")
-    response = client.get(f"/api/v1/prices/AAPL/check?date={date_str}")
+    response = client.get(
+        f"/api/v1/prices/AAPL/check?date={date_str}",
+        headers=auth_headers,
+    )
 
     assert response.status_code == 200
     data = response.json()
@@ -167,11 +207,15 @@ def test_check_historical_data_available(
 
 def test_check_historical_data_not_available(
     client: TestClient,
+    auth_headers: dict[str, str],
 ) -> None:
     """Test checking historical data availability when no data exists."""
     # Use a date far in the past where we have no data
     # InMemoryAdapter only has ±1 hour window
-    response = client.get("/api/v1/prices/AAPL/check?date=2020-01-01T00:00:00Z")
+    response = client.get(
+        "/api/v1/prices/AAPL/check?date=2020-01-01T00:00:00Z",
+        headers=auth_headers,
+    )
 
     assert response.status_code == 200
     data = response.json()
@@ -187,10 +231,14 @@ def test_check_historical_data_not_available(
 
 def test_check_historical_data_invalid_ticker(
     client: TestClient,
+    auth_headers: dict[str, str],
 ) -> None:
     """Test checking historical data with unknown ticker returns not available."""
     # Use a valid ticker format but unknown ticker (max 5 chars)
-    response = client.get("/api/v1/prices/XXXXX/check?date=2024-01-01T00:00:00Z")
+    response = client.get(
+        "/api/v1/prices/XXXXX/check?date=2024-01-01T00:00:00Z",
+        headers=auth_headers,
+    )
 
     assert response.status_code == 200
     data = response.json()
@@ -202,12 +250,14 @@ def test_check_historical_data_invalid_ticker(
 
 def test_fetch_historical_data(
     client: TestClient,
+    admin_auth_headers: dict[str, str],
 ) -> None:
-    """Test fetching historical data endpoint."""
+    """Test fetching historical data endpoint (admin-only)."""
     # This will use the InMemoryAdapter in tests, which doesn't actually fetch
     # from Alpha Vantage, but we can verify the endpoint structure
     response = client.post(
         "/api/v1/prices/fetch-historical",
+        headers=admin_auth_headers,
         json={
             "ticker": "AAPL",
             "start": "2024-01-01T00:00:00Z",
@@ -231,10 +281,12 @@ def test_fetch_historical_data(
 
 def test_fetch_historical_data_invalid_date_range(
     client: TestClient,
+    admin_auth_headers: dict[str, str],
 ) -> None:
-    """Test fetching historical data with invalid date range."""
+    """Test fetching historical data with invalid date range (admin-only)."""
     response = client.post(
         "/api/v1/prices/fetch-historical",
+        headers=admin_auth_headers,
         json={
             "ticker": "AAPL",
             "start": "2024-12-31T00:00:00Z",
@@ -250,9 +302,13 @@ def test_fetch_historical_data_invalid_date_range(
 
 def test_get_batch_prices_all_available(
     client: TestClient,
+    auth_headers: dict[str, str],
 ) -> None:
     """Test batch prices endpoint returns all requested tickers when available."""
-    response = client.get("/api/v1/prices/batch?tickers=AAPL,GOOGL,MSFT")
+    response = client.get(
+        "/api/v1/prices/batch?tickers=AAPL,GOOGL,MSFT",
+        headers=auth_headers,
+    )
 
     assert response.status_code == 200
     data = response.json()
@@ -277,10 +333,14 @@ def test_get_batch_prices_all_available(
 
 def test_get_batch_prices_partial_results(
     client: TestClient,
+    auth_headers: dict[str, str],
 ) -> None:
     """Test batch prices endpoint returns only available tickers."""
     # Request AAPL (available) and XXXXX (not available)
-    response = client.get("/api/v1/prices/batch?tickers=AAPL,XXXXX")
+    response = client.get(
+        "/api/v1/prices/batch?tickers=AAPL,XXXXX",
+        headers=auth_headers,
+    )
 
     assert response.status_code == 200
     data = response.json()
@@ -294,9 +354,10 @@ def test_get_batch_prices_partial_results(
 
 def test_get_batch_prices_empty_tickers(
     client: TestClient,
+    auth_headers: dict[str, str],
 ) -> None:
     """Test batch prices endpoint returns 400 for empty ticker list."""
-    response = client.get("/api/v1/prices/batch?tickers=")
+    response = client.get("/api/v1/prices/batch?tickers=", headers=auth_headers)
 
     assert response.status_code == 400
     data = response.json()
@@ -306,9 +367,10 @@ def test_get_batch_prices_empty_tickers(
 
 def test_get_batch_prices_single_ticker(
     client: TestClient,
+    auth_headers: dict[str, str],
 ) -> None:
     """Test batch prices endpoint works with single ticker."""
-    response = client.get("/api/v1/prices/batch?tickers=AAPL")
+    response = client.get("/api/v1/prices/batch?tickers=AAPL", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -321,10 +383,14 @@ def test_get_batch_prices_single_ticker(
 
 def test_get_batch_prices_whitespace_handling(
     client: TestClient,
+    auth_headers: dict[str, str],
 ) -> None:
     """Test batch prices endpoint handles whitespace in ticker list."""
     # Add extra spaces around tickers
-    response = client.get("/api/v1/prices/batch?tickers= AAPL , GOOGL , MSFT ")
+    response = client.get(
+        "/api/v1/prices/batch?tickers= AAPL , GOOGL , MSFT ",
+        headers=auth_headers,
+    )
 
     assert response.status_code == 200
     data = response.json()
@@ -336,9 +402,13 @@ def test_get_batch_prices_whitespace_handling(
 
 def test_get_batch_prices_case_insensitive(
     client: TestClient,
+    auth_headers: dict[str, str],
 ) -> None:
     """Test batch prices endpoint handles lowercase tickers."""
-    response = client.get("/api/v1/prices/batch?tickers=aapl,googl")
+    response = client.get(
+        "/api/v1/prices/batch?tickers=aapl,googl",
+        headers=auth_headers,
+    )
 
     assert response.status_code == 200
     data = response.json()
@@ -352,9 +422,10 @@ def test_get_batch_prices_case_insensitive(
 
 def test_get_batch_prices_includes_metadata(
     client: TestClient,
+    auth_headers: dict[str, str],
 ) -> None:
     """Test batch prices endpoint includes all required metadata."""
-    response = client.get("/api/v1/prices/batch?tickers=AAPL")
+    response = client.get("/api/v1/prices/batch?tickers=AAPL", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -373,3 +444,73 @@ def test_get_batch_prices_includes_metadata(
     assert aapl_price["ticker"] == "AAPL"
     assert aapl_price["currency"] == "USD"
     assert aapl_price["source"] == "database"
+
+
+# =========================================================================
+# Auth gate behaviour (Wave 1-A security fixes)
+# =========================================================================
+
+
+def test_prices_endpoints_require_auth(
+    client: TestClient,
+) -> None:
+    """All /api/v1/prices/* routes reject unauthenticated requests with 401."""
+    # GET endpoints
+    assert client.get("/api/v1/prices/AAPL").status_code == 401
+    assert client.get("/api/v1/prices/").status_code == 401
+    assert client.get("/api/v1/prices/batch?tickers=AAPL").status_code == 401
+    assert (
+        client.get(
+            "/api/v1/prices/AAPL/history"
+            "?start=2024-01-01T00:00:00Z"
+            "&end=2024-12-31T00:00:00Z",
+        ).status_code
+        == 401
+    )
+    assert (
+        client.get(
+            "/api/v1/prices/AAPL/check?date=2024-01-01T00:00:00Z",
+        ).status_code
+        == 401
+    )
+    assert client.get("/api/v1/prices/debug/cache/AAPL").status_code == 401
+
+    # POST endpoint
+    assert (
+        client.post(
+            "/api/v1/prices/fetch-historical",
+            json={
+                "ticker": "AAPL",
+                "start": "2024-01-01T00:00:00Z",
+                "end": "2024-12-31T23:59:59Z",
+            },
+        ).status_code
+        == 401
+    )
+
+
+def test_prices_admin_endpoints_reject_non_admin_with_403(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Authenticated non-admins cannot reach the admin-only price routes."""
+    # Empty allowlist => default test user is not an admin.
+    monkeypatch.setenv("ADMIN_USER_IDS", "")
+
+    fetch_resp = client.post(
+        "/api/v1/prices/fetch-historical",
+        headers=auth_headers,
+        json={
+            "ticker": "AAPL",
+            "start": "2024-01-01T00:00:00Z",
+            "end": "2024-12-31T23:59:59Z",
+        },
+    )
+    assert fetch_resp.status_code == 403
+
+    cache_resp = client.get(
+        "/api/v1/prices/debug/cache/AAPL",
+        headers=auth_headers,
+    )
+    assert cache_resp.status_code == 403

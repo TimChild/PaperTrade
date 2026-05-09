@@ -4,6 +4,7 @@ These tests verify that the analytics endpoints work correctly end-to-end,
 including snapshot retrieval and portfolio composition calculation.
 """
 
+from collections.abc import Iterator
 from datetime import date, timedelta
 from decimal import Decimal
 from typing import TYPE_CHECKING
@@ -563,3 +564,159 @@ async def test_old_snapshot_without_breakdown_returns_empty_list(
 
     # Old snapshot returns empty breakdown list
     assert data_point["holdings_breakdown"] == []
+
+
+# =========================================================================
+# Wave 1-A security fixes — admin gates + ownership check
+# (audits/2026-05-09: sec.P0-1, sec.P0-2, api.P0-2)
+# =========================================================================
+
+
+@pytest.fixture
+def admin_auth_headers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> Iterator[dict[str, str]]:
+    """Provide admin Bearer headers, registering the test user as admin."""
+    monkeypatch.setenv("ADMIN_USER_IDS", "test-user-default")
+    yield {"Authorization": "Bearer test-token-default"}
+
+
+def test_admin_price_refresh_requires_auth(
+    client: TestClient,
+) -> None:
+    """POST /analytics/prices/refresh rejects unauthenticated callers (401)."""
+    response = client.post("/api/v1/analytics/prices/refresh")
+    assert response.status_code == 401
+
+
+def test_admin_price_refresh_rejects_non_admin(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Authenticated non-admin gets 403 from POST /analytics/prices/refresh."""
+    monkeypatch.setenv("ADMIN_USER_IDS", "")  # default test user not in allowlist
+    response = client.post("/api/v1/analytics/prices/refresh", headers=auth_headers)
+    assert response.status_code == 403
+
+
+def test_admin_daily_snapshots_requires_auth(
+    client: TestClient,
+) -> None:
+    """POST /analytics/snapshots/daily rejects unauthenticated callers (401)."""
+    response = client.post("/api/v1/analytics/snapshots/daily")
+    assert response.status_code == 401
+
+
+def test_admin_daily_snapshots_rejects_non_admin(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Authenticated non-admin gets 403 from POST /analytics/snapshots/daily."""
+    monkeypatch.setenv("ADMIN_USER_IDS", "")
+    response = client.post("/api/v1/analytics/snapshots/daily", headers=auth_headers)
+    assert response.status_code == 403
+
+
+def test_admin_daily_snapshots_admin_succeeds(
+    client: TestClient,
+    admin_auth_headers: dict[str, str],
+) -> None:
+    """Admin caller can trigger daily snapshots and gets a 201."""
+    response = client.post(
+        "/api/v1/analytics/snapshots/daily", headers=admin_auth_headers
+    )
+    # The job runs against zero-portfolio test DB, so it completes cleanly.
+    assert response.status_code == 201
+    body = response.json()
+    assert body["status"] == "completed"
+    assert "results" in body
+
+
+def test_backfill_rejects_non_owner_with_404(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    """User cannot backfill snapshots for someone else's portfolio.
+
+    The default test user creates a portfolio. A second authenticated
+    request with a registered-but-different user attempts to backfill
+    that portfolio's snapshots — and should be denied with 404 (we use
+    404 rather than 403 to avoid disclosing existence).
+    """
+    from zebu.adapters.auth.in_memory_adapter import InMemoryAuthAdapter
+    from zebu.adapters.inbound.api.dependencies import get_auth_port
+    from zebu.application.ports.auth_port import AuthenticatedUser
+
+    # User A creates a portfolio
+    create_resp = client.post(
+        "/api/v1/portfolios",
+        headers=auth_headers,
+        json={
+            "name": "Owned by A",
+            "initial_deposit": "10000.00",
+            "currency": "USD",
+        },
+    )
+    assert create_resp.status_code == 201
+    portfolio_id_a = create_resp.json()["portfolio_id"]
+
+    # Register a second user in the same in-memory adapter so user B
+    # can authenticate (otherwise we'd just get 401, which is a
+    # different code path).
+    adapter_obj = client.app.dependency_overrides[get_auth_port]()  # type: ignore[attr-defined]
+    assert isinstance(adapter_obj, InMemoryAuthAdapter)
+    adapter_obj.add_user(
+        AuthenticatedUser(id="test-user-b", email="b@example.com"),
+        "test-token-b",
+    )
+
+    today = date.today()
+    backfill_resp = client.post(
+        f"/api/v1/portfolios/{portfolio_id_a}/snapshots/backfill"
+        f"?start_date={today - timedelta(days=2)}&end_date={today}",
+        headers={"Authorization": "Bearer test-token-b"},
+    )
+    assert backfill_resp.status_code == 404
+
+
+def test_backfill_owner_succeeds(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    """The portfolio owner can backfill snapshots for their portfolio."""
+    create_resp = client.post(
+        "/api/v1/portfolios",
+        headers=auth_headers,
+        json={
+            "name": "Owner Backfill",
+            "initial_deposit": "10000.00",
+            "currency": "USD",
+        },
+    )
+    portfolio_id = create_resp.json()["portfolio_id"]
+
+    today = date.today()
+    backfill_resp = client.post(
+        f"/api/v1/portfolios/{portfolio_id}/snapshots/backfill"
+        f"?start_date={today - timedelta(days=1)}&end_date={today}",
+        headers=auth_headers,
+    )
+    assert backfill_resp.status_code == 201
+    body = backfill_resp.json()
+    assert body["status"] == "completed"
+
+
+def test_backfill_requires_auth(
+    client: TestClient,
+) -> None:
+    """Backfill route rejects unauthenticated callers."""
+    from uuid import uuid4
+
+    today = date.today()
+    response = client.post(
+        f"/api/v1/portfolios/{uuid4()}/snapshots/backfill"
+        f"?start_date={today - timedelta(days=2)}&end_date={today}",
+    )
+    assert response.status_code == 401

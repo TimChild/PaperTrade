@@ -4,6 +4,11 @@ Provides REST endpoints for price data operations:
 - Get current price for a ticker
 - Get historical price data for a ticker
 - Get supported tickers
+
+All endpoints require authentication via Bearer JWT (see CurrentUserDep).
+The two operationally-sensitive endpoints (POST /fetch-historical, which
+burns Alpha Vantage rate limit, and GET /debug/cache/{ticker}, which
+exposes raw DB rows) additionally require admin allowlist membership.
 """
 
 from datetime import UTC, datetime, timedelta
@@ -13,7 +18,11 @@ import structlog
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from zebu.adapters.inbound.api.dependencies import MarketDataDep
+from zebu.adapters.inbound.api.dependencies import (
+    AdminUserDep,
+    CurrentUserDep,
+    MarketDataDep,
+)
 from zebu.application.exceptions import (
     MarketDataUnavailableError,
     TickerNotFoundError,
@@ -134,6 +143,7 @@ async def get_batch_prices(
         ),
     ],
     market_data: MarketDataDep,
+    current_user_id: CurrentUserDep,
 ) -> BatchPriceResponse:
     """Get current prices for multiple tickers in batch.
 
@@ -195,6 +205,7 @@ async def get_batch_prices(
 async def get_current_price(
     ticker: str,
     market_data: MarketDataDep,
+    current_user_id: CurrentUserDep,
 ) -> CurrentPriceResponse:
     """Get current price for a ticker.
 
@@ -247,6 +258,7 @@ async def get_current_price(
 async def get_price_history(
     ticker: str,
     market_data: MarketDataDep,
+    current_user_id: CurrentUserDep,
     start: Annotated[
         str, Query(description="Start of time range (YYYY-MM-DD or ISO datetime)")
     ],
@@ -383,6 +395,7 @@ async def get_price_history(
 )
 async def get_supported_tickers(
     market_data: MarketDataDep,
+    current_user_id: CurrentUserDep,
 ) -> SupportedTickersResponse:
     """Get list of supported tickers.
 
@@ -420,6 +433,7 @@ async def check_historical_data(
     ticker: str,
     date: Annotated[datetime, Query(description="Date to check (UTC)")],
     market_data: MarketDataDep,
+    current_user_id: CurrentUserDep,
 ) -> CheckHistoricalDataResponse:
     """Check if historical data exists for a ticker on a specific date.
 
@@ -474,6 +488,7 @@ async def check_historical_data(
 async def fetch_historical_data(
     request: FetchHistoricalDataRequest,
     market_data: MarketDataDep,
+    admin_user_id: AdminUserDep,
 ) -> FetchHistoricalDataResponse:
     """Fetch historical data for a ticker and date range.
 
@@ -481,15 +496,22 @@ async def fetch_historical_data(
     historical data. It fetches data from Alpha Vantage and stores it in the
     database for future use.
 
+    Admin only — gated by the `ADMIN_USER_IDS` allowlist. This endpoint
+    triggers paid Alpha Vantage API calls (limited rate budget shared
+    across the whole tenancy), so it must not be reachable by unprivileged
+    users or by unauthenticated callers.
+
     Args:
         request: Request with ticker and date range
         market_data: Market data port implementation (injected)
+        admin_user_id: Verified admin user ID (injected, gates the route)
 
     Returns:
         FetchHistoricalDataResponse with fetch results
 
     Raises:
-        HTTPException: 400 if invalid parameters, 404 if ticker not found,
+        HTTPException: 400 if invalid parameters, 401 if unauthenticated,
+                      403 if not admin, 404 if ticker not found,
                       503 if market data unavailable
     """
     try:
@@ -539,11 +561,15 @@ async def fetch_historical_data(
 async def inspect_price_cache(
     ticker: str,
     market_data: MarketDataDep,
+    admin_user_id: AdminUserDep,
 ) -> dict[str, object]:
     """Inspect cached price data for debugging.
 
-    **Development only** - shows what data exists in cache for a ticker.
-    This endpoint helps diagnose data completeness issues by showing:
+    Admin only — gated by the `ADMIN_USER_IDS` allowlist. Exposes raw
+    cache contents that should not be reachable from public callers.
+
+    Shows what data exists in cache for a ticker. Helps diagnose data
+    completeness issues by showing:
     - Total cached points for the ticker
     - Date range of cached data
     - List of all cached dates
@@ -552,6 +578,7 @@ async def inspect_price_cache(
     Args:
         ticker: Stock ticker symbol (e.g., "AAPL")
         market_data: Market data port implementation (injected)
+        admin_user_id: Verified admin user ID (injected, gates the route)
 
     Returns:
         Dictionary with cache inspection data
