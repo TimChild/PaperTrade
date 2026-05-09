@@ -170,13 +170,14 @@ B1. **Comprehensive multi-agent audit pass** — dispatch specialist agents in p
 | Backend code quality | `backend-swe` (audit mode) | Type-checker suppressions, `Any` usage, long methods, premature/missing abstractions, error handling patterns, async correctness |
 | Frontend code quality | `frontend-swe` (audit mode) | `any` usage, `useEffect`-as-state-sync anti-patterns, ESLint suppressions, accessibility, key prop usage, data-testid coverage |
 | Test quality & flakiness | `quality-infra` | Behavior-vs-implementation tests, mock placement (boundaries only?), flaky-test root causes, coverage of critical paths, test-pyramid balance |
-| CI infrastructure | `quality-infra` | Why CI has been flaky, self-hosted runner reliability, cache strategy, parallelism, dependency caching, secret rotation, artifact lifecycle |
+| CI infrastructure | `quality-infra` | Why CI has been flaky — Tim flagged that **past flakiness was largely auth-related** (Clerk rate-limiting, token-passing in tests, etc.), so start there. Confirm the self-hosted runner (`papertrade-proxmox`) is materially faster than GitHub-hosted and that its logs are genuinely useful for agent debugging — if not, fix it. Cache strategy, parallelism, dependency caching, secret rotation, artifact lifecycle |
 | Domain model | `architect` + `refactorer` | Entity naming, invariant enforcement, value-object opportunities, domain-language coherence |
 | API design | `backend-swe` + `architect` | REST consistency, error response shape, pagination/filtering patterns, OpenAPI completeness |
 | Security | `quality-infra` | Auth coverage (BACKLOG mentions admin-auth TODOs), input validation, output encoding, secret management, dependency vulnerabilities |
 | Database | `backend-swe` | Migration history hygiene, index coverage (BACKLOG mentions transaction indexes), query performance hot spots, connection pooling |
 | Documentation | `docs-refactorer` | Onboarding usability, runbook completeness, accuracy vs. current code, dead links, archive-vs-delete pass |
 | Dependencies | `quality-infra` | Outdated packages, unused dependencies, security advisories, license compatibility |
+| **Claude infrastructure** | `architect` + `docs-refactorer` (audit mode) | The new `CLAUDE.md`, `.claude/agents/`, `.claude/skills/` were a verbatim-ish migration from Copilot in Phase A. Where can each be tightened? Are agent definitions specific enough? Are skills granular enough? Are there workflows that should be promoted to new shared skills? Anything redundant with mature Claude Code patterns now available? **This is arguably the most crucial dimension** — these prompts shape every future agent session in this repo. Findings feed B7. |
 
 Output: a single consolidated report at `agent_docs/audits/2026-05-NN/SUMMARY.md` with **prioritized findings** (P0 critical / P1 high / P2 medium / P3 nice-to-have). All findings cite specific files / lines.
 
@@ -190,15 +191,22 @@ B5. **CI / infra hardening** — based on B1 audit findings. Fix any flakiness r
 
 B6. **Documentation pass** — `docs-refactorer` agent: kill stale docs, archive chronological artifacts, sync onboarding doc with actual setup, fix all internal cross-links.
 
+B7. **Claude-infra refresh + sync skill** (intentionally last in Phase B) — the `CLAUDE.md` / `.claude/agents/` / `.claude/skills/` content shipped in Phase A was a verbatim-ish migration from the Copilot originals. Now that B2–B6 have refactored the codebase substantially, the agent prompts should be re-tuned to the new state — **and the migration left them at "good enough" rather than "great"**. This is the chance to make them really sharp.
+- **Re-tune each agent definition** against fresh examples from the post-refactor code. Drop instructions that no longer apply; add ones capturing newly-codified patterns; tighten language.
+- **Identify recurring patterns** across agent definitions that should be promoted to new shared skills.
+- **Look for gap skills** — workflows that recurred during B2–B6 audit / refactor work and should be codified for future reuse.
+- **Trim / merge / split** agents whose responsibilities overlap awkwardly.
+- **Build a `claude-infra-sync` skill** — runs on demand (and ideally on a schedule, e.g., end of every major phase) to detect drift in `CLAUDE.md` and agents (stale paths, broken file references, outdated test counts, removed endpoints, agent definitions referencing concepts that no longer exist), suggest skill candidates from observed patterns, and output a findings doc the user / `docs-refactorer` can act on. **The sync skill itself is the long-term insurance against Claude infra drifting from code reality** as Phases C–G evolve the codebase further.
+
 **Owner**: orchestrator (Claude Code) dispatching the specialist agents above in parallel. Tim reviews the consolidated findings and signs off on what fixes get prioritized.
 
-**Effort**: 2–4 weeks depending on findings volume. The audit pass itself can be highly parallelized (~1 session of orchestrator time + parallel agent runs). Critical fixes and foundation refactors are the variable cost.
+**Effort**: 2–4 weeks depending on findings volume. The audit pass (B1) is highly parallelizable (~1 session of orchestrator time + parallel agent runs). Critical fixes (B2), foundation refactors (B3), and the test/CI/docs/Claude-infra hardening passes (B4–B7) are the variable cost.
 
 **Risk**: Medium — refactors can introduce regressions. Mitigated by: existing test suite as safety net, refactorer-agent constraint that all tests stay green, P0/P1 prioritization to avoid over-scope.
 
 **Parallelizable with**: Phase A (already done). The **audit pass (B1) can run while early Phase C scoping happens**; but **B2/B3 critical fixes should land before Phase C/D ships** to avoid building new features on questionable foundations.
 
-**Important non-goal**: this is **not** a full rewrite. Aggressive deletion of stale code (`docs-refactorer`-style) is welcome, but feature parity must be preserved. Agents should not "improve" by removing functionality.
+**Latitude**: this is the team's chance to do whatever it takes to get this codebase right. We're not yet deployed to external customers, so meaningful refactors and even short-term feature removal are on the table if they materially improve the foundation. The constraint is *direction*, not preservation: every change should make the codebase a stronger base for Phases C–G. Document any functionality removal in a `B-changes/removed-features.md` so it can be re-added intentionally later if missed.
 
 ### Phase C — Live strategy execution + machine identity
 
