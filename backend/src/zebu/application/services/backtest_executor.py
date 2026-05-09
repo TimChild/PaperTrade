@@ -284,8 +284,11 @@ class BacktestExecutor:
             current_date += timedelta(days=1)
 
         # ── Phase 3: Persist transactions ─────────────────────────────────────
-        for transaction in builder.transactions:
-            await self._transaction_repo.save(transaction)
+        # Single bulk insert — DO NOT introduce per-iteration save() calls here.
+        # See agent_docs/audits/2026-05-09/database.md (P1-db-1): a per-trade
+        # save() loop drove ~3 DB round-trips per transaction (SELECT + INSERT
+        # + flush), turning a 100-trade backtest into 300+ round-trips.
+        await self._transaction_repo.save_all(builder.transactions)
 
         # ── Phase 4: Generate snapshots ───────────────────────────────────────
         await self._snapshot_service.backfill_snapshots(

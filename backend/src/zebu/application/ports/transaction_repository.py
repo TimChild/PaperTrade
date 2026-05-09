@@ -92,6 +92,25 @@ class TransactionRepository(Protocol):
         """
         ...
 
+    async def save_all(self, transactions: list[Transaction]) -> None:
+        """Persist multiple new transactions in a single bulk insert.
+
+        Bulk-insert path for hot loops (e.g. backtest persistence) where
+        per-row ``save()`` is N+1 against the DB. Adapters MUST issue a
+        single round-trip (one ``INSERT ... VALUES (...), (...), ...`` /
+        ``add_all`` + flush) rather than looping ``save()``.
+
+        Args:
+            transactions: List of Transaction entities to persist.
+                An empty list is a no-op.
+
+        Raises:
+            RepositoryError: If any transaction ID already exists or
+                the bulk insert fails. On failure, no transactions are
+                persisted (atomic at the session level).
+        """
+        ...
+
     async def delete_by_portfolio(self, portfolio_id: UUID) -> int:
         """Delete all transactions for a portfolio.
 

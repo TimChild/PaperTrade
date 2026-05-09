@@ -94,6 +94,20 @@ class InMemoryTransactionRepository:
                 )
             self._transactions[transaction.id] = transaction
 
+    async def save_all(self, transactions: list[Transaction]) -> None:
+        """Bulk-save transactions atomically (none persisted on duplicate)."""
+        if not transactions:
+            return
+        with self._lock:
+            # Validate all-or-nothing: scan for any duplicate first
+            for transaction in transactions:
+                if transaction.id in self._transactions:
+                    raise DuplicateTransactionError(
+                        f"Transaction already exists: {transaction.id}"
+                    )
+            for transaction in transactions:
+                self._transactions[transaction.id] = transaction
+
     async def delete_by_portfolio(self, portfolio_id: UUID) -> int:
         """Delete all transactions for a portfolio.
 

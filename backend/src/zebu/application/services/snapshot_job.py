@@ -18,8 +18,11 @@ from zebu.application.ports.portfolio_repository import PortfolioRepository
 from zebu.application.ports.snapshot_repository import SnapshotRepository
 from zebu.application.ports.transaction_repository import TransactionRepository
 from zebu.domain.entities.portfolio_snapshot import PortfolioSnapshot
+from zebu.domain.entities.transaction import Transaction
 from zebu.domain.services.portfolio_calculator import PortfolioCalculator
 from zebu.domain.services.snapshot_calculator import SnapshotCalculator
+from zebu.domain.value_objects.price_point import PricePoint
+from zebu.domain.value_objects.ticker import Ticker
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +66,12 @@ class SnapshotJobService:
         It processes all portfolios and handles errors gracefully, continuing
         to process remaining portfolios even if some fail.
 
+        Performance: Bulk-fetches transactions for ALL portfolios in a single
+        query, then bulk-fetches prices for the union of all distinct tickers.
+        Per-portfolio iteration is then pure in-memory math. See
+        agent_docs/audits/2026-05-09/database.md (P1-db-2): the previous
+        implementation issued ~(1 + 1 + N_holdings) DB calls per portfolio.
+
         Args:
             snapshot_date: Date for the snapshot (defaults to today)
 
@@ -78,14 +87,54 @@ class SnapshotJobService:
         logger.info(f"Starting daily snapshot for {target_date}")
 
         portfolios = await self._portfolio_repo.list_all()
-
         results: dict[str, int] = {"processed": 0, "succeeded": 0, "failed": 0}
+        if not portfolios:
+            logger.info(
+                f"Daily snapshot complete: "
+                f"{results['succeeded']}/{results['processed']} succeeded"
+            )
+            return results
+
+        # Bulk-fetch: 1 query for transactions across ALL portfolios — replaces
+        # N per-portfolio get_by_portfolio calls.
+        portfolio_ids = [p.id for p in portfolios]
+        transactions_by_portfolio = await self._transaction_repo.get_by_portfolios(
+            portfolio_ids
+        )
+
+        # Determine the union of tickers held across all portfolios so we can
+        # fetch prices in one batch (current date) or one call per unique ticker
+        # (historical), instead of per-portfolio per-holding.
+        unique_tickers: set[Ticker] = set()
+        portfolio_holdings: dict[UUID, list[tuple[Ticker, int]]] = {}
+        for portfolio in portfolios:
+            transactions = transactions_by_portfolio.get(portfolio.id, [])
+            holdings = PortfolioCalculator.calculate_holdings(transactions)
+            held: list[tuple[Ticker, int]] = []
+            for holding in holdings:
+                if holding.quantity.shares > 0:
+                    held.append((holding.ticker, int(holding.quantity.shares)))
+                    unique_tickers.add(holding.ticker)
+            portfolio_holdings[portfolio.id] = held
+
+        # Bulk-fetch prices once. For "current" target_date we use the batch
+        # endpoint (1 round-trip when the cache is hot). For historical dates,
+        # we fall back to one get_price_at per *unique* ticker — still O(T)
+        # where T is distinct tickers across the entire fleet, not O(P × H).
+        price_map = await self._fetch_prices_for_date(
+            tickers=unique_tickers,
+            target_date=target_date,
+        )
 
         for portfolio in portfolios:
             results["processed"] += 1
             try:
-                snapshot = await self._calculate_snapshot_for_portfolio(
-                    portfolio.id, target_date
+                snapshot = self._build_snapshot_from_data(
+                    portfolio_id=portfolio.id,
+                    snapshot_date=target_date,
+                    transactions=transactions_by_portfolio.get(portfolio.id, []),
+                    holdings=portfolio_holdings[portfolio.id],
+                    price_map=price_map,
                 )
                 await self._snapshot_repo.save(snapshot)
                 results["succeeded"] += 1
@@ -242,6 +291,96 @@ class SnapshotJobService:
             )
 
         # Calculate snapshot using domain service
+        return self._calculator.calculate_snapshot(
+            portfolio_id=portfolio_id,
+            snapshot_date=snapshot_date,
+            cash_balance=cash_balance_money.amount,
+            holdings=holdings_data,
+        )
+
+    async def _fetch_prices_for_date(
+        self,
+        tickers: set[Ticker],
+        target_date: date,
+    ) -> dict[Ticker, PricePoint]:
+        """Fetch prices for the union of tickers in a single batch.
+
+        For ``target_date == today`` the batch endpoint is one round-trip
+        (cache-hot) or one API call (cache-miss). For historical dates we
+        fall back to one ``get_price_at`` per *unique* ticker — still
+        deduplicated across portfolios. Tickers that fail to resolve are
+        simply absent from the returned map; callers detect that and treat
+        the per-portfolio snapshot as failed.
+
+        Args:
+            tickers: Distinct tickers to look up.
+            target_date: Snapshot date (today → current price; past → historical).
+
+        Returns:
+            Dict mapping each successfully-resolved Ticker to its PricePoint.
+        """
+        if not tickers:
+            return {}
+
+        is_historical = target_date < date.today()
+        if not is_historical:
+            return await self._market_data.get_batch_prices(list(tickers))
+
+        snapshot_dt = datetime(
+            target_date.year,
+            target_date.month,
+            target_date.day,
+            12,
+            0,
+            0,
+            tzinfo=UTC,
+        )
+        result: dict[Ticker, PricePoint] = {}
+        for ticker in tickers:
+            try:
+                result[ticker] = await self._market_data.get_price_at(
+                    ticker, snapshot_dt
+                )
+            except (TickerNotFoundError, MarketDataUnavailableError) as e:
+                logger.warning(
+                    f"Historical price unavailable for {ticker.symbol} "
+                    f"on {target_date}: {e}"
+                )
+        return result
+
+    def _build_snapshot_from_data(
+        self,
+        portfolio_id: UUID,
+        snapshot_date: date,
+        transactions: list[Transaction],
+        holdings: list[tuple[Ticker, int]],
+        price_map: dict[Ticker, PricePoint],
+    ) -> PortfolioSnapshot:
+        """Build a snapshot from already-resolved transactions and prices.
+
+        Pure in-memory: no I/O. Used by ``run_daily_snapshot`` after the
+        bulk fetches have been done. Equivalent semantics to
+        ``_calculate_snapshot_for_portfolio`` — same failure mode (raises
+        ``MarketDataUnavailableError`` when any held ticker has no price)
+        and same SnapshotCalculator output.
+        """
+        cash_balance_money = PortfolioCalculator.calculate_cash_balance(transactions)
+
+        holdings_data: list[tuple[str, int, Decimal]] = []
+        failed_tickers: list[str] = []
+        for ticker, shares in holdings:
+            price_point = price_map.get(ticker)
+            if price_point is None:
+                failed_tickers.append(ticker.symbol)
+                continue
+            holdings_data.append((ticker.symbol, shares, price_point.price.amount))
+
+        if failed_tickers:
+            raise MarketDataUnavailableError(
+                f"Cannot calculate accurate snapshot: "
+                f"price unavailable for {', '.join(failed_tickers)}"
+            )
+
         return self._calculator.calculate_snapshot(
             portfolio_id=portfolio_id,
             snapshot_date=snapshot_date,

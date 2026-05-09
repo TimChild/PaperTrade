@@ -146,6 +146,34 @@ class SQLModelTransactionRepository:
                 f"Transaction already exists: {transaction.id}"
             ) from e
 
+    async def save_all(self, transactions: list[Transaction]) -> None:
+        """Bulk-persist multiple transactions in a single round-trip.
+
+        Hot path for backtest persistence — single ``add_all`` + ``flush``
+        replaces N per-row ``save()`` calls (each of which did SELECT-then-
+        INSERT). For a 100-trade backtest this drops 200+ round-trips to 1.
+
+        Note: This relies on PK uniqueness rather than a per-row SELECT.
+        IntegrityError surfaces as DuplicateTransactionError with no
+        information about which ID collided — acceptable for the
+        backtest path (IDs are uuid4-generated in-process).
+
+        Raises:
+            DuplicateTransactionError: If any transaction ID already exists.
+        """
+        if not transactions:
+            return
+
+        models = [TransactionModel.from_domain(t) for t in transactions]
+        self._session.add_all(models)
+        try:
+            await self._session.flush()
+        except IntegrityError as e:
+            raise DuplicateTransactionError(
+                f"Bulk insert failed: one or more of {len(transactions)} "
+                f"transactions already exists"
+            ) from e
+
     async def delete_by_portfolio(self, portfolio_id: UUID) -> int:
         """Delete all transactions for a portfolio.
 
