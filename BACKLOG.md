@@ -35,13 +35,6 @@ Incomplete items only. Completed work is tracked in PROGRESS.md.
 
 ## Technical Debt
 
-### Admin Authentication TODOs — ~2-4 hours
-- 6 TODO comments in `analytics.py` endpoints: analytics endpoints marked "Admin only" but no auth check implemented
-- Affected endpoints: `/analytics/backtest`, `/analytics/recalculate/{portfolio_id}`, `/analytics/recalculate-all`
-- Solution: Add admin role check (requires extending Clerk integration or adding admin flag)
-- **Note**: Also add user ownership verification for portfolio-specific endpoints
-- **Priority**: LOW — production app is currently single-user
-
 ### Add Database Indexes — ~1 hour
 - Tables: `Transaction.portfolio_id` and `Transaction.timestamp`
 - Implementation: Add to SQLModel models with a proper Alembic migration

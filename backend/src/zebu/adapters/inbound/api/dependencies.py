@@ -3,6 +3,7 @@
 Provides factory functions for repositories and other dependencies used by API routes.
 """
 
+import logging
 import os
 from typing import Annotated
 from uuid import UUID
@@ -37,8 +38,47 @@ from zebu.infrastructure.cache.price_cache import PriceCache
 from zebu.infrastructure.database import SessionDep
 from zebu.infrastructure.rate_limiter import RateLimiter
 
+logger = logging.getLogger(__name__)
+
 # Security scheme for Bearer token authentication
 security = HTTPBearer()
+
+
+def _is_production() -> bool:
+    """Check if APP_ENV is production.
+
+    Returns:
+        True when APP_ENV environment variable equals "production".
+    """
+    return os.getenv("APP_ENV", "development") == "production"
+
+
+def get_admin_user_ids() -> frozenset[str]:
+    """Read the comma-separated allowlist of admin Clerk user IDs from env.
+
+    Reads ADMIN_USER_IDS at call time (rather than module import) so that
+    test fixtures can mutate the environment via monkeypatch.setenv between
+    tests without reloading the dependencies module.
+
+    Returns:
+        Frozen set of admin Clerk user IDs (the raw string IDs from the
+        auth provider, not the deterministic UUIDs derived from them).
+    """
+    raw = os.getenv("ADMIN_USER_IDS", "")
+    return frozenset(part.strip() for part in raw.split(",") if part.strip())
+
+
+def is_admin_user(user_id: str, admin_ids: frozenset[str]) -> bool:
+    """Check whether the given Clerk user ID is in the admin allowlist.
+
+    Args:
+        user_id: Clerk user ID (e.g. "user_2abc123") from AuthenticatedUser.id
+        admin_ids: Allowlist of admin user IDs
+
+    Returns:
+        True if user_id is in the allowlist; False otherwise.
+    """
+    return user_id in admin_ids
 
 
 def get_portfolio_repository(
@@ -101,11 +141,21 @@ def get_auth_port() -> AuthPort:
     """Get authentication port implementation.
 
     Returns the appropriate AuthPort implementation based on environment
-    configuration. Uses ClerkAuthAdapter for production with a valid
-    Clerk secret key, or InMemoryAuthAdapter for testing.
+    configuration. Uses ClerkAuthAdapter when a Clerk secret is configured,
+    or InMemoryAuthAdapter for tests / local development.
+
+    In production (APP_ENV=production), a missing or placeholder
+    CLERK_SECRET_KEY is a configuration error: the function raises
+    RuntimeError so the misconfiguration surfaces as a hard 500 on first
+    request rather than as a silent swap to an empty in-memory adapter
+    (which would deny every login but mask the underlying cause).
 
     Returns:
         AuthPort implementation (ClerkAuthAdapter or InMemoryAuthAdapter)
+
+    Raises:
+        RuntimeError: If APP_ENV=production and CLERK_SECRET_KEY is missing
+            or set to the placeholder "test".
     """
     clerk_secret_key = os.getenv("CLERK_SECRET_KEY", "")
 
@@ -113,9 +163,19 @@ def get_auth_port() -> AuthPort:
     if clerk_secret_key and clerk_secret_key != "test":
         return ClerkAuthAdapter(secret_key=clerk_secret_key)
 
-    # Fall back to in-memory adapter for testing
+    # Fail fast in production rather than silently swap in the in-memory
+    # adapter. The in-memory adapter has no users registered, so every
+    # request would return 401 with no indication that auth itself is
+    # misconfigured.
+    if _is_production():
+        raise RuntimeError(
+            "CLERK_SECRET_KEY must be configured when APP_ENV=production. "
+            "Refusing to fall back to in-memory auth adapter."
+        )
+
+    # Fall back to in-memory adapter for testing / local development.
     # In test environments, this will be overridden with a properly
-    # configured InMemoryAuthAdapter
+    # configured InMemoryAuthAdapter.
     return InMemoryAuthAdapter()
 
 
@@ -174,6 +234,43 @@ async def get_current_user_id(
 
     # Create deterministic UUID from Clerk user ID
     # This ensures the same Clerk user ID always maps to the same UUID
+    return uuid5(NAMESPACE_DNS, current_user.id)
+
+
+async def verify_admin(
+    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+) -> UUID:
+    """Verify that the authenticated user is in the admin allowlist.
+
+    Reads the env-driven `ADMIN_USER_IDS` allowlist (comma-separated Clerk
+    user IDs) and rejects any caller whose `current_user.id` is not in that
+    list. This is intentionally strict: an empty allowlist means every
+    admin endpoint returns 403, which is the correct posture for a fresh
+    deploy that has not yet been provisioned.
+
+    Args:
+        current_user: Authenticated user from `get_current_user`
+
+    Returns:
+        UUID: Admin user's ID as a deterministic UUID (so admin endpoints
+        can use it interchangeably with `CurrentUserDep`).
+
+    Raises:
+        HTTPException: 403 if the user is not in the admin allowlist.
+    """
+    from uuid import NAMESPACE_DNS, uuid5
+
+    admin_ids = get_admin_user_ids()
+    if not is_admin_user(current_user.id, admin_ids):
+        logger.warning(
+            "Admin endpoint access denied for non-admin user",
+            extra={"clerk_user_id": current_user.id},
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required",
+        )
+
     return uuid5(NAMESPACE_DNS, current_user.id)
 
 
@@ -296,4 +393,5 @@ SnapshotRepositoryDep = Annotated[
 AuthPortDep = Annotated[AuthPort, Depends(get_auth_port)]
 CurrentUser = Annotated[AuthenticatedUser, Depends(get_current_user)]
 CurrentUserDep = Annotated[UUID, Depends(get_current_user_id)]
+AdminUserDep = Annotated[UUID, Depends(verify_admin)]
 MarketDataDep = Annotated[MarketDataPort, Depends(get_market_data)]

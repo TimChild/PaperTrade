@@ -6,6 +6,8 @@ deployment and configuration issues.
 
 Security: This endpoint redacts sensitive information (API keys,
 passwords) and only shows safe metadata like key prefixes and lengths.
+The whole router is gated behind the admin allowlist (`ADMIN_USER_IDS`).
+Unauthenticated callers receive 401; authenticated non-admins receive 403.
 """
 
 import os
@@ -17,6 +19,7 @@ import fastapi
 from redis.asyncio import Redis
 from sqlmodel import select
 
+from zebu.adapters.inbound.api.dependencies import AdminUserDep
 from zebu.infrastructure.database import SessionDep, engine
 
 router = fastapi.APIRouter(prefix="/debug", tags=["debug"])
@@ -190,6 +193,7 @@ async def _get_services_health() -> dict[str, Any]:
 @router.get("")
 async def get_debug_info(
     session: SessionDep,
+    admin_user_id: AdminUserDep,
 ) -> dict[str, Any]:
     """Get runtime debug information.
 
@@ -197,10 +201,19 @@ async def get_debug_info(
     environment, database connectivity, Redis status, and configured
     API keys (redacted).
 
+    Admin only — gated by the `ADMIN_USER_IDS` allowlist. Non-admin
+    authenticated callers receive 403; unauthenticated callers receive
+    401. Even with redaction, the host names, key prefixes, and pool
+    internals are recon vectors that should not be exposed publicly.
+
     Security Note: This endpoint does NOT expose:
     - Full API key values (only prefixes/lengths)
     - Database passwords (redacted in URLs)
     - Any user data or PII
+
+    Args:
+        session: Database session (injected)
+        admin_user_id: Verified admin user ID (injected, gates the route)
 
     Returns:
         Dictionary containing:
@@ -247,11 +260,20 @@ async def get_debug_info(
 
 
 @router.get("/scheduler")
-async def get_scheduler_status() -> dict[str, Any]:
+async def get_scheduler_status(
+    admin_user_id: AdminUserDep,
+) -> dict[str, Any]:
     """Get background scheduler status.
 
     Returns information about the APScheduler background job scheduler,
     including whether it's running and details about scheduled jobs.
+
+    Admin only — gated by the `ADMIN_USER_IDS` allowlist. Job IDs and
+    next-run times are useful for timing attacks, so this endpoint sits
+    behind the same admin gate as `/debug`.
+
+    Args:
+        admin_user_id: Verified admin user ID (injected, gates the route)
 
     Returns:
         Dictionary containing:
@@ -309,15 +331,20 @@ async def get_scheduler_status() -> dict[str, Any]:
 async def get_price_cache_status(
     ticker: str,
     session: SessionDep,
+    admin_user_id: AdminUserDep,
 ) -> dict[str, Any]:
     """Get price cache status for a ticker.
 
     Shows what price data exists in the database for debugging
     data completeness issues.
 
+    Admin only — gated by the `ADMIN_USER_IDS` allowlist. Even though the
+    payload is not user PII, raw DB rows should be auth-mediated.
+
     Args:
         ticker: Stock ticker symbol
         session: Database session
+        admin_user_id: Verified admin user ID (injected, gates the route)
 
     Returns:
         Cache status including date coverage and gaps
