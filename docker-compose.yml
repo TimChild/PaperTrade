@@ -64,6 +64,10 @@ services:
       REDIS_DB: 0
       # API configuration
       ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY:-demo}
+      # Market data provider: alpha_vantage (default, real API) or mock /
+      # in_memory (deterministic, no network — used by CI E2E to avoid the
+      # public Alpha Vantage demo key's 5/min, 25/day, IBM-only restrictions).
+      MARKET_DATA_PROVIDER: ${MARKET_DATA_PROVIDER:-alpha_vantage}
       SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
       # Authentication configuration
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}

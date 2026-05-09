@@ -2,8 +2,11 @@
 
 Covers the env-driven admin allowlist helpers and the production
 fail-fast guard added in Wave 1-A of the Phase B execution plan
-(audits/2026-05-09 — sec.P1-2).
+(audits/2026-05-09 — sec.P1-2), plus the ``MARKET_DATA_PROVIDER``
+switch added in Wave 2-C (audits/2026-05-09 — test.P0-1).
 """
+
+from unittest.mock import MagicMock
 
 import pytest
 from fastapi import HTTPException
@@ -13,8 +16,15 @@ from zebu.adapters.auth.in_memory_adapter import InMemoryAuthAdapter
 from zebu.adapters.inbound.api.dependencies import (
     get_admin_user_ids,
     get_auth_port,
+    get_market_data,
     is_admin_user,
     verify_admin,
+)
+from zebu.adapters.outbound.market_data.alpha_vantage_adapter import (
+    AlphaVantageAdapter,
+)
+from zebu.adapters.outbound.market_data.deterministic_mock_adapter import (
+    DeterministicMockMarketDataAdapter,
 )
 from zebu.application.ports.auth_port import AuthenticatedUser
 
@@ -171,3 +181,83 @@ class TestGetAuthPort:
         adapter = get_auth_port()
 
         assert isinstance(adapter, ClerkAuthAdapter)
+
+
+class TestGetMarketData:
+    """Tests for the ``MARKET_DATA_PROVIDER`` switch in `get_market_data()`.
+
+    Closes test.P0-1 from the 2026-05-09 audit: the public Alpha Vantage
+    "demo" key is no longer the only adapter the app can construct in CI E2E.
+    """
+
+    @pytest.mark.asyncio
+    async def test_default_returns_alpha_vantage_adapter(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Production / unset MARKET_DATA_PROVIDER preserves real-API behaviour."""
+        monkeypatch.delenv("MARKET_DATA_PROVIDER", raising=False)
+        # Avoid touching real Redis / network: a synthetic session is fine
+        # because the AlphaVantageAdapter only uses it to build a per-request
+        # PriceRepository, not for any I/O during construction.
+        session = MagicMock()
+
+        # Patch global singletons via reset before the call
+        from zebu.adapters.inbound.api import dependencies
+
+        dependencies._redis_client = MagicMock()
+        dependencies._http_client = MagicMock()
+        try:
+            adapter = await get_market_data(session)
+        finally:
+            # Reset to None — autouse fixture in conftest also clears these.
+            dependencies._redis_client = None
+            dependencies._http_client = None
+
+        assert isinstance(adapter, AlphaVantageAdapter)
+
+    @pytest.mark.asyncio
+    async def test_mock_provider_returns_deterministic_adapter(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """``MARKET_DATA_PROVIDER=mock`` swaps in the deterministic adapter."""
+        monkeypatch.setenv("MARKET_DATA_PROVIDER", "mock")
+        session = MagicMock()
+
+        adapter = await get_market_data(session)
+
+        assert isinstance(adapter, DeterministicMockMarketDataAdapter)
+
+    @pytest.mark.asyncio
+    async def test_in_memory_provider_returns_deterministic_adapter(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """``MARKET_DATA_PROVIDER=in_memory`` is also accepted (alias)."""
+        monkeypatch.setenv("MARKET_DATA_PROVIDER", "in_memory")
+        session = MagicMock()
+
+        adapter = await get_market_data(session)
+
+        assert isinstance(adapter, DeterministicMockMarketDataAdapter)
+
+    @pytest.mark.asyncio
+    async def test_provider_is_case_insensitive(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Mixed-case values still route to the mock adapter."""
+        monkeypatch.setenv("MARKET_DATA_PROVIDER", "MOCK")
+        session = MagicMock()
+
+        adapter = await get_market_data(session)
+
+        assert isinstance(adapter, DeterministicMockMarketDataAdapter)
+
+    @pytest.mark.asyncio
+    async def test_unsupported_provider_raises_runtime_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An unknown provider value fails fast rather than silently fall back."""
+        monkeypatch.setenv("MARKET_DATA_PROVIDER", "yahoo")
+        session = MagicMock()
+
+        with pytest.raises(RuntimeError, match="MARKET_DATA_PROVIDER"):
+            await get_market_data(session)
