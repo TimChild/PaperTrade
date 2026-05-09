@@ -13,7 +13,7 @@ User-id columns intentionally have NO foreign key — users live in Clerk
 (external auth provider); there is no ``users`` table in this schema.
 
 Revision ID: a7117ef792cb
-Revises: b002add_strategy_and_backtest
+Revises: d26cec7cdf69
 Create Date: 2026-05-09 18:16:17.487765
 
 """
@@ -25,7 +25,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "a7117ef792cb"
-down_revision: str | Sequence[str] | None = "b002add_strategy_and_backtest"
+down_revision: str | Sequence[str] | None = "d26cec7cdf69"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
