@@ -5,8 +5,8 @@ from decimal import Decimal
 
 import pytest
 
-from zebu.application.dtos.price_point import PricePoint
 from zebu.domain.value_objects.money import Money
+from zebu.domain.value_objects.price_point import PricePoint
 from zebu.domain.value_objects.ticker import Ticker
 
 

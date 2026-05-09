@@ -3,11 +3,11 @@
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 
-from zebu.application.dtos.price_point import PricePoint
 from zebu.domain.services.strategies.moving_average_crossover import (
     MovingAverageCrossoverStrategy,
 )
 from zebu.domain.value_objects.money import Money
+from zebu.domain.value_objects.price_point import PricePoint
 from zebu.domain.value_objects.ticker import Ticker
 from zebu.domain.value_objects.trade_signal import TradeAction
 

@@ -95,8 +95,8 @@ def client(test_engine: AsyncEngine) -> TestClient:
         from datetime import UTC, datetime, timedelta
         from decimal import Decimal
 
-        from zebu.application.dtos.price_point import PricePoint
         from zebu.domain.value_objects.money import Money
+        from zebu.domain.value_objects.price_point import PricePoint
         from zebu.domain.value_objects.ticker import Ticker
 
         adapter = InMemoryMarketDataAdapter()

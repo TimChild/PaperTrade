@@ -233,7 +233,9 @@ class TestAlphaVantageAdapterCacheHit:
             patch(
                 "zebu.adapters.outbound.market_data.alpha_vantage_adapter.datetime"
             ) as mock_datetime_adapter,
-            patch("zebu.application.dtos.price_point.datetime") as mock_datetime_price,
+            patch(
+                "zebu.domain.value_objects.price_point.datetime"
+            ) as mock_datetime_price,
         ):
             mock_datetime_adapter.now.return_value = mock_now
             mock_datetime_adapter.side_effect = lambda *args, **kwargs: datetime(
@@ -276,8 +278,8 @@ class TestAlphaVantageAdapterCacheHit:
         """Test that stale cache triggers API refresh."""
         from unittest.mock import patch
 
-        from zebu.application.dtos.price_point import PricePoint
         from zebu.domain.value_objects.money import Money
+        from zebu.domain.value_objects.price_point import PricePoint
 
         # Mock datetime to return a trading day (Monday, Jan 13, 2026)
         mock_now = datetime(2026, 1, 13, 10, 0, 0, tzinfo=UTC)
@@ -333,8 +335,8 @@ class TestAlphaVantageAdapterRateLimiting:
         """Test that rate limiting serves stale cached data when available."""
         from unittest.mock import patch
 
-        from zebu.application.dtos.price_point import PricePoint
         from zebu.domain.value_objects.money import Money
+        from zebu.domain.value_objects.price_point import PricePoint
 
         # Mock datetime to return a trading day (Monday, Jan 13, 2026)
         mock_now = datetime(2026, 1, 13, 10, 0, 0, tzinfo=UTC)

@@ -10,7 +10,6 @@ from zebu.adapters.outbound.market_data.in_memory_adapter import (
     InMemoryMarketDataAdapter,
 )
 from zebu.application.commands.run_backtest import RunBacktestCommand
-from zebu.application.dtos.price_point import PricePoint
 from zebu.application.ports.in_memory_backtest_run_repository import (
     InMemoryBacktestRunRepository,
 )
@@ -32,6 +31,7 @@ from zebu.application.services.snapshot_job import SnapshotJobService
 from zebu.domain.entities.strategy import Strategy
 from zebu.domain.value_objects.backtest_status import BacktestStatus
 from zebu.domain.value_objects.money import Money
+from zebu.domain.value_objects.price_point import PricePoint
 from zebu.domain.value_objects.strategy_type import StrategyType
 from zebu.domain.value_objects.ticker import Ticker
 

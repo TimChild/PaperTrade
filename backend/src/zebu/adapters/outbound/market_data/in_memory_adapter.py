@@ -2,11 +2,11 @@
 
 from datetime import datetime
 
-from zebu.application.dtos.price_point import PricePoint
 from zebu.application.exceptions import (
     MarketDataUnavailableError,
     TickerNotFoundError,
 )
+from zebu.domain.value_objects.price_point import PricePoint
 from zebu.domain.value_objects.ticker import Ticker
 
 

@@ -3,9 +3,9 @@
 import logging
 from datetime import UTC, date, datetime, timedelta
 
-from zebu.application.dtos.price_point import PricePoint
 from zebu.application.ports.market_data_port import MarketDataPort
 from zebu.domain.exceptions import InsufficientHistoricalDataError
+from zebu.domain.value_objects.price_point import PricePoint
 from zebu.domain.value_objects.ticker import Ticker
 
 logger = logging.getLogger(__name__)

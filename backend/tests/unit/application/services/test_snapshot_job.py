@@ -416,8 +416,8 @@ class TestCalculateSnapshotForPortfolio:
         await transaction_repo.save(buy)
 
         # Seed current price for AAPL
-        from zebu.application.dtos.price_point import PricePoint
         from zebu.domain.value_objects.money import Money as MoneyVO
+        from zebu.domain.value_objects.price_point import PricePoint
 
         market_data.seed_price(
             PricePoint(
@@ -620,8 +620,8 @@ class TestBackfillUsesHistoricalPrices:
         await transaction_repo.save(buy)
 
         # Seed a historical price for AAPL on 2024-01-10
-        from zebu.application.dtos.price_point import PricePoint
         from zebu.domain.value_objects.money import Money as MoneyVO
+        from zebu.domain.value_objects.price_point import PricePoint
 
         historical_price = PricePoint(
             ticker=ticker,
@@ -709,8 +709,8 @@ class TestBackfillUsesHistoricalPrices:
         await transaction_repo.save(buy)
 
         # Seed only a "current" price with a very recent timestamp (not historical)
-        from zebu.application.dtos.price_point import PricePoint
         from zebu.domain.value_objects.money import Money as MoneyVO
+        from zebu.domain.value_objects.price_point import PricePoint
 
         current_price = PricePoint(
             ticker=ticker,

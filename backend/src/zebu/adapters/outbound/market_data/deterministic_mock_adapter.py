@@ -35,10 +35,10 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from hashlib import sha256
 
-from zebu.application.dtos.price_point import PricePoint
 from zebu.application.exceptions import TickerNotFoundError
 from zebu.domain.exceptions import InvalidTickerError
 from zebu.domain.value_objects.money import Money
+from zebu.domain.value_objects.price_point import PricePoint
 from zebu.domain.value_objects.ticker import Ticker
 
 # Default tickers exposed via get_supported_tickers(). We keep this list short

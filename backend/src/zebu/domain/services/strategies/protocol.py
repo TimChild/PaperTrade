@@ -4,7 +4,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Protocol
 
-from zebu.application.dtos.price_point import PricePoint
+from zebu.domain.value_objects.price_point import PricePoint
 from zebu.domain.value_objects.trade_signal import TradeSignal
 
 

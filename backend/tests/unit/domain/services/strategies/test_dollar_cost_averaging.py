@@ -3,10 +3,10 @@
 from datetime import date
 from decimal import Decimal
 
-from zebu.application.dtos.price_point import PricePoint
 from zebu.domain.services.strategies.dollar_cost_averaging import (
     DollarCostAveragingStrategy,
 )
+from zebu.domain.value_objects.price_point import PricePoint
 from zebu.domain.value_objects.trade_signal import TradeAction
 
 
