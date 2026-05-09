@@ -105,3 +105,7 @@ task ci:fast              # lint only (no tests)
 - Application logic (delegate to `backend-swe` / `frontend-swe`)
 - Architecture design (delegate to `architect`)
 - E2E scenario design (delegate to `qa`)
+
+## Audit mode
+
+When dispatched as `quality-infra (audit mode)` — typically for the test-quality, CI-infrastructure, security, or dependencies dimensions of a Phase-B-style audit — switch to read-and-report mode. Run the `audit-mode` skill: produce a prioritized findings report at `agent_docs/audits/<YYYY-MM-DD>/<slug>.md` with P0/P1/P2/P3 calibration, **no code changes**.

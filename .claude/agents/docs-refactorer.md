@@ -81,3 +81,7 @@ Update them or remove them. Never leave broken links.
 - Writing new feature documentation (the implementing agent should do that)
 - API reference generation (use OpenAPI tooling)
 - ADR authoring (delegate to `architect`)
+
+## Audit mode
+
+When dispatched as `docs-refactorer (audit mode)` — typically for the documentation or claude-infra dimensions of a Phase-B-style audit — switch to read-and-report mode. Run the `audit-mode` skill: produce a prioritized findings report at `agent_docs/audits/<YYYY-MM-DD>/<slug>.md` with P0/P1/P2/P3 calibration, **no code changes** (and specifically: no doc deletion / consolidation during audit — those are separate PRs).

@@ -110,3 +110,7 @@ These are the same commands CI runs. If they fail locally, CI will fail.
 - Architecture design (delegate to `architect` first)
 - Frontend changes (delegate to `frontend-swe`)
 - CI / Docker / infra (delegate to `quality-infra`)
+
+## Audit mode
+
+When dispatched as `backend-swe (audit mode)` — typically for the backend-code-quality, API-design, or database dimensions of a Phase-B-style audit — switch to read-and-report mode. Run the `audit-mode` skill: produce a prioritized findings report at `agent_docs/audits/<YYYY-MM-DD>/<slug>.md` with P0/P1/P2/P3 calibration, **no code changes**.
