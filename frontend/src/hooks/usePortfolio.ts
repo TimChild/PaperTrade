@@ -96,12 +96,14 @@ export function useWithdraw(portfolioId: string) {
   })
 }
 
-// Type for transaction list query data
+// Type for transaction list query data — mirrors PaginatedResponse<Transaction>
+// with the `isNew` highlight flag we attach client-side.
 type TransactionListQueryData = {
-  transactions: Array<{ id: string; isNew?: boolean }>
-  total_count: number
+  items: Array<{ id: string; isNew?: boolean }>
+  total: number
   limit: number
   offset: number
+  has_more: boolean
 }
 
 /**
@@ -145,7 +147,7 @@ export function useExecuteTrade(portfolioId: string) {
 
               return {
                 ...oldData,
-                transactions: oldData.transactions.map((tx) =>
+                items: oldData.items.map((tx) =>
                   tx.id === newTransactionId ? { ...tx, isNew: true } : tx
                 ),
               }
@@ -163,7 +165,7 @@ export function useExecuteTrade(portfolioId: string) {
 
                 return {
                   ...oldData,
-                  transactions: oldData.transactions.map((tx) =>
+                  items: oldData.items.map((tx) =>
                     tx.id === newTransactionId ? { ...tx, isNew: false } : tx
                   ),
                 }

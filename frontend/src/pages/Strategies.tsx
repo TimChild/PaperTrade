@@ -11,7 +11,8 @@ import { useStrategies } from '@/hooks/useStrategies'
 
 export function Strategies(): React.JSX.Element {
   const [showForm, setShowForm] = useState(false)
-  const { data: strategies, isLoading, error } = useStrategies()
+  const { data: strategiesPage, isLoading, error } = useStrategies()
+  const strategies = strategiesPage?.items
 
   return (
     <div

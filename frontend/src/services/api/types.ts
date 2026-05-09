@@ -35,11 +35,18 @@ export interface TransactionDTO {
   notes?: string | null
 }
 
-export interface TransactionListResponse {
-  transactions: TransactionDTO[]
-  total_count: number
+/**
+ * Generic paginated response envelope used by all backend list endpoints.
+ *
+ * The backend returns this exact shape from `PaginatedResponse[T]` (see
+ * `backend/src/zebu/adapters/inbound/api/schemas/pagination.py`).
+ */
+export interface PaginatedResponse<T> {
+  items: T[]
+  total: number
   limit: number
   offset: number
+  has_more: boolean
 }
 
 // Cash operation types
@@ -88,23 +95,41 @@ export interface HoldingsResponse {
   holdings: HoldingDTO[]
 }
 
-// Error response - supports both string and structured errors
-export interface ErrorResponse {
-  detail: string | StructuredErrorDetail
-}
+/**
+ * Stable, machine-readable error codes emitted by the backend.
+ *
+ * Mirrors `backend/src/zebu/adapters/inbound/api/schemas/errors.py:ErrorCode`.
+ * Open-ended `string` so unknown codes from older/newer servers degrade
+ * gracefully into "default" handling.
+ */
+export type ErrorCode =
+  | 'insufficient_funds'
+  | 'insufficient_shares'
+  | 'invalid_ticker'
+  | 'invalid_quantity'
+  | 'invalid_money'
+  | 'ticker_not_found'
+  | 'market_data_unavailable'
+  | 'invalid_strategy'
+  | 'validation_error'
+  | 'not_found'
+  | 'unauthorized'
+  | 'forbidden'
+  | 'internal_error'
+  | (string & {})
 
-// Structured error details for specific error types
-export interface StructuredErrorDetail {
-  type: string
-  message: string
-  // Fields for insufficient_funds
-  available?: number
-  required?: number
-  shortfall?: number
-  // Fields for insufficient_shares and invalid_ticker
-  ticker?: string
-  // Fields for market_data_unavailable
-  reason?: string
+/**
+ * Standard error envelope returned from every backend 4xx/5xx response.
+ *
+ * Mirrors `backend/src/zebu/adapters/inbound/api/schemas/errors.py:ErrorResponse`.
+ * `detail` is always a human-readable string; structured payload now lives in
+ * `code` (machine-readable) and `fields` (per-field map: validation messages
+ * OR auxiliary data such as `available`, `required`, `shortfall`).
+ */
+export interface ErrorResponse {
+  detail: string
+  code?: ErrorCode | null
+  fields?: Record<string, string> | null
 }
 
 // Strategy types

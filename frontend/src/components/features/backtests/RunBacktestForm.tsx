@@ -41,7 +41,8 @@ export function RunBacktestForm({
   // today is the initial endDate value — used as max for date inputs
   const today = endDate
 
-  const { data: strategies, isLoading: loadingStrategies } = useStrategies()
+  const { data: strategiesPage, isLoading: loadingStrategies } = useStrategies()
+  const strategies = strategiesPage?.items
   const runBacktest = useRunBacktest()
 
   const validate = (): boolean => {

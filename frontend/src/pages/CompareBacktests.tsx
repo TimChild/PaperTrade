@@ -20,7 +20,8 @@ export function CompareBacktests(): React.JSX.Element {
     .map((id) => id.trim())
     .filter(Boolean)
 
-  const { data: strategies } = useStrategies()
+  const { data: strategiesPage } = useStrategies()
+  const strategies = strategiesPage?.items
 
   const strategyNames: Record<string, string> = {}
   strategies?.forEach((s) => {

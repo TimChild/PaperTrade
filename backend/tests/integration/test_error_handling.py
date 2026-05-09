@@ -80,23 +80,23 @@ def test_buy_with_insufficient_funds_fails(
 
     assert trade_response.status_code == 400
 
-    # Verify structured error response
+    # Verify standard ErrorResponse envelope: {detail, code, fields}
     error_data = trade_response.json()
     assert "detail" in error_data
-    detail = error_data["detail"]
+    assert isinstance(error_data["detail"], str)
+    assert error_data["code"] == "insufficient_funds"
 
-    # Should be a structured error with type and amounts
-    assert isinstance(detail, dict)
-    assert detail["type"] == "insufficient_funds"
-    assert "message" in detail
-    assert "available" in detail
-    assert "required" in detail
-    assert "shortfall" in detail
+    # Auxiliary numeric data lives in `fields` as strings
+    fields = error_data["fields"]
+    assert isinstance(fields, dict)
+    assert "available" in fields
+    assert "required" in fields
+    assert "shortfall" in fields
 
-    # Verify amounts are correct
-    assert detail["available"] == 1000.00
-    assert detail["required"] == 15000.00
-    assert detail["shortfall"] == 14000.00
+    # Verify amounts are correct (fields are stringified floats)
+    assert float(fields["available"]) == 1000.00
+    assert float(fields["required"]) == 15000.00
+    assert float(fields["shortfall"]) == 14000.00
 
 
 def test_sell_stock_not_owned_fails(
@@ -126,15 +126,15 @@ def test_sell_stock_not_owned_fails(
 
     assert trade_response.status_code == 400
 
-    # Verify structured error response
+    # Verify standard ErrorResponse envelope: {detail, code, fields}
     error_data = trade_response.json()
-    detail = error_data["detail"]
-    assert isinstance(detail, dict)
-    assert detail["type"] == "insufficient_shares"
-    assert detail["ticker"] == "AAPL"
-    assert detail["available"] == 0.0
-    assert detail["required"] == 10.0
-    assert detail["shortfall"] == 10.0
+    assert isinstance(error_data["detail"], str)
+    assert error_data["code"] == "insufficient_shares"
+    fields = error_data["fields"]
+    assert fields["ticker"] == "AAPL"
+    assert float(fields["available"]) == 0.0
+    assert float(fields["required"]) == 10.0
+    assert float(fields["shortfall"]) == 10.0
 
 
 def test_sell_more_shares_than_owned_fails(
@@ -171,15 +171,15 @@ def test_sell_more_shares_than_owned_fails(
 
     assert trade_response.status_code == 400
 
-    # Verify structured error response
+    # Verify standard ErrorResponse envelope: {detail, code, fields}
     error_data = trade_response.json()
-    detail = error_data["detail"]
-    assert isinstance(detail, dict)
-    assert detail["type"] == "insufficient_shares"
-    assert detail["ticker"] == "AAPL"
-    assert detail["available"] == 10.0
-    assert detail["required"] == 20.0
-    assert detail["shortfall"] == 10.0
+    assert isinstance(error_data["detail"], str)
+    assert error_data["code"] == "insufficient_shares"
+    fields = error_data["fields"]
+    assert fields["ticker"] == "AAPL"
+    assert float(fields["available"]) == 10.0
+    assert float(fields["required"]) == 20.0
+    assert float(fields["shortfall"]) == 10.0
 
 
 def test_withdraw_more_than_balance_fails(
@@ -209,14 +209,14 @@ def test_withdraw_more_than_balance_fails(
 
     assert withdraw_response.status_code == 400
 
-    # Verify structured error response
+    # Verify standard ErrorResponse envelope: {detail, code, fields}
     error_data = withdraw_response.json()
-    detail = error_data["detail"]
-    assert isinstance(detail, dict)
-    assert detail["type"] == "insufficient_funds"
-    assert detail["available"] == 1000.00
-    assert detail["required"] == 2000.00
-    assert detail["shortfall"] == 1000.00
+    assert isinstance(error_data["detail"], str)
+    assert error_data["code"] == "insufficient_funds"
+    fields = error_data["fields"]
+    assert float(fields["available"]) == 1000.00
+    assert float(fields["required"]) == 2000.00
+    assert float(fields["shortfall"]) == 1000.00
 
 
 def test_access_other_users_portfolio_returns_403(
@@ -361,11 +361,9 @@ def test_trade_with_invalid_ticker_fails(
     # Should fail because ticker is not found in market data
     assert trade_response.status_code == 404
 
-    # Verify structured error response
+    # Verify standard ErrorResponse envelope: {detail, code, fields}
     error_data = trade_response.json()
-    detail = error_data["detail"]
-    assert isinstance(detail, dict)
-    assert detail["type"] == "ticker_not_found"
-    assert "message" in detail
-    assert "ZZZZ" in detail["message"]
-    assert detail["ticker"] == "ZZZZ"
+    assert isinstance(error_data["detail"], str)
+    assert error_data["code"] == "ticker_not_found"
+    assert "ZZZZ" in error_data["detail"]
+    assert error_data["fields"]["ticker"] == "ZZZZ"

@@ -36,7 +36,9 @@ function shouldPreferSameOriginApi(
 export function resolveApiBaseUrl({
   mode = import.meta.env.MODE,
   configuredBaseUrl = import.meta.env.VITE_API_BASE_URL,
-  windowOrigin = typeof window !== 'undefined' ? window.location.origin : undefined,
+  windowOrigin = typeof window !== 'undefined'
+    ? window.location.origin
+    : undefined,
 }: ApiBaseUrlOptions = {}): string {
   if (mode === 'production') {
     if (!configuredBaseUrl) {
