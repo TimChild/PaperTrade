@@ -1,13 +1,33 @@
-# Clerk Authentication Implementation Guide
+# Authentication Implementation Guide
 
-**Last Updated**: January 4, 2026
-**Status**: Working implementation with E2E tests
+**Last Updated**: 2026-05-09
+**Status**: Working implementation with E2E tests. Phase C2 added the API-key path for machine identities.
 
 ---
 
 ## Overview
 
-This project uses Clerk for authentication in both frontend (React) and backend (FastAPI). This document captures critical implementation details and common pitfalls discovered during integration.
+Zebu supports two authentication paths:
+
+1. **Clerk Bearer JWT** (humans, browser-based clients). Used by the React frontend and any human user hitting the backend directly.
+2. **API key** (machine identities — agents, scheduled tasks, MCP servers). Added in Phase C2 of the agent platform proposal.
+
+Both paths land at the same `AuthenticatedUser` shape inside the backend, so route handlers don't care which scheme authenticated the request.
+
+### Clerk JWT path (legacy, still primary)
+
+- Frontend: `@clerk/clerk-react` v6.x
+- Backend: `clerk-backend-api` Python SDK validates the JWT.
+- Request shape: `Authorization: Bearer <jwt>`.
+
+### API-key path (Phase C2)
+
+- Backend mints raw keys at `POST /api/v1/api-keys` (Clerk-gated only).
+- Persistence: `api_keys` table — stores HMAC-SHA256 hash, never plaintext.
+- Request shape (either accepted): `Authorization: ApiKey <key>` or `X-API-Key: <key>`. As a quality-of-life convenience, `Authorization: Bearer <key>` is also accepted when `<key>` matches the `zk_` prefix — this lets agents send their key via any HTTP library without remembering the `ApiKey` scheme name.
+- Per-key scopes (`read`, `trade`, `admin`) are enforceable via the `require_scope` dependency. Phase C2 wires the helper but does not gate every endpoint — Phase D follow-up will sweep through with read/trade granularity.
+
+The Clerk path is unchanged by Phase C2; both paths coexist at the dependency layer.
 
 ## Architecture
 
@@ -307,10 +327,61 @@ When implementing or debugging Clerk authentication:
 ## Working Example
 
 See the complete working implementation:
-- Backend: `backend/src/zebu/adapters/auth/clerk_adapter.py`
+- Backend Clerk adapter: `backend/src/zebu/adapters/auth/clerk_adapter.py`
+- Backend API-key adapter: `backend/src/zebu/adapters/auth/api_key_adapter.py`
+- Composite auth dependency (selects between schemes): `backend/src/zebu/adapters/inbound/api/dependencies.py::get_current_user`
 - Frontend fixtures: `frontend/tests/e2e/fixtures.ts`
 - Global setup: `frontend/tests/e2e/global-setup.ts`
 - Example test: `frontend/tests/e2e/portfolio-creation.spec.ts`
+
+---
+
+## API-key path (Phase C2)
+
+The API-key path lets machine identities (agents, scheduled jobs, MCP servers) authenticate without Clerk. The Clerk path is preserved unchanged — both schemes coexist at the dependency layer.
+
+### Issuance flow
+
+1. A human user authenticates via Clerk and POSTs to `/api/v1/api-keys` with a label and one or more scopes.
+2. The backend generates a 256-bit random key (`zk_<43-char-base64url>`), HMAC-SHA256 hashes it under the server pepper, and persists the hash in the `api_keys` table.
+3. The raw key is returned **once** in the create response and never persisted.
+4. Subsequent requests present the raw key via `Authorization: ApiKey <key>` or `X-API-Key: <key>`. The auth adapter hashes the presented key, looks up the record, verifies it's not revoked or expired, bumps `last_used_at`, and returns the same `AuthenticatedUser` shape Clerk would.
+
+### Hashing primitive
+
+HMAC-SHA256 with a server-side pepper read from `API_KEY_HMAC_SECRET`. Rationale:
+
+- API keys are high-entropy server-issued tokens (256 bits of randomness). Slow-hash work factors (bcrypt, argon2) protect weak human-chosen passwords against rainbow tables — that threat doesn't apply here.
+- Every authenticated request hits this primitive. Bcrypt's ~100ms cost would be added to every API call.
+- The pepper prevents an attacker who steals only the DB from recovering keys via a precomputed table.
+
+### Endpoints (Clerk-gated only)
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/v1/api-keys` | Mint a new key. Returns the raw key once. |
+| `GET` | `/api/v1/api-keys` | List the authenticated user's keys (no raw values). |
+| `DELETE` | `/api/v1/api-keys/{id}` | Revoke a key (sets `revoked_at`). |
+
+These endpoints reject requests authenticated via API key — agents cannot mint other agents.
+
+### Scopes
+
+Each key carries one or more scopes:
+
+- `read` — read-only access (lists, gets).
+- `trade` — write access to trading operations.
+- `admin` — administrative access (snapshot backfill, price refresh).
+
+Use `require_scope(ApiKeyScope.TRADE)` as a route dependency to gate an endpoint on a scope. Clerk Bearer requests are full-trust and pass any `require_scope` check. **Phase C2 wires the helper but does not apply it broadly** — most non-admin endpoints stay open to any authenticated identity for now. Phase D follow-up will sweep through and apply read/trade granularity per route.
+
+### Required env
+
+```bash
+API_KEY_HMAC_SECRET=<256-bit-random>  # required in production
+```
+
+In production (`APP_ENV=production`), a missing or placeholder value raises `RuntimeError` at first request — same posture as `CLERK_SECRET_KEY`. In dev/test, a fixed test pepper is used.
 
 ---
 

@@ -102,6 +102,12 @@ class InvalidStrategyActivationError(InvalidEntityError):
     pass
 
 
+class InvalidApiKeyError(InvalidEntityError):
+    """Raised when ApiKey entity invariants are violated."""
+
+    pass
+
+
 # Business Rule Violation Exceptions
 
 

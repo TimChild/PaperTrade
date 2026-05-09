@@ -1,17 +1,21 @@
 """Integration tests for the parameterized auth-scheme fixture.
 
-These tests pin down the contract of ``auth_headers_for_scheme`` and the
-``auth_scheme`` parametrization in ``conftest.py``. The fixture is
-intentionally Phase C-ready: today the only accepted scheme is ``bearer``,
-but the fixture machinery is in place so when ``ApiKeyAuthAdapter`` lands
-the parameter list expansion is the only change needed to exercise every
-existing test against ``Authorization: ApiKey <key>`` and ``X-API-Key: <key>``.
+Phase C2 has shipped: ``ApiKeyAuthAdapter`` is wired into
+``dependencies.get_current_user`` and ``_AUTH_SCHEMES_CURRENT`` in
+``conftest.py`` now expands to ``("bearer", "api_key_authorization",
+"api_key_header")``. Every test that depends on the ``auth_scheme``
+fixture is automatically exercised against all three transports.
+
+These tests pin down the contract of the fixture itself so a regression
+shows up here first rather than as a confusing failure across every
+integration test in the suite.
 
 See also:
 
-- ``backend/tests/conftest.py`` — fixture definitions
+- ``backend/tests/conftest.py`` — fixture definitions + seeded test key
 - ``docs/planning/agent-platform-proposal.md`` §C2 — Phase C API-key spec
 - ``agent_docs/audits/2026-05-09/test-quality.md`` finding test.P0-2 / test.P1-1
+- ``backend/src/zebu/adapters/auth/api_key_adapter.py`` — the new adapter
 """
 
 from typing import TYPE_CHECKING
@@ -22,6 +26,9 @@ if TYPE_CHECKING:
     from fastapi.testclient import TestClient
 
 
+_ALL_SCHEMES = ("bearer", "api_key_authorization", "api_key_header")
+
+
 # ---------------------------------------------------------------------------
 # Header construction (no API call — pure fixture contract)
 # ---------------------------------------------------------------------------
@@ -30,31 +37,42 @@ if TYPE_CHECKING:
 class TestAuthSchemeFixture:
     """Pin down the auth_scheme / auth_headers_for_scheme fixtures."""
 
-    def test_default_param_is_bearer(self, auth_scheme: str) -> None:
-        """The default param list (``_AUTH_SCHEMES_CURRENT``) is ``("bearer",)``.
-        Until Phase C lands, every test using ``auth_scheme`` runs once for
-        bearer only. Locking this in surfaces an unintended scheme expansion
-        as a focused failure rather than a CI-wide green-then-red surprise."""
-        assert auth_scheme == "bearer"
+    def test_default_params_cover_all_schemes(self, auth_scheme: str) -> None:
+        """``_AUTH_SCHEMES_CURRENT`` should expose every accepted transport.
 
-    def test_bearer_headers_use_authorization(
-        self, auth_headers_for_scheme: dict[str, str]
-    ) -> None:
-        assert auth_headers_for_scheme == {"Authorization": "Bearer test-token-default"}
+        Locking this in surfaces unintended scheme additions or removals as
+        a focused fixture failure rather than a CI-wide surprise.
+        """
+        assert auth_scheme in _ALL_SCHEMES
+
+    def test_bearer_headers_use_authorization(self) -> None:
+        from tests.conftest import _build_auth_headers  # type: ignore[import-not-found]
+
+        headers = _build_auth_headers("bearer")
+        assert headers == {"Authorization": "Bearer test-token-default"}
+
+    def test_api_key_authorization_headers_use_apikey_scheme(self) -> None:
+        from tests.conftest import _build_auth_headers  # type: ignore[import-not-found]
+
+        headers = _build_auth_headers("api_key_authorization")
+        assert headers == {"Authorization": "ApiKey test-token-default"}
+
+    def test_api_key_header_uses_x_api_key(self) -> None:
+        from tests.conftest import _build_auth_headers  # type: ignore[import-not-found]
+
+        headers = _build_auth_headers("api_key_header")
+        assert headers == {"X-API-Key": "test-token-default"}
 
 
 # ---------------------------------------------------------------------------
-# End-to-end: bearer scheme is currently accepted by the API
+# End-to-end: every parametrized scheme authenticates against the API
 # ---------------------------------------------------------------------------
 
 
-class TestBearerSchemeIsAccepted:
-    """The Bearer path is the only one the backend recognises today.
-    Verifies the fixture's bearer wiring lines up with ``InMemoryAuthAdapter``
-    in conftest, so any future divergence (e.g. token format change) breaks
-    here first rather than in every API integration test simultaneously."""
+class TestEverySchemeIsAccepted:
+    """All three transports should resolve to the same default test user."""
 
-    def test_bearer_token_authenticates_default_user(
+    def test_scheme_authenticates_default_user(
         self,
         client: "TestClient",
         auth_headers_for_scheme: dict[str, str],
@@ -66,48 +84,39 @@ class TestBearerSchemeIsAccepted:
         )
 
         # 200 (with possibly empty list) means auth succeeded.
-        # If it had failed, we'd get 401 here.
         assert response.status_code == 200
 
 
 # ---------------------------------------------------------------------------
-# Phase C readiness — placeholder shape for the future api-key tests
+# Negative cases — bad / missing keys still produce 401
 # ---------------------------------------------------------------------------
 
 
-class TestPhaseCSchemeIsRejectedToday:
-    """Documents that the Phase C schemes are NOT YET ACCEPTED.
+class TestApiKeyNegativeCases:
+    """Sanity-check the failure paths so a buggy adapter doesn't silently allow."""
 
-    These tests are skipped today (no scheme is parametrized in) but the
-    structure is in place so when Phase C lands, expanding the param list
-    in conftest auto-enables them. A reviewer at Phase C time can flip the
-    skip into a real assertion.
+    def test_unknown_api_key_returns_401(self, client: "TestClient") -> None:
+        response = client.get(
+            "/api/v1/portfolios",
+            headers={"X-API-Key": "zk_definitely_not_a_real_key"},
+        )
+        assert response.status_code == 401
 
-    This is the test.P1-1 mitigation: the auth fixture pattern won't need
-    to be redesigned mid-Phase-C; it'll just need its parameter set extended.
-    """
+    def test_missing_credentials_returns_401(self, client: "TestClient") -> None:
+        response = client.get("/api/v1/portfolios")
+        assert response.status_code == 401
 
-    @pytest.mark.parametrize(
-        "scheme",
-        ["api_key_authorization", "api_key_header"],
-    )
-    def test_api_key_schemes_currently_return_401(
-        self,
-        scheme: str,
-        client: "TestClient",
-    ) -> None:
-        """Pre-Phase-C, neither api-key scheme should authenticate. Once Phase C
-        lands the matching ``ApiKeyAuthAdapter`` and middleware update, change
-        this assertion to 200 (with a seeded api-key fixture)."""
+    @pytest.mark.parametrize("scheme", ["api_key_authorization", "api_key_header"])
+    def test_empty_api_key_returns_401(self, scheme: str, client: "TestClient") -> None:
         from tests.conftest import _build_auth_headers  # type: ignore[import-not-found]
 
-        headers = _build_auth_headers(scheme, token="ak_test_dummy_phase_c")
+        # Empty string token after a valid scheme name.
+        headers = _build_auth_headers(scheme, token="")
+        # Reset to the empty-value form (the helper concatenates).
+        if scheme == "api_key_authorization":
+            headers = {"Authorization": "ApiKey "}
+        else:
+            headers = {"X-API-Key": ""}
 
         response = client.get("/api/v1/portfolios", headers=headers)
-
-        # Pre-Phase C: backend ignores api-key headers, so the request is
-        # treated as unauthenticated -> 401.
-        assert response.status_code == 401, (
-            f"Phase C may have shipped — scheme {scheme!r} now authenticates. "
-            "Update this test and expand _AUTH_SCHEMES_CURRENT in conftest."
-        )
+        assert response.status_code == 401

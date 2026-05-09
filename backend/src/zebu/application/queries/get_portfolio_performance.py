@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from datetime import date, timedelta
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID
 
 from zebu.application.ports.snapshot_repository import SnapshotRepository
@@ -10,7 +10,7 @@ from zebu.domain.entities.portfolio_snapshot import PortfolioSnapshot
 from zebu.domain.value_objects.performance_metrics import PerformanceMetrics
 
 
-class TimeRange(str, Enum):
+class TimeRange(StrEnum):
     """Time range for performance data.
 
     Defines standard time periods for portfolio performance analysis.

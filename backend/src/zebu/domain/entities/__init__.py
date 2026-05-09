@@ -1,5 +1,6 @@
 """Domain entities - Objects with identity and lifecycle."""
 
+from zebu.domain.entities.api_key import ApiKey, ApiKeyCreationResult
 from zebu.domain.entities.backtest_run import BacktestRun
 from zebu.domain.entities.exploration_task import (
     ExplorationConstraints,
@@ -15,6 +16,8 @@ from zebu.domain.entities.strategy import Strategy
 from zebu.domain.entities.transaction import Transaction, TransactionType
 
 __all__ = [
+    "ApiKey",
+    "ApiKeyCreationResult",
     "BacktestRun",
     "ExplorationConstraints",
     "ExplorationFindings",

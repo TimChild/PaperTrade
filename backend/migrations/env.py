@@ -8,6 +8,9 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlmodel import SQLModel
 
 # Import all SQLModel models to ensure they're registered with metadata
+from zebu.adapters.outbound.database.api_key_model import (  # noqa: F401
+    ApiKeyModel,
+)
 from zebu.adapters.outbound.database.models import (  # noqa: F401
     BacktestRunModel,
     PortfolioModel,

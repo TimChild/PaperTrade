@@ -13,6 +13,9 @@ from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 # Import all models to ensure they're registered with SQLModel metadata
+from zebu.adapters.outbound.database.api_key_model import (  # noqa: F401
+    ApiKeyModel,
+)
 from zebu.adapters.outbound.database.models import (  # noqa: F401
     BacktestRunModel,
     ExplorationTaskModel,
@@ -163,10 +166,70 @@ def client(test_engine: AsyncEngine) -> TestClient:
 
         return get_test_auth_port._adapter  # type: ignore[attr-defined, return-value]
 
+    # Phase C2: seed an in-memory API-key adapter pointed at the same
+    # test database the rest of the dependencies use. The default test
+    # API key (raw value: "test-token-default") hashes to a stable value
+    # under the test pepper and is owned by "test-user-default" — so the
+    # parameterized auth-scheme tests resolve to the same user as the
+    # Bearer path.
+    from zebu.adapters.auth.api_key_adapter import ApiKeyAuthAdapter
+    from zebu.adapters.auth.api_key_hasher import ApiKeyHasher
+    from zebu.adapters.inbound.api.dependencies import (
+        get_api_key_auth_adapter,
+        get_api_key_repository,
+    )
+    from zebu.application.ports.in_memory_api_key_repository import (
+        InMemoryApiKeyRepository,
+    )
+
+    _test_pepper = "test-api-key-pepper-do-not-use-in-production"
+    _test_hasher = ApiKeyHasher(secret=_test_pepper)
+
+    def get_test_api_key_repository() -> InMemoryApiKeyRepository:
+        """Singleton in-memory API-key repository for the test session.
+
+        Pre-seeded with one active key whose raw value is
+        ``"test-token-default"`` and whose owner is ``"test-user-default"``
+        (the same user the Bearer fixture authenticates as).
+        """
+        from datetime import UTC, datetime
+        from uuid import NAMESPACE_DNS, uuid4, uuid5
+
+        from zebu.domain.entities.api_key import ApiKey
+        from zebu.domain.value_objects.api_key_scope import ApiKeyScope
+
+        if not hasattr(get_test_api_key_repository, "_repo"):
+            repo = InMemoryApiKeyRepository()
+            seed_key = ApiKey(
+                id=uuid4(),
+                user_id=uuid5(NAMESPACE_DNS, "test-user-default"),
+                clerk_user_id="test-user-default",
+                label="test-default",
+                key_hash=_test_hasher.hash("test-token-default"),
+                scopes=frozenset(
+                    [ApiKeyScope.READ, ApiKeyScope.TRADE, ApiKeyScope.ADMIN]
+                ),
+                created_at=datetime.now(UTC),
+            )
+            # Seed via direct dict assignment so we can call from a sync
+            # closure — InMemoryApiKeyRepository.save is async.
+            repo._by_id[seed_key.id] = seed_key
+            get_test_api_key_repository._repo = repo  # type: ignore[attr-defined]
+        return get_test_api_key_repository._repo  # type: ignore[attr-defined, return-value]
+
+    def get_test_api_key_auth_adapter() -> ApiKeyAuthAdapter:
+        """API-key auth adapter for tests, sharing the in-memory repo."""
+        return ApiKeyAuthAdapter(
+            repository=get_test_api_key_repository(),
+            hasher=_test_hasher,
+        )
+
     # Override dependencies
     app.dependency_overrides[get_session] = get_test_session
     app.dependency_overrides[get_market_data] = get_test_market_data
     app.dependency_overrides[get_auth_port] = get_test_auth_port
+    app.dependency_overrides[get_api_key_repository] = get_test_api_key_repository
+    app.dependency_overrides[get_api_key_auth_adapter] = get_test_api_key_auth_adapter
 
     with TestClient(app) as test_client:
         yield test_client
@@ -175,6 +238,8 @@ def client(test_engine: AsyncEngine) -> TestClient:
     app.dependency_overrides.clear()
     if hasattr(get_test_auth_port, "_adapter"):
         delattr(get_test_auth_port, "_adapter")
+    if hasattr(get_test_api_key_repository, "_repo"):
+        delattr(get_test_api_key_repository, "_repo")
 
 
 @pytest.fixture
@@ -207,15 +272,16 @@ def auth_headers() -> dict[str, str]:
     return {"Authorization": "Bearer test-token-default"}
 
 
-# Auth schemes the backend accepts (or will accept in Phase C).
-# Ordered: current first, future second — keeps existing tests' behaviour
-# stable when the parameterized fixture is adopted incrementally.
-_AUTH_SCHEMES_CURRENT: tuple[str, ...] = ("bearer",)
-_AUTH_SCHEMES_PHASE_C: tuple[str, ...] = (
+# Auth schemes the backend accepts. Phase C2 (PR #233) added the
+# ``ApiKeyAuthAdapter`` and middleware support, so the parameter list
+# now includes both api-key transports alongside Bearer. The
+# ``_AUTH_SCHEMES_PHASE_C`` alias is kept for callers that pinned to it.
+_AUTH_SCHEMES_CURRENT: tuple[str, ...] = (
     "bearer",
     "api_key_authorization",
     "api_key_header",
 )
+_AUTH_SCHEMES_PHASE_C: tuple[str, ...] = _AUTH_SCHEMES_CURRENT
 
 
 def _build_auth_headers(
