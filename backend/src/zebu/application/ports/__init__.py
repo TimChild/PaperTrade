@@ -5,6 +5,9 @@ They use typing.Protocol for structural typing, allowing duck-typed implementati
 """
 
 from zebu.application.ports.backtest_run_repository import BacktestRunRepository
+from zebu.application.ports.exploration_task_repository import (
+    ExplorationTaskRepository,
+)
 from zebu.application.ports.market_data_port import MarketDataPort
 from zebu.application.ports.portfolio_repository import PortfolioRepository
 from zebu.application.ports.strategy_repository import StrategyRepository
@@ -12,6 +15,7 @@ from zebu.application.ports.transaction_repository import TransactionRepository
 
 __all__ = [
     "BacktestRunRepository",
+    "ExplorationTaskRepository",
     "MarketDataPort",
     "PortfolioRepository",
     "StrategyRepository",

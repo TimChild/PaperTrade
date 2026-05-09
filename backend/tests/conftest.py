@@ -15,6 +15,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 # Import all models to ensure they're registered with SQLModel metadata
 from zebu.adapters.outbound.database.models import (  # noqa: F401
     BacktestRunModel,
+    ExplorationTaskModel,
     PortfolioModel,
     PortfolioSnapshotModel,
     StrategyActivationModel,
