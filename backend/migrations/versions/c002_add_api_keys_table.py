@@ -7,8 +7,8 @@ hits the DB. ``user_id`` is the deterministic UUID derived from the
 Clerk user-id; ``clerk_user_id`` is the original Clerk string preserved
 so the auth adapter can hand it back as ``AuthenticatedUser.id``.
 
-Revision ID: c001_add_api_keys
-Revises: a7117ef792cb
+Revision ID: c002_add_api_keys
+Revises: c001add_exploration_tasks
 Create Date: 2026-05-09
 
 """
@@ -19,8 +19,8 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "c001_add_api_keys"
-down_revision: str | Sequence[str] | None = "a7117ef792cb"
+revision: str = "c002_add_api_keys"
+down_revision: str | Sequence[str] | None = "c001add_exploration_tasks"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
