@@ -20,6 +20,7 @@ from zebu.adapters.outbound.database.strategy_repository import (
 )
 from zebu.domain.entities.strategy import Strategy
 from zebu.domain.exceptions import InvalidStrategyError
+from zebu.domain.value_objects.strategy_parameters import parameters_from_dict
 from zebu.domain.value_objects.strategy_type import StrategyType
 from zebu.infrastructure.database import SessionDep
 
@@ -30,7 +31,13 @@ router = APIRouter(prefix="/strategies", tags=["strategies"])
 
 
 class CreateStrategyRequest(BaseModel):
-    """Request to create a new trading strategy."""
+    """Request to create a new trading strategy.
+
+    The ``parameters`` shape varies by ``strategy_type`` and is validated
+    after parsing — see
+    :mod:`zebu.domain.value_objects.strategy_parameters` for the per-type
+    contract.
+    """
 
     name: str = Field(..., min_length=1, max_length=100)
     strategy_type: str = Field(
@@ -43,7 +50,12 @@ class CreateStrategyRequest(BaseModel):
 
 
 class StrategyResponse(BaseModel):
-    """Strategy details response."""
+    """Strategy details response.
+
+    Note: ``parameters`` is a JSON-serialized representation of the typed
+    domain parameters. The wire shape is unchanged from the pre-typing
+    refactor — clients see the same fields they always have.
+    """
 
     id: UUID
     user_id: UUID
@@ -61,7 +73,7 @@ def _to_strategy_response(strategy: Strategy) -> StrategyResponse:
         name=strategy.name,
         strategy_type=strategy.strategy_type.value,
         tickers=strategy.tickers,
-        parameters=strategy.parameters,
+        parameters=dict(strategy.parameters.to_dict()),
         created_at=strategy.created_at.isoformat(),
     )
 
@@ -91,99 +103,16 @@ async def create_strategy(
             f"{', '.join(t.value for t in StrategyType)}",
         ) from None
 
-    # Validate strategy-specific parameters
-    params = request.parameters
-    if strategy_type == StrategyType.BUY_AND_HOLD:
-        allocation = params.get("allocation")
-        if not isinstance(allocation, dict) or not allocation:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="BUY_AND_HOLD requires 'allocation' dict parameter",
-            )
-        total = sum(float(v) for v in allocation.values())
-        if abs(total - 1.0) > 0.001:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=(
-                    f"BUY_AND_HOLD allocation values must sum to 1.0 (got {total:.4f})"
-                ),
-            )
-
-    elif strategy_type == StrategyType.DOLLAR_COST_AVERAGING:
-        frequency_days = params.get("frequency_days")
-        amount_per_period = params.get("amount_per_period")
-        allocation = params.get("allocation")
-        if not isinstance(frequency_days, int) or not (1 <= frequency_days <= 365):
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=(
-                    "DOLLAR_COST_AVERAGING 'frequency_days' must be an integer"
-                    " between 1 and 365"
-                ),
-            )
-        try:
-            apd = float(amount_per_period) if amount_per_period is not None else 0.0
-        except (TypeError, ValueError):
-            apd = 0.0
-        if amount_per_period is None or apd <= 0:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="DOLLAR_COST_AVERAGING 'amount_per_period' must be > 0",
-            )
-        if not isinstance(allocation, dict) or not allocation:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="DOLLAR_COST_AVERAGING requires 'allocation' dict parameter",
-            )
-        total = sum(float(v) for v in allocation.values())
-        if abs(total - 1.0) > 0.001:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=(
-                    f"DOLLAR_COST_AVERAGING allocation values must sum to 1.0"
-                    f" (got {total:.4f})"
-                ),
-            )
-
-    elif strategy_type == StrategyType.MOVING_AVERAGE_CROSSOVER:
-        fast_window = params.get("fast_window")
-        slow_window = params.get("slow_window")
-        invest_fraction = params.get("invest_fraction")
-        if not isinstance(fast_window, int) or not (2 <= fast_window <= 200):
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=(
-                    "MOVING_AVERAGE_CROSSOVER 'fast_window' must be an integer"
-                    " between 2 and 200"
-                ),
-            )
-        if not isinstance(slow_window, int) or not (2 <= slow_window <= 200):
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=(
-                    "MOVING_AVERAGE_CROSSOVER 'slow_window' must be an integer"
-                    " between 2 and 200"
-                ),
-            )
-        if fast_window >= slow_window:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=(
-                    "MOVING_AVERAGE_CROSSOVER 'fast_window' must be less"
-                    " than 'slow_window'"
-                ),
-            )
-        try:
-            inf = float(invest_fraction) if invest_fraction is not None else 0.0
-        except (TypeError, ValueError):
-            inf = 0.0
-        if invest_fraction is None or not (0 < inf <= 1.0):
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=(
-                    "MOVING_AVERAGE_CROSSOVER 'invest_fraction' must be > 0 and <= 1.0"
-                ),
-            )
+    # Parse + validate strategy-specific parameters via the typed dataclass.
+    # Single source of truth: domain rules raise InvalidStrategyError, mapped
+    # to 422 below.
+    try:
+        parameters = parameters_from_dict(strategy_type, request.parameters)
+    except InvalidStrategyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
 
     # Validate tickers against supported tickers
     supported = {t.symbol for t in await market_data.get_supported_tickers()}
@@ -201,7 +130,7 @@ async def create_strategy(
             name=request.name,
             strategy_type=strategy_type,
             tickers=request.tickers,
-            parameters=request.parameters,
+            parameters=parameters,
             created_at=datetime.now(UTC),
         )
     except InvalidStrategyError as exc:

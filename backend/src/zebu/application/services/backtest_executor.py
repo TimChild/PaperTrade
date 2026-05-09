@@ -35,7 +35,12 @@ from zebu.domain.value_objects.allocation import Allocation
 from zebu.domain.value_objects.backtest_status import BacktestStatus
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.portfolio_type import PortfolioType
-from zebu.domain.value_objects.strategy_type import StrategyType
+from zebu.domain.value_objects.strategy_parameters import (
+    BuyAndHoldParameters,
+    DcaParameters,
+    MaCrossoverParameters,
+)
+from zebu.domain.value_objects.strategy_snapshot import StrategySnapshot
 
 logger = logging.getLogger(__name__)
 
@@ -109,14 +114,16 @@ class BacktestExecutor:
         if strategy is None:
             raise InvalidStrategyError(f"Strategy not found: {command.strategy_id}")
 
-        # Build strategy snapshot
-        strategy_snapshot: dict[str, object] = {
-            "id": str(strategy.id),
-            "name": strategy.name,
-            "strategy_type": strategy.strategy_type.value,
-            "tickers": strategy.tickers,
-            "parameters": strategy.parameters,
-        }
+        # Build typed strategy snapshot — captured once and reused across
+        # the lifecycle (RUNNING → COMPLETED/FAILED) so the same immutable
+        # value object is on every persisted version of the run.
+        strategy_snapshot = StrategySnapshot(
+            strategy_id=strategy.id,
+            name=strategy.name,
+            strategy_type=strategy.strategy_type,
+            tickers=tuple(strategy.tickers),
+            parameters=strategy.parameters,
+        )
 
         initial_cash_money = Money(command.initial_cash, "USD")
 
@@ -173,7 +180,7 @@ class BacktestExecutor:
         backtest_run: BacktestRun,
         portfolio_id: UUID,
         strategy: Strategy,
-        strategy_snapshot: dict[str, object],
+        strategy_snapshot: StrategySnapshot,
         initial_cash: Money,
     ) -> BacktestRun:
         """Internal pipeline.
@@ -185,7 +192,7 @@ class BacktestExecutor:
             backtest_run: The initial RUNNING BacktestRun entity
             portfolio_id: UUID for the new backtest portfolio
             strategy: The loaded strategy entity
-            strategy_snapshot: Serialized strategy at time of run
+            strategy_snapshot: Typed snapshot of the strategy at run time.
             initial_cash: Starting cash balance (Money)
 
         Returns:
@@ -229,9 +236,8 @@ class BacktestExecutor:
         # ── Phase 1: Pre-fetch price data ─────────────────────────────────────
         trading_strategy = self._build_strategy(strategy)
         warm_up_days = 0
-        if strategy.strategy_type == StrategyType.MOVING_AVERAGE_CROSSOVER:
-            slow_window = int(strategy.parameters.get("slow_window", 50))
-            warm_up_days = slow_window * 2
+        if isinstance(strategy.parameters, MaCrossoverParameters):
+            warm_up_days = strategy.parameters.slow_window * 2
 
         price_map = await self._data_preparer.prepare(
             tickers=strategy.tickers,
@@ -336,6 +342,11 @@ class BacktestExecutor:
     def _build_strategy(self, strategy: Strategy) -> TradingStrategy:
         """Resolve the strategy entity to its TradingStrategy implementation.
 
+        With typed parameters, the per-type runtime ``isinstance`` /
+        ``dict.get`` validation that used to live here is gone — the
+        ``Strategy`` constructor enforces shape, and we just pattern-match
+        on the parameter type.
+
         Args:
             strategy: The strategy domain entity
 
@@ -343,77 +354,30 @@ class BacktestExecutor:
             TradingStrategy implementation
 
         Raises:
-            InvalidStrategyError: If strategy type is not supported
+            InvalidStrategyError: If strategy parameters do not match a
+                known concrete type (defensive — should be unreachable).
         """
-        if strategy.strategy_type == StrategyType.BUY_AND_HOLD:
-            raw_allocation = strategy.parameters.get("allocation", {})
-            if not isinstance(raw_allocation, dict):
-                raise InvalidStrategyError(
-                    "BUY_AND_HOLD strategy requires 'allocation' dict parameter"
+        params = strategy.parameters
+        match params:
+            case BuyAndHoldParameters():
+                return BuyAndHoldStrategy(
+                    tickers=strategy.tickers,
+                    allocation=Allocation.from_raw(dict(params.allocation)),
                 )
-            try:
-                allocation = Allocation.from_raw(raw_allocation)
-            except Exception as exc:
-                raise InvalidStrategyError(
-                    f"Invalid BUY_AND_HOLD allocation: {exc}"
-                ) from exc
-            return BuyAndHoldStrategy(
-                tickers=strategy.tickers,
-                allocation=allocation,
-            )
-
-        if strategy.strategy_type == StrategyType.DOLLAR_COST_AVERAGING:
-            frequency_days = strategy.parameters.get("frequency_days")
-            amount_per_period = strategy.parameters.get("amount_per_period")
-            raw_allocation = strategy.parameters.get("allocation", {})
-            if not isinstance(frequency_days, int):
-                raise InvalidStrategyError(
-                    "DOLLAR_COST_AVERAGING requires integer 'frequency_days' parameter"
+            case DcaParameters():
+                return DollarCostAveragingStrategy(
+                    tickers=strategy.tickers,
+                    frequency_days=params.frequency_days,
+                    amount_per_period=params.amount_per_period,
+                    allocation=Allocation.from_raw(dict(params.allocation)),
                 )
-            if amount_per_period is None:
-                raise InvalidStrategyError(
-                    "DOLLAR_COST_AVERAGING requires 'amount_per_period' parameter"
+            case MaCrossoverParameters():
+                return MovingAverageCrossoverStrategy(
+                    tickers=strategy.tickers,
+                    fast_window=params.fast_window,
+                    slow_window=params.slow_window,
+                    invest_fraction=float(params.invest_fraction),
                 )
-            if not isinstance(raw_allocation, dict):
-                raise InvalidStrategyError(
-                    "DOLLAR_COST_AVERAGING requires 'allocation' dict parameter"
-                )
-            try:
-                allocation = Allocation.from_raw(raw_allocation)
-            except Exception as exc:
-                raise InvalidStrategyError(
-                    f"Invalid DOLLAR_COST_AVERAGING allocation: {exc}"
-                ) from exc
-            return DollarCostAveragingStrategy(
-                tickers=strategy.tickers,
-                frequency_days=frequency_days,
-                amount_per_period=Decimal(str(amount_per_period)),
-                allocation=allocation,
-            )
-
-        if strategy.strategy_type == StrategyType.MOVING_AVERAGE_CROSSOVER:
-            fast_window = strategy.parameters.get("fast_window")
-            slow_window = strategy.parameters.get("slow_window")
-            invest_fraction = strategy.parameters.get("invest_fraction")
-            if not isinstance(fast_window, int) or not isinstance(slow_window, int):
-                raise InvalidStrategyError(
-                    "MOVING_AVERAGE_CROSSOVER requires integer 'fast_window' "
-                    "and 'slow_window' parameters"
-                )
-            if invest_fraction is None:
-                raise InvalidStrategyError(
-                    "MOVING_AVERAGE_CROSSOVER requires 'invest_fraction' parameter"
-                )
-            return MovingAverageCrossoverStrategy(
-                tickers=strategy.tickers,
-                fast_window=fast_window,
-                slow_window=slow_window,
-                invest_fraction=float(invest_fraction),
-            )
-
-        raise InvalidStrategyError(
-            f"Strategy type not supported: {strategy.strategy_type.value}"
-        )
 
     async def _compute_metrics(
         self,

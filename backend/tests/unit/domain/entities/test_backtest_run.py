@@ -10,6 +10,20 @@ from zebu.domain.entities.backtest_run import BacktestRun
 from zebu.domain.exceptions import InvalidBacktestRunError
 from zebu.domain.value_objects.backtest_status import BacktestStatus
 from zebu.domain.value_objects.money import Money
+from zebu.domain.value_objects.strategy_parameters import BuyAndHoldParameters
+from zebu.domain.value_objects.strategy_snapshot import StrategySnapshot
+from zebu.domain.value_objects.strategy_type import StrategyType
+
+
+def _make_snapshot() -> StrategySnapshot:
+    """Build a valid StrategySnapshot for tests."""
+    return StrategySnapshot(
+        strategy_id=uuid4(),
+        name="Test",
+        strategy_type=StrategyType.BUY_AND_HOLD,
+        tickers=("AAPL",),
+        parameters=BuyAndHoldParameters(allocation={"AAPL": Decimal("1")}),
+    )
 
 
 def _make_backtest_run(**overrides: object) -> BacktestRun:
@@ -20,7 +34,7 @@ def _make_backtest_run(**overrides: object) -> BacktestRun:
         "user_id": uuid4(),
         "strategy_id": uuid4(),
         "portfolio_id": uuid4(),
-        "strategy_snapshot": {"name": "Test", "type": "BUY_AND_HOLD"},
+        "strategy_snapshot": _make_snapshot(),
         "backtest_name": "My Backtest",
         "start_date": date(today.year - 2, 1, 1),
         "end_date": date(today.year - 1, 1, 1),

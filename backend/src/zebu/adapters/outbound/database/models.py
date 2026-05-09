@@ -4,9 +4,10 @@ These models represent the database schema and provide conversion functions
 to/from domain entities.
 """
 
+import logging
 from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import Any, TypedDict
+from typing import TypedDict
 from uuid import UUID
 
 from sqlmodel import JSON, Column, Field, Index, SQLModel
@@ -19,12 +20,17 @@ from zebu.domain.entities.portfolio_snapshot import (
 )
 from zebu.domain.entities.strategy import Strategy
 from zebu.domain.entities.transaction import Transaction, TransactionType
+from zebu.domain.exceptions import InvalidStrategyError
 from zebu.domain.value_objects.backtest_status import BacktestStatus
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.portfolio_type import PortfolioType
 from zebu.domain.value_objects.quantity import Quantity
+from zebu.domain.value_objects.strategy_parameters import parameters_from_dict
+from zebu.domain.value_objects.strategy_snapshot import StrategySnapshot
 from zebu.domain.value_objects.strategy_type import StrategyType
 from zebu.domain.value_objects.ticker import Ticker
+
+_logger = logging.getLogger(__name__)
 
 
 class HoldingBreakdownDict(TypedDict):
@@ -375,7 +381,7 @@ class StrategyModel(SQLModel, table=True):
     tickers: list[str] = Field(  # type: ignore[assignment]
         sa_column=Column(JSON, nullable=False)
     )
-    parameters: dict[str, Any] = Field(  # type: ignore[assignment]
+    parameters: dict[str, object] = Field(  # type: ignore[assignment]
         sa_column=Column(JSON, nullable=False)
     )
     created_at: datetime
@@ -387,13 +393,19 @@ class StrategyModel(SQLModel, table=True):
             Strategy domain entity
         """
         created_at_utc = self.created_at.replace(tzinfo=UTC)
+        strategy_type = StrategyType(self.strategy_type)
+        # Parse the JSON parameters back into the typed dataclass. Raises
+        # InvalidStrategyError on shape drift (e.g. an old row with missing
+        # fields) — the repository surfaces this loudly rather than
+        # silently returning a half-typed entity.
+        parameters = parameters_from_dict(strategy_type, dict(self.parameters))
         return Strategy(
             id=self.id,
             user_id=self.user_id,
             name=self.name,
-            strategy_type=StrategyType(self.strategy_type),
+            strategy_type=strategy_type,
             tickers=list(self.tickers),
-            parameters=dict(self.parameters),
+            parameters=parameters,
             created_at=created_at_utc,
         )
 
@@ -418,7 +430,7 @@ class StrategyModel(SQLModel, table=True):
             name=strategy.name,
             strategy_type=strategy.strategy_type.value,
             tickers=strategy.tickers,
-            parameters=strategy.parameters,
+            parameters=dict(strategy.parameters.to_dict()),
             created_at=created_at_naive,
         )
 
@@ -457,7 +469,7 @@ class BacktestRunModel(SQLModel, table=True):
     user_id: UUID = Field(index=True)
     strategy_id: UUID | None = Field(default=None)
     portfolio_id: UUID = Field(index=True)
-    strategy_snapshot: dict[str, Any] = Field(  # type: ignore[assignment]
+    strategy_snapshot: dict[str, object] = Field(  # type: ignore[assignment]
         sa_column=Column(JSON, nullable=False)
     )
     backtest_name: str = Field(max_length=100)
@@ -484,18 +496,37 @@ class BacktestRunModel(SQLModel, table=True):
 
         Returns:
             BacktestRun domain entity
+
+        Raises:
+            InvalidStrategyError: If the JSON ``strategy_snapshot`` cannot be
+                parsed into a ``StrategySnapshot`` (unknown ``strategy_type``,
+                missing ``parameters``, etc.). Old rows from before the
+                typed-parameters refactor may have a slightly different
+                shape and trigger this — the failure is loud rather than
+                silent so the operator can decide whether to migrate.
         """
         created_at_utc = self.created_at.replace(tzinfo=UTC)
         completed_at_utc: datetime | None = None
         if self.completed_at is not None:
             completed_at_utc = self.completed_at.replace(tzinfo=UTC)
 
+        try:
+            snapshot = StrategySnapshot.from_dict(dict(self.strategy_snapshot))
+        except InvalidStrategyError:
+            _logger.exception(
+                "Failed to parse strategy_snapshot for backtest_run %s; "
+                "row may have been written before the typed-parameters "
+                "refactor",
+                self.id,
+            )
+            raise
+
         return BacktestRun(
             id=self.id,
             user_id=self.user_id,
             strategy_id=self.strategy_id,
             portfolio_id=self.portfolio_id,
-            strategy_snapshot=dict(self.strategy_snapshot),
+            strategy_snapshot=snapshot,
             backtest_name=self.backtest_name,
             start_date=self.start_date,
             end_date=self.end_date,
@@ -541,7 +572,7 @@ class BacktestRunModel(SQLModel, table=True):
             user_id=backtest_run.user_id,
             strategy_id=backtest_run.strategy_id,
             portfolio_id=backtest_run.portfolio_id,
-            strategy_snapshot=backtest_run.strategy_snapshot,
+            strategy_snapshot=dict(backtest_run.strategy_snapshot.to_dict()),
             backtest_name=backtest_run.backtest_name,
             start_date=backtest_run.start_date,
             end_date=backtest_run.end_date,
