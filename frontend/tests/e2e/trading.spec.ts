@@ -77,7 +77,9 @@ test.describe('Trading Flow', () => {
     await expect(page.getByRole('heading', { name: 'Execute Trade' })).toBeVisible()
 
     // Try to buy expensive stock with insufficient funds
-    // IBM is ~$291.50, so 1000 shares would cost ~$291,500
+    // 1000 shares of any ticker exceeds the $1,000 portfolio cash balance
+    // (mock provider returns deterministic prices in the $20-$500 band, so
+    //  1000 * 20 = $20,000 > $1,000 even at the cheapest possible price).
     await page.getByTestId('trade-form-ticker-input').fill('IBM')
     await page.getByTestId('trade-form-quantity-input').fill('1000')
 
@@ -170,7 +172,9 @@ test.describe('Trading Flow', () => {
     await expect(page.getByRole('heading', { name: 'Execute Trade' })).toBeVisible()
 
     // 3. Execute a BUY order (buy 10 shares of IBM)
-    // Note: Using IBM because the Alpha Vantage demo API key only supports IBM ticker
+    // The CI E2E backend uses the deterministic mock market data adapter
+    // (MARKET_DATA_PROVIDER=mock), so any valid ticker works. IBM kept here
+    // for backward compatibility with previously-seeded test data.
     await page.getByTestId('trade-form-ticker-input').fill('IBM')
     await page.getByTestId('trade-form-quantity-input').fill('10')
 

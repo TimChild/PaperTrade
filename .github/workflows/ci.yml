@@ -167,6 +167,11 @@ jobs:
         env:
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
+          # Avoid the public Alpha Vantage demo key in CI: it is restricted to
+          # IBM with 5/min, 25/day rate limits, which made E2E runs
+          # non-deterministically blow up. The mock provider returns
+          # deterministic prices for any ticker without a network call.
+          MARKET_DATA_PROVIDER: mock
 
       - name: Wait for all services to be healthy
         run: task health:wait

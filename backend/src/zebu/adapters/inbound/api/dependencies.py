@@ -27,6 +27,9 @@ from zebu.adapters.outbound.database.transaction_repository import (
 from zebu.adapters.outbound.market_data.alpha_vantage_adapter import (
     AlphaVantageAdapter,
 )
+from zebu.adapters.outbound.market_data.deterministic_mock_adapter import (
+    DeterministicMockMarketDataAdapter,
+)
 from zebu.adapters.outbound.repositories.price_repository import (
     PriceRepository,
 )
@@ -281,24 +284,51 @@ _http_client: httpx.AsyncClient | None = None
 
 
 async def get_market_data(session: SessionDep) -> MarketDataPort:
-    """Provide MarketDataPort implementation (AlphaVantageAdapter).
+    """Provide MarketDataPort implementation.
 
-    This dependency creates and caches the AlphaVantageAdapter with all its
-    infrastructure dependencies (Redis, rate limiter, cache, HTTP client,
-    price repository).
+    Routes to a real or mock adapter based on the ``MARKET_DATA_PROVIDER``
+    environment variable:
 
-    The core adapter infrastructure is created once and reused, but the price
-    repository is created per-request using the provided session.
+    - ``alpha_vantage`` (default, production behaviour): the real
+      :class:`AlphaVantageAdapter` with Redis-backed caching and rate
+      limiting. The Alpha Vantage API key, rate limits, and Redis URL are
+      all read from the environment.
+    - ``mock`` / ``in_memory``: a deterministic, network-free
+      :class:`DeterministicMockMarketDataAdapter` used by E2E tests and
+      local-fake stacks. This avoids depending on the public Alpha Vantage
+      ``demo`` key (5/min, 25/day, IBM-only), which is the dominant
+      historical source of CI E2E flakiness.
+
+    The Alpha Vantage adapter's core infrastructure (Redis, HTTP client) is
+    created once and reused; only the per-request price repository is built
+    each call so it stays bound to the supplied session. The mock adapter has
+    no shared state to cache.
 
     Args:
-        session: Database session from dependency injection
+        session: Database session from dependency injection.
 
     Returns:
-        MarketDataPort implementation (AlphaVantageAdapter)
+        MarketDataPort implementation.
 
     Raises:
-        RuntimeError: If required environment variables are not set
+        RuntimeError: If a value other than ``alpha_vantage``, ``mock``, or
+            ``in_memory`` is supplied for ``MARKET_DATA_PROVIDER``.
     """
+    provider = os.getenv("MARKET_DATA_PROVIDER", "alpha_vantage").strip().lower()
+
+    if provider in {"mock", "in_memory"}:
+        # Deterministic, network-free adapter for E2E / local-fake stacks.
+        # No Redis, no HTTP client, no rate limiter. Defaults are sufficient
+        # for E2E tests; tests that need richer ticker behaviour can override
+        # the dependency directly via app.dependency_overrides.
+        return DeterministicMockMarketDataAdapter()
+
+    if provider != "alpha_vantage":
+        raise RuntimeError(
+            f"Unsupported MARKET_DATA_PROVIDER='{provider}'. "
+            "Valid values: 'alpha_vantage' (default), 'mock', 'in_memory'."
+        )
+
     global _redis_client, _http_client
 
     # Get configuration from environment variables
