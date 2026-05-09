@@ -7,7 +7,7 @@ import time
 from uuid import UUID
 
 import structlog
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel
 
 from zebu.adapters.inbound.api.dependencies import (
@@ -15,6 +15,12 @@ from zebu.adapters.inbound.api.dependencies import (
     PortfolioRepositoryDep,
     TransactionRepositoryDep,
 )
+from zebu.adapters.inbound.api.schemas import (
+    DEFAULT_PAGE_LIMIT,
+    MAX_PAGE_LIMIT,
+    PaginatedResponse,
+)
+from zebu.adapters.inbound.api.schemas.pagination import build_paginated_response
 from zebu.application.queries.list_transactions import (
     ListTransactionsHandler,
     ListTransactionsQuery,
@@ -45,31 +51,35 @@ class TransactionResponse(BaseModel):
     notes: str | None
 
 
-class TransactionListResponse(BaseModel):
-    """List of transactions with pagination."""
-
-    transactions: list[TransactionResponse]
-    total_count: int
-    limit: int
-    offset: int
-
-
 # Routes
 
 
-@router.get("", response_model=TransactionListResponse)
+@router.get("", response_model=PaginatedResponse[TransactionResponse])
 async def list_transactions(
     portfolio_id: UUID,
     current_user: CurrentUserDep,
     portfolio_repo: PortfolioRepositoryDep,
     transaction_repo: TransactionRepositoryDep,
-    limit: int = 50,
-    offset: int = 0,
-    transaction_type: str | None = None,
-) -> TransactionListResponse:
-    """Get transaction history for a portfolio.
+    limit: int = Query(
+        default=DEFAULT_PAGE_LIMIT,
+        ge=1,
+        le=MAX_PAGE_LIMIT,
+        description="Maximum number of transactions to return (1-100, default 20).",
+    ),
+    offset: int = Query(
+        default=0,
+        ge=0,
+        description="Number of transactions to skip for pagination (default 0).",
+    ),
+    transaction_type: str | None = Query(
+        default=None,
+        description="Filter by transaction type (DEPOSIT, WITHDRAWAL, BUY, SELL).",
+    ),
+) -> PaginatedResponse[TransactionResponse]:
+    """Get transaction history for a portfolio with pagination.
 
-    Supports pagination and filtering by transaction type.
+    Supports pagination via ``limit`` / ``offset`` and optional filtering by
+    transaction type. Returns the standard ``PaginatedResponse`` envelope.
     """
     start_time = time.perf_counter()
 
@@ -156,9 +166,9 @@ async def list_transactions(
             duration_ms=round(duration_ms, 2),
         )
 
-        return TransactionListResponse(
-            transactions=transactions,
-            total_count=result.total_count,
+        return build_paginated_response(
+            items=transactions,
+            total=result.total_count,
             limit=limit,
             offset=offset,
         )

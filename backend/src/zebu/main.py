@@ -16,6 +16,7 @@ from zebu.adapters.inbound.api.debug import router as debug_router
 from zebu.adapters.inbound.api.error_handlers import register_exception_handlers
 from zebu.adapters.inbound.api.portfolios import router as portfolios_router
 from zebu.adapters.inbound.api.prices import router as prices_router
+from zebu.adapters.inbound.api.schemas import ErrorResponse
 from zebu.adapters.inbound.api.strategies import router as strategies_router
 from zebu.adapters.inbound.api.transactions import router as transactions_router
 from zebu.infrastructure.database import init_db
@@ -85,6 +86,29 @@ async def lifespan(app: FastAPI):  # type: ignore[misc]  # AsyncGenerator return
     logger.info("Scheduler stopped")
 
 
+def _default_error_responses() -> dict[int | str, dict[str, object]]:
+    """Default error responses applied to every route in this app.
+
+    Documents the Wave 3-G ``ErrorResponse`` envelope (`{detail, code, fields}`)
+    on the OpenAPI schema for the common error status codes — frontend / MCP
+    code generators need this to build typed error handling. Per-route
+    ``responses=`` overrides are still honoured.
+
+    Returns ``dict[int | str, dict[str, object]]`` to match FastAPI's expected
+    parameter type. Each value is a ``{"model": ErrorResponse, "description":
+    "..."}`` mapping where ``model`` is the Pydantic class FastAPI uses to
+    build the response schema.
+    """
+    return {
+        400: {"model": ErrorResponse, "description": "Bad request"},
+        401: {"model": ErrorResponse, "description": "Unauthenticated"},
+        403: {"model": ErrorResponse, "description": "Forbidden"},
+        404: {"model": ErrorResponse, "description": "Resource not found"},
+        422: {"model": ErrorResponse, "description": "Validation error"},
+        503: {"model": ErrorResponse, "description": "Service unavailable"},
+    }
+
+
 app = FastAPI(
     title="Zebu API",
     description="Stock market emulation platform API",
@@ -92,6 +116,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     lifespan=lifespan,
+    responses=_default_error_responses(),
 )
 
 # Register exception handlers

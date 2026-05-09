@@ -11,15 +11,20 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
 from zebu.adapters.inbound.api.dependencies import CurrentUserDep, MarketDataDep
+from zebu.adapters.inbound.api.schemas import (
+    DEFAULT_PAGE_LIMIT,
+    MAX_PAGE_LIMIT,
+    PaginatedResponse,
+)
+from zebu.adapters.inbound.api.schemas.pagination import build_paginated_response
 from zebu.adapters.outbound.database.strategy_repository import (
     SQLModelStrategyRepository,
 )
 from zebu.domain.entities.strategy import Strategy
-from zebu.domain.exceptions import InvalidStrategyError
 from zebu.domain.value_objects.strategy_parameters import parameters_from_dict
 from zebu.domain.value_objects.strategy_type import StrategyType
 from zebu.infrastructure.database import SessionDep
@@ -104,15 +109,9 @@ async def create_strategy(
         ) from None
 
     # Parse + validate strategy-specific parameters via the typed dataclass.
-    # Single source of truth: domain rules raise InvalidStrategyError, mapped
-    # to 422 below.
-    try:
-        parameters = parameters_from_dict(strategy_type, request.parameters)
-    except InvalidStrategyError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(exc),
-        ) from exc
+    # ``InvalidStrategyError`` is mapped to a 422 ``ErrorResponse`` by the
+    # global exception handler — no try/except needed here.
+    parameters = parameters_from_dict(strategy_type, request.parameters)
 
     # Validate tickers against supported tickers
     supported = {t.symbol for t in await market_data.get_supported_tickers()}
@@ -123,21 +122,17 @@ async def create_strategy(
             detail=f"Unsupported tickers: {', '.join(unsupported)}",
         )
 
-    try:
-        strategy = Strategy(
-            id=uuid4(),
-            user_id=current_user,
-            name=request.name,
-            strategy_type=strategy_type,
-            tickers=request.tickers,
-            parameters=parameters,
-            created_at=datetime.now(UTC),
-        )
-    except InvalidStrategyError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(exc),
-        ) from exc
+    # ``InvalidStrategyError`` from the entity invariants is also mapped to
+    # 422 by the global handler.
+    strategy = Strategy(
+        id=uuid4(),
+        user_id=current_user,
+        name=request.name,
+        strategy_type=strategy_type,
+        tickers=request.tickers,
+        parameters=parameters,
+        created_at=datetime.now(UTC),
+    )
 
     repo = SQLModelStrategyRepository(session)
     await repo.save(strategy)
@@ -145,15 +140,37 @@ async def create_strategy(
     return _to_strategy_response(strategy)
 
 
-@router.get("", response_model=list[StrategyResponse])
+@router.get("", response_model=PaginatedResponse[StrategyResponse])
 async def list_strategies(
     current_user: CurrentUserDep,
     session: SessionDep,
-) -> list[StrategyResponse]:
-    """List all strategies for the current user."""
+    limit: int = Query(
+        default=DEFAULT_PAGE_LIMIT,
+        ge=1,
+        le=MAX_PAGE_LIMIT,
+        description="Maximum number of strategies to return (1-100, default 20).",
+    ),
+    offset: int = Query(
+        default=0,
+        ge=0,
+        description="Number of strategies to skip for pagination (default 0).",
+    ),
+) -> PaginatedResponse[StrategyResponse]:
+    """List strategies for the current user with pagination."""
     repo = SQLModelStrategyRepository(session)
+    # Repo returns owner-scoped strategies in creation order. Page in
+    # Python — strategy volume per user is small (typically <100) and the
+    # SQL push-down is tracked in the perf audit cross-cut.
     strategies = await repo.get_by_user(current_user)
-    return [_to_strategy_response(s) for s in strategies]
+    total = len(strategies)
+    page = strategies[offset : offset + limit]
+    items = [_to_strategy_response(s) for s in page]
+    return build_paginated_response(
+        items=items,
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get("/{strategy_id}", response_model=StrategyResponse)

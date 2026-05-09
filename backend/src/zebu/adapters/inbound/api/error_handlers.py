@@ -1,12 +1,22 @@
 """FastAPI exception handlers.
 
 Maps domain exceptions to HTTP status codes with consistent error responses.
+
+Wave 3-G: All handlers now emit the unified ``ErrorResponse`` envelope
+``{detail, code, fields}`` defined in ``schemas.errors``. ``detail`` is always
+a string; auxiliary numeric / identifier data (``available``, ``required``,
+``shortfall``, ``ticker``, ``reason``, ...) ride in ``fields`` as strings.
 """
 
-from fastapi import FastAPI, Request, status
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from collections.abc import Sequence
+from typing import Any
 
+from fastapi import FastAPI, HTTPException, Request, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from pydantic import ValidationError
+
+from zebu.adapters.inbound.api.schemas.errors import ErrorCode, ErrorResponse
 from zebu.application.exceptions import (
     MarketDataUnavailableError,
     TickerNotFoundError,
@@ -17,19 +27,31 @@ from zebu.domain.exceptions import (
     InvalidMoneyError,
     InvalidPortfolioError,
     InvalidQuantityError,
+    InvalidStrategyError,
     InvalidTickerError,
     InvalidTransactionError,
 )
 
 
-class ErrorResponse(BaseModel):
-    """Standard error response format.
+def _error_json(
+    *,
+    status_code: int,
+    detail: str,
+    code: ErrorCode | None = None,
+    fields: dict[str, str] | None = None,
+) -> JSONResponse:
+    """Build a ``JSONResponse`` carrying an ``ErrorResponse`` envelope.
 
-    Attributes:
-        detail: Error details (can be string or structured dict)
+    Centralised so every handler in this module emits the same shape.
     """
-
-    detail: str | dict[str, str | float]
+    return JSONResponse(
+        status_code=status_code,
+        content=ErrorResponse(
+            detail=detail,
+            code=code.value if code is not None else None,
+            fields=fields,
+        ).model_dump(),
+    )
 
 
 def register_exception_handlers(app: FastAPI) -> None:
@@ -44,11 +66,10 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request, exc: InvalidPortfolioError
     ) -> JSONResponse:
         """Handle InvalidPortfolioError -> 400 Bad Request."""
-        return JSONResponse(
+        return _error_json(
             status_code=status.HTTP_400_BAD_REQUEST,
-            content=ErrorResponse(
-                detail=str(exc),
-            ).model_dump(),
+            detail=str(exc),
+            code=ErrorCode.INVALID_PORTFOLIO,
         )
 
     @app.exception_handler(InvalidTransactionError)
@@ -56,11 +77,10 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request, exc: InvalidTransactionError
     ) -> JSONResponse:
         """Handle InvalidTransactionError -> 400 Bad Request."""
-        return JSONResponse(
+        return _error_json(
             status_code=status.HTTP_400_BAD_REQUEST,
-            content=ErrorResponse(
-                detail=str(exc),
-            ).model_dump(),
+            detail=str(exc),
+            code=ErrorCode.INVALID_TRANSACTION,
         )
 
     @app.exception_handler(InsufficientFundsError)
@@ -69,17 +89,15 @@ def register_exception_handlers(app: FastAPI) -> None:
     ) -> JSONResponse:
         """Handle InsufficientFundsError -> 400 Bad Request with structured details."""
         shortfall = exc.required.subtract(exc.available)
-        return JSONResponse(
+        return _error_json(
             status_code=status.HTTP_400_BAD_REQUEST,
-            content=ErrorResponse(
-                detail={
-                    "type": "insufficient_funds",
-                    "message": exc.message,
-                    "available": float(exc.available.amount),
-                    "required": float(exc.required.amount),
-                    "shortfall": float(shortfall.amount),
-                }
-            ).model_dump(),
+            detail=exc.message,
+            code=ErrorCode.INSUFFICIENT_FUNDS,
+            fields={
+                "available": f"{float(exc.available.amount)}",
+                "required": f"{float(exc.required.amount)}",
+                "shortfall": f"{float(shortfall.amount)}",
+            },
         )
 
     @app.exception_handler(InsufficientSharesError)
@@ -88,18 +106,16 @@ def register_exception_handlers(app: FastAPI) -> None:
     ) -> JSONResponse:
         """Handle InsufficientSharesError -> 400 Bad Request with structured details."""
         shortfall = exc.required.shares - exc.available.shares
-        return JSONResponse(
+        return _error_json(
             status_code=status.HTTP_400_BAD_REQUEST,
-            content=ErrorResponse(
-                detail={
-                    "type": "insufficient_shares",
-                    "message": exc.message,
-                    "ticker": exc.ticker,
-                    "available": float(exc.available.shares),
-                    "required": float(exc.required.shares),
-                    "shortfall": float(shortfall),
-                }
-            ).model_dump(),
+            detail=exc.message,
+            code=ErrorCode.INSUFFICIENT_SHARES,
+            fields={
+                "ticker": exc.ticker,
+                "available": f"{float(exc.available.shares)}",
+                "required": f"{float(exc.required.shares)}",
+                "shortfall": f"{float(shortfall)}",
+            },
         )
 
     @app.exception_handler(InvalidTickerError)
@@ -107,14 +123,10 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request, exc: InvalidTickerError
     ) -> JSONResponse:
         """Handle InvalidTickerError -> 400 Bad Request."""
-        return JSONResponse(
+        return _error_json(
             status_code=status.HTTP_400_BAD_REQUEST,
-            content=ErrorResponse(
-                detail={
-                    "type": "invalid_ticker",
-                    "message": str(exc),
-                }
-            ).model_dump(),
+            detail=str(exc),
+            code=ErrorCode.INVALID_TICKER,
         )
 
     @app.exception_handler(InvalidQuantityError)
@@ -122,14 +134,10 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request, exc: InvalidQuantityError
     ) -> JSONResponse:
         """Handle InvalidQuantityError -> 400 Bad Request."""
-        return JSONResponse(
+        return _error_json(
             status_code=status.HTTP_400_BAD_REQUEST,
-            content=ErrorResponse(
-                detail={
-                    "type": "invalid_quantity",
-                    "message": str(exc),
-                }
-            ).model_dump(),
+            detail=str(exc),
+            code=ErrorCode.INVALID_QUANTITY,
         )
 
     @app.exception_handler(InvalidMoneyError)
@@ -137,14 +145,21 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request, exc: InvalidMoneyError
     ) -> JSONResponse:
         """Handle InvalidMoneyError -> 400 Bad Request."""
-        return JSONResponse(
+        return _error_json(
             status_code=status.HTTP_400_BAD_REQUEST,
-            content=ErrorResponse(
-                detail={
-                    "type": "invalid_money",
-                    "message": str(exc),
-                }
-            ).model_dump(),
+            detail=str(exc),
+            code=ErrorCode.INVALID_MONEY,
+        )
+
+    @app.exception_handler(InvalidStrategyError)
+    async def handle_invalid_strategy(  # pyright: ignore[reportUnusedFunction]
+        request: Request, exc: InvalidStrategyError
+    ) -> JSONResponse:
+        """Handle InvalidStrategyError -> 422 Unprocessable Entity."""
+        return _error_json(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+            code=ErrorCode.INVALID_STRATEGY,
         )
 
     @app.exception_handler(TickerNotFoundError)
@@ -152,15 +167,11 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request, exc: TickerNotFoundError
     ) -> JSONResponse:
         """Handle TickerNotFoundError -> 404 Not Found."""
-        return JSONResponse(
+        return _error_json(
             status_code=status.HTTP_404_NOT_FOUND,
-            content=ErrorResponse(
-                detail={
-                    "type": "ticker_not_found",
-                    "message": f"Invalid ticker symbol: {exc.ticker}",
-                    "ticker": exc.ticker,
-                }
-            ).model_dump(),
+            detail=f"Invalid ticker symbol: {exc.ticker}",
+            code=ErrorCode.TICKER_NOT_FOUND,
+            fields={"ticker": exc.ticker},
         )
 
     @app.exception_handler(MarketDataUnavailableError)
@@ -168,13 +179,136 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request, exc: MarketDataUnavailableError
     ) -> JSONResponse:
         """Handle MarketDataUnavailableError -> 503 Service Unavailable."""
-        return JSONResponse(
+        return _error_json(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            content=ErrorResponse(
-                detail={
-                    "type": "market_data_unavailable",
-                    "message": "Unable to fetch market data. Please try again later.",
-                    "reason": exc.reason,
-                }
-            ).model_dump(),
+            detail="Unable to fetch market data. Please try again later.",
+            code=ErrorCode.MARKET_DATA_UNAVAILABLE,
+            fields={"reason": exc.reason},
         )
+
+    @app.exception_handler(HTTPException)
+    async def handle_http_exception(  # pyright: ignore[reportUnusedFunction]
+        request: Request, exc: HTTPException
+    ) -> JSONResponse:
+        """Normalise every ``HTTPException`` into the standard envelope.
+
+        FastAPI's default handler emits ``{"detail": <whatever was passed>}``
+        which leaks dict-shaped detail through routes that have not been
+        migrated yet. This handler:
+
+        * If the route raised ``HTTPException(detail=str)``, passes the string
+          through as ``detail`` with no code or fields.
+        * If the route raised ``HTTPException(detail={"type": ..., "message":
+            ..., **extras})`` (legacy shape), splits it into
+            ``detail`` / ``code`` / ``fields``. Routes are being migrated to
+            the new shape; this keeps backwards compatibility while the
+            migration is in flight.
+        * If the route raised ``HTTPException(detail=ErrorResponse(...).model_dump())``
+          it is passed through unchanged.
+
+        Auth headers (e.g. ``WWW-Authenticate: Bearer``) on the original
+        exception are preserved.
+        """
+        detail_obj: object = exc.detail
+
+        # Pass-through if the route already produced the new envelope.
+        if isinstance(detail_obj, dict) and "detail" in detail_obj:
+            payload: dict[str, Any] = dict(detail_obj)
+            return JSONResponse(
+                status_code=exc.status_code,
+                content=ErrorResponse(**payload).model_dump(),
+                headers=exc.headers,
+            )
+
+        # Legacy {"type": "...", "message": "...", ...extras} dict detail.
+        if isinstance(detail_obj, dict):
+            type_value = detail_obj.get("type")
+            message_value = detail_obj.get("message")
+            code_str = str(type_value) if type_value is not None else None
+            message_str = (
+                str(message_value) if message_value is not None else "An error occurred"
+            )
+            fields = {
+                k: str(v)
+                for k, v in detail_obj.items()
+                if k not in {"type", "message"} and v is not None
+            }
+            return JSONResponse(
+                status_code=exc.status_code,
+                content=ErrorResponse(
+                    detail=message_str,
+                    code=code_str,
+                    fields=fields or None,
+                ).model_dump(),
+                headers=exc.headers,
+            )
+
+        # Plain-string detail (the common case for non-domain errors).
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=ErrorResponse(detail=str(detail_obj)).model_dump(),
+            headers=exc.headers,
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def handle_request_validation_error(  # pyright: ignore[reportUnusedFunction]
+        request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
+        """Map FastAPI's request validation errors into the standard envelope.
+
+        The default 422 response is ``{"detail": [{loc, msg, type, ...}, ...]}``
+        which violates the Wave 3-G envelope. This handler flattens it into
+        ``{detail, code, fields}`` where ``fields`` maps each invalid field
+        path (e.g. ``"body.initial_deposit"``) to the validator message.
+        """
+        return _error_json(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Request validation failed",
+            code=ErrorCode.VALIDATION_ERROR,
+            fields=_validation_errors_to_fields(exc.errors()),
+        )
+
+    @app.exception_handler(ValidationError)
+    async def handle_pydantic_validation_error(  # pyright: ignore[reportUnusedFunction]
+        request: Request, exc: ValidationError
+    ) -> JSONResponse:
+        """Pydantic ``ValidationError`` (raised from response validation or
+        manual model construction). Treated the same way as a request
+        validation error so the envelope shape stays uniform."""
+        return _error_json(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Validation failed",
+            code=ErrorCode.VALIDATION_ERROR,
+            fields=_validation_errors_to_fields(exc.errors()),
+        )
+
+
+def _validation_errors_to_fields(
+    errors: Sequence[Any],
+) -> dict[str, str]:
+    """Flatten a Pydantic-style errors list into the ``fields`` map.
+
+    Each error has a ``loc`` tuple (e.g. ``("body", "initial_deposit")``) and
+    a ``msg`` string. We join the ``loc`` parts with dots and use the message
+    as the value. If two errors share the same path (rare), the later one
+    wins — Pydantic already aggregates them into a single ``msg`` per field.
+
+    The ``Sequence[Any]`` type is intentionally loose: Pydantic v2's
+    ``ValidationError.errors()`` returns ``list[ErrorDetails]`` (a TypedDict)
+    while FastAPI's ``RequestValidationError.errors()`` returns
+    ``Sequence[Any]``. The structural access below works for both.
+    """
+    fields: dict[str, str] = {}
+    for err in errors:
+        loc = err.get("loc", ()) if isinstance(err, dict) else getattr(err, "loc", ())
+        msg = (
+            err.get("msg", "Invalid value")
+            if isinstance(err, dict)
+            else getattr(err, "msg", "Invalid value")
+        )
+        if isinstance(loc, (list, tuple)):
+            key = ".".join(str(part) for part in loc) or "__root__"
+        else:
+            key = str(loc)
+        fields[key] = str(msg)
+    return fields
