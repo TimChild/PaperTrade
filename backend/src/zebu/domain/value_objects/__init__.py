@@ -1,5 +1,6 @@
 """Value objects - Immutable objects defined by their values."""
 
+from zebu.domain.value_objects.allocation import Allocation
 from zebu.domain.value_objects.backtest_status import BacktestStatus
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.performance_metrics import PerformanceMetrics
@@ -11,6 +12,7 @@ from zebu.domain.value_objects.ticker import Ticker
 from zebu.domain.value_objects.trade_signal import TradeAction, TradeSignal
 
 __all__ = [
+    "Allocation",
     "BacktestStatus",
     "Money",
     "PerformanceMetrics",

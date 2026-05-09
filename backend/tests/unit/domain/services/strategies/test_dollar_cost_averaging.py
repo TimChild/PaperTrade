@@ -6,6 +6,7 @@ from decimal import Decimal
 from zebu.domain.services.strategies.dollar_cost_averaging import (
     DollarCostAveragingStrategy,
 )
+from zebu.domain.value_objects.allocation import Allocation
 from zebu.domain.value_objects.price_point import PricePoint
 from zebu.domain.value_objects.trade_signal import TradeAction
 
@@ -23,7 +24,7 @@ class TestDollarCostAveragingStrategy:
             tickers=["AAPL"],
             frequency_days=7,
             amount_per_period=Decimal("1000"),
-            allocation={"AAPL": 1.0},
+            allocation=Allocation.from_raw({"AAPL": 1.0}),
         )
 
         signals = strategy.generate_signals(
@@ -35,7 +36,7 @@ class TestDollarCostAveragingStrategy:
 
         assert len(signals) == 1
         assert signals[0].action == TradeAction.BUY
-        assert signals[0].ticker == "AAPL"
+        assert signals[0].ticker.symbol == "AAPL"
 
     def test_subsequent_days_within_window_no_signals(self) -> None:
         """Days within the frequency window produce no signals."""
@@ -43,7 +44,7 @@ class TestDollarCostAveragingStrategy:
             tickers=["AAPL"],
             frequency_days=7,
             amount_per_period=Decimal("1000"),
-            allocation={"AAPL": 1.0},
+            allocation=Allocation.from_raw({"AAPL": 1.0}),
         )
 
         # First purchase
@@ -70,7 +71,7 @@ class TestDollarCostAveragingStrategy:
             tickers=["AAPL"],
             frequency_days=7,
             amount_per_period=Decimal("1000"),
-            allocation={"AAPL": 1.0},
+            allocation=Allocation.from_raw({"AAPL": 1.0}),
         )
 
         # First purchase
@@ -98,7 +99,7 @@ class TestDollarCostAveragingStrategy:
             tickers=["AAPL", "GOOGL"],
             frequency_days=7,
             amount_per_period=Decimal("1000"),
-            allocation={"AAPL": 0.6, "GOOGL": 0.4},
+            allocation=Allocation.from_raw({"AAPL": 0.6, "GOOGL": 0.4}),
         )
 
         signals = strategy.generate_signals(
@@ -109,9 +110,11 @@ class TestDollarCostAveragingStrategy:
         )
 
         assert len(signals) == 2
-        signal_map = {s.ticker: s for s in signals}
-        assert signal_map["AAPL"].amount == Decimal("600")
-        assert signal_map["GOOGL"].amount == Decimal("400")
+        signal_map = {s.ticker.symbol: s for s in signals}
+        assert signal_map["AAPL"].amount is not None
+        assert signal_map["AAPL"].amount.amount == Decimal("600.00")
+        assert signal_map["GOOGL"].amount is not None
+        assert signal_map["GOOGL"].amount.amount == Decimal("400.00")
 
     def test_zero_cash_balance_still_generates_signal(self) -> None:
         """DCA generates signals even when cash_balance is zero.
@@ -123,7 +126,7 @@ class TestDollarCostAveragingStrategy:
             tickers=["AAPL"],
             frequency_days=7,
             amount_per_period=Decimal("1000"),
-            allocation={"AAPL": 1.0},
+            allocation=Allocation.from_raw({"AAPL": 1.0}),
         )
 
         signals = strategy.generate_signals(
@@ -135,7 +138,8 @@ class TestDollarCostAveragingStrategy:
 
         # Signal is based on amount_per_period, not cash_balance
         assert len(signals) == 1
-        assert signals[0].amount == Decimal("1000")
+        assert signals[0].amount is not None
+        assert signals[0].amount.amount == Decimal("1000.00")
 
     def test_daily_frequency_purchases_every_day(self) -> None:
         """frequency_days=1 causes a purchase on every trading day."""
@@ -143,7 +147,7 @@ class TestDollarCostAveragingStrategy:
             tickers=["AAPL"],
             frequency_days=1,
             amount_per_period=Decimal("100"),
-            allocation={"AAPL": 1.0},
+            allocation=Allocation.from_raw({"AAPL": 1.0}),
         )
 
         for i in range(5):
@@ -161,7 +165,7 @@ class TestDollarCostAveragingStrategy:
             tickers=["AAPL"],
             frequency_days=30,
             amount_per_period=Decimal("500"),
-            allocation={"AAPL": 0.8},
+            allocation=Allocation.from_raw({"AAPL": 1.0}),
         )
 
         signals = strategy.generate_signals(
@@ -172,7 +176,9 @@ class TestDollarCostAveragingStrategy:
         )
 
         assert len(signals) == 1
-        assert signals[0].amount == Decimal("400")  # 500 * 0.8
+        assert signals[0].amount is not None
+        # 500 × 1.0 = 500
+        assert signals[0].amount.amount == Decimal("500.00")
 
     def test_signal_date_matches_current_date(self) -> None:
         """TradeSignal.signal_date matches the current_date argument."""
@@ -180,7 +186,7 @@ class TestDollarCostAveragingStrategy:
             tickers=["AAPL"],
             frequency_days=7,
             amount_per_period=Decimal("1000"),
-            allocation={"AAPL": 1.0},
+            allocation=Allocation.from_raw({"AAPL": 1.0}),
         )
         today = date(2024, 6, 15)
 

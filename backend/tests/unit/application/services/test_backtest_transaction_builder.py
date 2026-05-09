@@ -9,6 +9,8 @@ from zebu.application.services.backtest_transaction_builder import (
 )
 from zebu.domain.entities.transaction import TransactionType
 from zebu.domain.value_objects.money import Money
+from zebu.domain.value_objects.quantity import Quantity
+from zebu.domain.value_objects.ticker import Ticker
 from zebu.domain.value_objects.trade_signal import TradeAction, TradeSignal
 
 
@@ -21,9 +23,9 @@ def _buy_signal_by_amount(
 ) -> TradeSignal:
     return TradeSignal(
         action=TradeAction.BUY,
-        ticker=ticker,
+        ticker=Ticker(ticker),
         signal_date=(dt or _now()).date(),
-        amount=amount,
+        amount=Money(amount, "USD"),
     )
 
 
@@ -32,9 +34,9 @@ def _buy_signal_by_quantity(
 ) -> TradeSignal:
     return TradeSignal(
         action=TradeAction.BUY,
-        ticker=ticker,
+        ticker=Ticker(ticker),
         signal_date=(dt or _now()).date(),
-        quantity=quantity,
+        quantity=Quantity(quantity),
     )
 
 
@@ -43,9 +45,9 @@ def _sell_signal_by_quantity(
 ) -> TradeSignal:
     return TradeSignal(
         action=TradeAction.SELL,
-        ticker=ticker,
+        ticker=Ticker(ticker),
         signal_date=(dt or _now()).date(),
-        quantity=quantity,
+        quantity=Quantity(quantity),
     )
 
 
@@ -128,8 +130,8 @@ class TestBacktestTransactionBuilderBuy:
 
         builder.apply_signal(signal, price, _now())
 
-        assert "AAPL" in builder.holdings
-        assert builder.holdings["AAPL"].shares == Decimal("10")
+        assert Ticker("AAPL") in builder.holdings
+        assert builder.holdings[Ticker("AAPL")].shares == Decimal("10")
 
     def test_buy_insufficient_funds_returns_none(self) -> None:
         """BUY that exceeds cash returns None and state is unchanged."""
@@ -174,7 +176,7 @@ class TestBacktestTransactionBuilderBuy:
             signal = _buy_signal_by_quantity("AAPL", Decimal("5"))
             builder.apply_signal(signal, price, _now())
 
-        assert builder.holdings["AAPL"].shares == Decimal("15")
+        assert builder.holdings[Ticker("AAPL")].shares == Decimal("15")
 
 
 class TestBacktestTransactionBuilderSell:
@@ -200,7 +202,7 @@ class TestBacktestTransactionBuilderSell:
         price = Money(Decimal("100.00"), "USD")
         builder.apply_signal(sell_signal, price, _now())
 
-        assert builder.holdings["AAPL"].shares == Decimal("5")
+        assert builder.holdings[Ticker("AAPL")].shares == Decimal("5")
 
     def test_sell_all_shares_removes_from_holdings(self) -> None:
         """Selling all shares removes ticker from holdings dict."""
@@ -214,7 +216,7 @@ class TestBacktestTransactionBuilderSell:
         price = Money(Decimal("100.00"), "USD")
         builder.apply_signal(sell_signal, price, _now())
 
-        assert "AAPL" not in builder.holdings
+        assert Ticker("AAPL") not in builder.holdings
 
     def test_sell_increases_cash(self) -> None:
         """SELL increases cash balance."""
@@ -246,7 +248,7 @@ class TestBacktestTransactionBuilderSell:
 
         assert result is None
         # Holdings unchanged
-        assert builder.holdings["AAPL"].shares == Decimal("5")
+        assert builder.holdings[Ticker("AAPL")].shares == Decimal("5")
 
     def test_sell_no_holdings_returns_none(self) -> None:
         """SELL on a ticker with no holdings returns None."""

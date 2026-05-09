@@ -4,7 +4,10 @@ import logging
 from datetime import date
 from decimal import Decimal
 
+from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.price_point import PricePoint
+from zebu.domain.value_objects.quantity import Quantity
+from zebu.domain.value_objects.ticker import Ticker
 from zebu.domain.value_objects.trade_signal import TradeAction, TradeSignal
 
 logger = logging.getLogger(__name__)
@@ -67,8 +70,8 @@ class MovingAverageCrossoverStrategy:
         """
         signals: list[TradeSignal] = []
 
-        for ticker in self._tickers:
-            ticker_prices = price_map.get(ticker, {})
+        for ticker_str in self._tickers:
+            ticker_prices = price_map.get(ticker_str, {})
 
             fast_sma = self._compute_sma(ticker_prices, current_date, self._fast_window)
             slow_sma = self._compute_sma(ticker_prices, current_date, self._slow_window)
@@ -76,35 +79,38 @@ class MovingAverageCrossoverStrategy:
             if fast_sma is None or slow_sma is None:
                 logger.debug(
                     "MovingAverageCrossover: insufficient data for %s on %s",
-                    ticker,
+                    ticker_str,
                     current_date,
                 )
-                self._prev_sma[ticker] = None
+                self._prev_sma[ticker_str] = None
                 continue
 
-            prev = self._prev_sma.get(ticker)
+            prev = self._prev_sma.get(ticker_str)
 
             if prev is not None:
                 prev_fast, prev_slow = prev
-                current_holding = holdings.get(ticker, Decimal("0"))
+                current_holding = holdings.get(ticker_str, Decimal("0"))
                 has_position = current_holding > Decimal("0")
+                ticker_vo = Ticker(ticker_str)
 
                 # Golden cross: fast crosses above slow → BUY
                 if prev_fast <= prev_slow and fast_sma > slow_sma and not has_position:
-                    amount = cash_balance * Decimal(str(self._invest_fraction))
-                    if amount > Decimal("0"):
+                    amount_decimal = (
+                        cash_balance * Decimal(str(self._invest_fraction))
+                    ).quantize(Decimal("0.01"))
+                    if amount_decimal > Decimal("0"):
                         signals.append(
                             TradeSignal(
                                 action=TradeAction.BUY,
-                                ticker=ticker,
+                                ticker=ticker_vo,
                                 signal_date=current_date,
-                                amount=amount,
+                                amount=Money(amount_decimal, "USD"),
                             )
                         )
                         logger.debug(
                             "MovingAverageCrossover: BUY signal for %s on %s "
                             "(fast=%.4f, slow=%.4f)",
-                            ticker,
+                            ticker_str,
                             current_date,
                             fast_sma,
                             slow_sma,
@@ -115,21 +121,21 @@ class MovingAverageCrossoverStrategy:
                     signals.append(
                         TradeSignal(
                             action=TradeAction.SELL,
-                            ticker=ticker,
+                            ticker=ticker_vo,
                             signal_date=current_date,
-                            quantity=current_holding,
+                            quantity=Quantity(current_holding),
                         )
                     )
                     logger.debug(
                         "MovingAverageCrossover: SELL signal for %s on %s "
                         "(fast=%.4f, slow=%.4f)",
-                        ticker,
+                        ticker_str,
                         current_date,
                         fast_sma,
                         slow_sma,
                     )
 
-            self._prev_sma[ticker] = (fast_sma, slow_sma)
+            self._prev_sma[ticker_str] = (fast_sma, slow_sma)
 
         return signals
 

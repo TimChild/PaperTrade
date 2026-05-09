@@ -38,6 +38,18 @@ class InvalidQuantityError(InvalidValueObjectError):
     pass
 
 
+class InvalidTradeSignalError(InvalidValueObjectError):
+    """Raised when TradeSignal value object construction or validation fails."""
+
+    pass
+
+
+class InvalidAllocationError(InvalidValueObjectError):
+    """Raised when Allocation value object construction or validation fails."""
+
+    pass
+
+
 # Entity Exceptions
 
 
