@@ -188,12 +188,90 @@ def default_user_id() -> UUID:
 
 @pytest.fixture
 def auth_headers() -> dict[str, str]:
-    """Provide authentication headers for test requests.
+    """Provide authentication headers for test requests (Bearer JWT — current).
 
     Returns headers with a valid Bearer token for the default test user.
-    This replaces the old X-User-Id header approach.
+    This is the canonical fixture for current-state integration tests; today
+    Clerk Bearer is the only auth path the backend accepts.
+
+    For Phase C, when ``ApiKeyAuthAdapter`` lands and the middleware accepts
+    ``Authorization: ApiKey <key>`` / ``X-API-Key: <key>``, prefer the
+    ``auth_headers_for_scheme`` fixture below so the same test body can be run
+    against either scheme via parameterization.
     """
     return {"Authorization": "Bearer test-token-default"}
+
+
+# Auth schemes the backend accepts (or will accept in Phase C).
+# Ordered: current first, future second — keeps existing tests' behaviour
+# stable when the parameterized fixture is adopted incrementally.
+_AUTH_SCHEMES_CURRENT: tuple[str, ...] = ("bearer",)
+_AUTH_SCHEMES_PHASE_C: tuple[str, ...] = (
+    "bearer",
+    "api_key_authorization",
+    "api_key_header",
+)
+
+
+def _build_auth_headers(
+    scheme: str, token: str = "test-token-default"
+) -> dict[str, str]:
+    """Build an Authorization-style header dict for a given scheme.
+
+    Schemes:
+
+    - ``bearer`` — ``Authorization: Bearer <token>`` (current Clerk path)
+    - ``api_key_authorization`` — ``Authorization: ApiKey <token>`` (Phase C)
+    - ``api_key_header`` — ``X-API-Key: <token>`` (Phase C alt)
+
+    Note: the Phase C schemes are NOT YET ACCEPTED by the backend. Tests that
+    parameterize over them will fail (as 401) until Phase C lands the matching
+    ``ApiKeyAuthAdapter`` and middleware update. This is by design — keeping
+    the fixture in place lets us flip the scheme list at flag time without
+    a test refactor.
+    """
+    if scheme == "bearer":
+        return {"Authorization": f"Bearer {token}"}
+    if scheme == "api_key_authorization":
+        return {"Authorization": f"ApiKey {token}"}
+    if scheme == "api_key_header":
+        return {"X-API-Key": token}
+    raise ValueError(f"Unknown auth scheme: {scheme!r}")
+
+
+@pytest.fixture(params=_AUTH_SCHEMES_CURRENT, ids=lambda s: f"auth-{s}")
+def auth_scheme(request: pytest.FixtureRequest) -> str:
+    """Parametrized auth scheme — currently ``bearer`` only.
+
+    To run a test against both Bearer and the Phase C api-key paths, override
+    this in a test module or class with::
+
+        pytestmark = pytest.mark.parametrize(
+            "auth_scheme",
+            ["bearer", "api_key_authorization", "api_key_header"],
+            indirect=True,
+        )
+
+    The fixture is structured so when Phase C lands, switching the default
+    parameter list in ``conftest.py`` is the only change needed to exercise
+    every existing parametrized test against the new path.
+    """
+    scheme = request.param
+    if not isinstance(scheme, str):
+        raise TypeError(f"auth_scheme param must be str, got {type(scheme)}")
+    return scheme
+
+
+@pytest.fixture
+def auth_headers_for_scheme(auth_scheme: str) -> dict[str, str]:
+    """Auth headers for the currently-parametrized scheme.
+
+    Use this in tests that should be exercised against every supported auth
+    scheme (Bearer today; Bearer + ApiKey + X-API-Key in Phase C). For tests
+    that are deliberately scoped to one scheme, use ``auth_headers`` (Bearer)
+    or build headers directly.
+    """
+    return _build_auth_headers(auth_scheme)
 
 
 @pytest.fixture(scope="module")
