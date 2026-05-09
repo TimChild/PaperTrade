@@ -77,19 +77,39 @@ class MarketDataPort(Protocol):
         This method optimizes price fetching for multiple tickers by:
         - Checking cache for all tickers first
         - Only fetching uncached tickers from API
-        - Returning partial results if some tickers fail
+        - Returning partial results if some tickers fail transiently
 
-        The method never raises exceptions. Instead, failed tickers are simply
-        excluded from the result dict. Callers should check which tickers are
-        in the result.
+        Per-ticker failures are handled as follows:
+
+        - ``TickerNotFoundError``: ticker is excluded from the result.
+          (No false fallback - the ticker genuinely doesn't exist.)
+        - ``MarketDataUnavailableError`` (transient API failure): the
+          adapter attempts a stale-cache fallback for that ticker; if no
+          cached value exists, the ticker is excluded.
+
+        Failures that DO raise (and surface to callers):
+
+        - ``InvalidPriceDataError``: malformed API response is a data
+          integrity issue and must not be silently dropped.
+        - Unexpected exceptions (programming bugs, configuration errors):
+          propagate so they surface in monitoring rather than being
+          masked as "ticker excluded".
 
         Args:
             tickers: List of stock ticker symbols to get prices for
 
         Returns:
             Dictionary mapping tickers to their price points.
-            Only includes tickers for which prices were successfully fetched.
-            Missing tickers indicate failures (ticker not found, API unavailable, etc).
+            Only includes tickers for which prices were successfully
+            fetched (or successfully served from stale cache). Missing
+            tickers indicate per-ticker failures
+            (ticker not found, API unavailable with no cache).
+
+        Raises:
+            InvalidPriceDataError: API returned malformed data for any
+                ticker.
+            Other exceptions: unexpected programming or configuration
+                errors propagate.
 
         Performance Target:
             <200ms for all cache hits

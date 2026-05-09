@@ -13,6 +13,11 @@ import pytest
 from zebu.adapters.outbound.market_data.alpha_vantage_adapter import (
     AlphaVantageAdapter,
 )
+from zebu.application.exceptions import (
+    InvalidPriceDataError,
+    MarketDataUnavailableError,
+    TickerNotFoundError,
+)
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.price_point import PricePoint
 from zebu.domain.value_objects.ticker import Ticker
@@ -29,8 +34,17 @@ def mock_rate_limiter() -> MagicMock:
 
 @pytest.fixture
 def mock_price_repository() -> MagicMock:
-    """Provide mock price repository."""
-    return MagicMock()
+    """Provide mock price repository.
+
+    Async methods are configured as ``AsyncMock`` so awaits succeed without
+    relying on broad ``except Exception`` blocks in production code.
+    """
+    repo = MagicMock()
+    repo.upsert_price = AsyncMock(return_value=None)
+    repo.get_latest_price = AsyncMock(return_value=None)
+    repo.get_price_at = AsyncMock(return_value=None)
+    repo.get_all_tickers = AsyncMock(return_value=[])
+    return repo
 
 
 @pytest.fixture
@@ -1164,3 +1178,386 @@ class TestDailyPriceDeduplication:
         assert len(result) == 1
         assert result[0].timestamp == datetime(2026, 1, 20, 21, 0, 0, tzinfo=UTC)
         assert result[0].price.amount == Decimal("151.00")
+
+
+class TestGetCurrentPriceErrorHandling:
+    """Tests for the error contract on ``get_current_price``.
+
+    The adapter should:
+
+    - Fall back to stale cache only on ``MarketDataUnavailableError``
+      (transient API failure: timeout, network, 5xx).
+    - Propagate ``TickerNotFoundError`` (the ticker genuinely doesn't exist).
+    - Propagate ``InvalidPriceDataError`` (data integrity issue).
+    - Propagate unexpected exceptions (programming bugs / config errors)
+      so they surface in logs and monitoring rather than being masked as
+      "stale data served".
+    """
+
+    async def test_transient_api_failure_falls_back_to_cached(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_price_cache: MagicMock,
+    ) -> None:
+        """A transient ``MarketDataUnavailableError`` from the API should
+        fall back to the stale cache when present."""
+        # Arrange
+        ticker = Ticker("AAPL")
+        stale_price = create_price_point(
+            ticker, datetime(2026, 1, 1, 21, 0, 0, tzinfo=UTC)
+        )
+        mock_price_cache.get = AsyncMock(return_value=stale_price)
+
+        async def fail_with_unavailable(_: Ticker) -> PricePoint:
+            raise MarketDataUnavailableError("Network timeout")
+
+        alpha_vantage_adapter._fetch_from_api = fail_with_unavailable  # type: ignore[method-assign]
+
+        # Act
+        result = await alpha_vantage_adapter.get_current_price(ticker)
+
+        # Assert - serves stale cached data with explicit "cache" source
+        assert result.source == "cache"
+        assert result.price == stale_price.price
+
+    async def test_transient_api_failure_no_cache_propagates(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_price_cache: MagicMock,
+    ) -> None:
+        """When the API is unavailable AND no cache exists, the
+        ``MarketDataUnavailableError`` should propagate."""
+        # Arrange
+        ticker = Ticker("AAPL")
+        mock_price_cache.get = AsyncMock(return_value=None)
+
+        async def fail_with_unavailable(_: Ticker) -> PricePoint:
+            raise MarketDataUnavailableError("API quota exceeded")
+
+        alpha_vantage_adapter._fetch_from_api = fail_with_unavailable  # type: ignore[method-assign]
+
+        # Act / Assert
+        with pytest.raises(MarketDataUnavailableError, match="API quota exceeded"):
+            await alpha_vantage_adapter.get_current_price(ticker)
+
+    async def test_ticker_not_found_propagates_not_masked_as_stale(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_price_cache: MagicMock,
+    ) -> None:
+        """If a ticker doesn't exist, the error should propagate even when
+        a stale cached value happens to exist - serving the cached value
+        would lie about the ticker's validity."""
+        # Arrange
+        ticker = Ticker("BOGUS")
+        # Cache happens to have something, but the ticker is genuinely invalid
+        stale_price = create_price_point(
+            ticker, datetime(2026, 1, 1, 21, 0, 0, tzinfo=UTC)
+        )
+        mock_price_cache.get = AsyncMock(return_value=stale_price)
+
+        async def fail_with_not_found(_: Ticker) -> PricePoint:
+            raise TickerNotFoundError("BOGUS")
+
+        alpha_vantage_adapter._fetch_from_api = fail_with_not_found  # type: ignore[method-assign]
+
+        # Act / Assert - error propagates rather than being masked
+        with pytest.raises(TickerNotFoundError):
+            await alpha_vantage_adapter.get_current_price(ticker)
+
+    async def test_invalid_price_data_propagates_not_masked_as_stale(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_price_cache: MagicMock,
+    ) -> None:
+        """A data integrity error (malformed response) should propagate
+        rather than be silently replaced by stale cached data."""
+        # Arrange
+        ticker = Ticker("AAPL")
+        stale_price = create_price_point(
+            ticker, datetime(2026, 1, 1, 21, 0, 0, tzinfo=UTC)
+        )
+        mock_price_cache.get = AsyncMock(return_value=stale_price)
+
+        async def fail_with_invalid(_: Ticker) -> PricePoint:
+            raise InvalidPriceDataError("AAPL", "Negative price")
+
+        alpha_vantage_adapter._fetch_from_api = fail_with_invalid  # type: ignore[method-assign]
+
+        # Act / Assert
+        with pytest.raises(InvalidPriceDataError):
+            await alpha_vantage_adapter.get_current_price(ticker)
+
+    async def test_unexpected_exception_propagates_not_masked_as_stale(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_price_cache: MagicMock,
+    ) -> None:
+        """Programming bugs (e.g. ``KeyError`` on a parsing change) must
+        surface to logs and crash reporters - they are NOT transient API
+        failures and must not be masked as 'stale data served'.
+        """
+        # Arrange
+        ticker = Ticker("AAPL")
+        stale_price = create_price_point(
+            ticker, datetime(2026, 1, 1, 21, 0, 0, tzinfo=UTC)
+        )
+        mock_price_cache.get = AsyncMock(return_value=stale_price)
+
+        async def crash_with_keyerror(_: Ticker) -> PricePoint:
+            raise KeyError("fields rearranged in API response")
+
+        alpha_vantage_adapter._fetch_from_api = crash_with_keyerror  # type: ignore[method-assign]
+
+        # Act / Assert - propagates so monitoring can flag the bug
+        with pytest.raises(KeyError):
+            await alpha_vantage_adapter.get_current_price(ticker)
+
+
+class TestGetBatchPricesErrorHandling:
+    """Tests for the error contract on ``get_batch_prices``.
+
+    Per the ``MarketDataPort`` contract, batch fetching never raises for
+    *per-ticker* domain failures - those tickers are simply excluded from
+    the result. But:
+
+    - Transient ``MarketDataUnavailableError`` falls back to cache when
+      available.
+    - ``TickerNotFoundError`` excludes the ticker (no false cache fallback).
+    - ``InvalidPriceDataError`` propagates - malformed data is a real
+      integrity issue, not a per-ticker thing to silently drop.
+    - Unexpected exceptions propagate.
+    """
+
+    async def test_batch_invalid_price_data_propagates(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_price_cache: MagicMock,
+    ) -> None:
+        """``InvalidPriceDataError`` should propagate from the batch path
+        rather than silently dropping the ticker."""
+        # Arrange
+        ticker = Ticker("AAPL")
+        # Cache miss so we hit the API path
+        mock_price_cache.get = AsyncMock(return_value=None)
+
+        async def fail_with_invalid(_: Ticker) -> PricePoint:
+            raise InvalidPriceDataError("AAPL", "Malformed JSON")
+
+        alpha_vantage_adapter._fetch_from_api = fail_with_invalid  # type: ignore[method-assign]
+
+        # Act / Assert
+        with pytest.raises(InvalidPriceDataError):
+            await alpha_vantage_adapter.get_batch_prices([ticker])
+
+    async def test_batch_ticker_not_found_excludes_without_cache_fallback(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_price_cache: MagicMock,
+    ) -> None:
+        """For an invalid ticker, the result should *not* include a cached
+        value (which would be a lie); the ticker is just excluded."""
+        # Arrange
+        ticker = Ticker("BOGUS")
+        # Cache miss for initial check, plus a hypothetical stale value
+        # would still be wrong to return.
+        mock_price_cache.get = AsyncMock(return_value=None)
+
+        async def fail_with_not_found(_: Ticker) -> PricePoint:
+            raise TickerNotFoundError("BOGUS")
+
+        alpha_vantage_adapter._fetch_from_api = fail_with_not_found  # type: ignore[method-assign]
+
+        # Act
+        result = await alpha_vantage_adapter.get_batch_prices([ticker])
+
+        # Assert - ticker is not in result; no exception raised
+        assert ticker not in result
+        assert result == {}
+
+    async def test_batch_transient_failure_falls_back_to_cached_value(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_price_cache: MagicMock,
+    ) -> None:
+        """A ``MarketDataUnavailableError`` should still fall back to the
+        stale cached value (if any) for the affected ticker."""
+        # Arrange
+        ticker = Ticker("AAPL")
+        stale_price = create_price_point(
+            ticker, datetime(2026, 1, 1, 21, 0, 0, tzinfo=UTC)
+        )
+
+        # First call (initial cache check during batch loop): return None so
+        # we hit the API path. Second call (stale-cache fallback) returns
+        # the stale price.
+        get_calls = [None, stale_price]
+        mock_price_cache.get = AsyncMock(side_effect=get_calls)
+
+        async def fail_with_unavailable(_: Ticker) -> PricePoint:
+            raise MarketDataUnavailableError("Timeout")
+
+        alpha_vantage_adapter._fetch_from_api = fail_with_unavailable  # type: ignore[method-assign]
+
+        # Act
+        result = await alpha_vantage_adapter.get_batch_prices([ticker])
+
+        # Assert
+        assert ticker in result
+        assert result[ticker].source == "cache"
+
+    async def test_batch_unexpected_exception_propagates(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_price_cache: MagicMock,
+    ) -> None:
+        """A programming bug must propagate so it surfaces in monitoring."""
+        # Arrange
+        ticker = Ticker("AAPL")
+        mock_price_cache.get = AsyncMock(return_value=None)
+
+        async def crash_with_keyerror(_: Ticker) -> PricePoint:
+            raise KeyError("unexpected schema")
+
+        alpha_vantage_adapter._fetch_from_api = crash_with_keyerror  # type: ignore[method-assign]
+
+        # Act / Assert
+        with pytest.raises(KeyError):
+            await alpha_vantage_adapter.get_batch_prices([ticker])
+
+
+class TestGetPriceHistoryErrorHandling:
+    """Tests for the error contract on ``get_price_history``.
+
+    - ``MarketDataUnavailableError`` returns partial cached data (better
+      than nothing) but if there's no partial data, the error propagates -
+      it does NOT silently return ``[]``.
+    - ``TickerNotFoundError`` and ``InvalidPriceDataError`` propagate.
+    - Unexpected exceptions propagate.
+    """
+
+    async def test_history_transient_failure_with_partial_data_returns_partial(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_price_repository: MagicMock,
+        mock_price_cache: MagicMock,
+        mock_rate_limiter: MagicMock,
+    ) -> None:
+        """When the API call fails transiently and we have partial cached
+        data, return the partial data rather than failing."""
+        # Arrange
+        ticker = Ticker("AAPL")
+        start = datetime(2026, 1, 10, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 1, 17, 23, 59, 59, tzinfo=UTC)
+
+        # Sparse cached data (incomplete - density check will fail)
+        partial_db = [
+            create_price_point(ticker, datetime(2026, 1, 10, 21, 0, 0, tzinfo=UTC)),
+            create_price_point(ticker, datetime(2026, 1, 13, 21, 0, 0, tzinfo=UTC)),
+        ]
+        mock_price_repository.get_price_history = AsyncMock(return_value=partial_db)
+        mock_price_cache.get_history = AsyncMock(return_value=None)
+
+        async def fail_with_unavailable(
+            _ticker: Ticker, outputsize: str = "compact"
+        ) -> list[PricePoint]:
+            raise MarketDataUnavailableError("API timeout")
+
+        alpha_vantage_adapter._fetch_daily_history_from_api = fail_with_unavailable  # type: ignore[method-assign]
+
+        # Act
+        result = await alpha_vantage_adapter.get_price_history(
+            ticker, start, end, "1day"
+        )
+
+        # Assert - partial data is returned
+        assert len(result) == 2
+        # Rate limiter was consumed (we did try to fetch)
+        mock_rate_limiter.consume_token.assert_called_once()
+
+    async def test_history_transient_failure_no_partial_data_propagates(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_price_repository: MagicMock,
+        mock_price_cache: MagicMock,
+    ) -> None:
+        """When the API fails transiently AND there is no partial data,
+        the error propagates - we do NOT silently return ``[]``."""
+        # Arrange
+        ticker = Ticker("AAPL")
+        start = datetime(2026, 1, 10, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 1, 17, 23, 59, 59, tzinfo=UTC)
+
+        # No data anywhere
+        mock_price_repository.get_price_history = AsyncMock(return_value=[])
+        mock_price_cache.get_history = AsyncMock(return_value=None)
+
+        async def fail_with_unavailable(
+            _ticker: Ticker, outputsize: str = "compact"
+        ) -> list[PricePoint]:
+            raise MarketDataUnavailableError("Network down")
+
+        alpha_vantage_adapter._fetch_daily_history_from_api = fail_with_unavailable  # type: ignore[method-assign]
+
+        # Act / Assert
+        with pytest.raises(MarketDataUnavailableError, match="Network down"):
+            await alpha_vantage_adapter.get_price_history(ticker, start, end, "1day")
+
+    async def test_history_ticker_not_found_propagates(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_price_repository: MagicMock,
+        mock_price_cache: MagicMock,
+    ) -> None:
+        """``TickerNotFoundError`` from the API must propagate, even when
+        partial cached data exists - returning partial data for an
+        invalid ticker would be a lie."""
+        # Arrange
+        ticker = Ticker("BOGUS")
+        start = datetime(2026, 1, 10, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 1, 17, 23, 59, 59, tzinfo=UTC)
+
+        # Partial cached data exists
+        partial_db = [
+            create_price_point(ticker, datetime(2026, 1, 10, 21, 0, 0, tzinfo=UTC)),
+        ]
+        mock_price_repository.get_price_history = AsyncMock(return_value=partial_db)
+        mock_price_cache.get_history = AsyncMock(return_value=None)
+
+        async def fail_with_not_found(
+            _ticker: Ticker, outputsize: str = "compact"
+        ) -> list[PricePoint]:
+            raise TickerNotFoundError("BOGUS")
+
+        alpha_vantage_adapter._fetch_daily_history_from_api = fail_with_not_found  # type: ignore[method-assign]
+
+        # Act / Assert
+        with pytest.raises(TickerNotFoundError):
+            await alpha_vantage_adapter.get_price_history(ticker, start, end, "1day")
+
+    async def test_history_unexpected_exception_propagates(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_price_repository: MagicMock,
+        mock_price_cache: MagicMock,
+    ) -> None:
+        """Programming bugs in the API path must propagate, not be masked
+        as 'partial data returned'."""
+        # Arrange
+        ticker = Ticker("AAPL")
+        start = datetime(2026, 1, 10, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 1, 17, 23, 59, 59, tzinfo=UTC)
+
+        mock_price_repository.get_price_history = AsyncMock(return_value=[])
+        mock_price_cache.get_history = AsyncMock(return_value=None)
+
+        async def crash_with_keyerror(
+            _ticker: Ticker, outputsize: str = "compact"
+        ) -> list[PricePoint]:
+            raise KeyError("API schema changed")
+
+        alpha_vantage_adapter._fetch_daily_history_from_api = crash_with_keyerror  # type: ignore[method-assign]
+
+        # Act / Assert
+        with pytest.raises(KeyError):
+            await alpha_vantage_adapter.get_price_history(ticker, start, end, "1day")

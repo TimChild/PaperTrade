@@ -119,7 +119,20 @@ class AlphaVantageAdapter:
         2. Check PostgreSQL (return if reasonably fresh)
         3. Weekend/Holiday: Get last trading day's cached price
         4. Fetch from Alpha Vantage API (if rate limit allows)
-        5. Serve stale cached data if rate limited
+        5. Serve stale cached data if rate limited or API fails transiently
+
+        Error handling contract (Wave 3-E un-swallow):
+
+        - Transient API failures (``MarketDataUnavailableError``: timeout,
+          network, 5xx) fall back to stale cache when available and only
+          raise when no cache exists.
+        - ``TickerNotFoundError`` propagates - the ticker genuinely
+          doesn't exist; serving cache would lie about validity.
+        - ``InvalidPriceDataError`` propagates - malformed API response
+          is a data integrity issue, not transient.
+        - Unexpected exceptions (programming bugs, schema changes)
+          propagate so they surface in monitoring rather than being
+          silently masked as "stale data served".
 
         Args:
             ticker: Stock ticker symbol to get price for
@@ -130,6 +143,7 @@ class AlphaVantageAdapter:
         Raises:
             TickerNotFoundError: Ticker doesn't exist in data source
             MarketDataUnavailableError: Cannot fetch price and no cached data available
+            InvalidPriceDataError: API returned malformed data
 
         Example:
             >>> price = await adapter.get_current_price(Ticker("AAPL"))
@@ -214,8 +228,17 @@ class AlphaVantageAdapter:
 
             return price
 
-        except Exception:
-            # API call failed - serve stale cached data if available
+        except MarketDataUnavailableError:
+            # Transient API failure (timeout, network, 5xx) - log and try
+            # cache fallback. Note: TickerNotFoundError and InvalidPriceDataError
+            # propagate intentionally - those represent real data integrity issues
+            # that should NOT be masked as "stale data served". Unexpected
+            # exceptions (programming bugs) also propagate to surface loudly.
+            logger.exception(
+                "Alpha Vantage API call failed; attempting stale-cache fallback",
+                ticker=ticker.symbol,
+                has_cached_fallback=cached is not None,
+            )
             if cached:
                 return cached.with_source("cache")
 
@@ -358,15 +381,32 @@ class AlphaVantageAdapter:
 
                     result[ticker] = price
 
-                except Exception as e:
-                    # Log but don't fail - just exclude this ticker from results
+                except TickerNotFoundError:
+                    # Ticker genuinely doesn't exist - log and exclude from
+                    # result. Don't pretend a cached value is valid for an
+                    # invalid ticker.
                     logger.warning(
-                        "Failed to fetch price",
+                        "Ticker not found in Alpha Vantage; excluding from batch",
                         ticker=ticker.symbol,
-                        error=str(e),
+                    )
+                except InvalidPriceDataError as e:
+                    # API returned data but it was malformed - this is a data
+                    # integrity issue. Log loudly; don't mask with cached data.
+                    logger.error(
+                        "Invalid price data from Alpha Vantage; excluding from batch",
+                        ticker=ticker.symbol,
+                        reason=e.reason,
                         exc_info=True,
                     )
-                    # Try to serve stale cached data as last resort
+                    raise
+                except MarketDataUnavailableError as e:
+                    # Transient API failure - try stale cache fallback before
+                    # excluding this ticker.
+                    logger.warning(
+                        "Market data unavailable; attempting stale-cache fallback",
+                        ticker=ticker.symbol,
+                        reason=e.reason,
+                    )
                     cached = await self.price_cache.get(ticker)
                     if cached:
                         result[ticker] = cached.with_source("cache")
@@ -824,18 +864,23 @@ class AlphaVantageAdapter:
                 deduplicated = self._deduplicate_daily_prices(filtered)
                 return sorted(deduplicated, key=lambda p: p.timestamp)
 
-            except Exception as e:
-                log.error(
-                    "Alpha Vantage API fetch failed",
-                    error=str(e),
-                    exc_info=True,
+            except MarketDataUnavailableError as e:
+                # Transient API failure - log and return partial data if we
+                # have any. TickerNotFoundError and InvalidPriceDataError
+                # propagate intentionally because returning partial data for
+                # an unknown ticker or malformed response would mask real
+                # bugs. Unexpected exceptions also propagate.
+                log.warning(
+                    "Alpha Vantage API fetch failed; returning partial cached data",
+                    reason=e.reason,
+                    have_points=len(all_prices),
                 )
-                # Return partial data if we have any
                 if all_prices:
                     # Deduplicate daily prices before returning
                     deduplicated = self._deduplicate_daily_prices(all_prices)
                     return sorted(deduplicated, key=lambda p: p.timestamp)
-                return []
+                # Re-raise so callers see the failure rather than an empty list
+                raise
 
         # For other intervals (non-1day), we don't support API fetching
         # Return empty list if data is incomplete
@@ -1367,6 +1412,10 @@ class AlphaVantageAdapter:
         try:
             return await self.price_repository.get_all_tickers()
         except Exception as e:
+            # Repository may raise driver-specific exceptions (SQLAlchemy
+            # OperationalError, asyncpg errors, etc.) - translate to the
+            # documented port exception so callers don't depend on
+            # adapter-internal types. Original exception chained via `from e`.
             raise MarketDataUnavailableError(
                 f"Failed to get supported tickers: {e}"
             ) from e
