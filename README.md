@@ -11,22 +11,26 @@ A stock market emulation platform for practicing trading strategies without risk
 ## 📚 Documentation
 
 **New Users?** Start here:
+
 - **[Executive Summary](docs/planning/executive-summary.md)** - Quick overview of current capabilities
 - **[User Guide](docs/USER_GUIDE.md)** - Step-by-step instructions for using Zebu
 
 **Developers & Contributors:**
+
 - **[Feature Status Matrix](docs/planning/features.md)** - Complete feature implementation status
 - **[Technical Boundaries](docs/architecture/technical-boundaries.md)** - Known limitations and edge cases
 
 **Deployment & Operations:**
+
 - **[Deployment Guide](docs/deployment/README.md)** - Complete deployment documentation index
 - **[Proxmox VM Deployment](docs/deployment/proxmox-vm-deployment.md)** - Production deployment guide
 - **[Domain & SSL Setup](docs/deployment/domain-setup.md)** - Configure custom domain with HTTPS
 - **[Production Checklist](docs/deployment/production-checklist.md)** - Pre-deployment verification
 
 **Project Information:**
+
 - [Development Progress](PROGRESS.md) - Phase completion tracking
-- [Project Plan](docs/planning/project_plan.md) - Roadmap and architecture
+- [Roadmap](docs/planning/roadmap.md) - Phase plan and milestones
 - [Backlog](BACKLOG.md) - Planned improvements
 
 ## Overview
@@ -147,13 +151,14 @@ task --version
 ```bash
 # Clone the repository
 git clone https://github.com/TimChild/PaperTrade.git
-cd Zebu
+cd PaperTrade
+
+# Copy env defaults (safe defaults included)
+cp .env.example .env
 
 # OPTION 1: Automated setup (recommended)
-# This installs pre-commit hooks, dependencies, and starts Docker services
-./.github/copilot-setup.sh
-
-# Note: The setup script will create .env from .env.example automatically
+# Installs pre-commit hooks, backend + frontend dependencies, and starts Docker services
+task setup
 
 # OPTION 2: Manual setup (see below)
 
@@ -190,7 +195,7 @@ docker compose up -d
 
 # 6. Start backend development server
 cd backend
-uv run uvicorn papertrade.main:app --reload
+uv run uvicorn zebu.main:app --reload
 ```
 
 ## Docker Development
@@ -423,9 +428,10 @@ task dev:backend        # Start backend dev server
 task dev:frontend       # Start frontend dev server
 
 # Testing
-task test              # Run all tests
-task test:backend      # Run backend tests with coverage
-task test:frontend     # Run frontend tests
+task test:all         # Run all tests (backend + frontend unit + E2E)
+task test:backend     # Run backend tests with coverage
+task test:frontend    # Run frontend unit tests (Vitest)
+task test:e2e         # Run E2E tests with Playwright
 
 # Code Quality
 task lint              # Run all linters
@@ -443,11 +449,11 @@ task docker:clean      # Stop and remove volumes (⚠️ deletes data)
 
 # CI & Build
 task ci                # Run all CI checks locally (same as GitHub Actions)
-task ci:fast           # Run fast checks (lint only, skip tests)
+task ci:backend        # Backend CI checks only (quality:backend)
+task ci:frontend       # Frontend CI checks only (quality:frontend)
 task build             # Build all production artifacts
 task build:backend     # Check backend imports and structure
 task build:frontend    # Build frontend for production
-task test:e2e          # Run end-to-end tests with Playwright
 
 # Utilities
 task clean             # Clean build artifacts and caches
@@ -457,11 +463,11 @@ task precommit:run     # Run pre-commit on all files
 
 ### Running Tests
 
-Zebu follows the **Test Pyramid** approach with unit, integration, and E2E tests. See [docs/TESTING_STRATEGY.md](docs/TESTING_STRATEGY.md) for details.
+Zebu follows the **Test Pyramid** approach with unit, integration, and E2E tests. See [docs/testing/README.md](docs/testing/README.md) for details.
 
 ```bash
-# All tests (backend + frontend)
-task test
+# All tests (backend + frontend unit + E2E)
+task test:all
 
 # Backend tests
 cd backend
@@ -477,7 +483,7 @@ npm run test:e2e:ui              # E2E tests in interactive mode
 
 # With coverage report
 cd backend
-uv run pytest --cov=papertrade --cov-report=html
+uv run pytest --cov=zebu --cov-report=html
 # Open htmlcov/index.html in browser
 ```
 
@@ -542,21 +548,24 @@ task ci
 
 # Or run specific checks
 task lint           # All linters
-task test           # All tests
+task test:all       # All tests
 task build          # Build checks
 
-# Fast checks (lint only, skip tests)
-task ci:fast
+# Per-stack CI subsets
+task ci:backend     # Backend quality checks (lint + test)
+task ci:frontend    # Frontend quality checks (lint + test)
 ```
 
 **Why this matters**: These are the **exact same commands** that run in GitHub Actions CI. If `task ci` passes locally, CI should pass too.
 
 **CI Job Mapping:**
+
 - `backend-checks` job → `task setup:backend && task lint:backend && task test:backend`
 - `frontend-checks` job → `task setup:frontend && task lint:frontend && task test:frontend && task build:frontend`
 - `e2e-tests` job → `task docker:up && task test:e2e`
 
 **Additional CI Checks:**
+
 - Frontend security audit (`npm audit`) runs in CI to detect dependency vulnerabilities
 - Coverage reports are uploaded to Codecov for both backend and frontend
 - E2E tests include Playwright test reports uploaded as artifacts
@@ -570,7 +579,7 @@ task ci:fast
 
 ## Roadmap
 
-See [project_plan.md](docs/planning/project_plan.md) for detailed development phases:
+See [docs/planning/roadmap.md](docs/planning/roadmap.md) for detailed development phases:
 
 1. **Phase 0**: Foundation ✅ — Project setup, CI/CD, tooling
 2. **Phase 1**: The Ledger ✅ — Basic portfolio and trade tracking
