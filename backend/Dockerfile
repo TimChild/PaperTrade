@@ -6,7 +6,7 @@
 # ============================================================================
 # Stage 1: Builder - Install dependencies and prepare the application
 # ============================================================================
-FROM python:3.12-slim AS builder
+FROM python:3.13-slim AS builder
 
 # Install system dependencies required for building Python packages
 RUN apt-get update && apt-get install -y \
@@ -50,7 +50,7 @@ COPY migrations/ ./migrations/
 # ============================================================================
 # Stage 2: Runtime - Minimal production image
 # ============================================================================
-FROM python:3.12-slim AS runtime
+FROM python:3.13-slim AS runtime
 
 # Install curl for health checks
 RUN apt-get update && apt-get install -y \
