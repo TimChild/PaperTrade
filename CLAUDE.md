@@ -105,6 +105,7 @@ Status: Phase A (this Claude infra migration) is in progress as of 2026-05-09. P
 - **Hot paths**: `backend/src/zebu/application/services/backtest_executor.py` is the canonical "iterate over days, generate signals, execute trades" loop — Task #210's live executor will mirror its structure.
 - **CD is live**: pushing to `main` deploys to production. Add `[skip deploy]` in the commit message to skip.
 - **Pre-commit runs on push**, not commit. So commits are fast; push is where formatters run.
+- **Run `claude-infra-sync` at the end of each Wave / Phase**: the skill at `.claude/skills/claude-infra-sync/SKILL.md` audits `CLAUDE.md` + `.claude/` for drift against the actual repo. Run it before the next agent dispatch cycle (or as the closeout of a Wave) and address BLOCKERs in the same PR.
 
 ## Don't
 
