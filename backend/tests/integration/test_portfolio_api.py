@@ -56,7 +56,9 @@ def test_create_portfolio_with_initial_deposit(
         headers=auth_headers,
     )
     assert list_response.status_code == 200
-    portfolios = list_response.json()
+    page = list_response.json()
+    assert page["total"] == 1
+    portfolios = page["items"]
     assert len(portfolios) == 1
     assert portfolios[0]["id"] == portfolio_id
     assert portfolios[0]["name"] == "My Portfolio"
@@ -289,7 +291,9 @@ def test_get_portfolios_returns_only_user_portfolios(
         headers=auth_headers,
     )
     assert list_response.status_code == 200
-    portfolios = list_response.json()
+    page = list_response.json()
+    assert page["total"] == 1
+    portfolios = page["items"]
     assert len(portfolios) == 1
     assert portfolios[0]["name"] == "User 1 Portfolio"
     assert portfolios[0]["user_id"] == str(default_user_id)
@@ -382,7 +386,9 @@ def test_multiple_portfolios_for_same_user(
         headers=auth_headers,
     )
     assert list_response.status_code == 200
-    portfolios = list_response.json()
+    page = list_response.json()
+    assert page["total"] == 2
+    portfolios = page["items"]
     assert len(portfolios) == 2
 
     portfolio_names = {p["name"] for p in portfolios}
@@ -438,7 +444,7 @@ def test_execute_trade_with_as_of_uses_historical_price(
     )
     assert transactions_response.status_code == 200
 
-    transactions = transactions_response.json()["transactions"]
+    transactions = transactions_response.json()["items"]
     # Filter out the initial deposit transaction
     buy_transactions = [t for t in transactions if t["transaction_type"] == "BUY"]
     assert len(buy_transactions) == 1
@@ -497,7 +503,7 @@ def test_execute_trade_without_as_of_uses_current_price(
         headers=auth_headers,
     )
 
-    transactions = transactions_response.json()["transactions"]
+    transactions = transactions_response.json()["items"]
     buy_transactions = [t for t in transactions if t["transaction_type"] == "BUY"]
     assert len(buy_transactions) == 1
 
@@ -621,7 +627,7 @@ def test_delete_portfolio_removes_transactions(
         headers=auth_headers,
     )
     assert transactions_response.status_code == 200
-    transactions = transactions_response.json()["transactions"]
+    transactions = transactions_response.json()["items"]
     assert len(transactions) >= 2  # Initial deposit + manual deposit
 
     # Delete the portfolio
@@ -778,7 +784,7 @@ def test_delete_portfolio_removes_from_list(
         headers=auth_headers,
     )
     assert list_before.status_code == 200
-    assert len(list_before.json()) == 1
+    assert list_before.json()["total"] == 1
 
     # Delete the portfolio
     delete_response = client.delete(
@@ -793,7 +799,7 @@ def test_delete_portfolio_removes_from_list(
         headers=auth_headers,
     )
     assert list_after.status_code == 200
-    assert len(list_after.json()) == 0
+    assert list_after.json()["total"] == 0
 
 
 def test_total_value_includes_both_cash_and_holdings(
@@ -894,13 +900,16 @@ def test_get_all_balances_returns_empty_for_no_portfolios(
     client: TestClient,
     auth_headers: dict[str, str],
 ) -> None:
-    """Test that /balances returns empty list when user has no portfolios."""
+    """Empty paginated response when user has no portfolios."""
     response = client.get(
         "/api/v1/portfolios/balances",
         headers=auth_headers,
     )
     assert response.status_code == 200
-    assert response.json() == []
+    page = response.json()
+    assert page["items"] == []
+    assert page["total"] == 0
+    assert page["has_more"] is False
 
 
 def test_get_all_balances_returns_balance_for_each_portfolio(
@@ -929,7 +938,9 @@ def test_get_all_balances_returns_balance_for_each_portfolio(
         headers=auth_headers,
     )
     assert response.status_code == 200
-    balances = response.json()
+    page = response.json()
+    assert page["total"] == 2
+    balances = page["items"]
     assert len(balances) == 2
 
     # All fields present
@@ -971,7 +982,12 @@ def test_list_portfolios_pagination(
         headers=auth_headers,
     )
     assert response_p1.status_code == 200
-    page1 = response_p1.json()
+    page1_payload = response_p1.json()
+    assert page1_payload["total"] == 3
+    assert page1_payload["limit"] == 2
+    assert page1_payload["offset"] == 0
+    assert page1_payload["has_more"] is True
+    page1 = page1_payload["items"]
     assert len(page1) == 2
 
     # Get next 1
@@ -980,7 +996,10 @@ def test_list_portfolios_pagination(
         headers=auth_headers,
     )
     assert response_p2.status_code == 200
-    page2 = response_p2.json()
+    page2_payload = response_p2.json()
+    assert page2_payload["total"] == 3
+    assert page2_payload["has_more"] is False
+    page2 = page2_payload["items"]
     assert len(page2) == 1
 
     # No overlap
@@ -994,5 +1013,7 @@ def test_list_portfolios_pagination(
         headers=auth_headers,
     )
     assert response_all.status_code == 200
-    all_portfolios = response_all.json()
-    assert len(all_portfolios) == 3
+    all_payload = response_all.json()
+    assert all_payload["total"] == 3
+    assert all_payload["has_more"] is False
+    assert len(all_payload["items"]) == 3

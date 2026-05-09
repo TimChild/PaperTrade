@@ -12,13 +12,19 @@ from decimal import Decimal
 from typing import Self
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from zebu.adapters.inbound.api.dependencies import (
     CurrentUserDep,
     MarketDataDep,
 )
+from zebu.adapters.inbound.api.schemas import (
+    DEFAULT_PAGE_LIMIT,
+    MAX_PAGE_LIMIT,
+    PaginatedResponse,
+)
+from zebu.adapters.inbound.api.schemas.pagination import build_paginated_response
 from zebu.adapters.outbound.database.backtest_run_repository import (
     SQLModelBacktestRunRepository,
 )
@@ -207,15 +213,37 @@ async def run_backtest(
     return _to_backtest_response(backtest_run)
 
 
-@router.get("", response_model=list[BacktestRunResponse])
+@router.get("", response_model=PaginatedResponse[BacktestRunResponse])
 async def list_backtests(
     current_user: CurrentUserDep,
     session: SessionDep,
-) -> list[BacktestRunResponse]:
-    """List all backtest runs for the current user."""
+    limit: int = Query(
+        default=DEFAULT_PAGE_LIMIT,
+        ge=1,
+        le=MAX_PAGE_LIMIT,
+        description="Maximum number of backtest runs to return (1-100, default 20).",
+    ),
+    offset: int = Query(
+        default=0,
+        ge=0,
+        description="Number of backtest runs to skip for pagination (default 0).",
+    ),
+) -> PaginatedResponse[BacktestRunResponse]:
+    """List backtest runs for the current user with pagination."""
     repo = SQLModelBacktestRunRepository(session)
+    # Repo returns owner-scoped runs in creation order. Pagination is applied
+    # in Python; SQL push-down is tracked in the perf audit cross-cut and
+    # will matter once Phase C/D agents start scheduling backtests.
     runs = await repo.get_by_user(current_user)
-    return [_to_backtest_response(r) for r in runs]
+    total = len(runs)
+    page = runs[offset : offset + limit]
+    items = [_to_backtest_response(r) for r in page]
+    return build_paginated_response(
+        items=items,
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get("/{backtest_id}", response_model=BacktestRunResponse)

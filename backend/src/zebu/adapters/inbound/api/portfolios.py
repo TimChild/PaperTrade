@@ -23,6 +23,12 @@ from zebu.adapters.inbound.api.dependencies import (
     SnapshotRepositoryDep,
     TransactionRepositoryDep,
 )
+from zebu.adapters.inbound.api.schemas import (
+    DEFAULT_PAGE_LIMIT,
+    MAX_PAGE_LIMIT,
+    PaginatedResponse,
+)
+from zebu.adapters.inbound.api.schemas.pagination import build_paginated_response
 from zebu.application.commands.buy_stock import BuyStockCommand, BuyStockHandler
 from zebu.application.commands.create_portfolio import (
     CreatePortfolioCommand,
@@ -43,10 +49,6 @@ from zebu.application.commands.sell_stock import (
 from zebu.application.commands.withdraw_cash import (
     WithdrawCashCommand,
     WithdrawCashHandler,
-)
-from zebu.application.exceptions import (
-    MarketDataUnavailableError,
-    TickerNotFoundError,
 )
 from zebu.application.queries.get_portfolio import (
     GetPortfolioHandler,
@@ -222,20 +224,27 @@ async def create_portfolio(
     )
 
 
-@router.get("", response_model=list[PortfolioResponse])
+@router.get("", response_model=PaginatedResponse[PortfolioResponse])
 async def list_portfolios(
     current_user: CurrentUserDep,
     portfolio_repo: PortfolioRepositoryDep,
     limit: int = Query(
-        default=20, ge=1, le=100, description="Max portfolios to return"
+        default=DEFAULT_PAGE_LIMIT,
+        ge=1,
+        le=MAX_PAGE_LIMIT,
+        description="Maximum number of portfolios to return (1-100, default 20).",
     ),
-    offset: int = Query(default=0, ge=0, description="Number of portfolios to skip"),
+    offset: int = Query(
+        default=0,
+        ge=0,
+        description="Number of portfolios to skip for pagination (default 0).",
+    ),
     include_backtest: bool = Query(
         default=False,
         description="Include BACKTEST portfolios in the response",
     ),
-) -> list[PortfolioResponse]:
-    """Get all portfolios for the current user.
+) -> PaginatedResponse[PortfolioResponse]:
+    """Get portfolios for the current user with pagination.
 
     By default, BACKTEST portfolios are excluded.  Pass
     ``include_backtest=true`` to include them.
@@ -245,9 +254,10 @@ async def list_portfolios(
         portfolios = [
             p for p in portfolios if p.portfolio_type != PortfolioType.BACKTEST
         ]
-    paginated = portfolios[offset : offset + limit]
+    total = len(portfolios)
+    page = portfolios[offset : offset + limit]
 
-    return [
+    items = [
         PortfolioResponse(
             id=p.id,
             user_id=p.user_id,
@@ -255,33 +265,60 @@ async def list_portfolios(
             created_at=p.created_at.isoformat(),
             portfolio_type=p.portfolio_type.value,
         )
-        for p in paginated
+        for p in page
     ]
+    return build_paginated_response(
+        items=items,
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 
-@router.get("/balances", response_model=list[BalanceResponse])
+@router.get("/balances", response_model=PaginatedResponse[BalanceResponse])
 async def get_all_balances(
     current_user: CurrentUserDep,
     portfolio_repo: PortfolioRepositoryDep,
     transaction_repo: TransactionRepositoryDep,
     market_data: MarketDataDep,
-) -> list[BalanceResponse]:
-    """Get balances for all current user's portfolios in a single request.
+    limit: int = Query(
+        default=DEFAULT_PAGE_LIMIT,
+        ge=1,
+        le=MAX_PAGE_LIMIT,
+        description="Maximum number of balances to return (1-100, default 20).",
+    ),
+    offset: int = Query(
+        default=0,
+        ge=0,
+        description="Number of balances to skip for pagination (default 0).",
+    ),
+) -> PaginatedResponse[BalanceResponse]:
+    """Get balances for the current user's portfolios in a single request.
 
-    Eliminates N+1 API calls when displaying portfolio dashboard.
-    Returns balances in the same order as list_portfolios().
+    Eliminates N+1 API calls when displaying the portfolio dashboard. Balances
+    are returned in the same order as list_portfolios(). Pagination matches
+    the same ``limit`` / ``offset`` window so the dashboard can fetch the
+    portfolios page and the balances page in parallel and zip them on the
+    client.
     """
     portfolios = await portfolio_repo.get_by_user(current_user)
-    portfolio_ids = [p.id for p in portfolios]
+    total = len(portfolios)
+    page_portfolios = portfolios[offset : offset + limit]
+    portfolio_ids = [p.id for p in page_portfolios]
 
     if not portfolio_ids:
-        return []
+        return build_paginated_response(
+            items=[],
+            total=total,
+            limit=limit,
+            offset=offset,
+        )
 
     query = GetPortfolioBalancesQuery(portfolio_ids=portfolio_ids)
     handler = GetPortfolioBalancesHandler(portfolio_repo, transaction_repo, market_data)
     result = await handler.execute(query)
 
-    return [
+    items = [
         BalanceResponse(
             cash_balance=f"{b.cash_balance.amount:.2f}",
             holdings_value=f"{b.holdings_value.amount:.2f}",
@@ -293,6 +330,12 @@ async def get_all_balances(
         )
         for b in result.balances
     ]
+    return build_paginated_response(
+        items=items,
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get("/{portfolio_id}", response_model=PortfolioResponse)
@@ -466,34 +509,19 @@ async def execute_trade(
     # Verify user owns this portfolio
     await _verify_portfolio_ownership(portfolio_id, current_user, portfolio_repo)
 
-    # Fetch market price (current or historical based on as_of)
+    # Fetch market price (current or historical based on as_of). Both
+    # ``TickerNotFoundError`` (404) and ``MarketDataUnavailableError`` (503)
+    # are mapped to the standard ``ErrorResponse`` envelope by the global
+    # exception handlers in ``error_handlers.py`` — no try/except needed
+    # here.
     ticker = Ticker(request.ticker)
 
-    try:
-        if request.as_of:
-            # Backtesting mode - get historical price
-            price_point = await market_data.get_price_at(ticker, request.as_of)
-        else:
-            # Normal mode - get current price
-            price_point = await market_data.get_current_price(ticker)
-    except TickerNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail={
-                "type": "ticker_not_found",
-                "message": f"Invalid ticker symbol: {e.ticker}",
-                "ticker": e.ticker,
-            },
-        ) from None
-    except MarketDataUnavailableError as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail={
-                "type": "market_data_unavailable",
-                "message": "Unable to fetch market data. Please try again later.",
-                "reason": e.reason,
-            },
-        ) from None
+    if request.as_of:
+        # Backtesting mode - get historical price
+        price_point = await market_data.get_price_at(ticker, request.as_of)
+    else:
+        # Normal mode - get current price
+        price_point = await market_data.get_current_price(ticker)
 
     if request.action == "BUY":
         command = BuyStockCommand(

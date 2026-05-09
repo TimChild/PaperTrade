@@ -34,7 +34,7 @@ def test_get_transactions_returns_initial_deposit(
 
     assert tx_response.status_code == 200
     tx_data = tx_response.json()
-    transactions = tx_data["transactions"]
+    transactions = tx_data["items"]
 
     # Should have 1 transaction: DEPOSIT
     assert len(transactions) == 1
@@ -85,7 +85,7 @@ def test_get_transactions_returns_all_trades(
 
     assert tx_response.status_code == 200
     tx_data = tx_response.json()
-    transactions = tx_data["transactions"]
+    transactions = tx_data["items"]
 
     # Should have 3 transactions: 1 DEPOSIT + 2 BUY
     assert len(transactions) == 3
@@ -127,7 +127,7 @@ def test_transactions_include_trade_details(
         headers=auth_headers,
     )
 
-    transactions = tx_response.json()["transactions"]
+    transactions = tx_response.json()["items"]
 
     # Find the BUY transaction
     buy_tx = next(tx for tx in transactions if tx["transaction_type"] == "BUY")
@@ -178,7 +178,7 @@ def test_deposit_and_withdrawal_in_transaction_history(
         headers=auth_headers,
     )
 
-    transactions = tx_response.json()["transactions"]
+    transactions = tx_response.json()["items"]
 
     # Should have 3 transactions: initial DEPOSIT + deposit + withdrawal
     assert len(transactions) == 3
@@ -226,7 +226,7 @@ def test_sell_transaction_appears_in_history(
         headers=auth_headers,
     )
 
-    transactions = tx_response.json()["transactions"]
+    transactions = tx_response.json()["items"]
 
     # Find the SELL transaction
     sell_tx = next(tx for tx in transactions if tx["transaction_type"] == "SELL")
@@ -275,10 +275,11 @@ def test_transaction_pagination(
         headers=auth_headers,
     )
     page1_data = page1_response.json()
-    assert len(page1_data["transactions"]) == 5
-    assert page1_data["total_count"] == 11  # 10 trades + 1 initial deposit
+    assert len(page1_data["items"]) == 5
+    assert page1_data["total"] == 11  # 10 trades + 1 initial deposit
     assert page1_data["limit"] == 5
     assert page1_data["offset"] == 0
+    assert page1_data["has_more"] is True
 
     # Get second page
     page2_response = client.get(
@@ -286,5 +287,6 @@ def test_transaction_pagination(
         headers=auth_headers,
     )
     page2_data = page2_response.json()
-    assert len(page2_data["transactions"]) == 5
+    assert len(page2_data["items"]) == 5
     assert page2_data["offset"] == 5
+    assert page2_data["has_more"] is True
