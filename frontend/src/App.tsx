@@ -14,7 +14,6 @@ import { Strategies } from '@/pages/Strategies'
 import { Backtests } from '@/pages/Backtests'
 import { BacktestResult } from '@/pages/BacktestResult'
 import { CompareBacktests } from '@/pages/CompareBacktests'
-import { Debug } from '@/pages/Debug'
 import { NotFound } from '@/pages/NotFound'
 import { DashboardVariantA } from '@/pages/__prototypes__/DashboardVariantA'
 import { DashboardVariantB } from '@/pages/__prototypes__/DashboardVariantB'
@@ -45,10 +44,6 @@ function App() {
           }}
         />
         <Routes>
-          {/* Debug route - accessible without authentication */}
-          <Route path="/debug" element={<Debug />} />
-
-          {/* All other routes */}
           <Route path="*" element={<AuthenticatedApp />} />
         </Routes>
       </BrowserRouter>
