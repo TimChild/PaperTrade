@@ -1,7 +1,7 @@
 # Zebu Product Roadmap
 
-**Last Updated**: January 26, 2026
-**Version**: v1.2.0 - Production Deployed
+**Last Updated**: May 9, 2026
+**Version**: v1.0.0 - Production Deployed (Phase 4 Complete)
 
 ## What is this document?
 
@@ -23,7 +23,7 @@ We're building a platform where:
 
 ## ✅ What You Can Do Today (Production Live!)
 
-**Current Status**: Live at [zebutrader.com](https://zebutrader.com) with 796 automated tests
+**Current Status**: Live at [zebutrader.com](https://zebutrader.com) with 1,142 automated tests (831 backend + 311 frontend)
 
 ### Portfolio Management
 - ✅ Create unlimited portfolios with virtual cash
@@ -85,7 +85,25 @@ All Phase 3 features are complete and deployed. Focus is now on platform maturit
 
 ---
 
-### Phase 4: Professional Features (Q2-Q4 2026)
+### Phase 4: Trading Strategies & Backtesting ✅ COMPLETE
+
+**Shipped (March 8, 2026, v1.0.0)**:
+- Strategy entity with 3 types: BUY_AND_HOLD, DOLLAR_COST_AVERAGING, MOVING_AVERAGE_CROSSOVER
+- Backtest execution engine over historical data
+- Frontend backtesting UI with strategy comparison
+- CD pipeline (push to main → auto-deploy)
+
+---
+
+### Phase 5: Agent Platform (Active — May 2026)
+
+See [agent-platform-proposal.md](agent-platform-proposal.md) for the detailed plan. Six phases (A–F) covering Claude infrastructure modernization, live strategy execution (Task #210), API-key auth, MCP server, agent-authored strategies, long-running agent harness, and agent-observability GUI.
+
+The Phase 5 goal is **long-running / scheduled agents trying out trading strategies via API or MCP, with the app as the human-facing GUI**.
+
+---
+
+### Phase 6: Professional Features (Future)
 
 **Advanced Order Types**:
 - Limit orders (buy at specific price or lower)
@@ -114,13 +132,7 @@ All Phase 3 features are complete and deployed. Focus is now on platform maturit
 
 ---
 
-### Phase 5: Automation & Advanced Analytics (2027+)
-
-**Algorithmic Trading**:
-- Define rules (e.g., "Buy AAPL if drops 5%")
-- Automated strategy execution
-- Strategy templates
-- Backtest automation scripts
+### Phase 7: Advanced Analytics & Social (Future)
 
 **Advanced Analytics**:
 - Sharpe ratio, volatility, beta
@@ -130,11 +142,10 @@ All Phase 3 features are complete and deployed. Focus is now on platform maturit
 
 **Social Features** (maybe):
 - Portfolio sharing
-- Trading leagues
-- Leaderboards
+- Trading leagues / leaderboards
 - Copy trading
 
-**Timeline**: After Phase 4, based on demand
+**Timeline**: After Phase 5 / 6, based on demand
 
 ---
 
@@ -166,7 +177,7 @@ Some features are commonly requested but out of scope:
 - **UX Polish Complete**: TradingView charts, mobile responsive, empty states
 - **Production Deployment**: Live at zebutrader.com
 - **Infrastructure**: Grafana Cloud monitoring, E2E testing
-- **Quality**: 796 tests, 0 ESLint suppressions
+- **Quality**: 1,142 tests, 0 ESLint suppressions
 
 ### January 2026 - Phase 3a-3b Complete ✅
 - **SELL orders**: Complete trading loop with cost basis tracking

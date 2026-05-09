@@ -19,7 +19,7 @@
 | **Phase 4: Trading Strategies** | ✅ **Complete** | 3 strategy types, full backtest pipeline |
 | **Phase 4 Frontend** | ✅ **Complete** | Strategy comparison UI, backtest charts |
 | **Infrastructure** | ✅ **Complete** | CD pipeline, self-hosted runner, versioning |
-| **Total Tests** | ✅ **1,146** | 835 backend, 311 frontend |
+| **Total Tests** | ✅ **1,142** | 831 backend, 311 frontend |
 
 ### Recent Work (March 8, 2026)
 - ✅ **CD Pipeline & Versioning**:
@@ -223,7 +223,7 @@
 - 📈 **Phase 5 Planning**: Gather user feedback to prioritize next features
   - Options: live paper-trading UI, strategy comparison views, notifications
 
-**Current State**: Production system live at zebutrader.com with weekend-aware caching, full trading strategy backtesting with comparison UI, and 1,146 tests. Ready for beta users!
+**Current State**: Production system live at zebutrader.com with weekend-aware caching, full trading strategy backtesting with comparison UI, and 1,142 tests. Ready for beta users!
 
 ## Phase 4 Summary ✅ COMPLETE
 
@@ -390,7 +390,7 @@ For detailed phase completion information and implementation details from Decemb
 
 | Metric | Value |
 |--------|-------|
-| Total Tests | 835 backend + 311 frontend = **1,146 tests** |
+| Total Tests | 831 backend + 311 frontend = **1,142 tests** |
 | Backend Coverage | 81%+ |
 | Frontend ESLint Suppressions | **0** (exceptional!) |
 | Architecture Compliance | 10/10 Clean Architecture |

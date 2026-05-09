@@ -167,4 +167,4 @@ await expect(page.getByTestId('holding-symbol-AAPL')).toBeVisible()
 
 ## Contributing
 
-See the main repository README and `.github/copilot-instructions.md` for contribution guidelines.
+See the main repository README and `CLAUDE.md` for contribution guidelines.

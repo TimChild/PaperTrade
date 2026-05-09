@@ -156,7 +156,7 @@ For orchestrators running comprehensive QA sessions.
    ```bash
    # Use reusable template
    gh agent-task create --custom-agent qa \
-     -F agent_docs/reusable/e2e_qa_validation.md
+     -F .claude/skills/e2e-qa-validation/SKILL.md
 
    # Or create custom task focusing on recent changes
    ```

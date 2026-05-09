@@ -215,10 +215,10 @@ Potential future optimizations:
 ## Related Documentation
 
 - Main project README: `../../README.md`
-- Agent orchestration guide: `../../agent_docs/orchestration-guide.md`
-- Copilot instructions: `../.github/copilot-instructions.md`
+- Project conventions: `../../CLAUDE.md`
+- Orchestration playbook: `../../.claude/skills/orchestrate-zebu/SKILL.md`
 - Taskfile reference: `../../Taskfile.yml`
-- Quality & Infrastructure agent: `../agents/quality-infra.md`
+- Quality & Infrastructure agent: `../../.claude/agents/quality-infra.md`
 
 ## Changelog
 

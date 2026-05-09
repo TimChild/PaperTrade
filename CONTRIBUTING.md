@@ -320,7 +320,7 @@ Full task list: `task --list`
 - **Documentation**: Start with [README.md](README.md)
 - **Architecture**: See [project_strategy.md](project_strategy.md)
 - **Current Status**: Check [PROGRESS.md](PROGRESS.md)
-- **Agent Orchestration**: See [agent_docs/orchestration-guide.md](agent_docs/orchestration-guide.md) for AI agent workflow
+- **AI agent conventions**: See [CLAUDE.md](CLAUDE.md) and the `orchestrate-zebu` skill at `.claude/skills/orchestrate-zebu/SKILL.md`
 - **Issues**: Browse [GitHub Issues](https://github.com/TimChild/PaperTrade/issues)
 - **Discussions**: Use GitHub Discussions for questions
 
@@ -329,7 +329,7 @@ Full task list: `task --list`
 ```
 Zebu/
 ├── backend/               # Python/FastAPI backend
-│   ├── src/papertrade/
+│   ├── src/zebu/
 │   │   ├── domain/       # Pure business logic
 │   │   ├── application/  # Use cases
 │   │   ├── adapters/     # Interface implementations
