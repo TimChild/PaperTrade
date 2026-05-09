@@ -460,3 +460,74 @@ class TestGetByPortfolios:
         assert len(result[portfolio_id]) == 2
         assert result[portfolio_id][0].id == t1.id
         assert result[portfolio_id][1].id == t2.id
+
+
+class TestSaveAll:
+    """Tests for save_all() bulk insert."""
+
+    @pytest.mark.asyncio
+    async def test_save_all_inserts_all_transactions(self, session):
+        """Bulk save persists every transaction in the batch."""
+        repo = SQLModelTransactionRepository(session)
+        portfolio_id = uuid4()
+
+        batch = [
+            Transaction(
+                id=uuid4(),
+                portfolio_id=portfolio_id,
+                transaction_type=TransactionType.DEPOSIT,
+                timestamp=datetime(2026, 1, 1 + i, 10, 0, 0),
+                cash_change=Money(Decimal("100.00"), "USD"),
+                ticker=None,
+                quantity=None,
+                price_per_share=None,
+            )
+            for i in range(5)
+        ]
+
+        await repo.save_all(batch)
+        await session.commit()
+
+        result = await repo.get_by_portfolio(portfolio_id)
+        assert len(result) == 5
+        assert {t.id for t in result} == {t.id for t in batch}
+
+    @pytest.mark.asyncio
+    async def test_save_all_empty_list_is_noop(self, session):
+        """Empty input does not error and persists nothing."""
+        repo = SQLModelTransactionRepository(session)
+        await repo.save_all([])
+        # No-op — no commit needed; nothing to verify beyond no exception
+
+    @pytest.mark.asyncio
+    async def test_save_all_duplicate_id_raises(self, session):
+        """A duplicate ID inside the batch raises DuplicateTransactionError."""
+        repo = SQLModelTransactionRepository(session)
+        portfolio_id = uuid4()
+
+        existing = Transaction(
+            id=uuid4(),
+            portfolio_id=portfolio_id,
+            transaction_type=TransactionType.DEPOSIT,
+            timestamp=datetime(2026, 1, 1, 10, 0, 0),
+            cash_change=Money(Decimal("100.00"), "USD"),
+            ticker=None,
+            quantity=None,
+            price_per_share=None,
+        )
+        await repo.save(existing)
+        await session.commit()
+
+        # Now try a batch that includes the same ID
+        collision = Transaction(
+            id=existing.id,
+            portfolio_id=portfolio_id,
+            transaction_type=TransactionType.DEPOSIT,
+            timestamp=datetime(2026, 1, 2, 10, 0, 0),
+            cash_change=Money(Decimal("200.00"), "USD"),
+            ticker=None,
+            quantity=None,
+            price_per_share=None,
+        )
+        with pytest.raises(DuplicateTransactionError):
+            await repo.save_all([collision])
