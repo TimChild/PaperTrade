@@ -335,7 +335,7 @@ After the report lands, reply with under ~150 words:
 
 Example:
 
-> Wrote `agent_docs/sync-checks/2026-06-15/REPORT.md`. BLOCKER: 1 / WARN: 4 / NIT: 3. Top concern: `frontend-swe.md:62` still references `JSX.Element` (codebase uses `React.JSX.Element` everywhere). One BLOCKER: `architect.md:28-38` points to `architecture_plans/` which doesn't exist. Recommend `docs-refactorer` dispatch this week. Skipped Pass 7 (endpoint references) — none found in agent files this run.
+> Wrote `agent_docs/sync-checks/<YYYY-MM-DD>/REPORT.md`. BLOCKER: 1 / WARN: 4 / NIT: 3. Top concern: `frontend-swe.md:62` still references `JSX.Element` (codebase uses `React.JSX.Element` everywhere). One BLOCKER: `architect.md:28-38` points to `architecture_plans/` which doesn't exist. Recommend `docs-refactorer` dispatch this week. Skipped Pass 7 (endpoint references) — none found in agent files this run.
 
 ## Anti-patterns
 

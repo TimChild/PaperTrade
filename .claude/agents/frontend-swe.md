@@ -17,7 +17,7 @@ Run the `before-starting-work` skill, plus:
 
 - `frontend/package.json` for recent dependency changes
 - `frontend/src/components/` for reusable components — don't recreate
-- `docs/architecture/api/` for backend contracts when integrating
+- Backend contracts: read the FastAPI router source under `backend/src/zebu/adapters/inbound/api/` (the `docs/architecture/api/` shared-contracts directory is on the target schema but does not exist yet)
 
 ## Code organization
 

@@ -16,15 +16,15 @@ Designs **structured specifications** for the rest of the team to implement. **N
 
 ## Output locations
 
-Architecture decisions and shared reference content live under `docs/architecture/`:
+Architecture decisions and shared reference content live under `docs/architecture/`. The schema below is the **target** layout — `decisions/`, `domain/`, and `api/` subdirs are created on first write:
 
 ```
 docs/architecture/
-├── README.md                 # Architecture overview
-├── decisions/NNN-title.md    # ADRs
-├── principles.md             # The dependency rule, layer descriptions
-├── domain/{entities,value-objects,services}.md
-└── api/contracts.md          # OpenAPI specs
+├── README.md                 # Architecture overview (exists)
+├── principles.md             # The dependency rule, layer descriptions (exists)
+├── decisions/NNN-title.md    # ADRs (mkdir on first write)
+├── domain/{entities,value-objects,services}.md  # (mkdir on first write)
+└── api/contracts.md          # OpenAPI specs (mkdir on first write)
 ```
 
 Per-feature design specs go in the same `agent_docs/tasks/NNN_short_name.md` file the implementing agent will follow — sections include Overview, Architecture (entities, interfaces, data flow, decisions), Implementation Plan, Testing Strategy. See `200_phase4_architecture_design.md` and `200b_phase4_architecture_design_v2.md` for examples.

@@ -97,5 +97,5 @@ pytest tests/unit/application/queries/test_get_active_tickers.py -v
 
 ## Related Documentation
 
-- [ADR 003: Background Refresh Strategy](../../architecture_plans/20251228_phase2-market-data/adr-003-background-refresh.md)
-- [Market Data Architecture](../../architecture_plans/20251228_phase2-market-data/overview.md)
+- [ADR 003: Background Refresh Strategy](../../docs/architecture/archived/20251228_phase2-market-data/adr-003-background-refresh.md)
+- [Market Data Architecture](../../docs/architecture/archived/20251228_phase2-market-data/overview.md)

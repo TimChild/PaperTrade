@@ -79,7 +79,7 @@ Don't parallelize:
 - Tasks touching the same modules (merge conflicts guaranteed)
 - Tasks sharing domain concepts being designed for the first time
 
-Pattern: dispatch a remote agent for the larger backend task; use a local sub-agent for a small parallel visual fix.
+Pattern: dispatch a remote agent for the larger backend task; use a local specialist agent for a small parallel visual fix.
 
 ## Task scoping
 

@@ -220,7 +220,7 @@ Example response:
 
 When dispatching a full audit cycle (12 dimensions in 2026-05-09):
 
-- **Parallelize.** Each dimension is independent on read-only inputs, so dispatch all of them in parallel sub-agents. The 2026-05-09 cycle ran 12 audits in parallel and consolidated.
+- **Parallelize.** Each dimension is independent on read-only inputs, so dispatch all of them in parallel specialist agents. The 2026-05-09 cycle ran 12 audits in parallel and consolidated.
 - **Worktree isolation.** Each audit agent should run in its own git worktree so one agent's read state never sees another's drafts. (`git worktree add` per agent; the agent writes to `agent_docs/audits/<DATE>/<slug>.md` directly.)
 - **One date, one cycle.** All audits in a cycle share a single `<YYYY-MM-DD>` directory. If a follow-up audit runs a week later, it gets its own dated directory.
 - **Orchestrator writes SUMMARY.md.** After all per-dimension reports land, the orchestrator reads them, builds the P-count matrix (see `agent_docs/audits/2026-05-09/SUMMARY.md` for the table format), drafts an execution wave plan, and surfaces the consolidated finding set for Tim's signoff.
