@@ -1,4 +1,4 @@
-"""PricePoint DTO for representing stock price observations."""
+"""PricePoint value object for representing stock price observations."""
 
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -17,8 +17,12 @@ VALID_INTERVALS = {"real-time", "1day", "1hour", "5min", "1min"}
 class PricePoint:
     """Represents a single price observation for a ticker at a specific point in time.
 
-    PricePoint is an immutable DTO used to transfer price data between layers.
-    It includes core price information and optional OHLCV (candlestick) data.
+    PricePoint is an immutable domain value object that bundles a ticker, a
+    monetary price, and observation metadata. It is consumed by domain services
+    (e.g., trading strategies) and produced by market-data adapters; living in
+    the domain layer keeps the dependency rule intact (Domain depends on
+    nothing outward). It includes core price information and optional OHLCV
+    (candlestick) data.
 
     Attributes:
         ticker: Stock ticker symbol

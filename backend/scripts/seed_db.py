@@ -19,10 +19,10 @@ from zebu.adapters.outbound.database.models import (
     TransactionModel,
 )
 from zebu.adapters.outbound.models.price_history import PriceHistoryModel
-from zebu.application.dtos.price_point import PricePoint
 from zebu.domain.entities.portfolio import Portfolio
 from zebu.domain.entities.transaction import Transaction, TransactionType
 from zebu.domain.value_objects.money import Money
+from zebu.domain.value_objects.price_point import PricePoint
 from zebu.domain.value_objects.ticker import Ticker
 from zebu.infrastructure.database import async_session_maker, init_db
 

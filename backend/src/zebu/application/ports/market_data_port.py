@@ -8,7 +8,7 @@ price data from various sources.
 from datetime import datetime
 from typing import Protocol
 
-from zebu.application.dtos.price_point import PricePoint
+from zebu.domain.value_objects.price_point import PricePoint
 from zebu.domain.value_objects.ticker import Ticker
 
 

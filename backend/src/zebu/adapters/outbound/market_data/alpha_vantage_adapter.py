@@ -17,13 +17,13 @@ from typing import TYPE_CHECKING
 import httpx
 import structlog
 
-from zebu.application.dtos.price_point import PricePoint
 from zebu.application.exceptions import (
     InvalidPriceDataError,
     MarketDataUnavailableError,
     TickerNotFoundError,
 )
 from zebu.domain.value_objects.money import Money
+from zebu.domain.value_objects.price_point import PricePoint
 from zebu.domain.value_objects.ticker import Ticker
 from zebu.infrastructure.cache.price_cache import PriceCache
 from zebu.infrastructure.market_calendar import MarketCalendar

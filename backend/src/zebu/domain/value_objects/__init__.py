@@ -4,6 +4,7 @@ from zebu.domain.value_objects.backtest_status import BacktestStatus
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.performance_metrics import PerformanceMetrics
 from zebu.domain.value_objects.portfolio_type import PortfolioType
+from zebu.domain.value_objects.price_point import PricePoint
 from zebu.domain.value_objects.quantity import Quantity
 from zebu.domain.value_objects.strategy_type import StrategyType
 from zebu.domain.value_objects.ticker import Ticker
@@ -14,6 +15,7 @@ __all__ = [
     "Money",
     "PerformanceMetrics",
     "PortfolioType",
+    "PricePoint",
     "Quantity",
     "StrategyType",
     "Ticker",

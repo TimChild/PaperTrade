@@ -9,7 +9,6 @@ import pytest
 from zebu.adapters.outbound.market_data.in_memory_adapter import (
     InMemoryMarketDataAdapter,
 )
-from zebu.application.dtos.price_point import PricePoint
 from zebu.application.ports.in_memory_portfolio_repository import (
     InMemoryPortfolioRepository,
 )
@@ -24,6 +23,7 @@ from zebu.domain.entities.portfolio import Portfolio
 from zebu.domain.entities.transaction import Transaction, TransactionType
 from zebu.domain.exceptions import InvalidPortfolioError
 from zebu.domain.value_objects.money import Money
+from zebu.domain.value_objects.price_point import PricePoint
 from zebu.domain.value_objects.quantity import Quantity
 from zebu.domain.value_objects.ticker import Ticker
 

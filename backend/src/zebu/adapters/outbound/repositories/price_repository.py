@@ -12,7 +12,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from zebu.adapters.outbound.models.price_history import PriceHistoryModel
-from zebu.application.dtos.price_point import PricePoint
+from zebu.domain.value_objects.price_point import PricePoint
 from zebu.domain.value_objects.ticker import Ticker
 
 logger = structlog.get_logger(__name__)
