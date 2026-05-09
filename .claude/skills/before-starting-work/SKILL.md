@@ -28,10 +28,10 @@ Look for PRs touching the same files / features. Coordinate to avoid merge confl
 
 ```bash
 ls -la docs/architecture/
-ls -la architecture_plans/      # if it exists
+ls -lt agent_docs/tasks/ | head -10
 ```
 
-If a plan exists for the feature you're working on, **implement it as written** — don't deviate without explicit approval.
+If a task spec exists for the feature you're working on at `agent_docs/tasks/NNN_*.md`, **implement it as written** — don't deviate without explicit approval.
 
 ## 4. Current code state
 

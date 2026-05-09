@@ -1,6 +1,6 @@
 # Zebu — Project Conventions for Claude
 
-Zebu (repo: `TimChild/PaperTrade`) is a stock-market paper-trading platform — practice trading without real money. **Phase 4 complete, v1.0.0 deployed** to `https://zebutrader.com` (Proxmox VM, self-hosted CD pipeline). See `docs/planning/agent-platform-proposal.md` for the active forward plan (agent-driven trading, Phase 5).
+Zebu (repo: `TimChild/PaperTrade`) is a stock-market paper-trading platform — practice trading without real money. **Phase 4 complete, v1.0.0 deployed** to `https://zebutrader.com` (Proxmox VM, self-hosted CD pipeline). See `docs/planning/agent-platform-proposal.md` for the active forward plan (agent-driven trading, Phases A–F; Phase A done, Phase B in progress).
 
 ## Tech stack
 

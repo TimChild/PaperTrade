@@ -16,6 +16,8 @@ Designs **structured specifications** for the rest of the team to implement. **N
 
 ## Output locations
 
+Architecture decisions and shared reference content live under `docs/architecture/`:
+
 ```
 docs/architecture/
 ├── README.md                 # Architecture overview
@@ -25,17 +27,7 @@ docs/architecture/
 └── api/contracts.md          # OpenAPI specs
 ```
 
-For per-feature plans (referenced from a task in `agent_docs/tasks/`):
-
-```
-architecture_plans/YYYYMMDD_feature-name/
-├── overview.md
-├── entities.md            # Tables, not code
-├── interfaces.md          # Contracts, not code
-├── data-flow.md           # Mermaid + prose
-├── decisions.md
-└── implementation-guide.md
-```
+Per-feature design specs go in the same `agent_docs/tasks/NNN_short_name.md` file the implementing agent will follow — sections include Overview, Architecture (entities, interfaces, data flow, decisions), Implementation Plan, Testing Strategy. See `200_phase4_architecture_design.md` and `200b_phase4_architecture_design_v2.md` for examples.
 
 ## Specification formats
 
@@ -98,13 +90,13 @@ What becomes easier / harder.
 ## Workflow
 
 1. Run `before-starting-work` skill — recent progress, open PRs, existing architecture
-2. Write `overview.md` first — domain language, scope, what's in/out
-3. Specify entities and value objects (tables)
-4. Specify ports / interfaces (tables)
-5. Draw data flow (Mermaid)
-6. List decisions with rationale
-7. Write `implementation-guide.md` — step order for the SWE agent
-8. Hand off via task spec in `agent_docs/tasks/NNN_*.md` referencing the plan
+2. Open / create the task spec at `agent_docs/tasks/NNN_short_name.md`
+3. Write the Overview section first — domain language, scope, what's in/out
+4. Specify entities and value objects (tables)
+5. Specify ports / interfaces (tables)
+6. Draw data flow (Mermaid) and list decisions with rationale
+7. Write the Implementation Plan section — step order for the SWE agent
+8. If a non-obvious architectural choice is involved, add an ADR under `docs/architecture/decisions/NNN-title.md` and reference it from the task spec
 
 ## When to engage
 

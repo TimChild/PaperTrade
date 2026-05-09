@@ -17,7 +17,7 @@ Run the `before-starting-work` skill, plus:
 
 - `backend/pyproject.toml` for recent dependency changes
 - `backend/tests/conftest.py` for fixtures
-- If a plan exists in `architecture_plans/`, **implement it as written** — don't deviate without explicit approval
+- If a task spec exists at `agent_docs/tasks/NNN_*.md`, **implement it as written** — don't deviate without explicit approval
 
 ## Code organization
 
