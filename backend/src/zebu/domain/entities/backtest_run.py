@@ -8,6 +8,7 @@ from uuid import UUID
 
 from zebu.domain.exceptions import InvalidBacktestRunError
 from zebu.domain.value_objects.backtest_status import BacktestStatus
+from zebu.domain.value_objects.money import Money
 
 
 @dataclass(frozen=True)
@@ -29,7 +30,7 @@ class BacktestRun:
         backtest_name: Human-readable label (1-100 characters)
         start_date: First date of the simulation window (inclusive)
         end_date: Last date of the simulation window (inclusive)
-        initial_cash: Starting cash balance in USD
+        initial_cash: Starting cash balance (Money value object)
         status: Current lifecycle status of the run
         created_at: When the run was created (UTC)
         completed_at: When the run finished (UTC, None while pending/running)
@@ -51,7 +52,7 @@ class BacktestRun:
     backtest_name: str
     start_date: date
     end_date: date
-    initial_cash: Decimal
+    initial_cash: Money
     status: BacktestStatus
     created_at: datetime
     completed_at: datetime | None = None
@@ -74,7 +75,7 @@ class BacktestRun:
             raise InvalidBacktestRunError("start_date must be before end_date")
         if self.end_date > date.today():
             raise InvalidBacktestRunError("end_date cannot be in the future")
-        if self.initial_cash <= 0:
+        if not self.initial_cash.is_positive():
             raise InvalidBacktestRunError("initial_cash must be positive")
 
     def __eq__(self, other: object) -> bool:

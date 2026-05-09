@@ -4,6 +4,7 @@ from datetime import date
 from decimal import Decimal
 
 from zebu.domain.services.strategies.buy_and_hold import BuyAndHoldStrategy
+from zebu.domain.value_objects.allocation import Allocation
 from zebu.domain.value_objects.trade_signal import TradeAction
 
 
@@ -18,7 +19,7 @@ class TestBuyAndHoldStrategy:
         """On the first call, one BUY signal per ticker is generated."""
         strategy = BuyAndHoldStrategy(
             tickers=["AAPL", "GOOGL"],
-            allocation={"AAPL": 0.6, "GOOGL": 0.4},
+            allocation=Allocation.from_raw({"AAPL": 0.6, "GOOGL": 0.4}),
         )
 
         signals = strategy.generate_signals(
@@ -29,7 +30,7 @@ class TestBuyAndHoldStrategy:
         )
 
         assert len(signals) == 2
-        tickers = {s.ticker for s in signals}
+        tickers = {s.ticker.symbol for s in signals}
         assert tickers == {"AAPL", "GOOGL"}
         actions = {s.action for s in signals}
         assert actions == {TradeAction.BUY}
@@ -38,7 +39,7 @@ class TestBuyAndHoldStrategy:
         """Each BUY signal amount = cash_balance × allocation fraction."""
         strategy = BuyAndHoldStrategy(
             tickers=["AAPL", "GOOGL"],
-            allocation={"AAPL": 0.6, "GOOGL": 0.4},
+            allocation=Allocation.from_raw({"AAPL": 0.6, "GOOGL": 0.4}),
         )
 
         signals = strategy.generate_signals(
@@ -48,15 +49,17 @@ class TestBuyAndHoldStrategy:
             holdings={},
         )
 
-        signal_map = {s.ticker: s for s in signals}
-        assert signal_map["AAPL"].amount == Decimal("6000")
-        assert signal_map["GOOGL"].amount == Decimal("4000")
+        signal_map = {s.ticker.symbol: s for s in signals}
+        assert signal_map["AAPL"].amount is not None
+        assert signal_map["AAPL"].amount.amount == Decimal("6000.00")
+        assert signal_map["GOOGL"].amount is not None
+        assert signal_map["GOOGL"].amount.amount == Decimal("4000.00")
 
     def test_subsequent_calls_return_empty(self) -> None:
         """After the first buy, all subsequent calls return no signals."""
         strategy = BuyAndHoldStrategy(
             tickers=["AAPL"],
-            allocation={"AAPL": 1.0},
+            allocation=Allocation.from_raw({"AAPL": 1.0}),
         )
 
         # First call
@@ -82,7 +85,7 @@ class TestBuyAndHoldStrategy:
         """If cash_balance is zero, no signals are generated."""
         strategy = BuyAndHoldStrategy(
             tickers=["AAPL"],
-            allocation={"AAPL": 1.0},
+            allocation=Allocation.from_raw({"AAPL": 1.0}),
         )
 
         signals = strategy.generate_signals(
@@ -98,7 +101,7 @@ class TestBuyAndHoldStrategy:
         """Tickers with 0% allocation produce no signals."""
         strategy = BuyAndHoldStrategy(
             tickers=["AAPL", "GOOGL"],
-            allocation={"AAPL": 1.0, "GOOGL": 0.0},
+            allocation=Allocation.from_raw({"AAPL": 1.0, "GOOGL": 0.0}),
         )
 
         signals = strategy.generate_signals(
@@ -109,13 +112,17 @@ class TestBuyAndHoldStrategy:
         )
 
         assert len(signals) == 1
-        assert signals[0].ticker == "AAPL"
+        assert signals[0].ticker.symbol == "AAPL"
 
     def test_missing_allocation_ticker_is_skipped(self) -> None:
-        """Tickers not in the allocation dict are skipped."""
+        """Tickers not in the allocation dict are skipped.
+
+        Allocation requires sum to 1.0 — so if GOOGL is in tickers but not in
+        allocation, the only allocation entry must itself sum to 1.0.
+        """
         strategy = BuyAndHoldStrategy(
             tickers=["AAPL", "GOOGL"],
-            allocation={"AAPL": 0.6},  # GOOGL not included
+            allocation=Allocation.from_raw({"AAPL": 1.0}),  # GOOGL omitted
         )
 
         signals = strategy.generate_signals(
@@ -126,13 +133,13 @@ class TestBuyAndHoldStrategy:
         )
 
         assert len(signals) == 1
-        assert signals[0].ticker == "AAPL"
+        assert signals[0].ticker.symbol == "AAPL"
 
     def test_signal_date_matches_current_date(self) -> None:
         """Signal date matches the current_date argument."""
         strategy = BuyAndHoldStrategy(
             tickers=["AAPL"],
-            allocation={"AAPL": 1.0},
+            allocation=Allocation.from_raw({"AAPL": 1.0}),
         )
         today = date(2024, 6, 15)
 
@@ -149,7 +156,7 @@ class TestBuyAndHoldStrategy:
         """Strategy starts with _has_bought = False."""
         strategy = BuyAndHoldStrategy(
             tickers=["AAPL"],
-            allocation={"AAPL": 1.0},
+            allocation=Allocation.from_raw({"AAPL": 1.0}),
         )
         assert strategy._has_bought is False
 
@@ -157,7 +164,7 @@ class TestBuyAndHoldStrategy:
         """After first successful call, _has_bought is True."""
         strategy = BuyAndHoldStrategy(
             tickers=["AAPL"],
-            allocation={"AAPL": 1.0},
+            allocation=Allocation.from_raw({"AAPL": 1.0}),
         )
         strategy.generate_signals(
             current_date=date(2024, 1, 2),

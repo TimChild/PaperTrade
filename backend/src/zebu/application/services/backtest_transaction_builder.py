@@ -43,7 +43,7 @@ class BacktestTransactionBuilder:
         """
         self._portfolio_id = portfolio_id
         self._cash_balance: Money = initial_cash
-        self._holdings: dict[str, Quantity] = {}
+        self._holdings: dict[Ticker, Quantity] = {}
         self._transactions: list[Transaction] = []
 
     @property
@@ -52,8 +52,8 @@ class BacktestTransactionBuilder:
         return self._cash_balance
 
     @property
-    def holdings(self) -> dict[str, Quantity]:
-        """Current holdings by ticker symbol."""
+    def holdings(self) -> dict[Ticker, Quantity]:
+        """Current holdings keyed by Ticker."""
         return dict(self._holdings)
 
     @property
@@ -97,11 +97,11 @@ class BacktestTransactionBuilder:
         if signal.amount is not None:
             if price_per_share.amount <= Decimal("0"):
                 return None
-            raw_qty = signal.amount / price_per_share.amount
+            raw_qty = signal.amount.amount / price_per_share.amount
             floored = raw_qty.to_integral_value(rounding=ROUND_DOWN)
             if floored <= Decimal("0"):
                 logger.debug(
-                    f"Skipping BUY {signal.ticker}: "
+                    f"Skipping BUY {signal.ticker.symbol}: "
                     f"amount {signal.amount} too small at price {price_per_share}"
                 )
                 return None
@@ -109,9 +109,9 @@ class BacktestTransactionBuilder:
         else:
             # signal.quantity is not None
             assert signal.quantity is not None
-            quantity = Quantity(signal.quantity)
+            quantity = signal.quantity
 
-        ticker = Ticker(signal.ticker)
+        ticker = signal.ticker
 
         try:
             transaction = create_buy_transaction(
@@ -124,7 +124,7 @@ class BacktestTransactionBuilder:
             )
         except InsufficientFundsError:
             logger.debug(
-                f"Skipping BUY {signal.ticker}: insufficient funds "
+                f"Skipping BUY {ticker.symbol}: insufficient funds "
                 f"(have {self._cash_balance}, need {price_per_share} × {quantity})"
             )
             return None
@@ -133,8 +133,8 @@ class BacktestTransactionBuilder:
         self._cash_balance = self._cash_balance.subtract(
             transaction.cash_change.absolute()
         )
-        current_qty = self._holdings.get(signal.ticker, Quantity(Decimal("0")))
-        self._holdings[signal.ticker] = current_qty.add(quantity)
+        current_qty = self._holdings.get(ticker, Quantity(Decimal("0")))
+        self._holdings[ticker] = current_qty.add(quantity)
         self._transactions.append(transaction)
 
         return transaction
@@ -146,22 +146,21 @@ class BacktestTransactionBuilder:
         timestamp: datetime,
     ) -> Transaction | None:
         """Apply a SELL signal."""
-        current_qty = self._holdings.get(signal.ticker, Quantity(Decimal("0")))
+        ticker = signal.ticker
+        current_qty = self._holdings.get(ticker, Quantity(Decimal("0")))
 
         if signal.quantity is not None:
-            quantity = Quantity(signal.quantity)
+            quantity = signal.quantity
         else:
             # Sell by amount — resolve to shares
             assert signal.amount is not None
             if price_per_share.amount <= Decimal("0"):
                 return None
-            raw_qty = signal.amount / price_per_share.amount
+            raw_qty = signal.amount.amount / price_per_share.amount
             floored = raw_qty.to_integral_value(rounding=ROUND_DOWN)
             if floored <= Decimal("0"):
                 return None
             quantity = Quantity(floored)
-
-        ticker = Ticker(signal.ticker)
 
         try:
             transaction = create_sell_transaction(
@@ -174,7 +173,7 @@ class BacktestTransactionBuilder:
             )
         except InsufficientSharesError:
             logger.debug(
-                f"Skipping SELL {signal.ticker}: insufficient shares "
+                f"Skipping SELL {ticker.symbol}: insufficient shares "
                 f"(have {current_qty.shares}, need {quantity.shares})"
             )
             return None
@@ -183,18 +182,18 @@ class BacktestTransactionBuilder:
         self._cash_balance = self._cash_balance.add(transaction.cash_change)
         new_qty = current_qty.subtract(quantity)
         if new_qty.is_zero():
-            self._holdings.pop(signal.ticker, None)
+            self._holdings.pop(ticker, None)
         else:
-            self._holdings[signal.ticker] = new_qty
+            self._holdings[ticker] = new_qty
         self._transactions.append(transaction)
 
         return transaction
 
-    def get_holding_quantity(self, ticker: str) -> Quantity:
+    def get_holding_quantity(self, ticker: Ticker) -> Quantity:
         """Get current quantity held for a ticker.
 
         Args:
-            ticker: Stock symbol
+            ticker: Stock ticker
 
         Returns:
             Quantity held (zero if not held)

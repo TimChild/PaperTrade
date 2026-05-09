@@ -4,7 +4,10 @@ import logging
 from datetime import date
 from decimal import Decimal
 
+from zebu.domain.value_objects.allocation import Allocation
+from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.price_point import PricePoint
+from zebu.domain.value_objects.ticker import Ticker
 from zebu.domain.value_objects.trade_signal import TradeAction, TradeSignal
 
 logger = logging.getLogger(__name__)
@@ -14,9 +17,8 @@ class DollarCostAveragingStrategy:
     """Invest a fixed dollar amount at regular intervals across tickers.
 
     On the first trading day and every ``frequency_days`` thereafter, allocates
-    ``amount_per_period`` across tickers according to the configured allocation
-    fractions (which must sum to ~1.0). On all other days, no signals are
-    generated.
+    ``amount_per_period`` across tickers according to the configured
+    ``Allocation``. On all other days, no signals are generated.
     """
 
     def __init__(
@@ -24,7 +26,7 @@ class DollarCostAveragingStrategy:
         tickers: list[str],
         frequency_days: int,
         amount_per_period: Decimal,
-        allocation: dict[str, float],
+        allocation: Allocation,
     ) -> None:
         """Initialize strategy with tickers, frequency, amount, and allocation.
 
@@ -32,7 +34,7 @@ class DollarCostAveragingStrategy:
             tickers: Symbols to invest in on each purchase date
             frequency_days: Number of days between purchases (1–365)
             amount_per_period: Total USD amount to invest per period
-            allocation: Fraction of amount_per_period per ticker (should sum to ~1.0)
+            allocation: Validated Allocation describing per-ticker fractions
         """
         self._tickers = tickers
         self._frequency_days = frequency_days
@@ -74,19 +76,22 @@ class DollarCostAveragingStrategy:
             return []
 
         signals: list[TradeSignal] = []
-        for ticker in self._tickers:
-            fraction = self._allocation.get(ticker, 0.0)
-            if fraction <= 0.0:
+        for ticker_str in self._tickers:
+            ticker = Ticker(ticker_str)
+            fraction = self._allocation.fraction_for(ticker)
+            if fraction <= Decimal("0"):
                 continue
-            amount = self._amount_per_period * Decimal(str(fraction))
-            if amount <= Decimal("0"):
+            amount_decimal = (self._amount_per_period * fraction).quantize(
+                Decimal("0.01")
+            )
+            if amount_decimal <= Decimal("0"):
                 continue
             signals.append(
                 TradeSignal(
                     action=TradeAction.BUY,
                     ticker=ticker,
                     signal_date=current_date,
-                    amount=amount,
+                    amount=Money(amount_decimal, "USD"),
                 )
             )
 

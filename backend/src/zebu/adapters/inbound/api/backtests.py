@@ -109,7 +109,7 @@ def _to_backtest_response(run: BacktestRun) -> BacktestRunResponse:
         backtest_name=run.backtest_name,
         start_date=run.start_date.isoformat(),
         end_date=run.end_date.isoformat(),
-        initial_cash=f"{run.initial_cash:.2f}",
+        initial_cash=f"{run.initial_cash.amount:.2f}",
         status=run.status.value,
         created_at=run.created_at.isoformat(),
         completed_at=run.completed_at.isoformat() if run.completed_at else None,

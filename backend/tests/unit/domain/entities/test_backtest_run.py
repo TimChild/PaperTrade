@@ -9,6 +9,7 @@ import pytest
 from zebu.domain.entities.backtest_run import BacktestRun
 from zebu.domain.exceptions import InvalidBacktestRunError
 from zebu.domain.value_objects.backtest_status import BacktestStatus
+from zebu.domain.value_objects.money import Money
 
 
 def _make_backtest_run(**overrides: object) -> BacktestRun:
@@ -23,7 +24,7 @@ def _make_backtest_run(**overrides: object) -> BacktestRun:
         "backtest_name": "My Backtest",
         "start_date": date(today.year - 2, 1, 1),
         "end_date": date(today.year - 1, 1, 1),
-        "initial_cash": Decimal("10000.00"),
+        "initial_cash": Money(Decimal("10000.00"), "USD"),
         "status": BacktestStatus.COMPLETED,
         "created_at": datetime.now(UTC) - timedelta(minutes=5),
     }
@@ -114,14 +115,14 @@ class TestBacktestRunConstruction:
         with pytest.raises(
             InvalidBacktestRunError, match="initial_cash must be positive"
         ):
-            _make_backtest_run(initial_cash=Decimal("0"))
+            _make_backtest_run(initial_cash=Money(Decimal("0"), "USD"))
 
     def test_initial_cash_negative_raises_error(self) -> None:
         """Should raise error when initial_cash is negative."""
         with pytest.raises(
             InvalidBacktestRunError, match="initial_cash must be positive"
         ):
-            _make_backtest_run(initial_cash=Decimal("-100"))
+            _make_backtest_run(initial_cash=Money(Decimal("-100"), "USD"))
 
 
 class TestBacktestRunEquality:

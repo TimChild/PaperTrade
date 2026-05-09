@@ -85,7 +85,7 @@ class TestMovingAverageCrossoverStrategy:
         )
         assert len(signals_day4) == 1
         assert signals_day4[0].action == TradeAction.BUY
-        assert signals_day4[0].ticker == "AAPL"
+        assert signals_day4[0].ticker.symbol == "AAPL"
 
     def test_death_cross_triggers_sell_signal(self) -> None:
         """When fast SMA crosses below slow SMA, a SELL signal is generated."""
@@ -122,8 +122,9 @@ class TestMovingAverageCrossoverStrategy:
 
         assert len(signals) == 1
         assert signals[0].action == TradeAction.SELL
-        assert signals[0].ticker == "AAPL"
-        assert signals[0].quantity == Decimal("50")
+        assert signals[0].ticker.symbol == "AAPL"
+        assert signals[0].quantity is not None
+        assert signals[0].quantity.shares == Decimal("50")
 
     def test_no_crossover_no_signal(self) -> None:
         """No crossover in either direction produces no signals."""
@@ -257,7 +258,7 @@ class TestMovingAverageCrossoverStrategy:
         )
 
         assert len(signals) == 1
-        assert signals[0].ticker == "AAPL"
+        assert signals[0].ticker.symbol == "AAPL"
         assert signals[0].action == TradeAction.BUY
 
     def test_minimum_windows_fast2_slow3(self) -> None:
@@ -319,4 +320,6 @@ class TestMovingAverageCrossoverStrategy:
         )
 
         assert len(signals) == 1
-        assert signals[0].amount == Decimal("5000")  # 10000 × 0.5
+        assert signals[0].amount is not None
+        # 10000 × 0.5 = 5000
+        assert signals[0].amount.amount == Decimal("5000.00")

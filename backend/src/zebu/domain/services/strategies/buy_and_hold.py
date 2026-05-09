@@ -4,7 +4,10 @@ import logging
 from datetime import date
 from decimal import Decimal
 
+from zebu.domain.value_objects.allocation import Allocation
+from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.price_point import PricePoint
+from zebu.domain.value_objects.ticker import Ticker
 from zebu.domain.value_objects.trade_signal import TradeAction, TradeSignal
 
 logger = logging.getLogger(__name__)
@@ -14,20 +17,20 @@ class BuyAndHoldStrategy:
     """Buy proportionally on day 1 of the backtest, hold forever.
 
     On the first trading day, allocates cash across tickers according to
-    the configured allocation fractions (must sum to ~1.0). On all subsequent
-    days, no signals are generated.
+    the configured ``Allocation``. On all subsequent days, no signals are
+    generated.
     """
 
     def __init__(
         self,
         tickers: list[str],
-        allocation: dict[str, float],
+        allocation: Allocation,
     ) -> None:
-        """Initialize strategy with tickers and allocation fractions.
+        """Initialize strategy with tickers and allocation.
 
         Args:
             tickers: Symbols to trade on day 1
-            allocation: Fraction of cash per ticker (should sum to ~1.0)
+            allocation: Validated Allocation describing per-ticker fractions
         """
         self._tickers = tickers
         self._allocation = allocation
@@ -56,13 +59,14 @@ class BuyAndHoldStrategy:
 
         signals: list[TradeSignal] = []
 
-        for ticker in self._tickers:
-            fraction = self._allocation.get(ticker, 0.0)
-            if fraction <= 0.0:
+        for ticker_str in self._tickers:
+            ticker = Ticker(ticker_str)
+            fraction = self._allocation.fraction_for(ticker)
+            if fraction <= Decimal("0"):
                 continue
 
-            amount = cash_balance * Decimal(str(fraction))
-            if amount <= Decimal("0"):
+            amount_decimal = (cash_balance * fraction).quantize(Decimal("0.01"))
+            if amount_decimal <= Decimal("0"):
                 continue
 
             signals.append(
@@ -70,7 +74,7 @@ class BuyAndHoldStrategy:
                     action=TradeAction.BUY,
                     ticker=ticker,
                     signal_date=current_date,
-                    amount=amount,
+                    amount=Money(amount_decimal, "USD"),
                 )
             )
 

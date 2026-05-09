@@ -31,6 +31,7 @@ from zebu.domain.services.strategies.moving_average_crossover import (
     MovingAverageCrossoverStrategy,
 )
 from zebu.domain.services.strategies.protocol import TradingStrategy
+from zebu.domain.value_objects.allocation import Allocation
 from zebu.domain.value_objects.backtest_status import BacktestStatus
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.portfolio_type import PortfolioType
@@ -117,6 +118,8 @@ class BacktestExecutor:
             "parameters": strategy.parameters,
         }
 
+        initial_cash_money = Money(command.initial_cash, "USD")
+
         # Create the initial RUNNING BacktestRun
         backtest_run = BacktestRun(
             id=backtest_run_id,
@@ -127,7 +130,7 @@ class BacktestExecutor:
             backtest_name=command.backtest_name,
             start_date=command.start_date,
             end_date=command.end_date,
-            initial_cash=command.initial_cash,
+            initial_cash=initial_cash_money,
             status=BacktestStatus.RUNNING,
             created_at=now,
         )
@@ -140,6 +143,7 @@ class BacktestExecutor:
                 portfolio_id=portfolio_id,
                 strategy=strategy,
                 strategy_snapshot=strategy_snapshot,
+                initial_cash=initial_cash_money,
             )
         except Exception as exc:
             logger.exception("Backtest %s failed: %s", backtest_run_id, exc)
@@ -152,7 +156,7 @@ class BacktestExecutor:
                 backtest_name=command.backtest_name,
                 start_date=command.start_date,
                 end_date=command.end_date,
-                initial_cash=command.initial_cash,
+                initial_cash=initial_cash_money,
                 status=BacktestStatus.FAILED,
                 created_at=now,
                 completed_at=datetime.now(UTC),
@@ -170,6 +174,7 @@ class BacktestExecutor:
         portfolio_id: UUID,
         strategy: Strategy,
         strategy_snapshot: dict[str, object],
+        initial_cash: Money,
     ) -> BacktestRun:
         """Internal pipeline.
 
@@ -181,6 +186,7 @@ class BacktestExecutor:
             portfolio_id: UUID for the new backtest portfolio
             strategy: The loaded strategy entity
             strategy_snapshot: Serialized strategy at time of run
+            initial_cash: Starting cash balance (Money)
 
         Returns:
             COMPLETED BacktestRun with metrics
@@ -197,7 +203,6 @@ class BacktestExecutor:
         )
         await self._portfolio_repo.save(portfolio)
 
-        initial_cash = Money(command.initial_cash, "USD")
         start_ts = datetime(
             command.start_date.year,
             command.start_date.month,
@@ -251,7 +256,7 @@ class BacktestExecutor:
                 current_date += timedelta(days=1)
                 continue
 
-            holdings_dec = {k: v.shares for k, v in builder.holdings.items()}
+            holdings_dec = {k.symbol: v.shares for k, v in builder.holdings.items()}
 
             signals = trading_strategy.generate_signals(
                 current_date=current_date,
@@ -271,7 +276,7 @@ class BacktestExecutor:
             )
 
             for signal in signals:
-                ticker_prices = price_map.get(signal.ticker, {})
+                ticker_prices = price_map.get(signal.ticker.symbol, {})
                 price_point = ticker_prices.get(current_date)
                 if price_point is None:
                     continue
@@ -300,7 +305,7 @@ class BacktestExecutor:
         # ── Phase 5: Compute metrics ──────────────────────────────────────────
         metrics = await self._compute_metrics(
             portfolio_id=portfolio_id,
-            initial_cash=command.initial_cash,
+            initial_cash=initial_cash.amount,
             start_date=command.start_date,
             end_date=command.end_date,
             total_trades=builder.count_trades(),
@@ -315,7 +320,7 @@ class BacktestExecutor:
             backtest_name=command.backtest_name,
             start_date=command.start_date,
             end_date=command.end_date,
-            initial_cash=command.initial_cash,
+            initial_cash=initial_cash,
             status=BacktestStatus.COMPLETED,
             created_at=backtest_run.created_at,
             completed_at=datetime.now(UTC),
@@ -341,20 +346,26 @@ class BacktestExecutor:
             InvalidStrategyError: If strategy type is not supported
         """
         if strategy.strategy_type == StrategyType.BUY_AND_HOLD:
-            allocation = strategy.parameters.get("allocation", {})
-            if not isinstance(allocation, dict):
+            raw_allocation = strategy.parameters.get("allocation", {})
+            if not isinstance(raw_allocation, dict):
                 raise InvalidStrategyError(
                     "BUY_AND_HOLD strategy requires 'allocation' dict parameter"
                 )
+            try:
+                allocation = Allocation.from_raw(raw_allocation)
+            except Exception as exc:
+                raise InvalidStrategyError(
+                    f"Invalid BUY_AND_HOLD allocation: {exc}"
+                ) from exc
             return BuyAndHoldStrategy(
                 tickers=strategy.tickers,
-                allocation={k: float(v) for k, v in allocation.items()},
+                allocation=allocation,
             )
 
         if strategy.strategy_type == StrategyType.DOLLAR_COST_AVERAGING:
             frequency_days = strategy.parameters.get("frequency_days")
             amount_per_period = strategy.parameters.get("amount_per_period")
-            allocation = strategy.parameters.get("allocation", {})
+            raw_allocation = strategy.parameters.get("allocation", {})
             if not isinstance(frequency_days, int):
                 raise InvalidStrategyError(
                     "DOLLAR_COST_AVERAGING requires integer 'frequency_days' parameter"
@@ -363,15 +374,21 @@ class BacktestExecutor:
                 raise InvalidStrategyError(
                     "DOLLAR_COST_AVERAGING requires 'amount_per_period' parameter"
                 )
-            if not isinstance(allocation, dict):
+            if not isinstance(raw_allocation, dict):
                 raise InvalidStrategyError(
                     "DOLLAR_COST_AVERAGING requires 'allocation' dict parameter"
                 )
+            try:
+                allocation = Allocation.from_raw(raw_allocation)
+            except Exception as exc:
+                raise InvalidStrategyError(
+                    f"Invalid DOLLAR_COST_AVERAGING allocation: {exc}"
+                ) from exc
             return DollarCostAveragingStrategy(
                 tickers=strategy.tickers,
                 frequency_days=frequency_days,
                 amount_per_period=Decimal(str(amount_per_period)),
-                allocation={k: float(v) for k, v in allocation.items()},
+                allocation=allocation,
             )
 
         if strategy.strategy_type == StrategyType.MOVING_AVERAGE_CROSSOVER:
