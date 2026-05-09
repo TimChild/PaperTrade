@@ -112,11 +112,12 @@ export function DashboardVariantA(): React.JSX.Element {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const navigate = useNavigate()
   const {
-    data: portfolios,
+    data: portfoliosPage,
     isLoading: portfoliosLoading,
     isError,
     error,
   } = usePortfolios()
+  const portfolios = portfoliosPage?.items
 
   if (isError) {
     return (

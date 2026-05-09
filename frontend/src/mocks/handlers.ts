@@ -32,7 +32,7 @@ const mockHoldings = {
 }
 
 const mockTransactions = {
-  transactions: [
+  items: [
     {
       id: '00000000-0000-0000-0000-000000000002',
       portfolio_id: '00000000-0000-0000-0000-000000000001',
@@ -45,16 +45,23 @@ const mockTransactions = {
       notes: 'Initial deposit',
     },
   ],
-  total_count: 1,
+  total: 1,
   limit: 50,
   offset: 0,
+  has_more: false,
 }
 
 // API handlers
 export const handlers = [
-  // List portfolios
+  // List portfolios — paginated envelope (PR #226 / Wave 3-G)
   http.get(`${API_BASE_URL}/portfolios`, () => {
-    return HttpResponse.json([mockPortfolio])
+    return HttpResponse.json({
+      items: [mockPortfolio],
+      total: 1,
+      limit: 20,
+      offset: 0,
+      has_more: false,
+    })
   }),
 
   // Get portfolio by ID

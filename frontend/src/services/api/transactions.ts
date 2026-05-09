@@ -2,7 +2,7 @@
  * Transaction API functions
  */
 import { apiClient } from './client'
-import type { TransactionListResponse } from './types'
+import type { PaginatedResponse, TransactionDTO } from './types'
 
 export interface ListTransactionsParams {
   limit?: number
@@ -17,8 +17,8 @@ export const transactionsApi = {
   list: async (
     portfolioId: string,
     params?: ListTransactionsParams
-  ): Promise<TransactionListResponse> => {
-    const response = await apiClient.get<TransactionListResponse>(
+  ): Promise<PaginatedResponse<TransactionDTO>> => {
+    const response = await apiClient.get<PaginatedResponse<TransactionDTO>>(
       `/portfolios/${portfolioId}/transactions`,
       { params }
     )

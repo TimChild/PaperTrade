@@ -91,7 +91,7 @@ export function LightweightPriceChart({
   const tradeMarkers = useMemo(() => {
     if (!transactionsData || !portfolioId) return []
 
-    return transactionsData.transactions
+    return transactionsData.items
       .filter(
         (t) =>
           t.ticker === ticker &&

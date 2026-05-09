@@ -32,8 +32,10 @@ export function Backtests(): React.JSX.Element {
     null
   )
 
-  const { data: backtests, isLoading, error } = useBacktests()
-  const { data: strategies } = useStrategies()
+  const { data: backtestsPage, isLoading, error } = useBacktests()
+  const backtests = backtestsPage?.items
+  const { data: strategiesPage } = useStrategies()
+  const strategies = strategiesPage?.items
   const deleteBacktest = useDeleteBacktest()
 
   const strategyNames: Record<string, string> = {}

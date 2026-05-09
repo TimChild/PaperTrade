@@ -12,7 +12,13 @@ import type {
   WithdrawRequest,
   TransactionResponse,
   TradeRequest,
+  PaginatedResponse,
 } from './types'
+
+export interface ListPortfoliosParams {
+  limit?: number
+  offset?: number
+}
 
 export const portfoliosApi = {
   /**
@@ -31,8 +37,13 @@ export const portfoliosApi = {
   /**
    * Get all portfolios for the current user
    */
-  list: async (): Promise<PortfolioDTO[]> => {
-    const response = await apiClient.get<PortfolioDTO[]>('/portfolios')
+  list: async (
+    params?: ListPortfoliosParams
+  ): Promise<PaginatedResponse<PortfolioDTO>> => {
+    const response = await apiClient.get<PaginatedResponse<PortfolioDTO>>(
+      '/portfolios',
+      { params }
+    )
     return response.data
   },
 

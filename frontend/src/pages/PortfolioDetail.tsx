@@ -53,8 +53,7 @@ export function PortfolioDetail(): React.JSX.Element {
     ? adaptPortfolio(portfolioDTO, balanceData || null)
     : null
   const holdings = holdingsData?.holdings.map(adaptHolding) || []
-  const transactions =
-    transactionsData?.transactions.map(adaptTransaction) || []
+  const transactions = transactionsData?.items.map(adaptTransaction) || []
 
   const handleTradeSubmit = (trade: TradeRequest) => {
     console.log(

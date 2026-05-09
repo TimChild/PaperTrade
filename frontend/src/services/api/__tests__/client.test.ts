@@ -7,7 +7,9 @@ describe('resolveApiBaseUrl', () => {
   })
 
   it('uses localhost backend by default in development', () => {
-    expect(resolveApiBaseUrl({ mode: 'development' })).toBe('http://localhost:8000/api/v1')
+    expect(resolveApiBaseUrl({ mode: 'development' })).toBe(
+      'http://localhost:8000/api/v1'
+    )
   })
 
   it('uses same-origin api path by default in production', () => {

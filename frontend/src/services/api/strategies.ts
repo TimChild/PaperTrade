@@ -2,11 +2,25 @@
  * Strategies API functions
  */
 import { apiClient } from './client'
-import type { StrategyResponse, CreateStrategyRequest } from './types'
+import type {
+  StrategyResponse,
+  CreateStrategyRequest,
+  PaginatedResponse,
+} from './types'
+
+export interface ListStrategiesParams {
+  limit?: number
+  offset?: number
+}
 
 export const strategiesApi = {
-  list: async (): Promise<StrategyResponse[]> => {
-    const response = await apiClient.get<StrategyResponse[]>('/strategies')
+  list: async (
+    params?: ListStrategiesParams
+  ): Promise<PaginatedResponse<StrategyResponse>> => {
+    const response = await apiClient.get<PaginatedResponse<StrategyResponse>>(
+      '/strategies',
+      { params }
+    )
     return response.data
   },
 

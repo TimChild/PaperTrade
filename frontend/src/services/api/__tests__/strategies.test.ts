@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { strategiesApi } from '../strategies'
 import { apiClient } from '../client'
+import type { PaginatedResponse, StrategyResponse } from '../types'
 
 vi.mock('../client', () => ({
   apiClient: {
@@ -13,14 +14,28 @@ vi.mock('../client', () => ({
   },
 }))
 
-const mockStrategy = {
+const mockStrategy: StrategyResponse = {
   id: 'strategy-1',
   user_id: 'user-1',
   name: 'Test Strategy',
-  strategy_type: 'BUY_AND_HOLD' as const,
+  strategy_type: 'BUY_AND_HOLD',
   tickers: ['AAPL', 'MSFT'],
   parameters: { allocation: { AAPL: 0.5, MSFT: 0.5 } },
   created_at: '2024-01-01T00:00:00Z',
+}
+
+function paginate(
+  items: StrategyResponse[],
+  limit = 20,
+  offset = 0
+): PaginatedResponse<StrategyResponse> {
+  return {
+    items,
+    total: items.length,
+    limit,
+    offset,
+    has_more: false,
+  }
 }
 
 describe('strategiesApi', () => {
@@ -29,21 +44,39 @@ describe('strategiesApi', () => {
   })
 
   describe('list', () => {
-    it('fetches all strategies', async () => {
-      vi.mocked(apiClient.get).mockResolvedValueOnce({ data: [mockStrategy] })
+    it('fetches all strategies as a paginated envelope', async () => {
+      const page = paginate([mockStrategy])
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ data: page })
 
       const result = await strategiesApi.list()
 
-      expect(apiClient.get).toHaveBeenCalledWith('/strategies')
-      expect(result).toEqual([mockStrategy])
+      expect(apiClient.get).toHaveBeenCalledWith('/strategies', {
+        params: undefined,
+      })
+      expect(result).toEqual(page)
+      expect(result.items).toEqual([mockStrategy])
     })
 
-    it('returns an empty array when no strategies exist', async () => {
-      vi.mocked(apiClient.get).mockResolvedValueOnce({ data: [] })
+    it('returns an empty page when no strategies exist', async () => {
+      const page = paginate([])
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ data: page })
 
       const result = await strategiesApi.list()
 
-      expect(result).toEqual([])
+      expect(result.items).toEqual([])
+      expect(result.total).toBe(0)
+      expect(result.has_more).toBe(false)
+    })
+
+    it('forwards limit/offset query params', async () => {
+      const page = paginate([mockStrategy], 10, 5)
+      vi.mocked(apiClient.get).mockResolvedValueOnce({ data: page })
+
+      await strategiesApi.list({ limit: 10, offset: 5 })
+
+      expect(apiClient.get).toHaveBeenCalledWith('/strategies', {
+        params: { limit: 10, offset: 5 },
+      })
     })
   })
 
