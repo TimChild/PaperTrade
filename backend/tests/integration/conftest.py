@@ -1,6 +1,7 @@
 """Integration test fixtures for database testing."""
 
 import pytest_asyncio
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -8,13 +9,26 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 @pytest_asyncio.fixture
 async def engine():
-    """Create an in-memory SQLite engine for testing."""
+    """Create an in-memory SQLite engine for testing.
+
+    SQLite has FK enforcement disabled by default; we enable it via
+    ``PRAGMA foreign_keys=ON`` on every new connection so tests catch
+    referential-integrity violations the same way production Postgres
+    would.
+    """
     # Use in-memory SQLite for fast tests
     test_engine = create_async_engine(
         "sqlite+aiosqlite:///:memory:",
         echo=False,  # Set to True for SQL logging during debugging
         connect_args={"check_same_thread": False},
     )
+
+    # Enforce FK constraints in SQLite (off by default).
+    @event.listens_for(test_engine.sync_engine, "connect")
+    def _enable_sqlite_fks(dbapi_connection: object, _record: object) -> None:
+        cursor = dbapi_connection.cursor()  # type: ignore[attr-defined]
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
     # Create all tables
     async with test_engine.begin() as conn:

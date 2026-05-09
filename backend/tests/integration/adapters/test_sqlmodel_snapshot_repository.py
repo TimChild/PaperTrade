@@ -2,6 +2,11 @@
 
 Tests the snapshot repository with a real SQLite database to verify
 all CRUD operations work correctly.
+
+Note: a portfolio row must exist before any snapshot can reference it
+(``portfolio_snapshots.portfolio_id`` has a FK to ``portfolios.id``).
+The helper ``insert_portfolio`` from the integration helpers takes care
+of that.
 """
 
 from datetime import date
@@ -10,6 +15,7 @@ from uuid import uuid4
 
 import pytest
 
+from tests.integration._helpers import insert_portfolio
 from zebu.adapters.outbound.database.snapshot_repository import (
     SQLModelSnapshotRepository,
 )
@@ -24,8 +30,9 @@ class TestSQLModelSnapshotRepository:
         """Test saving a new snapshot."""
         # Arrange
         repo = SQLModelSnapshotRepository(session)
+        portfolio_id = await insert_portfolio(session, uuid4())
         snapshot = PortfolioSnapshot.create(
-            portfolio_id=uuid4(),
+            portfolio_id=portfolio_id,
             snapshot_date=date(2024, 1, 15),
             cash_balance=Decimal("10000.00"),
             holdings_value=Decimal("5000.00"),
@@ -51,7 +58,7 @@ class TestSQLModelSnapshotRepository:
         """Test that saving a snapshot with same portfolio_id and date updates it."""
         # Arrange
         repo = SQLModelSnapshotRepository(session)
-        portfolio_id = uuid4()
+        portfolio_id = await insert_portfolio(session, uuid4())
         snapshot_date = date(2024, 1, 15)
 
         # Create initial snapshot
@@ -97,7 +104,7 @@ class TestSQLModelSnapshotRepository:
         """Test getting a snapshot by portfolio and date when it exists."""
         # Arrange
         repo = SQLModelSnapshotRepository(session)
-        portfolio_id = uuid4()
+        portfolio_id = await insert_portfolio(session, uuid4())
         snapshot_date = date(2024, 1, 15)
 
         snapshot = PortfolioSnapshot.create(
@@ -138,7 +145,7 @@ class TestSQLModelSnapshotRepository:
         """Test getting snapshots in a date range returns them ordered by date."""
         # Arrange
         repo = SQLModelSnapshotRepository(session)
-        portfolio_id = uuid4()
+        portfolio_id = await insert_portfolio(session, uuid4())
 
         # Create snapshots on different dates
         snapshot1 = PortfolioSnapshot.create(
@@ -185,7 +192,7 @@ class TestSQLModelSnapshotRepository:
         """Test that get_range only returns snapshots within the date range."""
         # Arrange
         repo = SQLModelSnapshotRepository(session)
-        portfolio_id = uuid4()
+        portfolio_id = await insert_portfolio(session, uuid4())
 
         # Create snapshots on different dates
         await repo.save(
@@ -246,8 +253,8 @@ class TestSQLModelSnapshotRepository:
         """Test that get_range only returns snapshots for the specified portfolio."""
         # Arrange
         repo = SQLModelSnapshotRepository(session)
-        portfolio_id1 = uuid4()
-        portfolio_id2 = uuid4()
+        portfolio_id1 = await insert_portfolio(session, uuid4())
+        portfolio_id2 = await insert_portfolio(session, uuid4())
 
         await repo.save(
             PortfolioSnapshot.create(
@@ -283,7 +290,7 @@ class TestSQLModelSnapshotRepository:
         """Test that get_latest returns the snapshot with the most recent date."""
         # Arrange
         repo = SQLModelSnapshotRepository(session)
-        portfolio_id = uuid4()
+        portfolio_id = await insert_portfolio(session, uuid4())
 
         await repo.save(
             PortfolioSnapshot.create(
@@ -340,8 +347,8 @@ class TestSQLModelSnapshotRepository:
         """Test that delete_by_portfolio removes all snapshots for a portfolio."""
         # Arrange
         repo = SQLModelSnapshotRepository(session)
-        portfolio_id1 = uuid4()
-        portfolio_id2 = uuid4()
+        portfolio_id1 = await insert_portfolio(session, uuid4())
+        portfolio_id2 = await insert_portfolio(session, uuid4())
 
         # Create snapshots for both portfolios
         await repo.save(
