@@ -1,4 +1,10 @@
-"""Tests for SnapshotJobService."""
+"""Tests for SnapshotJobService.
+
+Uses the canonical ``InMemorySnapshotRepository`` port adapter. Assertions
+exercise observable behavior via the protocol's public methods
+(``get_range``, ``get_latest``, etc.) rather than poking at internal
+storage. Wave 4-C behavior-focused conversion.
+"""
 
 from datetime import UTC, date, datetime
 from decimal import Decimal
@@ -12,6 +18,9 @@ from zebu.adapters.outbound.market_data.in_memory_adapter import (
 from zebu.application.ports.in_memory_portfolio_repository import (
     InMemoryPortfolioRepository,
 )
+from zebu.application.ports.in_memory_snapshot_repository import (
+    InMemorySnapshotRepository,
+)
 from zebu.application.ports.in_memory_transaction_repository import (
     InMemoryTransactionRepository,
 )
@@ -21,63 +30,6 @@ from zebu.domain.entities.transaction import Transaction, TransactionType
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.quantity import Quantity
 from zebu.domain.value_objects.ticker import Ticker
-
-
-class InMemorySnapshotRepository:
-    """Simple in-memory snapshot repository for testing."""
-
-    def __init__(self) -> None:
-        """Initialize empty snapshot storage."""
-        self._snapshots: list = []
-
-    async def save(self, snapshot) -> None:  # type: ignore[no-untyped-def]
-        """Save a snapshot."""
-        # Upsert behavior: replace if exists for same portfolio+date
-        existing_idx = None
-        for idx, s in enumerate(self._snapshots):
-            if (
-                s.portfolio_id == snapshot.portfolio_id
-                and s.snapshot_date == snapshot.snapshot_date
-            ):
-                existing_idx = idx
-                break
-
-        if existing_idx is not None:
-            self._snapshots[existing_idx] = snapshot
-        else:
-            self._snapshots.append(snapshot)
-
-    async def get_by_portfolio_and_date(self, portfolio_id, snapshot_date):  # type: ignore[no-untyped-def]
-        """Get snapshot by portfolio and date."""
-        for s in self._snapshots:
-            if s.portfolio_id == portfolio_id and s.snapshot_date == snapshot_date:
-                return s
-        return None
-
-    async def get_range(self, portfolio_id, start_date, end_date):  # type: ignore[no-untyped-def]
-        """Get snapshots in date range."""
-        result = [
-            s
-            for s in self._snapshots
-            if s.portfolio_id == portfolio_id
-            and start_date <= s.snapshot_date <= end_date
-        ]
-        return sorted(result, key=lambda s: s.snapshot_date)
-
-    async def get_latest(self, portfolio_id):  # type: ignore[no-untyped-def]
-        """Get latest snapshot for portfolio."""
-        portfolio_snapshots = [
-            s for s in self._snapshots if s.portfolio_id == portfolio_id
-        ]
-        if not portfolio_snapshots:
-            return None
-        return max(portfolio_snapshots, key=lambda s: s.snapshot_date)
-
-    async def delete_by_portfolio(self, portfolio_id):  # type: ignore[no-untyped-def]
-        """Delete all snapshots for a portfolio."""
-        count = sum(1 for s in self._snapshots if s.portfolio_id == portfolio_id)
-        self._snapshots = [s for s in self._snapshots if s.portfolio_id != portfolio_id]
-        return count
 
 
 class TestRunDailySnapshot:
@@ -131,7 +83,9 @@ class TestRunDailySnapshot:
         assert results["processed"] == 3
         assert results["succeeded"] == 3
         assert results["failed"] == 0
-        assert len(snapshot_repo._snapshots) == 3
+        # Verify all 3 portfolios got a snapshot via the public port API.
+        for portfolio in (portfolio1, portfolio2, portfolio3):
+            assert await snapshot_repo.get_latest(portfolio.id) is not None
 
     @pytest.mark.asyncio
     async def test_run_daily_snapshot_empty_portfolios(self) -> None:
@@ -189,7 +143,10 @@ class TestRunDailySnapshot:
 
         # Assert
         assert results["succeeded"] == 1
-        snapshot = snapshot_repo._snapshots[0]
+        snapshot = await snapshot_repo.get_by_portfolio_and_date(
+            portfolio.id, target_date
+        )
+        assert snapshot is not None
         assert snapshot.snapshot_date == target_date
 
 
@@ -235,10 +192,11 @@ class TestBackfillSnapshots:
         assert results["processed"] == 5  # 5 days
         assert results["succeeded"] == 5
         assert results["failed"] == 0
-        assert len(snapshot_repo._snapshots) == 5
 
-        # Verify all dates are present
-        snapshot_dates = [s.snapshot_date for s in snapshot_repo._snapshots]
+        # Verify all 5 dates are present via the public range query.
+        snapshots = await snapshot_repo.get_range(portfolio.id, start_date, end_date)
+        assert len(snapshots) == 5
+        snapshot_dates = [s.snapshot_date for s in snapshots]
         expected_dates = [
             date(2024, 1, 1),
             date(2024, 1, 2),
@@ -246,7 +204,7 @@ class TestBackfillSnapshots:
             date(2024, 1, 4),
             date(2024, 1, 5),
         ]
-        assert sorted(snapshot_dates) == expected_dates
+        assert snapshot_dates == expected_dates
 
     @pytest.mark.asyncio
     async def test_backfill_snapshots_single_day(self) -> None:
@@ -286,8 +244,11 @@ class TestBackfillSnapshots:
         assert results["processed"] == 1
         assert results["succeeded"] == 1
         assert results["failed"] == 0
-        assert len(snapshot_repo._snapshots) == 1
-        assert snapshot_repo._snapshots[0].snapshot_date == target_date
+        snapshot = await snapshot_repo.get_by_portfolio_and_date(
+            portfolio.id, target_date
+        )
+        assert snapshot is not None
+        assert snapshot.snapshot_date == target_date
 
     @pytest.mark.asyncio
     async def test_backfill_snapshots_portfolio_not_found(self) -> None:
@@ -571,7 +532,8 @@ class TestCalculateSnapshotForPortfolio:
         assert results["processed"] == 1
         assert results["succeeded"] == 0
         assert results["failed"] == 1
-        assert len(snapshot_repo._snapshots) == 0
+        # No snapshot should have been persisted for the portfolio.
+        assert await snapshot_repo.get_latest(portfolio.id) is None
 
 
 class TestBackfillUsesHistoricalPrices:
@@ -650,8 +612,10 @@ class TestBackfillUsesHistoricalPrices:
 
         # Assert
         assert results["succeeded"] == 1
-        assert len(snapshot_repo._snapshots) == 1
-        snapshot = snapshot_repo._snapshots[0]
+        snapshot = await snapshot_repo.get_by_portfolio_and_date(
+            portfolio.id, historical_date
+        )
+        assert snapshot is not None
 
         # Cash: 10000 - 1500 = 8500
         # Holdings: 10 * 160 (historical price) = 1600

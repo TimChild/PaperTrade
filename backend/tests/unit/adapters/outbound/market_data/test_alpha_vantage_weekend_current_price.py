@@ -2,6 +2,11 @@
 
 These tests verify that get_current_price() and get_batch_prices() correctly
 handle weekends and holidays by serving cached prices from the last trading day.
+
+Wave 4-C behavior-focused conversion: the cache is now a real ``PriceCache``
+backed by fakeredis, so tests assert on the post-call cache state via
+``cache.get()`` / ``cache.get_ttl()`` rather than spying on
+``mock.set.call_args``.
 """
 
 from datetime import UTC, datetime
@@ -9,6 +14,7 @@ from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from fakeredis import aioredis as fakeredis
 
 from zebu.adapters.outbound.market_data.alpha_vantage_adapter import (
     AlphaVantageAdapter,
@@ -16,6 +22,7 @@ from zebu.adapters.outbound.market_data.alpha_vantage_adapter import (
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.price_point import PricePoint
 from zebu.domain.value_objects.ticker import Ticker
+from zebu.infrastructure.cache.price_cache import PriceCache
 
 
 @pytest.fixture
@@ -35,12 +42,15 @@ def mock_price_repository() -> MagicMock:
 
 
 @pytest.fixture
-def mock_price_cache() -> MagicMock:
-    """Provide mock price cache."""
-    cache = MagicMock()
-    cache.get = AsyncMock(return_value=None)
-    cache.set = AsyncMock()
-    return cache
+async def price_cache() -> PriceCache:
+    """Provide a real PriceCache backed by fakeredis.
+
+    Using a real cache (with a fake Redis) lets tests assert on observable
+    cache state (``await cache.get(...)``, ``await cache.get_ttl(...)``)
+    rather than spying on the ``set`` call's keyword arguments.
+    """
+    redis = await fakeredis.FakeRedis()
+    return PriceCache(redis=redis, key_prefix="test:price")
 
 
 @pytest.fixture
@@ -53,14 +63,14 @@ def mock_http_client() -> MagicMock:
 def alpha_vantage_adapter(
     mock_rate_limiter: MagicMock,
     mock_price_repository: MagicMock,
-    mock_price_cache: MagicMock,
+    price_cache: PriceCache,
     mock_http_client: MagicMock,
 ) -> AlphaVantageAdapter:
     """Provide configured Alpha Vantage adapter for testing."""
     return AlphaVantageAdapter(
         rate_limiter=mock_rate_limiter,
         price_repository=mock_price_repository,
-        price_cache=mock_price_cache,
+        price_cache=price_cache,
         http_client=mock_http_client,
         api_key="test_key",
     )
@@ -91,7 +101,7 @@ class TestGetCurrentPriceWeekend:
         self,
         alpha_vantage_adapter: AlphaVantageAdapter,
         mock_price_repository: MagicMock,
-        mock_price_cache: MagicMock,
+        price_cache: PriceCache,
         mock_rate_limiter: MagicMock,
     ) -> None:
         """Should return Friday's cached price when requesting on Saturday."""
@@ -122,24 +132,29 @@ class TestGetCurrentPriceWeekend:
             # Act
             result = await alpha_vantage_adapter.get_current_price(ticker)
 
-            # Assert
+            # Assert - returned price matches Friday's close.
             assert result.price.amount == Decimal("259.96")
             assert result.source == "database"
             assert result.timestamp == friday_price.timestamp
 
-            # Verify API was NOT called
+            # Verify API was NOT called (rate-limit boundary).
             mock_rate_limiter.consume_token.assert_not_called()
 
-            # Verify price was cached with longer TTL (2 hours = 7200 seconds)
-            mock_price_cache.set.assert_called_once()
-            call_args = mock_price_cache.set.call_args
-            assert call_args[1]["ttl"] == 7200
+            # Behavior: the cache is now warm with the historical price and
+            # carries the longer weekend TTL (~2 hours). Verify by reading
+            # the cache rather than spying on ``set`` call args.
+            cached = await price_cache.get(ticker)
+            assert cached is not None
+            assert cached.price.amount == Decimal("259.96")
+            ttl = await price_cache.get_ttl(ticker)
+            # Allow a tiny window in case any time has passed.
+            assert 7100 <= ttl <= 7200
 
     async def test_sunday_returns_friday_price(
         self,
         alpha_vantage_adapter: AlphaVantageAdapter,
         mock_price_repository: MagicMock,
-        mock_price_cache: MagicMock,
+        price_cache: PriceCache,
         mock_rate_limiter: MagicMock,
     ) -> None:
         """Should return Friday's cached price when requesting on Sunday."""
@@ -178,7 +193,7 @@ class TestGetCurrentPriceWeekend:
         self,
         alpha_vantage_adapter: AlphaVantageAdapter,
         mock_price_repository: MagicMock,
-        mock_price_cache: MagicMock,
+        price_cache: PriceCache,
         mock_rate_limiter: MagicMock,
     ) -> None:
         """Should return last trading day's price on market holiday."""
@@ -217,7 +232,7 @@ class TestGetCurrentPriceWeekend:
         self,
         alpha_vantage_adapter: AlphaVantageAdapter,
         mock_price_repository: MagicMock,
-        mock_price_cache: MagicMock,
+        price_cache: PriceCache,
         mock_rate_limiter: MagicMock,
         mock_http_client: MagicMock,
     ) -> None:
@@ -266,7 +281,7 @@ class TestGetCurrentPriceWeekend:
         self,
         alpha_vantage_adapter: AlphaVantageAdapter,
         mock_price_repository: MagicMock,
-        mock_price_cache: MagicMock,
+        price_cache: PriceCache,
         mock_rate_limiter: MagicMock,
         mock_http_client: MagicMock,
     ) -> None:
@@ -318,7 +333,7 @@ class TestGetBatchPricesWeekend:
         self,
         alpha_vantage_adapter: AlphaVantageAdapter,
         mock_price_repository: MagicMock,
-        mock_price_cache: MagicMock,
+        price_cache: PriceCache,
         mock_rate_limiter: MagicMock,
     ) -> None:
         """Should return Friday's cached prices for all tickers on Saturday."""
@@ -383,7 +398,7 @@ class TestGetBatchPricesWeekend:
         self,
         alpha_vantage_adapter: AlphaVantageAdapter,
         mock_price_repository: MagicMock,
-        mock_price_cache: MagicMock,
+        price_cache: PriceCache,
         mock_rate_limiter: MagicMock,
         mock_http_client: MagicMock,
     ) -> None:
@@ -464,7 +479,7 @@ class TestGetBatchPricesWeekend:
         self,
         alpha_vantage_adapter: AlphaVantageAdapter,
         mock_price_repository: MagicMock,
-        mock_price_cache: MagicMock,
+        price_cache: PriceCache,
         mock_rate_limiter: MagicMock,
         mock_http_client: MagicMock,
     ) -> None:
