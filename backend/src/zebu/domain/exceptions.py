@@ -96,6 +96,12 @@ class InvalidBacktestRunError(InvalidEntityError):
     pass
 
 
+class InvalidStrategyActivationError(InvalidEntityError):
+    """Raised when StrategyActivation entity invariants are violated."""
+
+    pass
+
+
 # Business Rule Violation Exceptions
 
 
