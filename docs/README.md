@@ -73,16 +73,4 @@ Technical guides and external resources:
 
 ## Archive
 
-Historical documentation and completed work:
-
-| Document | Purpose |
-|----------|---------|
-| [archive/progress-archive.md](archive/progress-archive.md) | Historical PR details |
-| [archive/proposed-reorganization.md](archive/proposed-reorganization.md) | Task #068 reorganization proposal (superseded) |
-| [archive/foundation-evaluation-2026-01-03.md](archive/foundation-evaluation-2026-01-03.md) | Post-Phase 2 evaluation |
-| [archive/e2e-testing-alpha-vantage-investigation.md](archive/e2e-testing-alpha-vantage-investigation.md) | E2E testing investigation |
-| [archive/resume-from-here.md](archive/resume-from-here.md) | Session handoff (Jan 11, 2026) |
-| [archive/CLEANUP_SUMMARY.md](archive/CLEANUP_SUMMARY.md) | January 2026 cleanup work |
-| [archive/CONSOLIDATION_SUMMARY.md](archive/CONSOLIDATION_SUMMARY.md) | Environment consolidation project |
-| [archive/PROTOTYPE_GUIDE.md](archive/PROTOTYPE_GUIDE.md) | Dashboard prototypes guide |
-| [archive/seed-files/](archive/seed-files/) | Original project seed files |
+Historical decision records and progress snapshots are preserved under [`archive/`](archive/) for reference. Not linked from main nav — see git history for full context.

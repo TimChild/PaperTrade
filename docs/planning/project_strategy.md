@@ -42,7 +42,7 @@ We start monolithic for simplicity but strictly modularized by domain contexts. 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                     INFRASTRUCTURE                          │
-│  Docker • AWS CDK • Database Config • External Services     │
+│  Docker • Database Config • Scheduler • External Services   │
 ├─────────────────────────────────────────────────────────────┤
 │                        ADAPTERS                             │
 │  ┌─────────────────────────┐  ┌─────────────────────────┐   │
@@ -155,7 +155,7 @@ We **build** (custom implementation) for:
 
 | Component | Choice | Rationale |
 |-----------|--------|-----------|
-| **IaC** | AWS CDK (Python) | Type-safe, same language as backend |
+| **Deployment** | Docker Compose on Proxmox VM (`scripts/proxmox-vm/`) | Self-hosted; push-to-main auto-deploys via GitHub Actions self-hosted runner |
 | **Containers** | Docker | Consistent environments |
 | **Local Dev** | Docker Compose | Simple multi-service orchestration |
 | **CI/CD** | GitHub Actions | Integrated with repository |

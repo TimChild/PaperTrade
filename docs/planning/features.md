@@ -97,7 +97,7 @@
 
 | Feature | Status | Details | Phase | Notes |
 |---------|--------|---------|-------|-------|
-| **Unit Tests** | ✅ Full | 571 backend + 225 frontend tests | Phase 1-2 | 81%+ coverage |
+| **Unit Tests** | ✅ Full | See PROGRESS.md for current counts | Phase 1-2 | 81%+ coverage |
 | **Integration Tests** | ✅ Full | API endpoints tested | Phase 1 | Full request/response cycle |
 | **E2E Tests** | ✅ Full | 7 critical workflows | Phase 2 | Playwright browser automation |
 | **Type Safety** | ✅ Full | Pyright (strict) + TypeScript | Phase 0 | Zero type errors |
@@ -126,7 +126,7 @@
 | **Docker Compose** | ✅ Full | Local development stack | Phase 2 | 4 services orchestrated |
 | **Dockerfiles** | ✅ Full | Multi-stage builds | Phase 2 | Dev + production variants |
 | **Health Checks** | ✅ Full | All services monitored | Phase 2 | Docker healthcheck support |
-| **AWS CDK** | ⚠️ Limited | Infrastructure as Code | Phase 0 | Proxmox deployment used instead |
+| **AWS CDK** | ❌ Not Implemented | Infrastructure as Code | Future / aspirational | Production runs on Proxmox VM (`scripts/proxmox-vm/`); CDK is a Stage 2 future option in `deployment_strategy.md` |
 | **Production Deploy** | ✅ Full | Live deployment | Production | zebutrader.com |
 | **CI/CD Pipeline** | ✅ Full | GitHub Actions | Phase 0 | Test + build automation |
 | **Monitoring** | ✅ Full | Grafana Cloud | Production | Logs, metrics, alerts |
@@ -173,5 +173,5 @@
 - Rate limits are for Alpha Vantage free tier (5/min, 500/day)
 - For production use with many users, consider Alpha Vantage paid tier or additional providers
 - All "Full" features have been validated through automated tests
-- Current test suite: 796 tests (571 backend + 225 frontend), 81%+ coverage
+- Test counts are reconciled in [PROGRESS.md](../../PROGRESS.md); 81%+ coverage on critical paths
 - Production deployment: zebutrader.com with HTTPS, authentication, and monitoring

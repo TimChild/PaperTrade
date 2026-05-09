@@ -60,7 +60,7 @@ We use **Clean Architecture** to maintain separation of concerns:
 ```
 ┌─────────────────────────────────────────┐
 │           Infrastructure                │
-│  (Docker, AWS CDK, Database Config)     │
+│  (Docker, DB Config, Scheduler)         │
 ├─────────────────────────────────────────┤
 │              Adapters                   │
 │  Inbound: FastAPI, CLI                  │
@@ -103,9 +103,9 @@ Dependencies point INWARD only
 ### Infrastructure
 | Component | Technology |
 |-----------|------------|
-| IaC | AWS CDK (Python) |
+| Deployment | Docker Compose on Proxmox VM (`scripts/proxmox-vm/`) |
 | Containers | Docker, Docker Compose |
-| CI/CD | GitHub Actions |
+| CI/CD | GitHub Actions (push-to-main auto-deploys via self-hosted runner) |
 | Task Runner | Taskfile |
 
 ## Getting Started
@@ -407,9 +407,9 @@ Zebu/
 ├── frontend/
 │   ├── src/
 │   └── tests/
-├── infrastructure/          # AWS CDK
-├── agent_progress_docs/     # AI agent work documentation
-├── docs/planning/           # Project plan and strategy
+├── scripts/proxmox-vm/      # Production deploy scripts
+├── agent_docs/              # AI agent work documentation
+├── docs/                    # Human-facing documentation (MkDocs)
 └── README.md
 ```
 
