@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from zebu.adapters.inbound.api.dependencies import (
     ActiveApiKeyIdDep,
+    BacktestRateLimiterDep,
     CurrentUserDep,
     MarketDataDep,
 )
@@ -26,6 +27,7 @@ from zebu.adapters.inbound.api.schemas import (
     MAX_PAGE_LIMIT,
     PaginatedResponse,
 )
+from zebu.adapters.inbound.api.schemas.errors import ErrorCode, ErrorResponse
 from zebu.adapters.inbound.api.schemas.pagination import build_paginated_response
 from zebu.adapters.outbound.database.backtest_run_repository import (
     SQLModelBacktestRunRepository,
@@ -184,6 +186,7 @@ async def run_backtest(
     api_key_id: ActiveApiKeyIdDep,
     session: SessionDep,
     market_data: MarketDataDep,
+    rate_limiter: BacktestRateLimiterDep,
 ) -> BacktestRunResponse:
     """Run a backtest synchronously.
 
@@ -194,10 +197,44 @@ async def run_backtest(
     write the pipeline performs (BacktestRun, synthetic portfolio's deposit,
     trade transactions) is stamped with the originating credential.
 
+    Phase F-6: per-API-key inbound rate limit (5/min, 100/day by default;
+    configurable via ``ZEBU_BACKTEST_RATE_LIMIT_MIN`` /
+    ``ZEBU_BACKTEST_RATE_LIMIT_DAY``). Clerk Bearer requests bypass the
+    limiter — the cap exists to bound machine-identity throughput so a
+    misbehaving agent can't drown the backtest engine. Limit-exceeded
+    responses are 429 with the standard error envelope, a ``Retry-After``
+    header, and an explanatory ``fields`` block.
+
     Raises:
         HTTPException: 404 if strategy not found
         HTTPException: 422 if validation fails
+        HTTPException: 429 if the per-API-key rate limit is exhausted
     """
+    rl_result = await rate_limiter.check_and_consume(api_key_id=api_key_id)
+    if not rl_result.allowed:
+        retry_after_seconds = max(1, int(rl_result.retry_after_seconds + 0.999))
+        envelope = ErrorResponse(
+            detail=(
+                "Backtest rate limit exceeded — "
+                f"{rl_result.minute_used}/{rl_result.minute_limit} per minute "
+                f"and {rl_result.day_used}/{rl_result.day_limit} per day. "
+                f"Retry after {retry_after_seconds}s."
+            ),
+            code=ErrorCode.RATE_LIMIT_EXCEEDED.value,
+            fields={
+                "minute_limit": str(rl_result.minute_limit),
+                "minute_used": str(rl_result.minute_used),
+                "day_limit": str(rl_result.day_limit),
+                "day_used": str(rl_result.day_used),
+                "retry_after_seconds": str(retry_after_seconds),
+            },
+        )
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=envelope.model_dump(),
+            headers={"Retry-After": str(retry_after_seconds)},
+        )
+
     command = RunBacktestCommand(
         user_id=current_user,
         strategy_id=request.strategy_id,

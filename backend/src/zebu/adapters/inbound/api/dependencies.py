@@ -41,12 +41,16 @@ from zebu.adapters.outbound.repositories.price_repository import (
     PriceRepository,
 )
 from zebu.application.ports.auth_port import AuthenticatedUser, AuthPort
+from zebu.application.ports.inbound_rate_limiter_port import (
+    InboundRateLimiterPort,
+)
 from zebu.application.ports.market_data_port import MarketDataPort
 from zebu.application.services.snapshot_job import SnapshotJobService
 from zebu.domain.exceptions import InvalidTokenError
 from zebu.domain.value_objects.api_key_scope import ApiKeyScope
 from zebu.infrastructure.cache.price_cache import PriceCache
 from zebu.infrastructure.database import SessionDep
+from zebu.infrastructure.inbound_rate_limiter import InMemoryInboundRateLimiter
 from zebu.infrastructure.rate_limiter import RateLimiter
 
 logger = logging.getLogger(__name__)
@@ -474,6 +478,44 @@ async def verify_admin(
 _redis_client: Redis | None = None  # type: ignore[type-arg]  # Redis generic type parameter not needed for singleton
 _http_client: httpx.AsyncClient | None = None
 
+# Phase F-6: per-process in-memory inbound rate limiter for backtest
+# requests. Singleton so the bucket state persists across requests within
+# a single FastAPI process. Configured lazily on first use from env so
+# tests that monkeypatch the limits before the first request still see
+# the patched values.
+_inbound_backtest_rate_limiter: InMemoryInboundRateLimiter | None = None
+
+
+def _get_backtest_rate_limiter() -> InMemoryInboundRateLimiter:
+    """Lazy singleton accessor for the backtest rate limiter.
+
+    Defaults (per design §6.2):
+
+    - 5 requests / minute / API key (``ZEBU_BACKTEST_RATE_LIMIT_MIN``)
+    - 100 requests / day / API key (``ZEBU_BACKTEST_RATE_LIMIT_DAY``)
+
+    The limiter is constructed lazily on first call so the env-driven
+    config is read after pytest fixtures have set up any monkeypatch.
+    """
+    global _inbound_backtest_rate_limiter
+    if _inbound_backtest_rate_limiter is None:
+        minute_limit = int(os.getenv("ZEBU_BACKTEST_RATE_LIMIT_MIN", "5"))
+        day_limit = int(os.getenv("ZEBU_BACKTEST_RATE_LIMIT_DAY", "100"))
+        _inbound_backtest_rate_limiter = InMemoryInboundRateLimiter(
+            minute_limit=minute_limit,
+            day_limit=day_limit,
+        )
+    return _inbound_backtest_rate_limiter
+
+
+def get_backtest_rate_limiter() -> InboundRateLimiterPort:
+    """FastAPI dependency — returns the inbound rate limiter port.
+
+    Returns the per-process singleton; can be overridden via
+    ``app.dependency_overrides`` in tests that need isolated state.
+    """
+    return _get_backtest_rate_limiter()
+
 
 async def get_market_data(session: SessionDep) -> MarketDataPort:
     """Provide MarketDataPort implementation.
@@ -703,3 +745,6 @@ CurrentUserDep = Annotated[UUID, Depends(get_current_user_id)]
 ActiveApiKeyIdDep = Annotated[UUID | None, Depends(get_active_api_key_id)]
 AdminUserDep = Annotated[UUID, Depends(verify_admin)]
 MarketDataDep = Annotated[MarketDataPort, Depends(get_market_data)]
+BacktestRateLimiterDep = Annotated[
+    InboundRateLimiterPort, Depends(get_backtest_rate_limiter)
+]
