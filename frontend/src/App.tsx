@@ -12,6 +12,8 @@ import { PortfolioDetail } from '@/pages/PortfolioDetail'
 import { PortfolioAnalytics } from '@/pages/PortfolioAnalytics'
 import { Strategies } from '@/pages/Strategies'
 import { Activations } from '@/pages/Activations'
+import { ExplorationTasks } from '@/pages/ExplorationTasks'
+import { ExplorationTaskDetail } from '@/pages/ExplorationTaskDetail'
 import { Backtests } from '@/pages/Backtests'
 import { BacktestResult } from '@/pages/BacktestResult'
 import { CompareBacktests } from '@/pages/CompareBacktests'
@@ -116,6 +118,11 @@ function AuthenticatedApp() {
                   { to: '/dashboard', label: 'Portfolios', end: true },
                   { to: '/strategies', label: 'Strategies', end: false },
                   { to: '/activations', label: 'Activations', end: false },
+                  {
+                    to: '/exploration-tasks',
+                    label: 'Exploration tasks',
+                    end: false,
+                  },
                   { to: '/backtests', label: 'Backtests', end: false },
                 ].map(({ to, label, end }) => (
                   <NavLink
@@ -150,6 +157,11 @@ function AuthenticatedApp() {
               />
               <Route path="/strategies" element={<Strategies />} />
               <Route path="/activations" element={<Activations />} />
+              <Route path="/exploration-tasks" element={<ExplorationTasks />} />
+              <Route
+                path="/exploration-tasks/:id"
+                element={<ExplorationTaskDetail />}
+              />
               <Route path="/backtests" element={<Backtests />} />
               <Route path="/backtests/:id" element={<BacktestResult />} />
               <Route path="/compare" element={<CompareBacktests />} />
