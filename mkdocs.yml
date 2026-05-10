@@ -38,6 +38,7 @@ nav:
       - Authentication: architecture/authentication.md
       - Technical Boundaries: architecture/technical-boundaries.md
       - "Phase 4: Trading Strategies": architecture/phase4-trading-strategies.md
+      - "Phase F: Agent-in-the-Loop": architecture/phase-f-agent-in-the-loop.md
   - Planning:
       - Executive Summary: planning/executive-summary.md
       - Roadmap: planning/roadmap.md
