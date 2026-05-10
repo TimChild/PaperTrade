@@ -417,6 +417,21 @@ async def get_current_user_id(
     return uuid5(NAMESPACE_DNS, current_user.id)
 
 
+async def get_active_api_key_id(
+    current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+) -> UUID | None:
+    """Return the API key ID if the request authenticated via API key, else None.
+
+    Routes use this to stamp the originating API-key id onto entities they
+    write so the recent-activity feed (Phase H2) can join back to
+    ``api_keys`` and surface the human-readable label.
+
+    For Clerk-authenticated requests this returns ``None`` — the activity
+    feed will render those rows as ``actor_kind="user"``.
+    """
+    return current_user.api_key_id
+
+
 async def verify_admin(
     current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
 ) -> UUID:
@@ -685,5 +700,6 @@ ApiKeyRepositoryDep = Annotated[
 AuthPortDep = Annotated[AuthPort, Depends(get_auth_port)]
 CurrentUser = Annotated[AuthenticatedUser, Depends(get_current_user)]
 CurrentUserDep = Annotated[UUID, Depends(get_current_user_id)]
+ActiveApiKeyIdDep = Annotated[UUID | None, Depends(get_active_api_key_id)]
 AdminUserDep = Annotated[UUID, Depends(verify_admin)]
 MarketDataDep = Annotated[MarketDataPort, Depends(get_market_data)]

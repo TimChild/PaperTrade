@@ -112,12 +112,28 @@ class SQLModelExplorationTaskRepository:
         value = result.one()
         return int(value)
 
-    async def save(self, task: ExplorationTask) -> None:
-        """Persist a task (create if new, update if exists)."""
+    async def save(
+        self,
+        task: ExplorationTask,
+        *,
+        api_key_id: UUID | None = None,
+    ) -> None:
+        """Persist a task (create if new, update if exists).
+
+        Args:
+            task: ExplorationTask entity to persist.
+            api_key_id: Phase H2 — ID of the API key that authenticated the
+                writing request, or None for Clerk Bearer (human via UI).
+                Stamped only on insert; subsequent transitions (claim, done,
+                abandoned) leave the original creator's credential reference
+                intact so the activity feed renders task-creation against
+                the correct actor.
+        """
         existing = await self._session.get(ExplorationTaskModel, task.id)
 
         if existing is None:
             model = ExplorationTaskModel.from_domain(task)
+            model.api_key_id = api_key_id
             self._session.add(model)
             return
 

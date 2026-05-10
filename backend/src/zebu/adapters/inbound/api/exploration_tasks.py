@@ -25,7 +25,7 @@ import structlog
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator
 
-from zebu.adapters.inbound.api.dependencies import CurrentUserDep
+from zebu.adapters.inbound.api.dependencies import ActiveApiKeyIdDep, CurrentUserDep
 from zebu.adapters.inbound.api.schemas import (
     DEFAULT_PAGE_LIMIT,
     MAX_PAGE_LIMIT,
@@ -265,12 +265,16 @@ def _parse_status(raw: str | None) -> ExplorationTaskStatus | None:
 async def create_exploration_task(
     request: CreateExplorationTaskRequest,
     current_user: CurrentUserDep,
+    api_key_id: ActiveApiKeyIdDep,
     session: SessionDep,
 ) -> ExplorationTaskResponse:
     """Create a new exploration task.
 
     The caller becomes the task's owner (``created_by``) and the task starts
     in OPEN status, ready for an agent to claim.
+
+    Phase H2: ``api_key_id`` is captured at write time so the recent-activity
+    feed can render this row's actor as the originating credential's label.
     """
     constraints = _payload_to_constraints(request.constraints)
 
@@ -296,7 +300,7 @@ async def create_exploration_task(
     )
 
     repo = SQLModelExplorationTaskRepository(session)
-    await repo.save(task)
+    await repo.save(task, api_key_id=api_key_id)
 
     logger.info(
         "Exploration task created",

@@ -121,8 +121,20 @@ class SQLModelTransactionRepository:
         count = result.first()
         return count if count is not None else 0
 
-    async def save(self, transaction: Transaction) -> None:
+    async def save(
+        self,
+        transaction: Transaction,
+        *,
+        api_key_id: UUID | None = None,
+    ) -> None:
         """Persist a new transaction (append-only, no updates).
+
+        Args:
+            transaction: Transaction entity to persist.
+            api_key_id: Phase H2 — ID of the API key that authenticated the
+                writing request, or None for Clerk Bearer (human via UI).
+                Activity feed joins on this column to surface the API-key
+                label as the actor identity.
 
         Raises:
             DuplicateTransactionError: If transaction ID already exists
@@ -136,6 +148,7 @@ class SQLModelTransactionRepository:
 
         # Create new transaction model
         model = TransactionModel.from_domain(transaction)
+        model.api_key_id = api_key_id
         self._session.add(model)
 
         # Try to flush to catch any integrity errors
@@ -146,7 +159,12 @@ class SQLModelTransactionRepository:
                 f"Transaction already exists: {transaction.id}"
             ) from e
 
-    async def save_all(self, transactions: list[Transaction]) -> None:
+    async def save_all(
+        self,
+        transactions: list[Transaction],
+        *,
+        api_key_id: UUID | None = None,
+    ) -> None:
         """Bulk-persist multiple transactions in a single round-trip.
 
         Hot path for backtest persistence — single ``add_all`` + ``flush``
@@ -158,13 +176,23 @@ class SQLModelTransactionRepository:
         information about which ID collided — acceptable for the
         backtest path (IDs are uuid4-generated in-process).
 
+        Args:
+            transactions: Transactions to persist.
+            api_key_id: Phase H2 — stamped onto every row in the batch
+                (uniform credential, since the request itself only has one
+                auth context). None for Clerk Bearer / human-via-UI.
+
         Raises:
             DuplicateTransactionError: If any transaction ID already exists.
         """
         if not transactions:
             return
 
-        models = [TransactionModel.from_domain(t) for t in transactions]
+        models: list[TransactionModel] = []
+        for t in transactions:
+            model = TransactionModel.from_domain(t)
+            model.api_key_id = api_key_id
+            models.append(model)
         self._session.add_all(models)
         try:
             await self._session.flush()

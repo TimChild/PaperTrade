@@ -73,7 +73,12 @@ class StrategyActivationRepository(Protocol):
         """
         ...
 
-    async def save(self, activation: StrategyActivation) -> None:
+    async def save(
+        self,
+        activation: StrategyActivation,
+        *,
+        api_key_id: UUID | None = None,
+    ) -> None:
         """Persist an activation (create if new, update if exists).
 
         Implementations MUST treat this as an idempotent upsert keyed on
@@ -81,6 +86,9 @@ class StrategyActivationRepository(Protocol):
 
         Args:
             activation: StrategyActivation entity to persist.
+            api_key_id: Phase H2 — ID of the API key that authenticated the
+                writing request, or None for Clerk Bearer (human via UI).
+                Stamped only on insert.
         """
         ...
 

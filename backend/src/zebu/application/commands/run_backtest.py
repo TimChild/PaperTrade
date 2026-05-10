@@ -17,6 +17,11 @@ class RunBacktestCommand:
         start_date: First day of the simulation (inclusive)
         end_date: Last day of the simulation (inclusive)
         initial_cash: Starting cash balance in USD
+        api_key_id: Phase H2 — ID of the API key that authenticated the
+            triggering request, or ``None`` for Clerk Bearer (human via UI).
+            Stamped onto the BacktestRun row + the synthetic portfolio +
+            its trades so the recent-activity feed can resolve actor
+            identity end-to-end.
     """
 
     user_id: UUID
@@ -25,3 +30,4 @@ class RunBacktestCommand:
     start_date: date
     end_date: date
     initial_cash: Decimal
+    api_key_id: UUID | None = None

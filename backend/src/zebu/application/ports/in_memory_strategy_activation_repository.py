@@ -63,8 +63,18 @@ class InMemoryStrategyActivationRepository:
             ]
             return sorted(user_activations, key=lambda a: a.created_at)
 
-    async def save(self, activation: StrategyActivation) -> None:
-        """Save an activation (idempotent upsert)."""
+    async def save(
+        self,
+        activation: StrategyActivation,
+        *,
+        api_key_id: UUID | None = None,
+    ) -> None:
+        """Save an activation (idempotent upsert).
+
+        ``api_key_id`` is accepted for protocol compatibility (Phase H2) but
+        ignored in this in-memory implementation.
+        """
+        del api_key_id
         with self._lock:
             self._activations[activation.id] = activation
 

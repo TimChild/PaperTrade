@@ -27,6 +27,10 @@ class BuyStockCommand:
         price_per_share_currency: Currency code (default "USD")
         notes: Optional description
         as_of: Optional timestamp for backtesting (defaults to now)
+        api_key_id: Phase H2 — ID of the API key that authenticated the
+            request, or ``None`` for Clerk Bearer (human via UI). Stamped
+            onto the resulting transaction row so the activity feed can
+            resolve actor identity.
     """
 
     portfolio_id: UUID
@@ -36,6 +40,7 @@ class BuyStockCommand:
     price_per_share_currency: str = "USD"
     notes: str | None = None
     as_of: datetime | None = None
+    api_key_id: UUID | None = None
 
 
 @dataclass(frozen=True)
@@ -122,8 +127,10 @@ class BuyStockHandler:
             notes=command.notes,
         )
 
-        # Persist transaction
-        await self._transaction_repository.save(transaction)
+        # Persist transaction (Phase H2: stamp originating credential).
+        await self._transaction_repository.save(
+            transaction, api_key_id=command.api_key_id
+        )
 
         return BuyStockResult(
             transaction_id=transaction.id,

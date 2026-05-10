@@ -106,16 +106,27 @@ class SQLModelStrategyActivationRepository:
         models = result.all()
         return [model.to_domain() for model in models]
 
-    async def save(self, activation: StrategyActivation) -> None:
+    async def save(
+        self,
+        activation: StrategyActivation,
+        *,
+        api_key_id: UUID | None = None,
+    ) -> None:
         """Persist an activation (create if new, update if exists).
 
         Args:
             activation: StrategyActivation entity to persist.
+            api_key_id: Phase H2 — ID of the API key that authenticated the
+                writing request, or None for Clerk Bearer (human via UI).
+                Stamped only on insert; subsequent lifecycle updates
+                (PAUSED / STOPPED / ERROR transitions) leave the original
+                creator's credential reference intact.
         """
         existing = await self._session.get(StrategyActivationModel, activation.id)
 
         if existing is None:
             model = StrategyActivationModel.from_domain(activation)
+            model.api_key_id = api_key_id
             self._session.add(model)
             return
 

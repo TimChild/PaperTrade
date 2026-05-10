@@ -35,11 +35,20 @@ class StrategyRepository(Protocol):
         """
         ...
 
-    async def save(self, strategy: Strategy) -> None:
+    async def save(
+        self,
+        strategy: Strategy,
+        *,
+        api_key_id: UUID | None = None,
+    ) -> None:
         """Persist a strategy (create if new, update if exists).
 
         Args:
-            strategy: Strategy entity to persist
+            strategy: Strategy entity to persist.
+            api_key_id: Phase H2 — ID of the API key that authenticated the
+                writing request, or None for Clerk Bearer (human via UI).
+                Production adapters stamp it onto the row only on insert so
+                the activity feed can resolve the originating credential.
         """
         ...
 

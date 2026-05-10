@@ -78,21 +78,37 @@ class TransactionRepository(Protocol):
         """
         ...
 
-    async def save(self, transaction: Transaction) -> None:
+    async def save(
+        self,
+        transaction: Transaction,
+        *,
+        api_key_id: UUID | None = None,
+    ) -> None:
         """Persist a new transaction (append-only, no updates).
 
         This method ONLY creates new records. Attempting to save a transaction
         with an existing ID will raise an error to maintain ledger integrity.
 
         Args:
-            transaction: Transaction entity to persist
+            transaction: Transaction entity to persist.
+            api_key_id: Phase H2 — ID of the API key that authenticated the
+                writing request, or None for Clerk Bearer (human via UI).
+                Adapters that don't track this (e.g. older in-memory tests)
+                may ignore the kwarg; production adapters MUST stamp it onto
+                the row so the activity-feed aggregator can join back to
+                ``api_keys.label`` for the actor identity column.
 
         Raises:
             RepositoryError: If transaction already exists or save fails
         """
         ...
 
-    async def save_all(self, transactions: list[Transaction]) -> None:
+    async def save_all(
+        self,
+        transactions: list[Transaction],
+        *,
+        api_key_id: UUID | None = None,
+    ) -> None:
         """Persist multiple new transactions in a single bulk insert.
 
         Bulk-insert path for hot loops (e.g. backtest persistence) where
@@ -103,6 +119,9 @@ class TransactionRepository(Protocol):
         Args:
             transactions: List of Transaction entities to persist.
                 An empty list is a no-op.
+            api_key_id: Phase H2 — stamped uniformly onto every row in the
+                batch (the request itself only has one auth context). None
+                for Clerk Bearer / human-via-UI.
 
         Raises:
             RepositoryError: If any transaction ID already exists or

@@ -348,4 +348,15 @@ export const handlers = [
       ],
     })
   }),
+
+  // Recent-activity feed (Phase H2)
+  http.get(`${API_BASE_URL}/activity`, () => {
+    return HttpResponse.json({
+      items: [],
+      total: 0,
+      limit: 50,
+      offset: 0,
+      has_more: false,
+    })
+  }),
 ]

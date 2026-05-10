@@ -36,6 +36,8 @@ class SellStockCommand:
     price_per_share_currency: str = "USD"
     notes: str | None = None
     as_of: datetime | None = None
+    # Phase H2: see BuyStockCommand.api_key_id for the full doc.
+    api_key_id: UUID | None = None
 
 
 @dataclass(frozen=True)
@@ -123,8 +125,10 @@ class SellStockHandler:
             notes=command.notes,
         )
 
-        # Persist transaction
-        await self._transaction_repository.save(transaction)
+        # Persist transaction (Phase H2: stamp originating credential).
+        await self._transaction_repository.save(
+            transaction, api_key_id=command.api_key_id
+        )
 
         return SellStockResult(
             transaction_id=transaction.id,
