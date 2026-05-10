@@ -4,11 +4,14 @@
  */
 
 // Portfolio types
+export type PortfolioType = 'PAPER_TRADING' | 'BACKTEST'
+
 export interface PortfolioDTO {
   id: string
   user_id: string
   name: string
   created_at: string // ISO 8601
+  portfolio_type?: PortfolioType
 }
 
 export interface CreatePortfolioRequest {
@@ -183,4 +186,74 @@ export interface RunBacktestRequest {
   start_date: string // YYYY-MM-DD
   end_date: string
   initial_cash: number
+}
+
+// Strategy activation types
+/**
+ * Lifecycle state of a strategy activation.
+ *
+ * Mirrors `backend/src/zebu/domain/value_objects/activation_status.py:ActivationStatus`.
+ *
+ * - `ACTIVE` — Activation is enabled and will be executed by the scheduler.
+ * - `PAUSED` — Temporarily disabled by the user; can resume to ACTIVE.
+ * - `STOPPED` — Permanently terminated; a fresh activation is required to resume.
+ * - `ERROR` — Last execution failed; `last_error` should describe why.
+ */
+export type ActivationStatus = 'ACTIVE' | 'PAUSED' | 'STOPPED' | 'ERROR'
+
+/**
+ * Execution cadence for a strategy activation.
+ *
+ * Mirrors `backend/src/zebu/domain/value_objects/activation_frequency.py:ActivationFrequency`.
+ * Phase C1 ships with a single cadence; the union is forward-compatible.
+ */
+export type ActivationFrequency = 'DAILY_MARKET_CLOSE'
+
+/**
+ * Wire shape for a `StrategyActivation`.
+ *
+ * Mirrors `StrategyActivationResponse` in
+ * `backend/src/zebu/adapters/inbound/api/strategy_activations.py`.
+ */
+export interface StrategyActivationResponse {
+  id: string
+  user_id: string
+  strategy_id: string
+  portfolio_id: string
+  status: ActivationStatus
+  frequency: ActivationFrequency
+  last_executed_at: string | null
+  last_error: string | null
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * Request body for `POST /strategies/{id}/activate`.
+ */
+export interface ActivateStrategyRequest {
+  portfolio_id: string
+  frequency?: ActivationFrequency
+}
+
+/**
+ * Request body for `POST /activations/{id}/deactivate`.
+ *
+ * The optional `reason` is captured on the activation's `last_error` field
+ * (the entity's auxiliary text channel) so the UI can surface it.
+ */
+export interface DeactivateActivationRequest {
+  reason?: string
+}
+
+/**
+ * Response from `POST /activations/{id}/run-now`.
+ *
+ * Carries the immediate execution outcome plus the post-run activation state.
+ */
+export interface RunNowResponse {
+  activation: StrategyActivationResponse
+  succeeded: boolean
+  trades: number
+  error: string | null
 }

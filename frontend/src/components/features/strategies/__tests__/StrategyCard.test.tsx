@@ -1,13 +1,15 @@
 /**
  * Tests for StrategyCard component
  */
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { StrategyCard } from '../StrategyCard'
 import type { StrategyResponse } from '@/services/api/types'
 import * as strategiesApi from '@/services/api/strategies'
+import { strategyActivationsApi } from '@/services/api/strategyActivations'
+import { portfoliosApi } from '@/services/api/portfolios'
 
 vi.mock('react-hot-toast', () => ({
   default: {
@@ -15,6 +17,38 @@ vi.mock('react-hot-toast', () => ({
     error: vi.fn(),
   },
 }))
+
+vi.mock('@/services/api/strategyActivations', () => ({
+  strategyActivationsApi: {
+    activate: vi.fn(),
+    getByStrategy: vi.fn(),
+    list: vi.fn(),
+    deactivate: vi.fn(),
+    runNow: vi.fn(),
+  },
+}))
+
+vi.mock('@/services/api/portfolios', () => ({
+  portfoliosApi: {
+    list: vi.fn(),
+    getById: vi.fn(),
+  },
+}))
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  // Default: no activation exists for the strategy under test, and portfolios
+  // list returns an empty page. Each test can override before render() if it
+  // needs other behaviour.
+  vi.mocked(strategyActivationsApi.getByStrategy).mockResolvedValue(null)
+  vi.mocked(portfoliosApi.list).mockResolvedValue({
+    items: [],
+    total: 0,
+    limit: 20,
+    offset: 0,
+    has_more: false,
+  })
+})
 
 function createWrapper() {
   const queryClient = new QueryClient({
