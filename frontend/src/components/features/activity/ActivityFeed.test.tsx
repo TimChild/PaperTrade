@@ -67,14 +67,14 @@ function buildPage(
   }
 }
 
-function renderFeed() {
+function renderFeed(actorLabel?: string) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
-        <ActivityFeed />
+        <ActivityFeed actorLabel={actorLabel} />
       </MemoryRouter>
     </QueryClientProvider>
   )
@@ -110,9 +110,10 @@ describe('ActivityFeed', () => {
 
     renderFeed()
 
-    // Agent row carries the explicit API-key label.
+    // Agent row carries the explicit API-key label as a clickable link
+    // (the G-2.2 drill-down affordance).
     expect(
-      screen.getByTestId('activity-feed-actor-label-claude-laptop')
+      screen.getByTestId('activity-actor-link-claude-laptop')
     ).toHaveTextContent('claude-laptop')
     // User row says "you".
     expect(screen.getByText('you')).toBeInTheDocument()
@@ -216,10 +217,12 @@ describe('ActivityFeed', () => {
     const user = userEvent.setup()
     renderFeed()
 
-    // First call from initial render — no event_type filter.
+    // First call from initial render — no event_type filter, no actor
+    // label.
     expect(mockedUseActivity).toHaveBeenLastCalledWith({
       limit: 50,
       event_type: undefined,
+      actor_label: undefined,
     })
 
     // Activate the "Trades" chip.
@@ -229,6 +232,7 @@ describe('ActivityFeed', () => {
     expect(mockedUseActivity).toHaveBeenLastCalledWith({
       limit: 50,
       event_type: ['trade'],
+      actor_label: undefined,
     })
 
     // Clear button surfaces only after at least one chip is active.
@@ -237,6 +241,7 @@ describe('ActivityFeed', () => {
     expect(mockedUseActivity).toHaveBeenLastCalledWith({
       limit: 50,
       event_type: undefined,
+      actor_label: undefined,
     })
   })
 
@@ -253,5 +258,64 @@ describe('ActivityFeed', () => {
     expect(within(table).getByText('When')).toBeInTheDocument()
     expect(within(table).getByText('Actor')).toBeInTheDocument()
     expect(within(table).getByText('What happened')).toBeInTheDocument()
+  })
+
+  it('navigates to the actor drill-down when an actor link is clicked', async () => {
+    // Stub window.scrollTo — jsdom doesn't implement it.
+    const scrollSpy = vi
+      .spyOn(window, 'scrollTo')
+      .mockImplementation(() => undefined)
+
+    mockedUseActivity.mockReturnValue({
+      data: buildPage([agentEvt]),
+      isLoading: false,
+      isError: false,
+    } as ReturnType<typeof useActivity>)
+
+    const user = userEvent.setup()
+    renderFeed()
+
+    await user.click(screen.getByTestId('activity-actor-link-claude-laptop'))
+
+    expect(navigateSpy).toHaveBeenCalledWith(
+      '/activity?actor_label=claude-laptop'
+    )
+    expect(scrollSpy).toHaveBeenCalled()
+    scrollSpy.mockRestore()
+  })
+
+  it('renders the actor as a plain span (non-interactive) when already filtered', () => {
+    mockedUseActivity.mockReturnValue({
+      data: buildPage([agentEvt]),
+      isLoading: false,
+      isError: false,
+    } as ReturnType<typeof useActivity>)
+
+    renderFeed('claude-laptop')
+
+    // When filtered, the actor cell renders as the non-clickable
+    // testid (the click handler is suppressed).
+    expect(
+      screen.queryByTestId('activity-actor-link-claude-laptop')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByTestId('activity-feed-actor-label-claude-laptop')
+    ).toBeInTheDocument()
+  })
+
+  it('passes the actor_label filter through to the hook', () => {
+    mockedUseActivity.mockReturnValue({
+      data: buildPage([agentEvt]),
+      isLoading: false,
+      isError: false,
+    } as ReturnType<typeof useActivity>)
+
+    renderFeed('claude-laptop')
+
+    expect(mockedUseActivity).toHaveBeenLastCalledWith({
+      limit: 50,
+      event_type: undefined,
+      actor_label: 'claude-laptop',
+    })
   })
 })

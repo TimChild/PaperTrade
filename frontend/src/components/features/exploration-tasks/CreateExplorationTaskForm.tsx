@@ -1,7 +1,16 @@
 /**
  * Editorial form for creating a new exploration task. Fits inside a flush
  * Panel and submits through the `useCreateExplorationTask` mutation. On
- * success the parent navigates to the new task's detail view.
+ * success the parent navigates to the new task's detail view (or, if a
+ * custom `onSubmitted` handler is supplied, the parent owns the next-step
+ * navigation).
+ *
+ * `initialValues` lets a parent seed any of the editable fields when
+ * mounting the form (used by the G-2 "Ask an agent" buttons to pre-fill
+ * `target_portfolio_id` from the portfolio detail page and `tickers` from
+ * the strategy detail page). The form initialises state from those values
+ * on mount — to update them after the form has rendered, parents should
+ * remount the form via the `key` prop (no `useEffect`-to-sync).
  */
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -13,10 +22,41 @@ import { Panel } from '@/components/ui/Panel'
 import { Eyebrow } from '@/components/ui/Eyebrow'
 import { useCreateExplorationTask } from '@/hooks/useExplorationTasks'
 import { usePortfolios } from '@/hooks/usePortfolio'
-import type { CreateExplorationTaskRequest } from '@/services/api/types'
+import type {
+  CreateExplorationTaskRequest,
+  ExplorationTaskResponse,
+} from '@/services/api/types'
+
+/**
+ * Optional seed values for the form on mount. Each field is independently
+ * optional so callers can supply only what they have context for (e.g. a
+ * portfolio detail page seeds `targetPortfolioId`; a strategy detail page
+ * seeds `tickers`).
+ */
+export interface CreateExplorationTaskFormInitialValues {
+  title?: string
+  prompt?: string
+  /** Pre-selected target portfolio id. */
+  targetPortfolioId?: string
+  /** Pre-populated tickers (rendered as a comma-separated string in the input). */
+  tickers?: string[]
+  constraints?: string
+}
 
 interface CreateExplorationTaskFormProps {
   onCancel: () => void
+  /**
+   * Optional initial values for the form fields. Read once on mount.
+   * To re-seed after mount, remount the form via the `key` prop.
+   */
+  initialValues?: CreateExplorationTaskFormInitialValues
+  /**
+   * Optional handler called instead of the default
+   * "navigate to detail page" behaviour. Use for inline / dialog flows
+   * where the parent wants to control the next step (close a dialog,
+   * surface a toast, etc.).
+   */
+  onSubmitted?: (task: ExplorationTaskResponse) => void
 }
 
 const SELECT_CLASSES =
@@ -27,13 +67,26 @@ const TEXTAREA_CLASSES =
 
 export function CreateExplorationTaskForm({
   onCancel,
+  initialValues,
+  onSubmitted,
 }: CreateExplorationTaskFormProps): React.JSX.Element {
   const navigate = useNavigate()
-  const [title, setTitle] = useState('')
-  const [prompt, setPrompt] = useState('')
-  const [tickersInput, setTickersInput] = useState('')
-  const [targetPortfolioId, setTargetPortfolioId] = useState('')
-  const [constraints, setConstraints] = useState('')
+  // Initialise state from `initialValues` exactly once on mount — see the
+  // module-level JSDoc for the key-prop pattern parents should use to
+  // re-seed.
+  const [title, setTitle] = useState(initialValues?.title ?? '')
+  const [prompt, setPrompt] = useState(initialValues?.prompt ?? '')
+  const [tickersInput, setTickersInput] = useState(
+    initialValues?.tickers && initialValues.tickers.length > 0
+      ? initialValues.tickers.join(', ')
+      : ''
+  )
+  const [targetPortfolioId, setTargetPortfolioId] = useState(
+    initialValues?.targetPortfolioId ?? ''
+  )
+  const [constraints, setConstraints] = useState(
+    initialValues?.constraints ?? ''
+  )
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const createTask = useCreateExplorationTask()
@@ -94,8 +147,14 @@ export function CreateExplorationTaskForm({
 
     createTask.mutate(payload, {
       onSuccess: (created) => {
-        toast.success('Exploration task created')
-        void navigate(`/exploration-tasks/${created.id}`)
+        if (onSubmitted) {
+          // Parent owns the post-submit flow (e.g. close dialog +
+          // its own toast).
+          onSubmitted(created)
+        } else {
+          toast.success('Exploration task created')
+          void navigate(`/exploration-tasks/${created.id}`)
+        }
       },
       onError: () => {
         toast.error('Failed to create exploration task')

@@ -11,9 +11,11 @@ import { Dashboard } from '@/pages/Dashboard'
 import { PortfolioDetail } from '@/pages/PortfolioDetail'
 import { PortfolioAnalytics } from '@/pages/PortfolioAnalytics'
 import { Strategies } from '@/pages/Strategies'
+import { StrategyDetail } from '@/pages/StrategyDetail'
 import { Activations } from '@/pages/Activations'
 import { ExplorationTasks } from '@/pages/ExplorationTasks'
 import { ExplorationTaskDetail } from '@/pages/ExplorationTaskDetail'
+import { Activity } from '@/pages/Activity'
 import { Backtests } from '@/pages/Backtests'
 import { BacktestResult } from '@/pages/BacktestResult'
 import { CompareBacktests } from '@/pages/CompareBacktests'
@@ -159,12 +161,14 @@ function AuthenticatedApp() {
                 element={<PortfolioAnalytics />}
               />
               <Route path="/strategies" element={<Strategies />} />
+              <Route path="/strategies/:id" element={<StrategyDetail />} />
               <Route path="/activations" element={<Activations />} />
               <Route path="/exploration-tasks" element={<ExplorationTasks />} />
               <Route
                 path="/exploration-tasks/:id"
                 element={<ExplorationTaskDetail />}
               />
+              <Route path="/activity" element={<Activity />} />
               <Route path="/backtests" element={<Backtests />} />
               <Route path="/backtests/:id" element={<BacktestResult />} />
               <Route path="/compare" element={<CompareBacktests />} />
