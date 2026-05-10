@@ -11,6 +11,7 @@ from zebu.adapters.inbound.api.analytics import (
     admin_router as analytics_admin_router,
 )
 from zebu.adapters.inbound.api.analytics import router as analytics_router
+from zebu.adapters.inbound.api.api_keys import router as api_keys_router
 from zebu.adapters.inbound.api.backtests import router as backtests_router
 from zebu.adapters.inbound.api.debug import router as debug_router
 from zebu.adapters.inbound.api.error_handlers import register_exception_handlers
@@ -153,6 +154,7 @@ app.include_router(debug_router, prefix="/api/v1")
 app.include_router(strategies_router, prefix="/api/v1")
 app.include_router(backtests_router, prefix="/api/v1")
 app.include_router(exploration_tasks_router, prefix="/api/v1")
+app.include_router(api_keys_router, prefix="/api/v1")
 
 
 @app.get("/health")

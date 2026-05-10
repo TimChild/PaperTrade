@@ -5,16 +5,22 @@ Provides factory functions for repositories and other dependencies used by API r
 
 import logging
 import os
+from collections.abc import Awaitable, Callable
 from typing import Annotated
 from uuid import UUID
 
 import httpx
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from redis.asyncio import Redis
 
+from zebu.adapters.auth.api_key_adapter import ApiKeyAuthAdapter
+from zebu.adapters.auth.api_key_hasher import API_KEY_PREFIX, get_api_key_hasher
 from zebu.adapters.auth.clerk_adapter import ClerkAuthAdapter
 from zebu.adapters.auth.in_memory_adapter import InMemoryAuthAdapter
+from zebu.adapters.outbound.database.api_key_repository import (
+    SQLModelApiKeyRepository,
+)
 from zebu.adapters.outbound.database.portfolio_repository import (
     SQLModelPortfolioRepository,
 )
@@ -37,14 +43,18 @@ from zebu.application.ports.auth_port import AuthenticatedUser, AuthPort
 from zebu.application.ports.market_data_port import MarketDataPort
 from zebu.application.services.snapshot_job import SnapshotJobService
 from zebu.domain.exceptions import InvalidTokenError
+from zebu.domain.value_objects.api_key_scope import ApiKeyScope
 from zebu.infrastructure.cache.price_cache import PriceCache
 from zebu.infrastructure.database import SessionDep
 from zebu.infrastructure.rate_limiter import RateLimiter
 
 logger = logging.getLogger(__name__)
 
-# Security scheme for Bearer token authentication
-security = HTTPBearer()
+# Security scheme for Bearer token authentication.
+# auto_error=False so we can fall back to the API-key path when no Bearer
+# header is present. The composite get_current_user dependency owns the
+# final 401 decision.
+security = HTTPBearer(auto_error=False)
 
 
 def _is_production() -> bool:
@@ -140,6 +150,42 @@ def get_snapshot_repository(
     return SQLModelSnapshotRepository(session)
 
 
+def get_api_key_repository(
+    session: SessionDep,
+) -> SQLModelApiKeyRepository:
+    """Get API key repository instance.
+
+    Args:
+        session: Database session from dependency injection
+
+    Returns:
+        SQLModelApiKeyRepository instance
+    """
+    return SQLModelApiKeyRepository(session)
+
+
+def get_api_key_auth_adapter(
+    repository: Annotated[SQLModelApiKeyRepository, Depends(get_api_key_repository)],
+) -> ApiKeyAuthAdapter:
+    """Build an :class:`ApiKeyAuthAdapter` for the current request.
+
+    The hasher is read from env config via :func:`get_api_key_hasher`. The
+    repository is request-scoped (bound to the per-request session) so a
+    successful auth's ``last_used_at`` bump commits with the rest of the
+    request's unit of work.
+
+    Args:
+        repository: Per-request SQLModel API-key repository.
+
+    Returns:
+        Configured :class:`ApiKeyAuthAdapter`.
+    """
+    return ApiKeyAuthAdapter(
+        repository=repository,
+        hasher=get_api_key_hasher(),
+    )
+
+
 def get_auth_port() -> AuthPort:
     """Get authentication port implementation.
 
@@ -182,33 +228,124 @@ def get_auth_port() -> AuthPort:
     return InMemoryAuthAdapter()
 
 
-async def get_current_user(
-    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
-    auth: Annotated[AuthPort, Depends(get_auth_port)],
-) -> AuthenticatedUser:
-    """Extract and verify user from Authorization header.
+def extract_api_key_from_request(request: Request) -> str | None:
+    """Pull a raw API key from the request headers, if any.
 
-    Validates the Bearer token and returns the authenticated user.
-    This dependency can be used in route handlers to require authentication.
+    Tries, in order:
+
+    1. ``Authorization: ApiKey <key>``
+    2. ``X-API-Key: <key>``
+
+    Returns ``None`` if neither header is present. The Bearer scheme is
+    handled by :class:`fastapi.security.HTTPBearer` and parsed separately.
 
     Args:
-        credentials: Bearer token credentials from Authorization header
-        auth: Authentication port implementation
+        request: The active FastAPI request.
 
     Returns:
-        AuthenticatedUser: Verified user identity
+        The raw API key string if present, otherwise ``None``.
+    """
+    auth_header = request.headers.get("authorization") or request.headers.get(
+        "Authorization"
+    )
+    if auth_header:
+        # "ApiKey zk_xxx" — case-insensitive scheme match.
+        scheme, _, value = auth_header.partition(" ")
+        if scheme.lower() == "apikey" and value:
+            return value.strip()
+
+    x_api_key = request.headers.get("x-api-key") or request.headers.get("X-API-Key")
+    if x_api_key:
+        return x_api_key.strip()
+
+    return None
+
+
+async def get_current_user(
+    request: Request,
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)],
+    auth: Annotated[AuthPort, Depends(get_auth_port)],
+    api_key_auth: Annotated[ApiKeyAuthAdapter, Depends(get_api_key_auth_adapter)],
+) -> AuthenticatedUser:
+    """Extract and verify user from the request's auth headers.
+
+    Supports two schemes:
+
+    - ``Authorization: Bearer <jwt>`` — Clerk JWT, verified via
+      :class:`AuthPort`.
+    - ``Authorization: ApiKey <raw>`` or ``X-API-Key: <raw>`` — Phase C2
+      API-key path, verified via :class:`ApiKeyAuthAdapter`.
+
+    Returns the same :class:`AuthenticatedUser` shape regardless of which
+    scheme authenticated the request. Downstream code does not need to
+    care which path the request came in on.
+
+    Selection rule: a Bearer token wins if both are present; this keeps
+    behaviour unchanged for browser clients that always send ``Bearer``.
+    A request that looks like an API key (``Bearer zk_...`` or matching
+    the API-key prefix) is routed to the API-key adapter even when sent
+    through the Bearer slot — this lets curl-style ``Authorization:
+    Bearer zk_xxx`` work without forcing callers to remember the
+    ``ApiKey`` scheme name.
+
+    Args:
+        request: The active FastAPI request (used to read non-Bearer
+            auth headers).
+        credentials: Optional ``HTTPAuthorizationCredentials`` parsed by
+            :class:`fastapi.security.HTTPBearer` (auto_error disabled).
+        auth: Auth port (Clerk in prod, in-memory in tests).
+        api_key_auth: API-key auth adapter (always available — validates
+            against the request-scoped DB session).
+
+    Returns:
+        AuthenticatedUser: Verified user identity.
 
     Raises:
-        HTTPException: 401 if authentication fails
+        HTTPException: 401 if neither scheme produces a valid identity.
     """
-    try:
-        return await auth.verify_token(credentials.credentials)
-    except InvalidTokenError as e:
+    bearer_token: str | None = (
+        credentials.credentials if credentials is not None else None
+    )
+    api_key_token: str | None = extract_api_key_from_request(request)
+
+    # Bearer token that *looks* like an API key: route it to the API-key
+    # adapter. Lets agents send `Authorization: Bearer zk_xxx` and have it
+    # work, which is what most HTTP libraries default to.
+    if (
+        bearer_token is not None
+        and bearer_token.startswith(API_KEY_PREFIX)
+        and api_key_token is None
+    ):
+        api_key_token = bearer_token
+        bearer_token = None
+
+    last_error: InvalidTokenError | None = None
+
+    if bearer_token is not None:
+        try:
+            return await auth.verify_token(bearer_token)
+        except InvalidTokenError as exc:
+            last_error = exc
+
+    if api_key_token is not None:
+        try:
+            return await api_key_auth.verify_token(api_key_token)
+        except InvalidTokenError as exc:
+            last_error = exc
+
+    if last_error is None:
+        # Neither scheme presented anything — the request was missing auth.
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid authentication credentials: {str(e)}",
+            detail="Not authenticated",
             headers={"WWW-Authenticate": "Bearer"},
-        ) from e
+        )
+
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail=f"Invalid authentication credentials: {str(last_error)}",
+        headers={"WWW-Authenticate": "Bearer"},
+    ) from last_error
 
 
 async def get_current_user_id(
@@ -409,6 +546,88 @@ async def get_snapshot_job(
     )
 
 
+def require_scope(
+    scope: ApiKeyScope,
+) -> "Callable[[Request, SQLModelApiKeyRepository], Awaitable[None]]":
+    """Build a dependency that gates on an API-key scope.
+
+    Behaviour:
+
+    - Clerk Bearer auth always passes (humans authenticated through the UI
+      are full-trust). Only API-key requests are gated.
+    - API-key requests must carry the requested scope (or ``ADMIN``, which
+      is always sufficient).
+
+    Phase C2 deliberately wires this helper but does *not* apply it
+    broadly. Most non-admin endpoints stay open to any authenticated
+    identity for now — Phase D follow-up will sweep through and apply
+    ``READ`` / ``TRADE`` gates per-route.
+
+    Usage:
+
+    ::
+
+        @router.post(
+            "/trades",
+            dependencies=[Depends(require_scope(ApiKeyScope.TRADE))],
+        )
+        async def execute_trade(...): ...
+
+    Args:
+        scope: The minimum scope an API-key request must carry.
+
+    Returns:
+        An async dependency callable that raises 403 on scope mismatch
+        and is a no-op for Clerk-authenticated requests.
+    """
+
+    async def _check(
+        request: Request,
+        api_key_repo: Annotated[
+            SQLModelApiKeyRepository, Depends(get_api_key_repository)
+        ],
+    ) -> None:
+        raw_key = extract_api_key_from_request(request)
+        # Allow `Authorization: Bearer zk_...` to satisfy the API-key route.
+        auth_header = request.headers.get("authorization") or request.headers.get(
+            "Authorization"
+        )
+        if raw_key is None and auth_header:
+            scheme, _, value = auth_header.partition(" ")
+            if scheme.lower() == "bearer" and value.startswith(API_KEY_PREFIX):
+                raw_key = value.strip()
+
+        if raw_key is None:
+            # Clerk Bearer path — no scope check applies.
+            return
+
+        # Look up the key. We trust get_current_user (which ran first as a
+        # dependency on the route) to have rejected revoked/expired keys
+        # already, but we re-verify the hash to load the scope set.
+        hasher = get_api_key_hasher()
+        record = await api_key_repo.get_by_hash(hasher.hash(raw_key))
+        if record is None:
+            # Should not happen if get_current_user passed, but treat as
+            # 401 to be safe rather than masking it as 403.
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        if record.has_scope(ApiKeyScope.ADMIN):
+            return
+        if record.has_scope(scope):
+            return
+
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"API key missing required scope: {scope.value}",
+        )
+
+    return _check
+
+
 # Type aliases for route dependency injection
 PortfolioRepositoryDep = Annotated[
     SQLModelPortfolioRepository, Depends(get_portfolio_repository)
@@ -419,6 +638,9 @@ TransactionRepositoryDep = Annotated[
 PriceRepositoryDep = Annotated[PriceRepository, Depends(get_price_repository)]
 SnapshotRepositoryDep = Annotated[
     SQLModelSnapshotRepository, Depends(get_snapshot_repository)
+]
+ApiKeyRepositoryDep = Annotated[
+    SQLModelApiKeyRepository, Depends(get_api_key_repository)
 ]
 AuthPortDep = Annotated[AuthPort, Depends(get_auth_port)]
 CurrentUser = Annotated[AuthenticatedUser, Depends(get_current_user)]

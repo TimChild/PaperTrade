@@ -101,7 +101,7 @@ Status: Phase A (this Claude infra migration) is in progress as of 2026-05-09. P
 ## Things to remember
 
 - **Naming**: product is "Zebu", repo is `PaperTrade`, import path is `zebu`. All three refer to the same thing.
-- **Auth**: every API endpoint sits behind Clerk Bearer JWT. There's no API-key path. Adding one is part of Phase B in the proposal.
+- **Auth**: two paths coexist — Clerk Bearer JWT for humans, and API key (Phase C2) for machine identities (agents, scheduled tasks, MCP servers). Agents authenticate by minting a key at `POST /api/v1/api-keys` (Clerk-gated) and presenting it via `Authorization: ApiKey <key>` or `X-API-Key: <key>`. Both schemes resolve to the same `AuthenticatedUser` shape — route handlers don't care which path was used. Scope enforcement (`require_scope`) is wired but not applied broadly yet — that's a Phase D sweep.
 - **Hot paths**: `backend/src/zebu/application/services/backtest_executor.py` is the canonical "iterate over days, generate signals, execute trades" loop — Task #210's live executor will mirror its structure.
 - **CD is live**: pushing to `main` deploys to production. Add `[skip deploy]` in the commit message to skip.
 - **Pre-commit runs on push**, not commit. So commits are fast; push is where formatters run.

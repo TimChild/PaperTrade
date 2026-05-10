@@ -24,12 +24,12 @@ OpenAPI schema does not have to enumerate them.
 ``loc`` from FastAPI's `RequestValidationError` becomes a ``fields`` entry.
 """
 
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class ErrorCode(str, Enum):
+class ErrorCode(StrEnum):
     """Machine-readable error codes shared across routes.
 
     Values are stable strings — frontend / MCP clients can match on these.
