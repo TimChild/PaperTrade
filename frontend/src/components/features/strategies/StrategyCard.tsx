@@ -56,7 +56,7 @@ export function StrategyCard({
               <Link
                 to={`/strategies/${strategy.id}`}
                 className="hover:text-amber transition-colors duration-quick ease-editorial"
-                data-testid={`strategy-card-detail-link-${strategy.id}`}
+                data-testid={`strategy-name-link-${strategy.id}`}
               >
                 {strategy.name}
               </Link>
