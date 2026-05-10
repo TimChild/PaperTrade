@@ -151,9 +151,8 @@ describe('HoldingsTable', () => {
     it('should show empty state when no holdings', () => {
       render(<HoldingsTable holdings={[]} />, { wrapper: createWrapper() })
 
-      expect(
-        screen.getByText(/No holdings in this portfolio yet/i)
-      ).toBeInTheDocument()
+      // Editorial empty state — was "No holdings in this portfolio yet".
+      expect(screen.getByText(/No holdings yet/i)).toBeInTheDocument()
     })
 
     it('should show loading state', () => {

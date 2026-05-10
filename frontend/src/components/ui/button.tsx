@@ -4,19 +4,32 @@ import { cva, type VariantProps } from 'class-variance-authority'
 
 import { cn } from '@/lib/utils'
 
+/**
+ * Editorial button (Wave 1).
+ *
+ * - `default` is amber-on-canvas — used for primary calls to action
+ *   (place order, save). Restrained, no shadow.
+ * - `secondary` is hairline-bordered, ink text — used for tertiary actions.
+ * - `outline` is the same shape as secondary but with a transparent body
+ *   and accent on hover.
+ * - `ghost` is borderless — for inline navigation.
+ * - `destructive` uses the muted loss tone.
+ *
+ * The default `rounded-button` token resolves to a small radius (0.25rem)
+ * — no jelly buttons.
+ */
 const buttonVariants = cva(
-  'inline-flex items-center justify-center whitespace-nowrap rounded-button text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center whitespace-nowrap rounded-button text-sm font-medium tracking-tight transition-colors duration-quick ease-editorial focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-amber focus-visible:ring-offset-2 focus-visible:ring-offset-canvas disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        default:
-          'bg-primary text-white hover:bg-primary-hover shadow-card hover:shadow-card-hover',
+        default: 'bg-amber text-canvas hover:bg-amber-hover',
         secondary:
-          'bg-gray-100 text-gray-900 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700',
+          'bg-canvas-raised text-ink hover:bg-canvas-raised/70 border border-hairline',
         outline:
-          'border border-gray-300 bg-transparent hover:bg-gray-100 dark:border-gray-700 dark:hover:bg-gray-800',
-        ghost: 'hover:bg-gray-100 dark:hover:bg-gray-800',
-        destructive: 'bg-negative text-white hover:bg-negative-dark',
+          'border border-hairline-strong bg-transparent text-ink hover:border-amber hover:text-amber',
+        ghost: 'text-ink-muted hover:text-ink hover:bg-canvas-raised/40',
+        destructive: 'bg-loss text-canvas hover:bg-loss/90',
       },
       size: {
         default: 'h-10 px-4 py-2',

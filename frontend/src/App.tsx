@@ -28,18 +28,31 @@ function App() {
           position="top-right"
           toastOptions={{
             duration: 5000,
+            // Editorial dark: warm canvas backplate + ink, with muted gain/loss
+            // icon tones — never neon green/red.
+            style: {
+              background: '#13181f',
+              color: '#ece7df',
+              border: '1px solid hsl(215 12% 22%)',
+              borderRadius: '0.25rem',
+              fontFamily:
+                "'IBM Plex Sans Variable', 'IBM Plex Sans', system-ui, sans-serif",
+              fontSize: '0.875rem',
+              boxShadow:
+                '0 14px 40px -22px rgba(0, 0, 0, 0.6), 0 4px 8px -4px rgba(0, 0, 0, 0.4)',
+            },
             success: {
               duration: 5000,
               iconTheme: {
-                primary: '#10b981',
-                secondary: '#fff',
+                primary: '#6ba283', // muted gain (matches --gain)
+                secondary: '#13181f',
               },
             },
             error: {
               duration: 7000,
               iconTheme: {
-                primary: '#ef4444',
-                secondary: '#fff',
+                primary: '#c46a64', // muted loss (matches --loss)
+                secondary: '#13181f',
               },
             },
           }}
@@ -54,17 +67,18 @@ function App() {
 
 function AuthenticatedApp() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-canvas">
       <SignedOut>
         {/* Show sign-in page when user is not authenticated */}
-        <div className="flex min-h-screen items-center justify-center">
-          <div className="w-full max-w-md">
+        <div className="flex min-h-screen items-center justify-center bg-canvas">
+          <div className="w-full max-w-md px-6">
             <div className="mb-8 text-center">
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
+              <p className="font-eyebrow text-ink-muted">Practice trading</p>
+              <h1 className="mt-2 font-display text-display-lg tracking-tight text-ink">
                 Zebu
               </h1>
-              <p className="mt-2 text-gray-600 dark:text-gray-400">
-                Practice trading without risking real money
+              <p className="mt-3 text-body-md text-ink-muted">
+                Backtest. Refine. Trade — without risk.
               </p>
             </div>
             <SignIn
@@ -73,7 +87,7 @@ function AuthenticatedApp() {
               appearance={{
                 elements: {
                   rootBox: 'mx-auto',
-                  card: 'shadow-xl',
+                  card: 'shadow-elevated',
                 },
               }}
             />
@@ -82,21 +96,21 @@ function AuthenticatedApp() {
       </SignedOut>
 
       <SignedIn>
-        {/* Show app when user is authenticated */}
-        <div className="flex min-h-screen flex-col">
-          {/* Header with user button */}
-          <header className="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800">
-            <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+        {/* Show app when user is authenticated. Editorial chrome: hairline
+            border under the header, generous gutters, no card-with-shadow. */}
+        <div className="flex min-h-screen flex-col bg-canvas">
+          <header className="border-b border-hairline bg-canvas">
+            <div className="mx-auto flex max-w-[1240px] items-center justify-between px-5 sm:px-8 lg:px-12 py-4 sm:py-5">
+              <h1 className="font-display text-2xl tracking-tight text-ink">
                 Zebu
               </h1>
               <UserButton afterSignOutUrl="/" />
             </div>
           </header>
 
-          {/* Navigation tabs */}
-          <nav className="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800">
-            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          {/* Navigation — editorial tabs. Underline on active, ink-muted on rest. */}
+          <nav className="border-b border-hairline bg-canvas">
+            <div className="mx-auto max-w-[1240px] px-5 sm:px-8 lg:px-12">
               <div className="flex gap-0">
                 {[
                   { to: '/dashboard', label: 'Portfolios', end: true },
@@ -109,12 +123,13 @@ function AuthenticatedApp() {
                     to={to}
                     end={end}
                     className={({ isActive }) =>
-                      `px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                      `relative px-4 py-3.5 text-body-sm font-medium tracking-tight transition-colors duration-quick ease-editorial ${
                         isActive
-                          ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
-                          : 'border-transparent text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                          ? 'text-amber after:absolute after:left-4 after:right-4 after:-bottom-px after:h-px after:bg-amber'
+                          : 'text-ink-muted hover:text-ink'
                       }`
                     }
+                    style={{ minHeight: 'auto' }}
                   >
                     {label}
                   </NavLink>

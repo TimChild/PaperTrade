@@ -310,7 +310,7 @@ test.describe('Trading Flow', () => {
     // Wait for sell button to be visible (component remounts with new key)
     const sellActionButton = page.getByTestId('trade-form-action-sell')
     await expect(sellActionButton).toBeVisible({ timeout: 5000 })
-    await expect(sellActionButton).toHaveClass(/bg-negative/)
+    await expect(sellActionButton).toHaveClass(/bg-loss/)
 
     // Should pre-fill ticker and quantity
     const tickerInput = page.getByTestId('trade-form-ticker-input')

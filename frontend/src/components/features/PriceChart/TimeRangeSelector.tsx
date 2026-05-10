@@ -1,5 +1,8 @@
 /**
- * Time range selector component for price charts
+ * Time range selector component for price charts.
+ *
+ * Editorial pill: hairline-bordered rail with selected segment in amber. No
+ * solid blue, no rounded-large pills. Subtle hover on inactive segments.
  */
 import type { TimeRange } from '@/types/price'
 
@@ -15,25 +18,36 @@ export function TimeRangeSelector({
   onChange,
 }: TimeRangeSelectorProps): React.JSX.Element {
   return (
-    <div className="flex gap-1 rounded-lg border border-gray-300 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
-      {TIME_RANGES.map((range) => (
-        <button
-          key={range}
-          onClick={() => onChange(range)}
-          className={`
-            rounded px-3 py-1 text-sm font-medium transition-colors
-            ${
-              selected === range
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700'
-            }
-          `}
-          aria-label={`Show ${range} price history`}
-          aria-pressed={selected === range}
-        >
-          {range}
-        </button>
-      ))}
+    <div
+      role="group"
+      aria-label="Select time range"
+      className="inline-flex rounded-editorial border border-hairline bg-canvas-sunken/40 p-0.5"
+    >
+      {TIME_RANGES.map((range) => {
+        const isSelected = selected === range
+        return (
+          <button
+            key={range}
+            type="button"
+            onClick={() => onChange(range)}
+            className={`
+              relative px-2.5 py-1 text-xs font-eyebrow rounded-[3px]
+              transition-colors duration-quick ease-editorial
+              ${
+                isSelected
+                  ? 'bg-canvas-raised text-amber'
+                  : 'text-ink-subtle hover:text-ink'
+              }
+            `}
+            style={{ minHeight: 'auto', letterSpacing: '0.12em' }}
+            aria-label={`Show ${range} price history`}
+            aria-pressed={isSelected}
+            data-testid={`time-range-${range}`}
+          >
+            {range}
+          </button>
+        )
+      })}
     </div>
   )
 }

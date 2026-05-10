@@ -3,9 +3,16 @@ import type { Holding } from '@/types/portfolio'
 import type { HoldingDTO } from '@/services/api/types'
 import { formatCurrency, formatPercent, formatNumber } from '@/utils/formatters'
 import { useBatchPricesQuery } from '@/hooks/usePriceQuery'
-import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
+import {
+  DataTable,
+  DataTableHead,
+  DataTableBody,
+  DataHeaderCell,
+  DataRow,
+  DataCell,
+} from '@/components/ui/DataRow'
 
 interface HoldingsTableProps {
   holdings: Holding[]
@@ -14,6 +21,16 @@ interface HoldingsTableProps {
   onQuickSell?: (ticker: string, quantity: number) => void
 }
 
+/**
+ * Editorial holdings table.
+ *
+ * Renders with the new DataRow primitives — hairline dividers, mono numerics,
+ * restrained hover. Preserves the previous testid contract (`holdings-table`,
+ * `holding-row-${ticker}`, `holding-symbol-${ticker}`, etc.) and the
+ * `hover:bg-gray-50` class that the existing tests assert on. New work
+ * should reach for the DataRow primitives directly rather than mirroring
+ * those legacy assertions.
+ */
 export function HoldingsTable({
   holdings,
   holdingsDTO,
@@ -64,186 +81,150 @@ export function HoldingsTable({
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="space-y-3 pt-6">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-12" />
-          ))}
-        </CardContent>
-      </Card>
+      <div className="space-y-3" data-testid="holdings-table-loading">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-12 w-full" />
+        ))}
+      </div>
     )
   }
 
   if (holdingsWithRealPrices.length === 0) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <p className="text-center text-foreground-secondary">
-            No holdings in this portfolio yet
-          </p>
-        </CardContent>
-      </Card>
+      <div className="border border-hairline rounded-editorial p-10 text-center">
+        <p className="font-display text-display-sm text-ink-muted">
+          No holdings yet
+        </p>
+        <p className="mt-2 text-body-sm text-ink-subtle">
+          Trades will appear here once executed.
+        </p>
+      </div>
     )
   }
 
   return (
-    <Card>
-      <CardContent className="p-0">
-        {/* Horizontal scroll container that breaks out of card padding on mobile for full-width scrolling */}
-        <div className="overflow-x-auto -mx-4 sm:mx-0">
-          <div className="inline-block min-w-full align-middle">
-            <table data-testid="holdings-table" className="min-w-full">
-              <thead className="border-b border-gray-200 dark:border-gray-700">
-                <tr>
-                  <th
-                    scope="col"
-                    className="px-3 sm:px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-foreground-secondary"
-                  >
-                    Symbol
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-3 sm:px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-foreground-secondary"
-                  >
-                    Shares
-                  </th>
-                  <th
-                    scope="col"
-                    className="hidden sm:table-cell px-3 sm:px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-foreground-secondary"
-                  >
-                    Avg Cost
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-3 sm:px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-foreground-secondary"
-                  >
-                    Current Price
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-3 sm:px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-foreground-secondary"
-                  >
-                    Market Value
-                  </th>
-                  <th
-                    scope="col"
-                    className="hidden md:table-cell px-3 sm:px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-foreground-secondary"
-                  >
-                    Gain/Loss
-                  </th>
-                  {onQuickSell && (
-                    <th
-                      scope="col"
-                      className="px-3 sm:px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-foreground-secondary"
-                    >
-                      Actions
-                    </th>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                {holdingsWithRealPrices.map((holding) => {
-                  const isPositive = holding.gainLoss >= 0
-                  const gainLossColorClass = isPositive
-                    ? 'text-positive'
-                    : 'text-negative'
+    <DataTable
+      caption="Portfolio holdings"
+      className="border border-hairline rounded-editorial"
+      testId="holdings-table"
+    >
+      <DataTableHead>
+        <DataHeaderCell>Symbol</DataHeaderCell>
+        <DataHeaderCell align="right">Shares</DataHeaderCell>
+        <DataHeaderCell align="right" hideOnMobile>
+          Avg Cost
+        </DataHeaderCell>
+        <DataHeaderCell align="right">Current Price</DataHeaderCell>
+        <DataHeaderCell align="right">Market Value</DataHeaderCell>
+        <DataHeaderCell align="right" hideUntilMd>
+          Gain/Loss
+        </DataHeaderCell>
+        {onQuickSell && <DataHeaderCell align="right">Actions</DataHeaderCell>}
+      </DataTableHead>
+      <DataTableBody>
+        {holdingsWithRealPrices.map((holding) => {
+          const isPositive = holding.gainLoss >= 0
+          const gainLossTone: 'gain' | 'loss' = isPositive ? 'gain' : 'loss'
 
-                  // Check if we're using real-time price or fallback
-                  const usingFallback = !(
-                    'usingRealTimePrice' in holding &&
-                    holding.usingRealTimePrice
-                  )
+          // Check if we're using real-time price or fallback
+          const usingFallback = !(
+            'usingRealTimePrice' in holding && holding.usingRealTimePrice
+          )
 
-                  return (
-                    <tr
-                      key={holding.ticker}
-                      data-testid={`holding-row-${holding.ticker}`}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                    >
-                      <td
-                        className="whitespace-nowrap px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium text-foreground-primary"
-                        data-testid={`holding-symbol-${holding.ticker}`}
+          return (
+            <DataRow
+              key={holding.ticker}
+              testId={`holding-row-${holding.ticker}`}
+              interactive
+              // Preserve the legacy hover class assertion in HoldingsTable.test.tsx
+              className="hover:bg-gray-50 dark:hover:bg-canvas-raised/40"
+            >
+              <DataCell
+                emphasis="primary"
+                testId={`holding-symbol-${holding.ticker}`}
+              >
+                <span className="font-display text-body-md tracking-tightish">
+                  {holding.ticker}
+                </span>
+              </DataCell>
+              <DataCell
+                align="right"
+                numeric
+                tone="muted"
+                testId={`holding-quantity-${holding.ticker}`}
+              >
+                {formatNumber(holding.quantity, 0)}
+              </DataCell>
+              <DataCell align="right" numeric tone="muted" hideOnMobile>
+                {formatCurrency(holding.averageCost)}
+              </DataCell>
+              <DataCell align="right" numeric tone="muted">
+                {pricesLoading ? (
+                  <Skeleton
+                    className="h-4 w-16 ml-auto"
+                    data-testid={`holding-price-loading-${holding.ticker}`}
+                  />
+                ) : (
+                  <span className="inline-flex items-center gap-1">
+                    {formatCurrency(holding.currentPrice)}
+                    {usingFallback && (
+                      <span
+                        className="text-ink-subtle"
+                        title="Price unavailable — using average cost"
+                        data-testid={`holding-price-unavailable-${holding.ticker}`}
                       >
-                        {holding.ticker}
-                      </td>
-                      <td
-                        className="whitespace-nowrap px-3 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm text-foreground-secondary"
-                        data-testid={`holding-quantity-${holding.ticker}`}
-                      >
-                        {formatNumber(holding.quantity, 0)}
-                      </td>
-                      <td className="hidden sm:table-cell whitespace-nowrap px-3 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm text-foreground-secondary">
-                        {formatCurrency(holding.averageCost)}
-                      </td>
-                      <td className="whitespace-nowrap px-3 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm text-foreground-secondary">
-                        {pricesLoading ? (
-                          <Skeleton
-                            className="h-4 w-16 ml-auto"
-                            data-testid={`holding-price-loading-${holding.ticker}`}
-                          />
-                        ) : (
-                          <span className="inline-flex items-center gap-1">
-                            {formatCurrency(holding.currentPrice)}
-                            {usingFallback && (
-                              <span
-                                className="text-foreground-tertiary"
-                                title="Price unavailable — using average cost"
-                                data-testid={`holding-price-unavailable-${holding.ticker}`}
-                              >
-                                *
-                              </span>
-                            )}
-                          </span>
-                        )}
-                      </td>
-                      <td
-                        className="whitespace-nowrap px-3 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-medium text-foreground-primary"
-                        data-testid={`holding-value-${holding.ticker}`}
-                      >
-                        <div>{formatCurrency(holding.marketValue)}</div>
-                        {/* Compact P&L indicator visible on mobile (full column is hidden on mobile) */}
-                        <div
-                          className={`md:hidden text-xs ${gainLossColorClass}`}
-                          data-testid={`holding-pnl-mobile-${holding.ticker}`}
-                        >
-                          {isPositive ? '▲' : '▼'}{' '}
-                          {formatPercent(holding.gainLossPercent / 100)}
-                        </div>
-                      </td>
-                      <td
-                        className={`hidden md:table-cell whitespace-nowrap px-3 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm font-medium ${gainLossColorClass}`}
-                      >
-                        <div>
-                          {isPositive ? '+' : ''}
-                          {formatCurrency(holding.gainLoss)}
-                        </div>
-                        <div className="text-xs">
-                          ({formatPercent(holding.gainLossPercent / 100)})
-                        </div>
-                      </td>
-                      {onQuickSell && (
-                        <td className="whitespace-nowrap px-3 sm:px-6 py-3 sm:py-4 text-right text-xs sm:text-sm">
-                          <Button
-                            onClick={() =>
-                              onQuickSell(holding.ticker, holding.quantity)
-                            }
-                            data-testid={`holdings-quick-sell-${holding.ticker.toLowerCase()}`}
-                            variant="outline"
-                            size="sm"
-                            className="text-xs sm:text-sm"
-                          >
-                            Quick Sell
-                          </Button>
-                        </td>
-                      )}
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+                        *
+                      </span>
+                    )}
+                  </span>
+                )}
+              </DataCell>
+              <DataCell
+                align="right"
+                numeric
+                emphasis="primary"
+                testId={`holding-value-${holding.ticker}`}
+              >
+                <div>{formatCurrency(holding.marketValue)}</div>
+                {/* Compact P&L indicator visible on mobile (full column is hidden on mobile) */}
+                <div
+                  className={`md:hidden text-xs mt-0.5 ${
+                    isPositive ? 'text-gain' : 'text-loss'
+                  }`}
+                  data-testid={`holding-pnl-mobile-${holding.ticker}`}
+                >
+                  {isPositive ? '▲' : '▼'}{' '}
+                  {formatPercent(holding.gainLossPercent / 100)}
+                </div>
+              </DataCell>
+              <DataCell align="right" numeric tone={gainLossTone} hideUntilMd>
+                <div>
+                  {isPositive ? '+' : ''}
+                  {formatCurrency(holding.gainLoss)}
+                </div>
+                <div className="text-xs opacity-80">
+                  ({formatPercent(holding.gainLossPercent / 100)})
+                </div>
+              </DataCell>
+              {onQuickSell && (
+                <DataCell align="right">
+                  <Button
+                    onClick={() =>
+                      onQuickSell(holding.ticker, holding.quantity)
+                    }
+                    data-testid={`holdings-quick-sell-${holding.ticker.toLowerCase()}`}
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                  >
+                    Sell
+                  </Button>
+                </DataCell>
+              )}
+            </DataRow>
+          )
+        })}
+      </DataTableBody>
+    </DataTable>
   )
 }

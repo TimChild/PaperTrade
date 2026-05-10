@@ -2,6 +2,13 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ClerkProvider } from '@clerk/clerk-react'
+// Self-hosted fonts (no external CDN). Fraunces variable for display, IBM
+// Plex Sans variable for body, IBM Plex Mono for tabular financial numerics.
+// See `frontend/src/styles/theme.css` for usage / token wiring.
+import '@fontsource-variable/fraunces/opsz.css'
+import '@fontsource-variable/ibm-plex-sans/wght.css'
+import '@fontsource/ibm-plex-mono/400.css'
+import '@fontsource/ibm-plex-mono/500.css'
 import './index.css'
 import App from './App.tsx'
 import { ErrorBoundary } from './components/ErrorBoundary.tsx'

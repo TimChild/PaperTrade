@@ -18,11 +18,12 @@ describe('PriceStats', () => {
 
     const changeAmount = screen.getByText('+$5.25')
     expect(changeAmount).toBeInTheDocument()
-    expect(changeAmount).toHaveClass('text-green-600')
+    // Editorial muted gain tone. Was `text-green-600` pre-revamp.
+    expect(changeAmount).toHaveClass('text-gain')
 
     const changePercent = screen.getByText('+3.61%')
     expect(changePercent).toBeInTheDocument()
-    expect(changePercent).toHaveClass('text-green-600')
+    expect(changePercent).toHaveClass('text-gain')
   })
 
   it('displays negative change with red color and minus sign', () => {
@@ -32,11 +33,12 @@ describe('PriceStats', () => {
 
     const changeAmount = screen.getByText('-$5.25')
     expect(changeAmount).toBeInTheDocument()
-    expect(changeAmount).toHaveClass('text-red-600')
+    // Editorial muted loss tone. Was `text-red-600` pre-revamp.
+    expect(changeAmount).toHaveClass('text-loss')
 
     const changePercent = screen.getByText('-3.48%')
     expect(changePercent).toBeInTheDocument()
-    expect(changePercent).toHaveClass('text-red-600')
+    expect(changePercent).toHaveClass('text-loss')
   })
 
   it('displays zero change with green color', () => {
@@ -44,7 +46,8 @@ describe('PriceStats', () => {
 
     const changeAmount = screen.getByText('+$0.00')
     expect(changeAmount).toBeInTheDocument()
-    expect(changeAmount).toHaveClass('text-green-600')
+    // Editorial muted gain tone. Was `text-green-600` pre-revamp.
+    expect(changeAmount).toHaveClass('text-gain')
 
     const changePercent = screen.getByText('+0.00%')
     expect(changePercent).toBeInTheDocument()
@@ -65,7 +68,8 @@ describe('PriceStats', () => {
       <PriceStats currentPrice={undefined} change={5.25} changePercent={3.61} />
     )
 
-    expect(screen.getByText('---')).toBeInTheDocument()
+    // Editorial em-dash fallback. Was `---` pre-revamp.
+    expect(screen.getByText('—')).toBeInTheDocument()
     expect(screen.getByText('Price data unavailable')).toBeInTheDocument()
   })
 
@@ -74,7 +78,8 @@ describe('PriceStats', () => {
       <PriceStats currentPrice={150.25} change={NaN} changePercent={3.61} />
     )
 
-    expect(screen.getByText('---')).toBeInTheDocument()
+    // Editorial em-dash fallback. Was `---` pre-revamp.
+    expect(screen.getByText('—')).toBeInTheDocument()
     expect(screen.getByText('Price data unavailable')).toBeInTheDocument()
   })
 
@@ -87,7 +92,8 @@ describe('PriceStats', () => {
       />
     )
 
-    expect(screen.getByText('---')).toBeInTheDocument()
+    // Editorial em-dash fallback. Was `---` pre-revamp.
+    expect(screen.getByText('—')).toBeInTheDocument()
     expect(screen.getByText('Price data unavailable')).toBeInTheDocument()
   })
 })

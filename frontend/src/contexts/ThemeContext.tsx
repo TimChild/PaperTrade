@@ -24,9 +24,11 @@ export function ThemeProvider({
   children: React.ReactNode
 }): React.JSX.Element {
   const [theme, setThemeState] = useState<Theme>(() => {
-    // Load from localStorage or default to 'system'
+    // Zebu is dark-only by design (Tim, 2026-05-09). We still respect a
+    // pre-existing localStorage value (someone may have explicitly chosen
+    // 'system' or 'light' previously) but default new users to 'dark'.
     const stored = localStorage.getItem('theme') as Theme | null
-    return stored || 'system'
+    return stored || 'dark'
   })
 
   // Track system preference separately
