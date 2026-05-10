@@ -19,6 +19,18 @@ Run the `before-starting-work` skill, plus:
 - `frontend/src/components/` for reusable components — don't recreate
 - Backend contracts: read the FastAPI router source under `backend/src/zebu/adapters/inbound/api/` (the `docs/architecture/api/` shared-contracts directory is on the target schema but does not exist yet)
 
+## Aesthetic / design work
+
+When the task is **net-new UI surface, a redesign, or aesthetic polish**, also invoke the `frontend-design` skill (from the `claude-plugins-official` marketplace). It demands a clear, intentional aesthetic direction and pushes against generic AI-style defaults. Use it for:
+
+- Building a new page or feature whose visual direction is open
+- Revamping an existing surface for a more distinctive look
+- Choosing typography / color / motion / composition for a redesign
+
+**Skip it for** routine bug fixes, type-safety cleanups, behavior fixes, refactors, or anything where the existing design is the constraint. The skill is opinionated — applying it to a small fix would over-engineer.
+
+When invoking `frontend-design`, get the aesthetic direction from the user explicitly (one sentence is enough — "refined editorial", "brutalist trading terminal", "luxury fintech", etc.). Don't pick arbitrarily; the skill is most valuable when the direction is intentional.
+
 ## Code organization
 
 ```
