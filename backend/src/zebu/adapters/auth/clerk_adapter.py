@@ -110,6 +110,7 @@ class ClerkAuthAdapter(AuthPort):
             return AuthenticatedUser(
                 id=user.id,
                 email=email,
+                auth_method="clerk",
             )
         except InvalidTokenError:
             # Re-raise our domain exception
@@ -141,6 +142,7 @@ class ClerkAuthAdapter(AuthPort):
             return AuthenticatedUser(
                 id=user.id,
                 email=email,
+                auth_method="clerk",
             )
         except Exception:
             # User not found or other error

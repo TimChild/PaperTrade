@@ -75,12 +75,22 @@ class ApiKeyAuthAdapter:
         a guessed key was once valid. Logs at INFO record the failure
         category for ops; the response is uniform.
 
+        On success, the returned :class:`AuthenticatedUser` carries
+        ``auth_method="api_key"``, the persisted key's ``id``, and its
+        ``label``. Phase H5 (multi-agent identity prep): the label is
+        the identity column the activity feed and per-key rate limiter
+        will key on, so a single human user can mint multiple keys
+        with different labels and have them surface independently in
+        observability without any new code paths per role.
+
         Args:
             token: The raw API key string presented by the client.
 
         Returns:
-            AuthenticatedUser whose ``id`` is the owner UUID serialised
-            as a string and whose ``email`` is empty.
+            AuthenticatedUser whose ``id`` is the Clerk user-id string
+            captured at mint time, whose ``email`` is empty, whose
+            ``auth_method`` is ``"api_key"``, and whose ``api_key_id``
+            / ``api_key_label`` mirror the persisted record.
 
         Raises:
             InvalidTokenError: For every authentication failure.
@@ -125,6 +135,9 @@ class ApiKeyAuthAdapter:
         return AuthenticatedUser(
             id=record.clerk_user_id,
             email="",
+            auth_method="api_key",
+            api_key_id=record.id,
+            api_key_label=record.label,
         )
 
     async def get_user(self, user_id: str) -> AuthenticatedUser | None:
@@ -134,13 +147,23 @@ class ApiKeyAuthAdapter:
         the Clerk and API-key paths uniformly get a non-None response that
         round-trips ``user_id`` unchanged.
 
+        Note: this method is part of the :class:`AuthPort` contract but
+        only the Clerk path actually uses it (during a Clerk session
+        refresh). API-key requests resolve everything through
+        :meth:`verify_token` directly. The returned shape carries
+        ``auth_method="api_key"`` for completeness; ``api_key_id`` and
+        ``api_key_label`` are unavoidably ``None`` here because no key
+        has been presented — the caller is just round-tripping a user
+        identity.
+
         Args:
             user_id: The Clerk user-id string returned by :meth:`verify_token`.
 
         Returns:
             ``AuthenticatedUser`` reconstructed from ``user_id`` (email
-            is empty), or ``None`` for a falsy input.
+            is empty, ``api_key_id`` / ``api_key_label`` are ``None``),
+            or ``None`` for a falsy input.
         """
         if not user_id or not user_id.strip():
             return None
-        return AuthenticatedUser(id=user_id, email="")
+        return AuthenticatedUser(id=user_id, email="", auth_method="api_key")

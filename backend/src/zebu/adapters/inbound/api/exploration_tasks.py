@@ -21,6 +21,7 @@ the standard ``ErrorResponse`` envelope).
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
+import structlog
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator
 
@@ -45,6 +46,11 @@ from zebu.domain.value_objects.ticker import Ticker
 from zebu.infrastructure.database import SessionDep
 
 router = APIRouter(prefix="/exploration-tasks", tags=["exploration-tasks"])
+
+# Module-level structlog logger. Picks up the actor identity bound by
+# get_current_user (auth_method, clerk_user_id, api_key_id, api_key_label)
+# automatically via structlog.contextvars — Phase H5.
+logger = structlog.get_logger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -292,6 +298,16 @@ async def create_exploration_task(
     repo = SQLModelExplorationTaskRepository(session)
     await repo.save(task)
 
+    logger.info(
+        "Exploration task created",
+        task_id=str(task.id),
+        target_portfolio_id=(
+            str(task.target_portfolio_id)
+            if task.target_portfolio_id is not None
+            else None
+        ),
+    )
+
     return _to_response(task)
 
 
@@ -456,6 +472,12 @@ async def claim_exploration_task(
         agent_id=agent_id,
         claimed_at=datetime.now(UTC),
     )
+    if claimed is not None:
+        logger.info(
+            "Exploration task claimed",
+            task_id=str(task_id),
+            agent_id=agent_id,
+        )
     if claimed is None:
         # Either the task doesn't exist or it isn't OPEN. We need to tell
         # the caller which it is so polling agents can react sensibly.
@@ -520,5 +542,12 @@ async def submit_exploration_task_findings(
 
     completed = task.complete(findings=findings, completed_at=datetime.now(UTC))
     await repo.save(completed)
+
+    logger.info(
+        "Exploration task findings submitted",
+        task_id=str(task_id),
+        backtest_run_count=len(findings.backtest_run_ids),
+        strategy_count=len(findings.strategy_ids),
+    )
 
     return _to_response(completed)

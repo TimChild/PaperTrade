@@ -22,6 +22,7 @@ authenticated user.
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
+import structlog
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
@@ -59,6 +60,11 @@ from zebu.infrastructure.database import SessionDep
 
 strategies_router = APIRouter(prefix="/strategies", tags=["strategy-activations"])
 activations_router = APIRouter(prefix="/activations", tags=["strategy-activations"])
+
+# Module-level structlog logger. Picks up the actor identity bound by
+# get_current_user (auth_method, clerk_user_id, api_key_id, api_key_label)
+# automatically via structlog.contextvars — Phase H5.
+logger = structlog.get_logger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -242,6 +248,13 @@ async def activate_strategy(
         updated_at=now,
     )
     await activation_repo.save(activation)
+    logger.info(
+        "Strategy activated",
+        activation_id=str(activation.id),
+        strategy_id=str(strategy_id),
+        portfolio_id=str(request.portfolio_id),
+        frequency=frequency.value,
+    )
     return _to_response(activation)
 
 
@@ -383,6 +396,11 @@ async def deactivate_activation(
         last_error=reason,
     )
     await repo.save(paused)
+    logger.info(
+        "Strategy activation deactivated",
+        activation_id=str(activation_id),
+        reason=reason,
+    )
     return _to_response(paused)
 
 
@@ -429,6 +447,17 @@ async def run_activation_now(
             detail="You don't have permission to run this activation",
         )
 
+    # Phase H5: log the run-now request with actor identity. The
+    # api_key_label (when present) is auto-merged from contextvars
+    # bound by get_current_user. This is the canonical "agent ran a
+    # live strategy" signal for the activity feed (Phase H2).
+    logger.info(
+        "Strategy activation run-now requested",
+        activation_id=str(activation_id),
+        strategy_id=str(activation.strategy_id),
+        portfolio_id=str(activation.portfolio_id),
+    )
+
     strategy_repo = SQLModelStrategyRepository(session)
     portfolio_repo = SQLModelPortfolioRepository(session)
     transaction_repo = SQLModelTransactionRepository(session)
@@ -441,6 +470,14 @@ async def run_activation_now(
         market_data=market_data,
     )
     result = await service.execute_one(activation_id)
+
+    logger.info(
+        "Strategy activation run-now completed",
+        activation_id=str(activation_id),
+        succeeded=result["succeeded"],
+        trades=result["trades"],
+        error=result["error"],
+    )
 
     # Reload — the service mutated the activation (status / last_error /
     # last_executed_at). Returning the *fresh* state gives the client a

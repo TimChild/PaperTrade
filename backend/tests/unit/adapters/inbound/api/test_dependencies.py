@@ -7,13 +7,16 @@ switch added in Wave 2-C (audits/2026-05-09 — test.P0-1).
 """
 
 from unittest.mock import MagicMock
+from uuid import uuid4
 
 import pytest
+import structlog
 from fastapi import HTTPException
 
 from zebu.adapters.auth.clerk_adapter import ClerkAuthAdapter
 from zebu.adapters.auth.in_memory_adapter import InMemoryAuthAdapter
 from zebu.adapters.inbound.api.dependencies import (
+    _bind_actor_to_log_context,
     get_admin_user_ids,
     get_auth_port,
     get_market_data,
@@ -261,3 +264,77 @@ class TestGetMarketData:
 
         with pytest.raises(RuntimeError, match="MARKET_DATA_PROVIDER"):
             await get_market_data(session)
+
+
+class TestBindActorToLogContext:
+    """Tests for ``_bind_actor_to_log_context()`` (Phase H5).
+
+    The helper writes the resolved auth identity into structlog
+    contextvars so every log line emitted during the rest of the
+    request handler automatically carries it. Test by binding, reading
+    back the merged context, then clearing.
+    """
+
+    def setup_method(self) -> None:
+        """Start each test with a clean contextvar dict."""
+        structlog.contextvars.clear_contextvars()
+
+    def teardown_method(self) -> None:
+        """Don't leak bound vars into other tests."""
+        structlog.contextvars.clear_contextvars()
+
+    def test_clerk_user_binds_only_clerk_fields(self) -> None:
+        """Clerk-authenticated requests bind clerk_user_id + auth_method."""
+        clerk_user = AuthenticatedUser(
+            id="user_2abc", email="tim@example.com", auth_method="clerk"
+        )
+
+        _bind_actor_to_log_context(clerk_user)
+
+        merged = structlog.contextvars.get_contextvars()
+        assert merged["auth_method"] == "clerk"
+        assert merged["clerk_user_id"] == "user_2abc"
+        # No api_key fields should be bound for the Clerk path.
+        assert "api_key_id" not in merged
+        assert "api_key_label" not in merged
+
+    def test_api_key_user_binds_label_and_id(self) -> None:
+        """API-key requests bind the per-key id + label as well.
+
+        These are the identity columns the activity feed groups on —
+        verifying the binding here is the unit-level guarantee that an
+        API-key request's logs are differentiable from a Clerk one's.
+        """
+        api_key_id = uuid4()
+        api_key_user = AuthenticatedUser(
+            id="user_2abc",
+            email="",
+            auth_method="api_key",
+            api_key_id=api_key_id,
+            api_key_label="claude-code-laptop-explorer",
+        )
+
+        _bind_actor_to_log_context(api_key_user)
+
+        merged = structlog.contextvars.get_contextvars()
+        assert merged["auth_method"] == "api_key"
+        assert merged["clerk_user_id"] == "user_2abc"
+        assert merged["api_key_id"] == str(api_key_id)
+        assert merged["api_key_label"] == "claude-code-laptop-explorer"
+
+    def test_api_key_user_with_no_label_skips_label_binding(self) -> None:
+        """Defensive: a partial API-key user (no label) shouldn't bind None."""
+        partial_user = AuthenticatedUser(
+            id="user_2abc",
+            email="",
+            auth_method="api_key",
+            api_key_id=None,
+            api_key_label=None,
+        )
+
+        _bind_actor_to_log_context(partial_user)
+
+        merged = structlog.contextvars.get_contextvars()
+        assert merged["auth_method"] == "api_key"
+        assert "api_key_id" not in merged
+        assert "api_key_label" not in merged
