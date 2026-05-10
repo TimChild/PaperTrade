@@ -108,6 +108,32 @@ class InvalidApiKeyError(InvalidEntityError):
     pass
 
 
+class InvalidTriggerError(InvalidEntityError):
+    """Raised when StrategyConditionTrigger or its condition params invariants
+    are violated.
+
+    Used for both entity-level checks (e.g. status / lifecycle errors,
+    timestamp invariants) and value-object-level checks (a typed condition
+    param whose fields are out of range, or a ``CUSTOM_RULE`` construction
+    while that variant remains deliberately unimplemented).
+    """
+
+    pass
+
+
+class InvalidTriggerFireError(InvalidEntityError):
+    """Raised when TriggerFireRecord invariants are violated.
+
+    The fire record has cross-field constraints (exactly one of the three
+    "resulting" pointers is set unless the response is HOLD or
+    INVOCATION_FAILED), and a few timestamp / latency rules. Surface as a
+    distinct exception so callers can differentiate "trigger configuration
+    is bad" from "fire record is bad" in audit-trail handling.
+    """
+
+    pass
+
+
 # Business Rule Violation Exceptions
 
 

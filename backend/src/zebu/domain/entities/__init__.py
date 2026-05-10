@@ -13,7 +13,9 @@ from zebu.domain.entities.holding import Holding
 from zebu.domain.entities.portfolio import Portfolio
 from zebu.domain.entities.portfolio_snapshot import PortfolioSnapshot
 from zebu.domain.entities.strategy import Strategy
+from zebu.domain.entities.strategy_condition_trigger import StrategyConditionTrigger
 from zebu.domain.entities.transaction import Transaction, TransactionType
+from zebu.domain.entities.trigger_fire_record import TriggerFireRecord
 
 __all__ = [
     "ApiKey",
@@ -28,6 +30,8 @@ __all__ = [
     "Portfolio",
     "PortfolioSnapshot",
     "Strategy",
+    "StrategyConditionTrigger",
     "Transaction",
     "TransactionType",
+    "TriggerFireRecord",
 ]

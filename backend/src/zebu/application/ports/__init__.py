@@ -12,6 +12,8 @@ from zebu.application.ports.market_data_port import MarketDataPort
 from zebu.application.ports.portfolio_repository import PortfolioRepository
 from zebu.application.ports.strategy_repository import StrategyRepository
 from zebu.application.ports.transaction_repository import TransactionRepository
+from zebu.application.ports.trigger_fire_repository import TriggerFireRepository
+from zebu.application.ports.trigger_repository import TriggerRepository
 
 __all__ = [
     "BacktestRunRepository",
@@ -20,4 +22,6 @@ __all__ = [
     "PortfolioRepository",
     "StrategyRepository",
     "TransactionRepository",
+    "TriggerFireRepository",
+    "TriggerRepository",
 ]
