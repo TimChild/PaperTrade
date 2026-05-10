@@ -1,4 +1,4 @@
-"""Strategy-activation read tools."""
+"""Strategy-activation read + lifecycle tools."""
 
 from __future__ import annotations
 
@@ -7,7 +7,13 @@ from uuid import UUID
 from mcp.server.fastmcp import FastMCP
 
 from zebu_mcp.client import ZebuClient
-from zebu_mcp.schemas import Page, StrategyActivation
+from zebu_mcp.schemas import (
+    ActivateStrategyRequest,
+    DeactivateActivationRequest,
+    Page,
+    RunNowResponse,
+    StrategyActivation,
+)
 
 
 def register(server: FastMCP, client: ZebuClient) -> None:
@@ -82,3 +88,65 @@ def register(server: FastMCP, client: ZebuClient) -> None:
             offset += page_size
         # Mimic the API's 404 by raising; the agent gets a clear failure.
         raise LookupError(f"Activation not found: {activation_id}")
+
+    @server.tool(
+        name="activate_strategy",
+        description=(
+            "Activate a strategy for live execution against a portfolio. "
+            "The strategy and portfolio must both belong to the caller. "
+            "frequency is the execution cadence — Phase C1 ships only "
+            "DAILY_MARKET_CLOSE. Returns the new activation in ACTIVE "
+            "status; subsequent scheduler ticks will execute it.\n\n"
+            "Returns 409 if the strategy already has an ACTIVE activation "
+            "(deactivate it first to re-activate against a different "
+            "portfolio)."
+        ),
+    )
+    async def activate_strategy(
+        strategy_id: UUID,
+        portfolio_id: UUID,
+        frequency: str = "DAILY_MARKET_CLOSE",
+    ) -> StrategyActivation:
+        """Activate a strategy on a portfolio."""
+        request = ActivateStrategyRequest(
+            portfolio_id=portfolio_id,
+            frequency=frequency,
+        )
+        return await client.activate_strategy(strategy_id, request)
+
+    @server.tool(
+        name="deactivate_activation",
+        description=(
+            "Pause an active activation. Sets status=PAUSED so the "
+            "scheduler skips it on subsequent cycles. The optional reason "
+            "is stored for UI display (currently piggybacks the entity's "
+            "last_error field)."
+        ),
+    )
+    async def deactivate_activation(
+        activation_id: UUID,
+        reason: str | None = None,
+    ) -> StrategyActivation:
+        """Pause an active strategy activation."""
+        request = DeactivateActivationRequest(reason=reason)
+        return await client.deactivate_activation(activation_id, request)
+
+    @server.tool(
+        name="run_activation_now",
+        description=(
+            "Trigger immediate execution of an activation outside its "
+            "configured cadence. Useful for an agent that just created an "
+            "activation and wants to see it execute immediately, or for "
+            "ad-hoc one-off runs. Runs synchronously in the backend "
+            "handler.\n\n"
+            "Returns the post-run activation state plus the immediate "
+            "outcome (succeeded, trades, error). Status may have flipped "
+            "to ERROR if the run failed; trades reports the count of "
+            "transactions written. Bypasses the activation's status — a "
+            "PAUSED activation can be ad-hoc run; only the cron-driven "
+            "scheduler respects status."
+        ),
+    )
+    async def run_activation_now(activation_id: UUID) -> RunNowResponse:
+        """Run an activation immediately."""
+        return await client.run_activation_now(activation_id)

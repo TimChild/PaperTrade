@@ -269,3 +269,56 @@ class TestUserAgent:
 
         ua = route.calls.last.request.headers.get("user-agent", "")
         assert "zebu-mcp" in ua
+
+
+class TestWritePathsCarryAuth:
+    """Wave 2: POST/DELETE methods inherit the same auth-header injection."""
+
+    async def test_post_request_carries_auth_header(
+        self,
+        client: ZebuClient,
+        respx_mock_session: respx.MockRouter,
+    ) -> None:
+        from zebu_mcp.schemas import CreateStrategyRequest
+
+        route = respx_mock_session.post("/strategies").mock(
+            return_value=httpx.Response(
+                201,
+                json={
+                    "id": "00000000-0000-0000-0000-000000000001",
+                    "user_id": "00000000-0000-0000-0000-000000000099",
+                    "name": "demo",
+                    "strategy_type": "BUY_AND_HOLD",
+                    "tickers": ["AAPL"],
+                    "parameters": {"allocation": {"AAPL": "1.0"}},
+                    "created_at": "2026-01-01T00:00:00+00:00",
+                },
+            ),
+        )
+
+        await client.create_strategy(
+            CreateStrategyRequest(
+                name="demo",
+                strategy_type="BUY_AND_HOLD",
+                tickers=["AAPL"],
+                parameters={"allocation": {"AAPL": "1.0"}},
+            ),
+        )
+
+        assert route.called
+        assert route.calls.last.request.headers["X-API-Key"] == TEST_API_KEY
+
+    async def test_delete_204_returns_none(
+        self,
+        client: ZebuClient,
+        respx_mock_session: respx.MockRouter,
+    ) -> None:
+        from uuid import UUID
+
+        task_id = UUID("88888888-8888-8888-8888-888888888888")
+        respx_mock_session.delete(f"/exploration-tasks/{task_id}").mock(
+            return_value=httpx.Response(204),
+        )
+
+        # No exception, no return value — just goes through cleanly.
+        await client.delete_exploration_task(task_id)

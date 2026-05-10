@@ -36,8 +36,13 @@ import httpx
 from zebu_mcp._version import __version__
 from zebu_mcp.config import ZebuMcpConfig
 from zebu_mcp.schemas import (
+    ActivateStrategyRequest,
     BacktestRun,
+    ClaimExplorationTaskRequest,
+    CreateExplorationTaskRequest,
+    CreateStrategyRequest,
     CurrentPrice,
+    DeactivateActivationRequest,
     ExplorationTask,
     Holding,
     Page,
@@ -45,8 +50,11 @@ from zebu_mcp.schemas import (
     PortfolioBalance,
     PortfolioState,
     PriceHistory,
+    RunBacktestRequest,
+    RunNowResponse,
     Strategy,
     StrategyActivation,
+    SubmitExplorationFindingsRequest,
     SupportedTickers,
 )
 
@@ -179,6 +187,7 @@ class ZebuClient(AbstractAsyncContextManager["ZebuClient"]):
         path: str,
         *,
         params: dict[str, Any] | None = None,
+        json: Any = None,
     ) -> Any:
         """Send a request and parse the JSON body, mapping errors.
 
@@ -186,9 +195,12 @@ class ZebuClient(AbstractAsyncContextManager["ZebuClient"]):
             method: HTTP method (uppercase).
             path: Path under ``/api/v1`` — e.g. ``/portfolios``.
             params: Query parameters (None values dropped before send).
+            json: JSON body to send (typically for POST/PUT). Forwarded
+                directly to httpx — pass a serialised ``dict`` rather
+                than a Pydantic model. ``None`` means no body.
 
         Returns:
-            Parsed JSON body.
+            Parsed JSON body, or ``None`` for 204 responses.
 
         Raises:
             ZebuApiError: On any non-2xx response.
@@ -209,6 +221,7 @@ class ZebuClient(AbstractAsyncContextManager["ZebuClient"]):
             method=method,
             url=path,
             params=cleaned_params,
+            json=json,
         )
 
         if response.is_success:
@@ -393,6 +406,22 @@ class ZebuClient(AbstractAsyncContextManager["ZebuClient"]):
         body = await self._request_json("GET", f"/strategies/{strategy_id}")
         return Strategy.model_validate(body)
 
+    async def create_strategy(self, request: CreateStrategyRequest) -> Strategy:
+        """``POST /strategies`` — create a strategy template.
+
+        The request body matches the backend's ``CreateStrategyRequest``;
+        ``parameters`` is a free-form mapping that the backend parses
+        into the typed strategy-parameters dataclass via
+        ``parameters_from_dict``. Invalid parameters surface as a typed
+        422 ``ZebuApiError`` with per-field detail.
+        """
+        body = await self._request_json(
+            "POST",
+            "/strategies",
+            json=request.model_dump(mode="json"),
+        )
+        return Strategy.model_validate(body)
+
     # -- backtests ---------------------------------------------------------
 
     async def list_backtests(
@@ -435,6 +464,22 @@ class ZebuClient(AbstractAsyncContextManager["ZebuClient"]):
     async def get_backtest(self, backtest_id: UUID) -> BacktestRun:
         """``GET /backtests/{id}``."""
         body = await self._request_json("GET", f"/backtests/{backtest_id}")
+        return BacktestRun.model_validate(body)
+
+    async def run_backtest(self, request: RunBacktestRequest) -> BacktestRun:
+        """``POST /backtests`` — run a backtest synchronously.
+
+        The backend currently runs to completion in the request handler
+        (see ``backtest_executor.execute``), so the returned ``status`` is
+        almost always ``COMPLETED`` (or ``FAILED``) rather than ``RUNNING``.
+        Tools layer on top can still poll defensively in case the backend
+        switches to a background-job model.
+        """
+        body = await self._request_json(
+            "POST",
+            "/backtests",
+            json=request.model_dump(mode="json"),
+        )
         return BacktestRun.model_validate(body)
 
     # -- activations -------------------------------------------------------
@@ -487,6 +532,45 @@ class ZebuClient(AbstractAsyncContextManager["ZebuClient"]):
         body = await self._request_json("GET", f"/strategies/{strategy_id}/activation")
         return StrategyActivation.model_validate(body)
 
+    async def activate_strategy(
+        self,
+        strategy_id: UUID,
+        request: ActivateStrategyRequest,
+    ) -> StrategyActivation:
+        """``POST /strategies/{id}/activate`` — link strategy to a portfolio."""
+        body = await self._request_json(
+            "POST",
+            f"/strategies/{strategy_id}/activate",
+            json=request.model_dump(mode="json"),
+        )
+        return StrategyActivation.model_validate(body)
+
+    async def deactivate_activation(
+        self,
+        activation_id: UUID,
+        request: DeactivateActivationRequest,
+    ) -> StrategyActivation:
+        """``POST /activations/{id}/deactivate`` — pause an active activation."""
+        body = await self._request_json(
+            "POST",
+            f"/activations/{activation_id}/deactivate",
+            json=request.model_dump(mode="json"),
+        )
+        return StrategyActivation.model_validate(body)
+
+    async def run_activation_now(self, activation_id: UUID) -> RunNowResponse:
+        """``POST /activations/{id}/run-now`` — trigger immediate execution.
+
+        Returns the post-run activation state along with the immediate
+        outcome (``succeeded``, ``trades``, ``error``). Runs synchronously
+        in the backend handler, so the response carries the final state.
+        """
+        body = await self._request_json(
+            "POST",
+            f"/activations/{activation_id}/run-now",
+        )
+        return RunNowResponse.model_validate(body)
+
     # -- exploration tasks -------------------------------------------------
 
     async def list_exploration_tasks(
@@ -524,3 +608,61 @@ class ZebuClient(AbstractAsyncContextManager["ZebuClient"]):
         """``GET /exploration-tasks/{id}``."""
         body = await self._request_json("GET", f"/exploration-tasks/{task_id}")
         return ExplorationTask.model_validate(body)
+
+    async def create_exploration_task(
+        self,
+        request: CreateExplorationTaskRequest,
+    ) -> ExplorationTask:
+        """``POST /exploration-tasks`` — file a new task on the queue."""
+        body = await self._request_json(
+            "POST",
+            "/exploration-tasks",
+            json=request.model_dump(mode="json"),
+        )
+        return ExplorationTask.model_validate(body)
+
+    async def claim_exploration_task(
+        self,
+        task_id: UUID,
+        request: ClaimExplorationTaskRequest,
+    ) -> ExplorationTask:
+        """``POST /exploration-tasks/{id}/claim`` — atomically claim work.
+
+        The backend's ``claim_atomic`` issues a single status-conditional
+        UPDATE so two callers fighting for the same task can't both win.
+        Returns 409 (mapped to :class:`ZebuApiError`) if the task is no
+        longer OPEN; 404 if it never existed.
+        """
+        body = await self._request_json(
+            "POST",
+            f"/exploration-tasks/{task_id}/claim",
+            json=request.model_dump(mode="json"),
+        )
+        return ExplorationTask.model_validate(body)
+
+    async def submit_exploration_findings(
+        self,
+        task_id: UUID,
+        request: SubmitExplorationFindingsRequest,
+    ) -> ExplorationTask:
+        """``POST /exploration-tasks/{id}/findings`` — submit + DONE-transition.
+
+        Backend rejects (409) if the task is not currently IN_PROGRESS.
+        """
+        body = await self._request_json(
+            "POST",
+            f"/exploration-tasks/{task_id}/findings",
+            json=request.model_dump(mode="json"),
+        )
+        return ExplorationTask.model_validate(body)
+
+    async def delete_exploration_task(self, task_id: UUID) -> None:
+        """``DELETE /exploration-tasks/{id}`` — owner-only abandon-and-delete.
+
+        Note: only the *creator* can delete. A claiming agent that gives
+        up cannot use this endpoint (see Wave 3 / future endpoint).
+        """
+        await self._request_json(
+            "DELETE",
+            f"/exploration-tasks/{task_id}",
+        )
