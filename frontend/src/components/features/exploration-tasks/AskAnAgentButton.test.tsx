@@ -149,12 +149,15 @@ describe('AskAnAgentButton', () => {
 
   it('does not open the dialog by default', () => {
     renderButton({ triggerContext: 'portfolio' })
-    // The Dialog component renders its <dialog> element unconditionally
-    // (it uses the native <dialog>'s showModal/close imperative API).
-    // Verify the dialog is *not* open by checking the `open` attribute.
-    const dialog = document.querySelector('dialog')
-    expect(dialog).toBeTruthy()
-    expect(dialog!.hasAttribute('open')).toBe(false)
+    // The Dialog (and its form children) is conditionally rendered —
+    // mounted only when isOpen=true. This keeps the form's hidden
+    // <option> rows out of DOM when closed (otherwise they break
+    // unrelated E2E tests that locate trade-history "BUY" rows by
+    // text). Verify nothing is in DOM until the button is clicked.
+    expect(document.querySelector('dialog')).toBeNull()
+    expect(
+      screen.queryByTestId('ask-an-agent-dialog-portfolio')
+    ).not.toBeInTheDocument()
   })
 
   it('opens the form dialog when the button is clicked', async () => {
@@ -277,10 +280,14 @@ describe('AskAnAgentButton', () => {
 
     await user.click(screen.getByTestId('exploration-task-create-cancel-btn'))
 
-    // After Cancel, the underlying dialog element is still in the tree
-    // (jsdom keeps it mounted), but the `open` attribute is removed.
-    const dialog = document.querySelector('dialog')
-    expect(dialog).toBeTruthy()
-    expect(dialog!.hasAttribute('open')).toBe(false)
+    // After Cancel, the dialog tree unmounts (conditional render) so
+    // the dialog element disappears from DOM along with its form
+    // children — see the comment in AskAnAgentButton.tsx.
+    await waitFor(() => {
+      expect(document.querySelector('dialog')).toBeNull()
+    })
+    expect(
+      screen.queryByTestId('ask-an-agent-dialog-portfolio')
+    ).not.toBeInTheDocument()
   })
 })
