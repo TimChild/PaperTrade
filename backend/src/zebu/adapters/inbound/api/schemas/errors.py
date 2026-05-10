@@ -68,6 +68,7 @@ class ErrorCode(StrEnum):
     VALIDATION_ERROR = "validation_error"
     BAD_REQUEST = "bad_request"
     INTERNAL_ERROR = "internal_error"
+    RATE_LIMIT_EXCEEDED = "rate_limit_exceeded"
 
 
 class ErrorResponse(BaseModel):

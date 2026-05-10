@@ -153,10 +153,10 @@ Phase F is the **trigger system**: an active strategy can carry one or more `Str
 |---|---|---|
 | F-1 | `StrategyConditionTrigger` + `TriggerFireRecord` entities, repos, migration | ✅ Merged |
 | F-2 | Evaluator service + DRAWDOWN_THRESHOLD condition + scheduler job | ✅ Merged |
-| **F-3** | **`AgentInvocationPort` + Anthropic adapter + decision-execution flow** | **✅ This PR** |
-| F-4 | VOLATILITY_SPIKE + EARNINGS_PROXIMITY conditions | Pending |
-| F-5 | Trigger fire log API + kill-switch endpoints | Pending |
-| F-6 | Per-key rate limit on `run_backtest` + per-portfolio agent-trade caps | Pending |
+| F-3 | `AgentInvocationPort` + Anthropic adapter + decision-execution flow | ✅ Merged |
+| F-4 | VOLATILITY_SPIKE + EARNINGS_PROXIMITY conditions | ✅ Merged |
+| F-5 | Trigger fire log API + kill-switch endpoints + audit columns | ✅ Merged |
+| **F-6** | **Per-key rate limit on `run_backtest` + per-portfolio agent-trade caps + F-5 wire-up** | **✅ This PR** |
 | F-7 | End-to-end smoke against real Anthropic API on staging | Pending |
 
 **F-3 ships the actual fire path** — the orchestrator wakes the agent and acts on its decision. **The scheduler job is gated behind a feature flag (`ZEBU_TRIGGER_FIRES_ENABLED`, default `false`)** until Tim opts in. With the flag off, the evaluator runs and detects fires but doesn't invoke an agent (this is the F-2 behavior).
@@ -376,6 +376,10 @@ Zebu is paper-money. If you ever find yourself reaching for an integration that 
 
 ### 4.2 Daily activity caps
 
+These are split between two layers — **soft caps you should self-enforce** and **hard platform-layer guardrails** enforced by the backend. As of Phase F-6 the platform-layer guardrails are live.
+
+#### 4.2.1 Soft caps (self-enforced)
+
 Per portfolio per UTC day, don't:
 
 - Run more than **50 backtests**. (One per parameter combo is fine; if you want 50+ combos, break into multiple sessions or file a follow-up task.)
@@ -384,6 +388,62 @@ Per portfolio per UTC day, don't:
 - Activate more than **3 new strategies on live portfolios**.
 
 If you hit a cap, finish the current finding cleanly and stop. Surface the cap-hit in the finding so Tim knows.
+
+#### 4.2.2 Hard platform-layer guardrails (Phase F-6)
+
+These are enforced by the backend regardless of what your code does. If you hit one, you'll see an HTTP 429 or a `HOLD` downgrade — no need to scaffold retry logic yourself; just respect the response.
+
+**Per-API-key rate limit on `run_backtest`** (`POST /api/v1/backtests`):
+
+- **5 requests / minute / API key** (default — env: `ZEBU_BACKTEST_RATE_LIMIT_MIN`).
+- **100 requests / day / API key** (default — env: `ZEBU_BACKTEST_RATE_LIMIT_DAY`).
+- Both apply; whichever fires first denies.
+- **Clerk Bearer (human-via-UI) requests bypass the limit entirely.** The limit governs machine identities only.
+- When exhausted: HTTP `429 Too Many Requests` with the standard error envelope plus a `Retry-After` header in seconds.
+
+Example denied response:
+
+```json
+{
+  "detail": "Backtest rate limit exceeded — 5/5 per minute and 47/100 per day. Retry after 12s.",
+  "code": "rate_limit_exceeded",
+  "fields": {
+    "minute_limit": "5",
+    "minute_used": "5",
+    "day_limit": "100",
+    "day_used": "47",
+    "retry_after_seconds": "12"
+  }
+}
+```
+
+How to back off: sleep `int(Retry-After)` seconds (or `fields.retry_after_seconds`) and try again. Don't tight-loop — every retry within the window will get another 429 and consume nothing useful.
+
+**Per-portfolio per-day agent-trade volume cap** (applied when an agent-driven BUY/SELL trade is about to execute via a fired trigger):
+
+- **Max 10 BUY/SELL transactions / portfolio / UTC day** from agent identities (default — env: `AGENT_TRADE_DAILY_CAP_COUNT`).
+- **Max $5,000 cumulative `|cash_change|` / portfolio / UTC day** (default — env: `AGENT_TRADE_DAILY_CAP_USD`).
+- **Applies ONLY to BUY and SELL decisions.** `MODIFY_STRATEGY`, `HOLD`, and `NEEDS_HUMAN` bypass the cap (per design Q7).
+- Both ceilings apply; whichever fires first denies.
+- Direct human-initiated trades (Clerk Bearer auth) are NOT counted toward the cap.
+
+When the cap blocks a BUY/SELL:
+
+1. The agent's decision is **downgraded to `HOLD`** by the orchestrator.
+2. The `TriggerFireRecord` audit row records:
+   - `agent_response = HOLD` (post-guardrail outcome)
+   - `agent_response_raw` = the agent's verbatim rationale (so an investigator can see "the agent wanted to BUY")
+3. The orchestrator's structured log captures the downgrade reason (e.g. *"BUY AAPL qty=30 downgraded to HOLD by per-portfolio daily cap: would exceed daily cap of $5000 (current $4000, attempted $6000)"*).
+
+If you're a woken trigger-fire agent and your BUY/SELL gets downgraded, that's expected behaviour — the platform deliberately bounds blast radius. Don't try to circumvent the cap by chained `MODIFY_STRATEGY` calls (the cap is documented as BUY/SELL-only on purpose, but the audit trail will flag aggressive MODIFY use).
+
+#### 4.2.3 Soft vs hard distinction summary
+
+| Layer | Caps | Who enforces | Response on breach |
+|---|---|---|---|
+| Soft (operating-manual) | 50 backtests, 20 strategies, 10 activations, 3 live activations per portfolio/UTC day | You (the agent) | "I hit my self-imposed cap — stopping cleanly. Surfacing in the finding." |
+| Hard — `run_backtest` rate limit | 5/min, 100/day per API key | Backend | HTTP 429 with `Retry-After` header. Sleep + retry. |
+| Hard — agent-trade volume cap | 10 trades, $5,000 cumulative per portfolio/UTC day | Backend (orchestrator) | `HOLD` downgrade on the `TriggerFireRecord`; the trade does not land. |
 
 ### 4.3 Capital preservation defaults
 

@@ -52,6 +52,7 @@ from zebu.application.ports.exploration_task_repository import (
     ExplorationTaskRepository,
 )
 from zebu.application.ports.market_data_port import MarketDataPort
+from zebu.application.ports.portfolio_cap_port import PortfolioCapPort
 from zebu.application.ports.portfolio_repository import PortfolioRepository
 from zebu.application.ports.strategy_activation_repository import (
     StrategyActivationRepository,
@@ -180,6 +181,7 @@ class TriggerInvocationOrchestrator:
         market_data: MarketDataPort,
         api_key_repo: ApiKeyRepository,
         exploration_task_repo: ExplorationTaskRepository,
+        portfolio_cap: PortfolioCapPort | None = None,
     ) -> None:
         """Initialise the orchestrator with required ports.
 
@@ -195,6 +197,12 @@ class TriggerInvocationOrchestrator:
             market_data: Current price for trade execution.
             api_key_repo: Resolve the API key for trade attribution.
             exploration_task_repo: File NEEDS_HUMAN escalations.
+            portfolio_cap: Phase F-6 — optional cap port; when supplied,
+                BUY/SELL decisions are gated on the per-portfolio
+                per-UTC-day caps before execution. ``None`` disables the
+                guardrail (used in legacy tests / dev environments where
+                the cap isn't configured). Production deployments wire
+                this in.
         """
         self._agent = agent_invocation
         self._trigger_repo = trigger_repo
@@ -206,6 +214,7 @@ class TriggerInvocationOrchestrator:
         self._market_data = market_data
         self._api_key_repo = api_key_repo
         self._task_repo = exploration_task_repo
+        self._portfolio_cap = portfolio_cap
 
     async def fire(
         self,
@@ -472,6 +481,7 @@ class TriggerInvocationOrchestrator:
                 return await self._execute_trade(
                     decision=result.decision,
                     payload=result.payload,
+                    trigger=trigger,
                     strategy=strategy,
                     portfolio_id=portfolio_id,
                     api_key_id=api_key.id,
@@ -517,6 +527,7 @@ class TriggerInvocationOrchestrator:
         *,
         decision: AgentDecision,
         payload: Mapping[str, object],
+        trigger: StrategyConditionTrigger,
         strategy: Strategy,
         portfolio_id: UUID,
         api_key_id: UUID,
@@ -527,8 +538,18 @@ class TriggerInvocationOrchestrator:
         Mirrors the strategy execution service's signal application so
         the same trade-factory / quantity-resolution invariants apply.
         On any rejection (insufficient funds, missing price, invalid
-        ticker), the decision is downgraded to HOLD and the rationale
-        captures the reason.
+        ticker, per-portfolio cap exceeded), the decision is downgraded
+        to HOLD and the rationale captures the reason.
+
+        Phase F-6:
+
+        - Per-portfolio per-UTC-day cap is checked AFTER the signal has
+          built a candidate transaction but BEFORE it's persisted. The
+          cap operates on the absolute ``cash_change`` of the candidate
+          so the rationale carries an accurate "$X exceeded $Y" message.
+        - The resulting transaction is persisted with ``trigger_id`` set
+          so the activity feed can join trade back to the fire that
+          produced it.
         """
         ticker_str = _payload_str(payload, "ticker")
         if not ticker_str:
@@ -619,7 +640,29 @@ class TriggerInvocationOrchestrator:
                 f"or zero quantity after sizing)"
             )
 
-        await self._transaction_repo.save_all([applied], api_key_id=api_key_id)
+        # Phase F-6 — per-portfolio per-UTC-day cap. The candidate
+        # transaction's |cash_change| is the impact; check against the
+        # cap before persistence. A denied cap downgrades to HOLD with
+        # the cap's reason captured in the audit-row rationale.
+        if self._portfolio_cap is not None:
+            attempted_value = abs(applied.cash_change.amount)
+            cap_result = await self._portfolio_cap.check(
+                portfolio_id=portfolio_id,
+                attempted_decision=decision,
+                attempted_value_usd=attempted_value,
+            )
+            if not cap_result.allowed:
+                return self._downgrade_to_hold(
+                    f"{decision.value} {ticker_str} qty={quantity.shares} "
+                    f"downgraded to HOLD by per-portfolio daily cap: "
+                    f"{cap_result.reason}"
+                )
+
+        await self._transaction_repo.save_all(
+            [applied],
+            api_key_id=api_key_id,
+            trigger_id=trigger.id,
+        )
         return {
             "decision": decision,
             "resulting_trade_id": applied.id,

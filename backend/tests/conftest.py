@@ -399,3 +399,6 @@ async def reset_global_singletons() -> AsyncGenerator[None, None]:
     # Reset singletons to None
     dependencies._redis_client = None
     dependencies._http_client = None
+    # Phase F-6: reset the inbound rate-limiter singleton so each test
+    # starts with a fresh per-key bucket state.
+    dependencies._inbound_backtest_rate_limiter = None
