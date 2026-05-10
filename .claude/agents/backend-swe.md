@@ -38,6 +38,7 @@ backend/src/zebu/
 - **Repository ports** are `Protocol`s in `application/ports/`; implementations are in `adapters/outbound/`.
 - **Async I/O** for HTTP and DB.
 - **Domain exceptions** for business-rule violations (`InsufficientFundsError`, `InvalidTradeError`). Don't catch and swallow.
+- **Alembic revision ids must be ≤ 32 chars** — `alembic_version.version_num` is `varchar(32)`. A revision id longer than that fails with `StringDataRightTruncationError` on first insert. Use compact short slugs (e.g. `h001_add_api_key_id_audit`, not `h001_add_api_key_id_to_writable_tables`). Filename should match the revision id.
 
 ## Coding standard
 
