@@ -1,7 +1,7 @@
 /**
  * React Query hook for fetching price history data
  */
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { getPriceHistory } from '@/services/api/prices'
 import type { TimeRange } from '@/types/price'
 import { isApiError } from '@/utils/priceErrors'
@@ -53,6 +53,10 @@ export function usePriceHistory(ticker: string, range: TimeRange) {
     queryFn: () => getPriceHistory(ticker, start, end),
     staleTime: 5 * 60 * 1000, // 5 minutes
     enabled: Boolean(ticker), // Only run if we have a ticker
+    // Keep the previous range's data on screen while a new range is fetching.
+    // This is what makes the chart stay rendered when the user switches
+    // timeframe instead of unmounting and flashing the skeleton.
+    placeholderData: keepPreviousData,
     retry: (failureCount, error) => {
       // Don't retry 404s (ticker not found)
       if (isApiError(error) && error.type === 'not_found') {

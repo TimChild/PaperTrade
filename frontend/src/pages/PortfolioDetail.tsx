@@ -212,7 +212,6 @@ export function PortfolioDetail(): React.JSX.Element {
                     <LightweightPriceChart
                       key={holding.ticker}
                       ticker={holding.ticker}
-                      initialTimeRange="1M"
                       portfolioId={portfolioId}
                       onChartClick={handleChartClick}
                     />
