@@ -134,6 +134,41 @@ class InvalidTriggerFireError(InvalidEntityError):
     pass
 
 
+class AgentInvocationError(DomainException):
+    """Raised when invoking an agent through :class:`AgentInvocationPort` fails.
+
+    Used for transport failures (network errors, timeouts), authentication
+    failures (missing or invalid Anthropic API key), and protocol failures
+    (the agent's response can't be parsed as a structured decision). The
+    trigger-invocation orchestrator catches this and writes an
+    ``INVOCATION_FAILED`` :class:`TriggerFireRecord` so the activity feed
+    surfaces the failed attempt rather than dropping it silently.
+
+    Attributes:
+        message: Human-readable error description.
+        cause: Optional underlying exception (e.g. the Anthropic SDK error).
+    """
+
+    def __init__(self, message: str, *, cause: Exception | None = None) -> None:
+        """Initialise with a message and optional underlying cause."""
+        super().__init__(message)
+        self.message = message
+        self.cause = cause
+
+
+class AgentResponseParseError(AgentInvocationError):
+    """Raised when an agent response cannot be coerced into a structured decision.
+
+    Distinct subclass so callers (and structured-logging middleware) can
+    differentiate "the model returned malformed output" from "the call
+    itself failed". Both paths still produce ``INVOCATION_FAILED`` audit
+    rows, but the operational response differs (parse failures usually
+    indicate prompt regression; transport failures indicate infra issues).
+    """
+
+    pass
+
+
 # Business Rule Violation Exceptions
 
 

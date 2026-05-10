@@ -1,18 +1,21 @@
 """TriggerEvaluationService - evaluates ACTIVE triggers each scheduler tick.
 
-Phase F-2 of the agent platform. Mirrors :class:`StrategyExecutionService`
-in shape but for the new trigger-fire path: the service lists evaluable
-triggers, computes the condition's required inputs from the ledger +
-market data, runs the per-condition evaluator (currently
-:func:`evaluate_drawdown` only), and returns the list of "would fire"
-results.
+Phase F-2 of the agent platform, extended in F-3 to optionally hand off
+to the :class:`TriggerInvocationOrchestrator` when a fire is detected.
+Mirrors :class:`StrategyExecutionService` in shape but for the new
+trigger-fire path: the service lists evaluable triggers, computes the
+condition's required inputs from the ledger + market data, runs the
+per-condition evaluator (currently :func:`evaluate_drawdown` only),
+and on a fire either returns the "would fire" envelope (F-2 default)
+or hands off to the orchestrator (F-3, gated by
+``ZEBU_TRIGGER_FIRES_ENABLED``).
 
-**F-2 deferred work**: this service does NOT yet invoke the agent or
-write :class:`TriggerFireRecord` rows. F-3 will introduce the
-``AgentInvocationPort`` abstraction, the Anthropic adapter, and the
-fire-and-decide flow. The "evaluation-only" posture means F-2 ships
-something landable on its own (cron job runs, condition fires are
-detected and logged) without committing to an agent integration.
+**F-3 wiring**: when the orchestrator is supplied at construction
+time AND the runtime feature flag is on, the service calls
+:meth:`TriggerInvocationOrchestrator.fire` for each fire-eligible
+result. The flag exists so this PR is safe to merge with the actual
+fire path off in production until Tim opts in. Tests pass an
+in-memory orchestrator so coverage is high regardless of the flag.
 
 The service composes the I/O around the per-condition evaluators (which
 are pure functions on inputs). The ledger walk and price fetching all
@@ -25,6 +28,7 @@ References:
 """
 
 import logging
+import os
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import TypedDict
@@ -49,6 +53,9 @@ from zebu.application.services.trigger_evaluators.drawdown import (
     evaluate_drawdown,
     lookback_window,
 )
+from zebu.application.services.trigger_invocation_orchestrator import (
+    TriggerInvocationOrchestrator,
+)
 from zebu.domain.entities.strategy_activation import StrategyActivation
 from zebu.domain.entities.strategy_condition_trigger import StrategyConditionTrigger
 from zebu.domain.entities.transaction import Transaction
@@ -65,12 +72,34 @@ from zebu.domain.value_objects.trigger_condition import (
 logger = logging.getLogger(__name__)
 
 
+# Feature flag — when False, the evaluator stops at "would fire" and
+# does NOT hand off to the orchestrator (matches F-2 behaviour). When
+# True (and an orchestrator is supplied), the orchestrator fires for
+# real, the agent is invoked, and a TriggerFireRecord is written.
+#
+# Default False so this PR is safe to merge in production. Flip on when
+# Tim is ready (env var `ZEBU_TRIGGER_FIRES_ENABLED=true` on the API
+# container).
+_FIRES_ENABLED_ENV: str = "ZEBU_TRIGGER_FIRES_ENABLED"
+
+
+def _fires_enabled() -> bool:
+    """Read the feature flag from env. Defaults to False if unset.
+
+    Truthy values: ``true``, ``1``, ``yes`` (case-insensitive).
+    Anything else is false.
+    """
+    value = os.environ.get(_FIRES_ENABLED_ENV, "").strip().lower()
+    return value in {"true", "1", "yes"}
+
+
 class TriggerEvaluationResult(TypedDict):
     """Per-trigger result returned by :meth:`TriggerEvaluationService.evaluate_all`.
 
-    F-2 returns these for any trigger that *would* fire — F-3 will
-    extend the service to actually invoke the agent and persist a
-    :class:`TriggerFireRecord` for each fire.
+    F-2 returned these for any trigger that *would* fire. F-3 extends
+    the envelope: when the orchestrator is wired and the feature flag
+    is on, ``fire_record_id`` and ``decision`` carry the audit-row
+    pointer + the agent's post-guardrail decision.
 
     Attributes:
         trigger_id: The trigger that was evaluated.
@@ -84,6 +113,14 @@ class TriggerEvaluationResult(TypedDict):
             service catches and logs; the trigger is reported as
             ``fired=False, error=...`` so a single broken trigger never
             blocks the cycle.
+        fire_record_id: F-3 — the :class:`TriggerFireRecord` ID written
+            by the orchestrator for this fire. ``None`` when the fire
+            path is disabled (feature flag off / no orchestrator) or the
+            condition didn't fire.
+        decision: F-3 — the post-guardrail decision the orchestrator
+            recorded. ``None`` when the orchestrator was not invoked.
+            String form (e.g. ``"BUY"``, ``"INVOCATION_FAILED"``) so the
+            envelope is JSON-friendly without a custom serialiser.
     """
 
     trigger_id: UUID
@@ -91,6 +128,8 @@ class TriggerEvaluationResult(TypedDict):
     fired: bool
     evaluation_data: DrawdownEvaluationData | None
     error: str | None
+    fire_record_id: UUID | None
+    decision: str | None
 
 
 class EvaluationSummary(TypedDict):
@@ -149,12 +188,16 @@ class TriggerEvaluationService:
         portfolio_repo: PortfolioRepository,
         transaction_repo: TransactionRepository,
         market_data: MarketDataPort,
+        orchestrator: TriggerInvocationOrchestrator | None = None,
+        fires_enabled_override: bool | None = None,
     ) -> None:
         """Initialise the service with required ports.
 
         Args:
             trigger_repo: Persistence for :class:`StrategyConditionTrigger`.
-                Read-only in F-2 (no fire recording yet).
+                F-2 used this read-only; F-3 mutates it via
+                ``record_fire`` after a successful orchestrator invocation
+                (the orchestrator owns that write).
             activation_repo: Read-only resolution from the trigger's
                 activation_id to the activation entity.
             strategy_repo: Read-only resolution from the activation's
@@ -169,6 +212,17 @@ class TriggerEvaluationService:
                 per design Q6).
             market_data: Port for fetching price history (used by the
                 drawdown evaluator and the future volatility evaluator).
+            orchestrator: F-3 — the
+                :class:`TriggerInvocationOrchestrator`. When ``None``,
+                the service stops at "would fire" results (F-2 behavior;
+                useful for tests or when fires are disabled by ops).
+                When provided AND the feature flag is on, the service
+                hands off every fire-eligible result to the orchestrator.
+            fires_enabled_override: F-3 — explicit override for the
+                ``ZEBU_TRIGGER_FIRES_ENABLED`` env var. Tests pass
+                ``True`` to exercise the orchestrator path without
+                touching env state. Production leaves this ``None`` so
+                the env var controls behavior.
         """
         self._trigger_repo = trigger_repo
         self._activation_repo = activation_repo
@@ -176,6 +230,8 @@ class TriggerEvaluationService:
         self._portfolio_repo = portfolio_repo
         self._transaction_repo = transaction_repo
         self._market_data = market_data
+        self._orchestrator = orchestrator
+        self._fires_enabled_override = fires_enabled_override
 
     async def evaluate_all(self) -> EvaluationSummary:
         """Run one evaluation cycle for every evaluable trigger.
@@ -247,6 +303,14 @@ class TriggerEvaluationService:
     ) -> TriggerEvaluationResult:
         """Evaluate one trigger, capturing any exception on the result.
 
+        On a fire-eligible result, hand off to the orchestrator if
+        present and the feature flag is on. The handoff is wrapped in
+        its own try/except: an orchestrator failure must NOT crash the
+        evaluation cycle (the orchestrator already turns its own
+        failures into INVOCATION_FAILED audit rows, but defense in
+        depth here keeps the service contract intact even if the
+        orchestrator raises unexpectedly).
+
         Args:
             trigger: The trigger to evaluate.
             now: Reference timestamp for window construction.
@@ -259,9 +323,11 @@ class TriggerEvaluationService:
         except Exception as exc:
             # Broad except is intentional: one bad trigger must never
             # crash the cycle. The error is logged with a stack trace
-            # and recorded on the result envelope; F-3 will additionally
-            # write an ``INVOCATION_FAILED`` fire record so the activity
-            # feed shows the failure.
+            # and recorded on the result envelope. F-3 layers an
+            # additional ``INVOCATION_FAILED`` audit row when the
+            # failure happens after the fire decision; pre-fire failures
+            # (resolution issues) stop here without an audit row since
+            # the upstream evaluator path didn't claim a fire.
             logger.exception(
                 "Trigger evaluation failed",
                 extra={
@@ -276,15 +342,87 @@ class TriggerEvaluationService:
                 "fired": False,
                 "evaluation_data": None,
                 "error": str(exc),
+                "fire_record_id": None,
+                "decision": None,
             }
 
+        if not fired:
+            return {
+                "trigger_id": trigger.id,
+                "activation_id": trigger.activation_id,
+                "fired": False,
+                "evaluation_data": None,
+                "error": None,
+                "fire_record_id": None,
+                "decision": None,
+            }
+
+        # Fire path: optionally hand off to the orchestrator.
+        fire_record_id, decision_str, error = await self._maybe_orchestrate(
+            trigger=trigger, evaluation_data=data
+        )
         return {
             "trigger_id": trigger.id,
             "activation_id": trigger.activation_id,
-            "fired": fired,
+            "fired": True,
             "evaluation_data": data,
-            "error": None,
+            "error": error,
+            "fire_record_id": fire_record_id,
+            "decision": decision_str,
         }
+
+    async def _maybe_orchestrate(
+        self,
+        *,
+        trigger: StrategyConditionTrigger,
+        evaluation_data: DrawdownEvaluationData | None,
+    ) -> tuple[UUID | None, str | None, str | None]:
+        """Optionally delegate to the orchestrator on a fire.
+
+        Returns ``(fire_record_id, decision_str, error)``. When the
+        orchestrator is not wired or the feature flag is off, returns
+        ``(None, None, None)`` — F-2-compatible behavior.
+
+        Args:
+            trigger: The trigger that fired.
+            evaluation_data: The condition snapshot (becomes
+                ``TriggerFireRecord.condition_evaluation_data``).
+        """
+        if self._orchestrator is None:
+            return None, None, None
+
+        # Defensive: even if the orchestrator is wired, respect the
+        # feature flag. Override (for tests) wins over env var.
+        enabled = (
+            self._fires_enabled_override
+            if self._fires_enabled_override is not None
+            else _fires_enabled()
+        )
+        if not enabled:
+            return None, None, None
+
+        if evaluation_data is None:
+            # Should not happen on a fire — defensive only.
+            return None, None, "fire reported without evaluation_data"
+
+        try:
+            outcome = await self._orchestrator.fire(
+                trigger=trigger,
+                evaluation_data=evaluation_data,
+            )
+        except Exception as exc:
+            # Defense-in-depth: the orchestrator should already catch
+            # everything, but if it raises, we don't crash the cycle.
+            logger.exception(
+                "Trigger orchestrator raised unexpectedly",
+                extra={
+                    "trigger_id": str(trigger.id),
+                    "activation_id": str(trigger.activation_id),
+                },
+            )
+            return None, None, f"orchestrator raised: {exc}"
+
+        return outcome.fire_record_id, outcome.decision.value, outcome.error
 
     async def _evaluate_one(
         self,

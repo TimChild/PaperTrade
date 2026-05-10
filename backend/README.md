@@ -109,6 +109,22 @@ uv run python scripts/seed_historical_data.py --tickers AAPL,IBM --days 365
 
 **Note**: Requires `ALPHA_VANTAGE_API_KEY` environment variable. Get a free API key at [alphavantage.co](https://www.alphavantage.co/support/#api-key). The free tier allows 5 API calls per minute and 500 per day.
 
+## Environment Variables
+
+Backend env vars (set in `.env`, never committed):
+
+| Variable | Required? | Default | Purpose |
+|---|---|---|---|
+| `DATABASE_URL` | yes | — | Postgres / SQLite DSN. |
+| `ALPHA_VANTAGE_API_KEY` | yes | — | Market-data adapter (free tier OK). |
+| `CLERK_SECRET_KEY` | yes | — | Clerk Bearer auth verification. |
+| `API_KEY_HMAC_SECRET` | yes | — | HMAC-SHA256 secret for hashing API keys at rest. |
+| `CORS_ORIGINS` | yes (prod) | — | Comma-separated allowed origins. |
+| `REDIS_URL` | optional | `redis://localhost:6379` | Price-cache backend. |
+| `ANTHROPIC_API_KEY` | conditional | — | **Phase F-3.** Required when `ZEBU_TRIGGER_FIRES_ENABLED=true`; the trigger-fire orchestrator calls the Anthropic Messages API. Without it (and with fires enabled), every fire records `INVOCATION_FAILED`. |
+| `ZEBU_AGENT_MODEL` | optional | `claude-haiku-4-5-20251001` | **Phase F-3.** Model the trigger-fire orchestrator invokes. Haiku 4.5 is the right tier for the small trigger-fire prompt; override to Sonnet/Opus if latency-vs-quality calls for it. |
+| `ZEBU_TRIGGER_FIRES_ENABLED` | optional | `false` | **Phase F-3.** Feature flag for the agent-invocation path. While `false`, the F-2 evaluator runs (detects fires + logs them) but the orchestrator is not invoked. Set to `true` / `1` / `yes` (case-insensitive) once F-7's smoke test passes. |
+
 ## Technology Stack
 
 - **Framework**: FastAPI

@@ -23,6 +23,7 @@ dependencies = [
     "clerk-backend-api>=5.0.6",
     "structlog>=24.1.0",
     "python-json-logger>=2.0.7",
+    "anthropic>=0.40.0,<1.0.0",
     # Transitive dependency CVE pins (deps.P0-2 / Wave 1-B)
     # Remove these once parent packages bump their floors past the fixed versions.
     "urllib3>=2.6.3",       # CVE-2026-21441 / GHSA-38jv-5279-wg99 (transitive via requests)
