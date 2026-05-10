@@ -1,0 +1,95 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "zebu-mcp"
+version = "0.1.0"
+description = "MCP server exposing the Zebu paper-trading backend to Claude Code agents"
+readme = "README.md"
+requires-python = ">=3.13"
+license = { text = "Proprietary" }
+authors = [{ name = "Tim Child" }]
+keywords = ["mcp", "claude-code", "trading", "zebu", "papertrade"]
+dependencies = [
+    # Official Anthropic MCP SDK; FastMCP lives at `mcp.server.fastmcp`.
+    # The `cli` extra is intentionally NOT pulled in as a runtime dep — it
+    # adds typer/uvicorn which we don't need at runtime. Use
+    # `uvx --from "mcp[cli]" mcp dev <entry>` for the inspector workflow.
+    "mcp>=1.27.0",
+    # HTTP client for the Zebu REST API.
+    "httpx>=0.27.0",
+    # Pydantic models for typed request/response shapes.
+    "pydantic>=2.9.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.8.0",
+    "pyright>=1.1.389",
+    "respx>=0.22.0",
+]
+
+[project.scripts]
+# `uvx zebu-mcp` (or `python -m zebu_mcp`) starts the stdio MCP server.
+zebu-mcp = "zebu_mcp.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/zebu_mcp"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+]
+ignore = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["zebu_mcp"]
+
+[tool.pyright]
+include = ["src", "tests"]
+exclude = [
+    "**/__pycache__",
+    "**/node_modules",
+    ".venv",
+]
+typeCheckingMode = "strict"
+pythonVersion = "3.13"
+reportMissingTypeStubs = false
+# Match the Zebu backend's posture — strict everywhere except the three
+# "unknown" reports that fire on third-party libraries we don't control.
+reportUnknownMemberType = false
+reportUnknownArgumentType = false
+reportUnknownVariableType = false
+
+# Tool modules use the FastMCP `@server.tool(...)` decorator, which
+# pyright can't see through — it flags every decorated tool function as
+# unused even though the decorator registers it on the server. The
+# decorator is the public consumer, so the warning is a false positive
+# specific to this pattern. We narrow the override to `tools/**` so the
+# rule still fires on regular code.
+[[tool.pyright.executionEnvironments]]
+root = "src/zebu_mcp/tools"
+reportUnusedFunction = "none"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "integration: mark tests that need a real Zebu backend (skipped by default unless ZEBU_MCP_INTEGRATION=1)",
+]
