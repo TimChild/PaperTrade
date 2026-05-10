@@ -1,8 +1,8 @@
 # Design Decisions: Visual Direction & Design Tokens
 
-**Date**: January 10, 2026
-**Author**: Orchestrator (based on frontend-swe prototypes)
-**Status**: Approved
+**Date**: January 10, 2026  
+**Author**: Orchestrator (based on frontend-swe prototypes)  
+**Status**: Approved  
 **Related Task**: Task 089 (Dashboard Prototyping)
 
 ---
@@ -22,10 +22,12 @@
 ### Variant A: Modern Minimal ✅ **SELECTED**
 
 **Screenshots**:
+
 - Desktop: `.playwright-mcp/variant-a-modern-minimal.png`
 - Mobile: `.playwright-mcp/variant-a-mobile.png`
 
 **Strengths**:
+
 - ✅ Excellent readability - large type hierarchy, scannable at a glance
 - ✅ Spacious and calm - generous whitespace reduces cognitive load
 - ✅ Professional aesthetic - clean, trustworthy feel for financial app
@@ -34,6 +36,7 @@
 - ✅ Subtle interaction states - cards respond nicely to hover
 
 **Evaluation Scores** (1-5):
+
 | Criterion | Score | Notes |
 |-----------|-------|-------|
 | **Readability** | 5/5 | Portfolio values immediately scannable |
@@ -49,10 +52,12 @@
 ### Variant B: Data Dense
 
 **Screenshots**:
+
 - Desktop: `.playwright-mcp/variant-b-data-dense.png`
 - Mobile: `.playwright-mcp/variant-b-mobile.png`
 
 **Strengths**:
+
 - ✅ Excellent information density - more portfolios visible
 - ✅ Dark mode aesthetic - modern, reduces eye strain
 - ✅ Compact but readable - efficient space usage
@@ -60,6 +65,7 @@
 - ✅ Abbreviated values - cleaner at scale ($5K vs $5,011.90)
 
 **Evaluation Scores** (1-5):
+
 | Criterion | Score | Notes |
 |-----------|-------|-------|
 | **Readability** | 4/5 | Good, but slightly harder to scan than Variant A |
@@ -77,6 +83,7 @@
 ### Core Foundation: Variant A (Modern Minimal)
 
 **Primary Design System**:
+
 - Light color palette with soft gray background
 - Generous whitespace and padding
 - Large, clear typography hierarchy
@@ -260,12 +267,14 @@ export default {
 ### Phase 2: Design System Foundation (Tasks 090-091)
 
 **Task 090: Tailwind Config & Design Tokens** (Frontend SWE)
+
 - Implement extended Tailwind config with custom theme
 - Add CSS variables for dark mode support
 - Create type-safe token references
 - Document token usage guide
 
 **Task 091: shadcn/ui Setup** (Frontend SWE)
+
 - Install shadcn/ui CLI
 - Configure components.json
 - Set up cn() utility helper
@@ -274,12 +283,14 @@ export default {
 ### Phase 3: Component Primitives (Tasks 092-093)
 
 **Task 092: Core Primitive Components** (Frontend SWE)
+
 - Implement Button variants (primary, secondary, ghost)
 - Implement Card variants (default, elevated)
 - Implement Input, Select, Dialog, Badge
 - Add unit tests for all primitives
 
 **Task 093: Dark Mode Implementation** (Frontend SWE)
+
 - Add theme toggle component
 - Implement dark mode persistence (localStorage)
 - Test all components in both themes
@@ -299,6 +310,7 @@ export default {
 ### A. Screenshots
 
 All prototype screenshots saved in `.playwright-mcp/`:
+
 - `variant-a-modern-minimal.png` - Desktop light mode (selected)
 - `variant-a-mobile.png` - Mobile light mode (selected)
 - `variant-b-data-dense.png` - Desktop dark mode (reference for dark theme)
@@ -307,21 +319,24 @@ All prototype screenshots saved in `.playwright-mcp/`:
 ### B. Prototype Code Location
 
 Live prototypes available at:
+
 - `frontend/src/pages/__prototypes__/DashboardVariantA.tsx`
 - `frontend/src/pages/__prototypes__/DashboardVariantB.tsx`
 
 Routes (development only):
+
 - http://localhost:5173/prototypes/dashboard-a
 - http://localhost:5173/prototypes/dashboard-b
 
 ### C. Agent Progress Documentation
 
 Detailed implementation notes:
+
 - `agent_tasks/progress/20260110_055730_task089_dashboard_prototyping.md`
 - `agent_tasks/progress/prototype_visual_documentation.md`
 
 ---
 
-**Approved by**: Orchestrator
-**Date**: January 10, 2026
+**Approved by**: Orchestrator  
+**Date**: January 10, 2026  
 **Status**: Ready for Phase 2 Implementation

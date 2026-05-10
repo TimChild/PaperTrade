@@ -1,13 +1,14 @@
 # ADR 003: Background Refresh Strategy
 
-**Status**: Approved
-**Date**: 2025-12-28
-**Deciders**: Architecture Team
+**Status**: Approved  
+**Date**: 2025-12-28  
+**Deciders**: Architecture Team  
 **Context**: Phase 2 Market Data Integration
 
 ## Context
 
 To minimize API calls and provide consistent price data, we need a background refresh strategy that:
+
 1. **Pre-populates** common stocks (AAPL, MSFT, GOOGL, etc.)
 2. **Refreshes** prices on a schedule (daily, configurable)
 3. **Respects** API rate limits
@@ -24,6 +25,7 @@ To minimize API calls and provide consistent price data, we need a background re
 ## Decision
 
 Implement **APScheduler** (Python background scheduler) with a **daily batch refresh job** that:
+
 - Runs at midnight UTC (configurable cron)
 - Refreshes all tracked tickers
 - Respects rate limits (batched with delays)
@@ -70,6 +72,7 @@ max_instances = 1  # Only one refresh job at a time
 ```
 
 **Jobs**:
+
 - `refresh_all_prices` - Daily price refresh
 - (Future: `backfill_history`, `cleanup_stale_data`)
 
@@ -91,11 +94,13 @@ max_instances = 1  # Only one refresh job at a time
 ```
 
 **Rate Limiting**:
+
 - Batch size: Based on available tokens
 - Inter-batch delay: 60 seconds (respect per-minute limit)
 - Total time: ~2 hours for 500 tickers (respects daily limit)
 
 **Error Handling**:
+
 - Individual ticker failure: Log error, continue
 - Rate limit exhausted: Sleep until refill
 - Redis/PostgreSQL down: Retry after delay, abort if persistent
@@ -105,6 +110,7 @@ max_instances = 1  # Only one refresh job at a time
 **Purpose**: Maintains list of tickers to refresh
 
 **Sources**:
+
 1. **User Portfolios**: All tickers held in any portfolio
 2. **Common Stocks**: Pre-defined list (AAPL, MSFT, GOOGL, AMZN, TSLA, etc.)
 3. **Recently Queried**: Tickers queried in last 7 days
@@ -120,6 +126,7 @@ max_instances = 1  # Only one refresh job at a time
 | priority | INTEGER | Higher = refresh first (1=critical, 5=normal) |
 
 **Priority Levels**:
+
 1. **Critical (1)**: Held in portfolios, refresh first
 2. **High (2)**: Common stocks (large cap indices)
 3. **Normal (3)**: Recently queried
@@ -152,11 +159,13 @@ Log summary: "Refreshed 487/500 tickers, 13 errors"
 ### Alternative 1: Celery (Distributed Task Queue)
 
 **Pros**:
+
 - Highly scalable (distributed workers)
 - Robust retry mechanisms
 - Web UI (Flower) for monitoring
 
 **Cons**:
+
 - ❌ Requires RabbitMQ or Redis (additional infrastructure)
 - ❌ Complex setup (broker, workers, scheduler)
 - ❌ Overkill for Phase 2 scale (single server)
@@ -171,11 +180,13 @@ Log summary: "Refreshed 487/500 tickers, 13 errors"
 **Implementation**: Scheduled workflow calls API endpoint to trigger refresh
 
 **Pros**:
+
 - Zero infrastructure (uses GitHub)
 - Simple configuration (YAML file)
 - Familiar to developers
 
 **Cons**:
+
 - ❌ External dependency (GitHub availability)
 - ❌ Harder to debug (logs in GitHub UI)
 - ❌ Can't react to events (only cron schedule)
@@ -188,10 +199,12 @@ Log summary: "Refreshed 487/500 tickers, 13 errors"
 **Implementation**: Use FastAPI's `BackgroundTasks` for async jobs
 
 **Pros**:
+
 - Built into FastAPI (no new dependency)
 - Simple for one-off tasks
 
 **Cons**:
+
 - ❌ Not persistent (lost on server restart)
 - ❌ No scheduling (only triggered by requests)
 - ❌ No job management (can't list, cancel jobs)
@@ -204,10 +217,12 @@ Log summary: "Refreshed 487/500 tickers, 13 errors"
 **Implementation**: System cron job calls Python script
 
 **Pros**:
+
 - Simple, no Python library needed
 - Uses OS-level scheduler
 
 **Cons**:
+
 - ❌ Requires shell access (not Dockerized)
 - ❌ Hard to test (system dependency)
 - ❌ No job persistence (can't track history)
@@ -220,10 +235,12 @@ Log summary: "Refreshed 487/500 tickers, 13 errors"
 **Implementation**: No background job, refresh on user request
 
 **Pros**:
+
 - Simplest (no scheduler)
 - Zero background resources
 
 **Cons**:
+
 - ❌ Poor UX (user waits for API calls)
 - ❌ Wastes API quota (repeated requests)
 - ❌ Doesn't work for historical backtesting
@@ -251,6 +268,7 @@ Log summary: "Refreshed 487/500 tickers, 13 errors"
 | Weekly | 71 | Under quota | ❌ Too stale |
 
 **Decision**: Daily refresh (midnight UTC)
+
 - **Rationale**: Fits within 500/day quota, acceptable staleness (after-hours updates)
 - **Mitigation**: User can manually refresh critical tickers
 
@@ -266,12 +284,14 @@ Log summary: "Refreshed 487/500 tickers, 13 errors"
 ### Job Execution Flow
 
 **Phase 1: Preparation** (10 seconds)
+
 1. Load configuration (cron schedule, rate limits)
 2. Get watchlist from database (all tracked tickers)
 3. Filter to stale tickers (last refresh >24h ago)
 4. Sort by priority (portfolio holdings first)
 
 **Phase 2: Batch Processing** (1-2 hours)
+
 1. Split tickers into batches (batch size = rate limit per minute)
 2. For each batch:
    - Check rate limiter (wait if needed)
@@ -280,6 +300,7 @@ Log summary: "Refreshed 487/500 tickers, 13 errors"
    - Sleep 60 seconds (next batch)
 
 **Phase 3: Cleanup** (10 seconds)
+
 1. Log summary statistics
 2. Update job metadata (last run time, success rate)
 3. Send alerts if errors exceed threshold
@@ -297,6 +318,7 @@ Log summary: "Refreshed 487/500 tickers, 13 errors"
 ### Idempotency
 
 Job is **idempotent**: Running multiple times has same effect as running once.
+
 - Price updates are upserts (insert or update by ticker+timestamp)
 - No side effects beyond database writes
 - Safe to re-run manually if job fails
@@ -316,6 +338,7 @@ Job is **idempotent**: Running multiple times has same effect as running once.
 | errors | JSON array of error messages |
 
 **Alerts**:
+
 - Success rate <90% (too many failures)
 - Job duration >4 hours (API too slow or rate-limited)
 - Job didn't run (scheduler malfunction)
@@ -361,6 +384,7 @@ retry_failed_after_hours = 6
 ### Common Stocks List
 
 Pre-populate with major indices:
+
 - **Dow 30**: Top 30 blue-chip stocks
 - **S&P 100**: Largest 100 companies
 - **FAANG**: AAPL, AMZN, GOOGL, META, NFLX
@@ -373,6 +397,7 @@ Total: ~150 tickers (fits well within 500/day quota)
 ### Unit Tests
 
 Test `PriceRefreshJob` class:
+
 - Watchlist filtering (stale vs fresh)
 - Batch sizing logic
 - Error handling (continue on failure)
@@ -383,6 +408,7 @@ Use **freezegun** to control time (test midnight trigger).
 ### Integration Tests
 
 Test with real scheduler:
+
 - Job triggers on cron schedule
 - Job persists to database
 - Job can be cancelled/re-run
@@ -392,6 +418,7 @@ Use **test database** (isolated from production).
 ### Load Tests
 
 Simulate large watchlist:
+
 - 500 tickers (max for free tier)
 - All stale (all need refresh)
 - Measure total time (should be <2 hours)
@@ -433,11 +460,13 @@ python -m papertrade.infrastructure.scheduler run-job refresh_all_prices
 ### Migration Plan
 
 **Phase 2a** (Week 1):
+
 - Install APScheduler (no jobs yet)
 - Test job persistence
 - Manual job trigger only
 
 **Phase 2b** (Week 2):
+
 - Enable daily refresh job
 - Monitor for 1 week (errors, duration)
 - Adjust batch size/delays if needed
@@ -445,6 +474,7 @@ python -m papertrade.infrastructure.scheduler run-job refresh_all_prices
 ### Rollback Plan
 
 If background refresh causes issues:
+
 1. Disable job in config (`enabled = false`)
 2. Restart application (job stops)
 3. Fall back to on-demand refresh only

@@ -1,7 +1,7 @@
 # UX Polish Phase - Phase 4
 
-**Date**: January 19, 2026
-**Status**: In Progress
+**Date**: January 19, 2026  
+**Status**: In Progress  
 **Goal**: Production-ready, delightful user experience before beta launch
 
 ## Overview
@@ -104,9 +104,11 @@ All PRs must meet:
 ## Dependencies
 
 ### External
+
 - None (all features use existing infrastructure)
 
 ### Internal
+
 - Weekend price handling (PR #158) ✅ Merged
 - Batch price endpoint ✅ Already exists
 - Transaction API ✅ Already exists
@@ -151,9 +153,11 @@ All PRs must meet:
 ### January 19, 2026
 
 **Tests Fixed**:
+
 - [ ] Weekend cache validation tests
 
 **Agents Started**:
+
 - [ ] Task 163: Purchase points on charts
 - [ ] Task 164: Real-time prices in holdings
 - [ ] Task 165: Toast notifications

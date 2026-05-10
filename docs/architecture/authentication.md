@@ -1,6 +1,6 @@
 # Authentication Implementation Guide
 
-**Last Updated**: 2026-05-09
+**Last Updated**: 2026-05-09  
 **Status**: Working implementation with E2E tests. Phase C2 added the API-key path for machine identities.
 
 ---
@@ -32,10 +32,12 @@ The Clerk path is unchanged by Phase C2; both paths coexist at the dependency la
 ## Architecture
 
 ### Frontend Stack
+
 - `@clerk/clerk-react` v6.x - React components and hooks
 - `@clerk/testing` v4.x - Playwright E2E testing support
 
 ### Backend Stack
+
 - `clerk-backend-api` v4.2.0 - Python SDK for JWT validation
 - FastAPI with custom auth dependency
 
@@ -79,6 +81,7 @@ if request_state.payload:
 ```
 
 **Key Points:**
+
 - The Clerk Python SDK does NOT have a `verify_token()` method
 - Must use `authenticate_request()` which expects a request-like object
 - The request object must have `.headers` dictionary with Authorization header
@@ -128,6 +131,7 @@ await clerk.signIn({
 ```
 
 This fails because:
+
 - Clerk instances may require email verification as a second factor
 - The "magic code" 424242 doesn't work for all Clerk instances
 - Tests will timeout waiting for email verification
@@ -169,6 +173,7 @@ if (page.url().includes('/dashboard')) {
 ```
 
 **Key Points:**
+
 - `clerkSetup()` MUST be called before `setupClerkTestingToken()`
 - Navigate to the app BEFORE calling `clerk.signIn()` - Clerk needs to be loaded
 - Use `emailAddress` parameter, NOT `signInParams` with password
@@ -218,10 +223,12 @@ This bypasses email verification and 2FA entirely.
 
 #### "Test timeout waiting for clerk.signIn()"
 **Problem:** Either:
+
 1. Page not loaded before sign-in (Clerk not initialized)
 2. Using password strategy instead of email-based sign-in
 
 **Solution:**
+
 1. Navigate to app first: `await page.goto('/')`
 2. Use `emailAddress` parameter: `clerk.signIn({ page, emailAddress })`
 
@@ -246,6 +253,7 @@ curl -X POST https://api.clerk.com/v1/users \
 ```
 
 **Important:**
+
 - User should NOT have 2FA enabled
 - Use a test email (e.g., `+clerk_test` subaddress or dedicated test domain)
 - Password is not needed for email-based sign-in in tests
@@ -327,6 +335,7 @@ When implementing or debugging Clerk authentication:
 ## Working Example
 
 See the complete working implementation:
+
 - Backend Clerk adapter: `backend/src/zebu/adapters/auth/clerk_adapter.py`
 - Backend API-key adapter: `backend/src/zebu/adapters/auth/api_key_adapter.py`
 - Composite auth dependency (selects between schemes): `backend/src/zebu/adapters/inbound/api/dependencies.py::get_current_user`

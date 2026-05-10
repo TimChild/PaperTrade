@@ -1,6 +1,6 @@
 # Zebu Product Roadmap
 
-**Last Updated**: May 9, 2026
+**Last Updated**: May 9, 2026  
 **Version**: v1.0.0 - Production Deployed (Phase 4 Complete)
 
 ## What is this document?
@@ -14,6 +14,7 @@ This roadmap shows what features are available now, what's coming soon, and our 
 **Make learning to invest accessible to everyone through realistic, risk-free trading simulation.**
 
 We're building a platform where:
+
 - Beginners can learn without losing real money
 - Experienced traders can test strategies
 - Investors can backtest historical decisions
@@ -26,6 +27,7 @@ We're building a platform where:
 **Current Status**: Live at [zebutrader.com](https://zebutrader.com) with 1,142 automated tests (831 backend + 311 frontend)
 
 ### Portfolio Management
+
 - ✅ Create unlimited portfolios with virtual cash
 - ✅ View all portfolios in centralized dashboard
 - ✅ Track portfolio value in real-time with charts
@@ -33,6 +35,7 @@ We're building a platform where:
 - ✅ Performance metrics and analytics
 
 ### Stock Trading
+
 - ✅ **BUY stocks** with real market prices (US & international)
 - ✅ **SELL stocks** with cost basis tracking
 - ✅ Trade during market hours with live data
@@ -41,6 +44,7 @@ We're building a platform where:
 - ✅ Weekend/holiday-aware price handling
 
 ### Market Data & Charts
+
 - ✅ Real-time current prices (Alpha Vantage API)
 - ✅ Intelligent 3-tier caching (Redis → PostgreSQL → API)
 - ✅ Historical price data storage
@@ -49,6 +53,7 @@ We're building a platform where:
 - ✅ Candlestick and line charts with trade markers
 
 ### Analytics & Insights
+
 - ✅ Portfolio performance charts (value over time)
 - ✅ Composition pie charts (asset allocation)
 - ✅ Performance metrics (daily change, total return)
@@ -56,12 +61,14 @@ We're building a platform where:
 - ✅ Daily snapshot calculations
 
 ### Authentication & Security
+
 - ✅ User authentication (Clerk integration)
 - ✅ Private portfolios (data privacy)
 - ✅ Protected API endpoints
 - ✅ HTTPS/SSL encryption
 
 ### User Experience
+
 - ✅ Clean, responsive React interface
 - ✅ Mobile-responsive design (320px-2560px)
 - ✅ Real-time updates without page refreshes
@@ -71,6 +78,7 @@ We're building a platform where:
 - ✅ Chart scaling and interaction
 
 ### Infrastructure
+
 - ✅ Production deployment (Proxmox)
 - ✅ Grafana Cloud monitoring
 - ✅ Docker containerization
@@ -88,6 +96,7 @@ All Phase 3 features are complete and deployed. Focus is now on platform maturit
 ### Phase 4: Trading Strategies & Backtesting ✅ COMPLETE
 
 **Shipped (March 8, 2026, v1.0.0)**:
+
 - Strategy entity with 3 types: BUY_AND_HOLD, DOLLAR_COST_AVERAGING, MOVING_AVERAGE_CROSSOVER
 - Backtest execution engine over historical data
 - Frontend backtesting UI with strategy comparison
@@ -106,23 +115,27 @@ The Phase 5 goal is **long-running / scheduled agents trying out trading strateg
 ### Phase 6: Professional Features (Future)
 
 **Advanced Order Types**:
+
 - Limit orders (buy at specific price or lower)
 - Stop orders (sell if price drops)
 - Stop-limit orders (combined protection)
 
 **Real-Time Experience**:
+
 - WebSocket live price updates (no refresh needed)
 - Toast notifications (replace browser alerts)
 - Mobile-optimized responsive design
 - Dark mode theme
 
 **Realistic Trading**:
+
 - Transaction fees (configurable)
 - Slippage simulation
 - Market hours enforcement
 - Multiple data providers (backup if Alpha Vantage down)
 
 **Operations**:
+
 - Monitoring & alerting
 - Error tracking
 - Performance dashboards
@@ -135,12 +148,14 @@ The Phase 5 goal is **long-running / scheduled agents trying out trading strateg
 ### Phase 7: Advanced Analytics & Social (Future)
 
 **Advanced Analytics**:
+
 - Sharpe ratio, volatility, beta
 - Benchmark comparisons (vs S&P 500)
 - Sector allocation analysis
 - Risk metrics
 
 **Social Features** (maybe):
+
 - Portfolio sharing
 - Trading leagues / leaderboards
 - Copy trading
@@ -164,6 +179,7 @@ Some features are commonly requested but out of scope:
 - **Multi-Currency** - USD only for now
 
 **Why Not?**
+
 - These features distract from core value (learning to trade stocks)
 - Complexity doesn't match user needs yet
 - Can add later if demand grows
@@ -173,6 +189,7 @@ Some features are commonly requested but out of scope:
 ## 📊 Release History
 
 ### January 2026 - v1.2.0 Production Launch ✅
+
 - **Phase 3c Complete**: Analytics, performance charts, backtesting
 - **UX Polish Complete**: TradingView charts, mobile responsive, empty states
 - **Production Deployment**: Live at zebutrader.com
@@ -180,12 +197,14 @@ Some features are commonly requested but out of scope:
 - **Quality**: 1,142 tests, 0 ESLint suppressions
 
 ### January 2026 - Phase 3a-3b Complete ✅
+
 - **SELL orders**: Complete trading loop with cost basis tracking
 - **Authentication**: Clerk integration with E2E tests
 - **Weekend handling**: Market calendar with intelligent caching
 - **Project rename**: PaperTrade → Zebu (268 files updated)
 
 ### January 2026 - Phase 2 Complete ✅
+
 - Real market data integration (Alpha Vantage)
 - Price caching with Redis
 - Background price scheduler
@@ -193,6 +212,7 @@ Some features are commonly requested but out of scope:
 - Comprehensive user documentation
 
 ### December 2025 - Phase 1 Complete ✅
+
 - Portfolio creation and management
 - BUY order execution
 - Transaction ledger
@@ -211,6 +231,7 @@ We listen to users! Here's how to make your voice heard:
 4. **Surveys**: Quarterly user surveys (coming soon)
 
 **Most Impactful**:
+
 - Explain **why** you want a feature (your use case)
 - Describe **how often** you'd use it
 - Note **alternatives** you're currently using
@@ -228,6 +249,7 @@ How we decide what to build:
 5. **Realistic Simulation**: Accurate market behavior over gamification
 
 **Recent Example**:
+
 - User need: "I can't sell stocks" (HIGH pain)
 - Solution: Phase 3a (SELL orders)
 - Prioritization: Moved ahead of analytics (less painful)
@@ -249,6 +271,7 @@ How we decide what to build:
 | **v2.0 Launch** | Q4 2026 | 📋 Planned | After Phase 4 |
 
 **Confidence Levels**:
+
 - **High**: Clear scope, no blockers, realistic estimate
 - **Medium**: Dependencies exist, some unknowns
 - **Low**: Exploratory, subject to change
@@ -260,6 +283,7 @@ How we decide what to build:
 Current limitations and future plans:
 
 ### Low Priority (Future Improvements)
+
 1. ⚠️ **No dark mode** → Future (user feedback will prioritize)
 2. ⚠️ **Whole shares only** → Future (fractional shares complex)
 3. ⚠️ **USD currency only** → Future (multi-currency)
@@ -283,6 +307,7 @@ For complete details, see [features.md](./features.md)
 - **Total**: Production deployment in ~30 days
 
 **Key Success Factors**:
+
 - Clean Architecture accelerates feature development
 - 81%+ test coverage catches bugs early
 - E2E tests validate complete workflows
@@ -296,17 +321,20 @@ For complete details, see [features.md](./features.md)
 We're considering open-sourcing Zebu in 2027. Here's the plan:
 
 ### 2026 (Closed Source)
+
 - Build core platform
 - Establish product-market fit
 - Validate architecture
 
 ### 2027 (Potential Open Source)
+
 - MIT license
 - Open GitHub repository
 - Accept community contributions
 - Public roadmap voting
 
 **Why Wait?**
+
 - Want to validate architecture first
 - Need production battle-testing
 - Ensure code quality worthy of community
@@ -318,12 +346,14 @@ We're considering open-sourcing Zebu in 2027. Here's the plan:
 ## 📖 Stay Updated
 
 ### Documentation
+
 - **User Guide**: How to use current features
 - **Feature Status**: Detailed implementation matrix
 - **Technical Boundaries**: Known limitations
 - **Architecture Plans**: Technical designs (for developers)
 
 ### Communication Channels (Coming Soon)
+
 - 📧 Newsletter (monthly updates)
 - 🐦 Twitter (@ZebuSim)
 - 💬 Discord (community chat)
@@ -369,5 +399,5 @@ We're building Zebu because we believe everyone should have access to investment
 
 **Questions? Suggestions?** Open an issue on GitHub or visit [zebutrader.com](https://zebutrader.com)
 
-**Last Updated**: January 26, 2026
+**Last Updated**: January 26, 2026  
 **Next Update**: April 2026 (post-Phase 4a)

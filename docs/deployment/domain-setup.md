@@ -1,7 +1,7 @@
 # Domain and SSL Setup Guide
 
-**Last Updated**: January 11, 2026
-**Agent**: quality-infra
+**Last Updated**: January 11, 2026  
+**Agent**: quality-infra  
 **Purpose**: Configure custom domain with HTTPS/SSL for production deployment
 
 ---
@@ -11,18 +11,21 @@
 This guide walks through configuring a custom domain (e.g., `zebutrader.com`) with automatic HTTPS/SSL for your Zebu deployment. This is a **one-time setup** performed after the application is running on your Proxmox VM.
 
 **Prerequisites:**
+
 - Zebu deployed and running on Proxmox VM (see [proxmox-vm-deployment.md](./proxmox-vm-deployment.md))
 - Domain registered and managed through DNS provider (this guide uses Cloudflare)
 - Reverse proxy available (this guide uses NPMplus - Nginx Proxy Manager Plus)
 - Access to your network's public IP or ability to configure port forwarding
 
 **Infrastructure Assumptions:**
+
 - **VM IP**: `192.168.4.111` (internal network)
 - **NPMplus IP**: `192.168.4.200` (reverse proxy on Proxmox host network)
 - **Domain**: `zebutrader.com` (example - replace with your domain)
 - **DNS Provider**: Cloudflare (instructions adaptable to other providers)
 
 **What This Guide Covers:**
+
 1. DNS configuration in Cloudflare
 2. Reverse proxy setup in NPMplus
 3. Backend CORS configuration for production domain
@@ -53,6 +56,7 @@ This guide walks through configuring a custom domain (e.g., `zebutrader.com`) wi
 ### Step 2: Create DNS Records
 
 You'll need DNS records pointing to your public IP address. If your Proxmox host is behind a router:
+
 - Your **public IP** is what the internet sees (check at [whatismyip.com](https://www.whatismyip.com/))
 - Configure **port forwarding** on your router: `80` and `443` → `192.168.4.200` (NPMplus)
 
@@ -69,6 +73,7 @@ You'll need DNS records pointing to your public IP address. If your Proxmox host
 | A | `api` | `<your-public-ip>` | Proxied | Auto |
 
 **Proxy Status Options:**
+
 - **Proxied** (orange cloud): Traffic goes through Cloudflare (DDoS protection, CDN, but may add latency)
 - **DNS Only** (gray cloud): Direct connection to your server (faster, but no Cloudflare protection)
 
@@ -96,6 +101,7 @@ nslookup api.zebutrader.com
 ### What is NPMplus?
 
 NPMplus (Nginx Proxy Manager Plus) is a user-friendly web interface for managing Nginx reverse proxy configurations. It:
+
 - Routes external domain requests to internal services
 - Automatically manages SSL certificates (Let's Encrypt)
 - Handles certificate renewal
@@ -107,6 +113,7 @@ NPMplus (Nginx Proxy Manager Plus) is a user-friendly web interface for managing
 2. Login with your admin credentials
 
 **Default credentials** (if not changed):
+
 - Email: `admin@example.com`
 - Password: `changeme`
 
@@ -117,6 +124,7 @@ NPMplus (Nginx Proxy Manager Plus) is a user-friendly web interface for managing
 1. Click **Hosts** → **Proxy Hosts** → **Add Proxy Host**
 
 **Details Tab:**
+
 - **Domain Names**: `zebutrader.com` (add without `www`, or add both)
 - **Scheme**: `http`
 - **Forward Hostname/IP**: `192.168.4.111` (your VM IP)
@@ -126,6 +134,7 @@ NPMplus (Nginx Proxy Manager Plus) is a user-friendly web interface for managing
 - **Websockets Support**: ✅ Enabled (if using WebSockets for real-time features)
 
 **SSL Tab:**
+
 - **SSL Certificate**: Select "Request a new SSL Certificate"
 - **Force SSL**: ✅ Enabled (redirects HTTP to HTTPS)
 - **HTTP/2 Support**: ✅ Enabled (better performance)
@@ -136,6 +145,7 @@ NPMplus (Nginx Proxy Manager Plus) is a user-friendly web interface for managing
 3. Click **Save**
 
 NPMplus will automatically:
+
 - Request an SSL certificate from Let's Encrypt
 - Configure Nginx to handle the domain
 - Set up automatic certificate renewal
@@ -149,6 +159,7 @@ NPMplus will automatically:
 1. Click **Add Proxy Host** again
 
 **Details Tab:**
+
 - **Domain Names**: `api.zebutrader.com`
 - **Scheme**: `http`
 - **Forward Hostname/IP**: `192.168.4.111`
@@ -158,6 +169,7 @@ NPMplus will automatically:
 - **Websockets Support**: ✅ Enabled (if backend uses WebSockets)
 
 **SSL Tab:**
+
 - Same SSL settings as frontend (request new certificate)
 
 **Option B: Path-Based Routing (Alternative)**
@@ -213,12 +225,14 @@ app.add_middleware(
 Configure allowed origins for your production domain:
 
 1. SSH into your VM:
+
 ```bash
 ssh root@192.168.4.111
 cd /opt/zebu
 ```
 
 2. Edit `.env` file and add:
+
 ```bash
 # Production CORS configuration
 CORS_ORIGINS=https://zebutrader.com,https://api.zebutrader.com
@@ -226,12 +240,14 @@ APP_ENV=production
 ```
 
 3. Restart the backend to apply changes:
+
 ```bash
 cd /opt/zebu
 docker compose -f docker-compose.prod.yml restart backend
 ```
 
 4. Verify CORS is working:
+
 ```bash
 curl -H "Origin: https://zebutrader.com" -I https://api.zebutrader.com/health
 # Look for: Access-Control-Allow-Origin: https://zebutrader.com
@@ -250,12 +266,14 @@ Even though `api.zebutrader.com` is a subdomain of `zebutrader.com`, browsers tr
 The frontend needs to know where to send API requests.
 
 1. SSH into VM:
+
 ```bash
 ssh root@192.168.4.111
 cd /opt/zebu
 ```
 
 2. Edit `.env` file:
+
 ```bash
 nano .env
 ```
@@ -312,18 +330,21 @@ Go through each item to verify your setup:
 ### Testing Steps
 
 1. **Test Frontend Access:**
+
    ```bash
    curl -I https://zebutrader.com
    # Should return: HTTP/2 200
    ```
 
 2. **Test Backend Health:**
+
    ```bash
    curl https://api.zebutrader.com/health
    # Should return: {"status":"healthy"}
    ```
 
 3. **Test CORS (from browser console):**
+
    ```javascript
    // Open browser console on https://zebutrader.com
    fetch('https://api.zebutrader.com/api/v1/portfolios')
@@ -375,6 +396,7 @@ nslookup zebutrader.com 1.1.1.1  # Cloudflare DNS
 ```
 
 **Solutions**:
+
 - Wait for DNS propagation (can take 24-48 hours)
 - Verify DNS records in Cloudflare dashboard
 - Clear your local DNS cache: `sudo dscacheutil -flushcache` (macOS) or `ipconfig /flushdns` (Windows)
@@ -382,6 +404,7 @@ nslookup zebutrader.com 1.1.1.1  # Cloudflare DNS
 **Problem**: DNS resolves but site doesn't load
 
 **Solutions**:
+
 - Verify port forwarding on your router (80, 443 → 192.168.4.200)
 - Check NPMplus is accessible internally: `curl http://192.168.4.200`
 - Verify Proxmox firewall isn't blocking traffic
@@ -391,11 +414,13 @@ nslookup zebutrader.com 1.1.1.1  # Cloudflare DNS
 **Problem**: NPMplus can't obtain SSL certificate
 
 **Possible Causes**:
+
 1. DNS not fully propagated
 2. Ports 80/443 not properly forwarded
 3. Cloudflare proxy interfering with Let's Encrypt validation
 
 **Solutions**:
+
 - **Wait for DNS**: Let's Encrypt validates domain ownership via DNS
 - **Check port forwarding**: Ensure external port 80 reaches NPMplus
 - **Cloudflare DNS Only mode**: Temporarily disable Cloudflare proxy (gray cloud)
@@ -406,6 +431,7 @@ nslookup zebutrader.com 1.1.1.1  # Cloudflare DNS
 **Problem**: Certificate expired or renewal failed
 
 **Solutions**:
+
 - NPMplus auto-renews certificates 30 days before expiry
 - Check NPMplus is running and accessible
 - Manually renew in NPMplus UI: Edit proxy host → SSL → Force renew
@@ -420,7 +446,9 @@ has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is pres
 ```
 
 **Solutions**:
+
 1. **Verify CORS_ORIGINS in .env:**
+
    ```bash
    ssh root@192.168.4.111
    cat /opt/zebu/.env | grep CORS_ORIGINS
@@ -428,6 +456,7 @@ has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is pres
    ```
 
 2. **Check backend logs:**
+
    ```bash
    ssh root@192.168.4.111
    cd /opt/zebu
@@ -435,11 +464,13 @@ has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is pres
    ```
 
 3. **Restart backend after env changes:**
+
    ```bash
    docker compose -f docker-compose.prod.yml restart backend
    ```
 
 4. **Test backend directly:**
+
    ```bash
    curl -H "Origin: https://zebutrader.com" -I https://api.zebutrader.com/health
    # Look for: Access-Control-Allow-Origin: https://zebutrader.com
@@ -450,14 +481,17 @@ has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is pres
 **Problem**: Frontend shows blank page or old version
 
 **Solutions**:
+
 1. **Clear browser cache**: Ctrl+Shift+R (hard refresh)
 2. **Verify environment variables:**
+
    ```bash
    ssh root@192.168.4.111
    cat /opt/zebu/.env | grep VITE_API_BASE_URL
    ```
 
 3. **Rebuild frontend:**
+
    ```bash
    cd /opt/zebu
    docker compose -f docker-compose.prod.yml build frontend
@@ -465,6 +499,7 @@ has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is pres
    ```
 
 4. **Check frontend logs:**
+
    ```bash
    docker compose -f docker-compose.prod.yml logs frontend
    ```
@@ -474,6 +509,7 @@ has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is pres
 **Problem**: Can't access NPMplus UI
 
 **Solutions**:
+
 - Verify NPMplus is running on Proxmox host
 - Check firewall: `http://192.168.4.200:81` accessible from your network
 - Restart NPMplus container (depends on your NPMplus installation method)
@@ -481,6 +517,7 @@ has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is pres
 **Problem**: Proxy host shows offline
 
 **Solutions**:
+
 - Check VM is running: `ssh root@proxmox qm status 200`
 - Verify services running: `ssh root@192.168.4.111 docker compose -f /opt/zebu/docker-compose.prod.yml ps`
 - Check NPMplus can reach VM: From NPMplus host, `curl http://192.168.4.111`
@@ -492,6 +529,7 @@ has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is pres
 **Cause**: Cloudflare proxy may add latency or interfere with WebSocket connections
 
 **Solutions**:
+
 - Switch to **DNS Only** mode (gray cloud) in Cloudflare
 - Disable Cloudflare features temporarily to isolate issue
 - Check Cloudflare Analytics for blocked requests
@@ -499,6 +537,7 @@ has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is pres
 **Problem**: Let's Encrypt validation fails with Cloudflare proxied
 
 **Solution**:
+
 1. Temporarily disable Cloudflare proxy (gray cloud)
 2. Wait 5 minutes for DNS propagation
 3. Request SSL certificate in NPMplus
@@ -509,9 +548,11 @@ has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is pres
 **Problem**: Real-time features not working
 
 **Solutions**:
+
 - Verify **Websockets Support** enabled in NPMplus proxy host
 - Check Cloudflare proxy settings (may need to disable for WebSocket routes)
 - Add custom Nginx configuration in NPMplus:
+
   ```nginx
   proxy_http_version 1.1;
   proxy_set_header Upgrade $http_upgrade;
@@ -523,13 +564,16 @@ has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is pres
 **Problem**: `https://api.zebutrader.com` returns 502 Bad Gateway
 
 **Solutions**:
+
 1. **Check backend is running:**
+
    ```bash
    ssh root@192.168.4.111
    docker compose -f /opt/zebu/docker-compose.prod.yml ps backend
    ```
 
 2. **Verify port 8000 is listening:**
+
    ```bash
    ss -tulpn | grep 8000
    ```
@@ -539,6 +583,7 @@ has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is pres
    - Forward Hostname/IP should be `192.168.4.111`
 
 4. **Test backend locally on VM:**
+
    ```bash
    curl http://localhost:8000/health
    # Should return: {"status":"healthy"}
@@ -610,6 +655,7 @@ iptables -L -n | grep 192.168.4.111
 ### Exposing Services
 
 **Recommended exposure:**
+
 - ✅ Frontend: Public (`https://zebutrader.com`)
 - ✅ Backend API: Public with authentication (`https://api.zebutrader.com`)
 - ⚠️ API Docs: Internal only or behind authentication
@@ -618,6 +664,7 @@ iptables -L -n | grep 192.168.4.111
 - ❌ NPMplus admin UI: Internal network only
 
 **Port forwarding should only expose:**
+
 - Port 80 (HTTP, redirects to HTTPS)
 - Port 443 (HTTPS)
 

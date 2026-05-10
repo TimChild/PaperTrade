@@ -7,6 +7,7 @@ The Domain Layer contains the core business logic and rules of PaperTrade. It ha
 ## Dependency Rules
 
 The Domain Layer:
+
 - ✅ MAY depend on Python standard library
 - ✅ MAY use type hints from `typing` module
 - ✅ MAY use `decimal.Decimal` for precise financial calculations
@@ -32,6 +33,7 @@ Represents a monetary amount with currency. Ensures type safety and prevents mix
 | currency | String | ISO 4217 currency code | Must be valid 3-letter code, default "USD" |
 
 #### Invariants
+
 - Amount precision MUST NOT exceed 2 decimal places
 - Currency MUST be a valid ISO 4217 code (USD, EUR, GBP, etc.)
 - Amount MUST be finite (not NaN or Infinity)
@@ -53,6 +55,7 @@ Represents a monetary amount with currency. Ensures type safety and prevents mix
 
 #### Equality Semantics
 Two Money objects are equal if and only if:
+
 - Both have the same currency code (case-sensitive)
 - Both have the same amount value
 
@@ -76,6 +79,7 @@ Represents a stock ticker symbol with validation. Ensures only valid ticker form
 | symbol | String | Stock ticker symbol | 1-5 uppercase letters, alphanumeric |
 
 #### Invariants
+
 - Symbol MUST be 1 to 5 characters long
 - Symbol MUST contain only uppercase letters A-Z
 - Symbol MUST NOT be empty or whitespace
@@ -121,6 +125,7 @@ Represents a number of shares in a holding or trade. Ensures shares are always n
 | shares | Decimal | Number of shares | Must be non-negative, max 4 decimal places |
 
 #### Invariants
+
 - Shares MUST be non-negative (>= 0)
 - Shares MUST have maximum 4 decimal places (supports fractional shares)
 - Shares MUST be finite (not NaN or Infinity)
@@ -171,6 +176,7 @@ Represents a user's investment portfolio. Serves as the aggregate root for all t
 | created_at | DateTime | When portfolio was created | UTC timezone, immutable |
 
 #### Invariants
+
 - ID MUST be unique across all portfolios
 - user_id MUST reference a valid user (enforced at application layer)
 - name MUST NOT be empty or only whitespace
@@ -179,6 +185,7 @@ Represents a user's investment portfolio. Serves as the aggregate root for all t
 
 #### Lifecycle States
 Portfolios do not have explicit state transitions in Phase 1. Future phases may add:
+
 - Active (can trade)
 - Suspended (view-only)
 - Archived (historical record)
@@ -237,6 +244,7 @@ Represents a single immutable entry in the portfolio ledger. Records all state c
 | SELL | Sell shares | Positive | Required | Required | Required |
 
 #### Invariants
+
 - Transaction is **completely immutable** after creation
 - ID MUST be unique across all transactions
 - portfolio_id MUST reference an existing portfolio
@@ -281,6 +289,7 @@ Represents the current position in a specific stock within a portfolio. **This i
 | average_cost_per_share | Money | Cost basis divided by quantity | Derived, read-only |
 
 #### Invariants
+
 - quantity MUST be non-negative
 - cost_basis MUST be non-negative
 - If quantity is zero, cost_basis MUST be zero
@@ -290,6 +299,7 @@ Represents the current position in a specific stock within a portfolio. **This i
 Holding is calculated by processing all BUY and SELL transactions for a given ticker:
 
 **High-Level Algorithm**:
+
 1. Filter all transactions for the portfolio by ticker
 2. Order transactions by timestamp (chronological)
 3. For each BUY transaction:
@@ -327,11 +337,13 @@ Pure functions for calculating portfolio state from transaction history. All fun
 #### Calculation Rules
 
 **Cash Balance**:
+
 - Start with zero
 - Add cash_change from each transaction in chronological order
 - Result is current cash available
 
 **Holdings**:
+
 - For each unique ticker in transactions:
   - Process BUY transactions: accumulate shares and cost
   - Process SELL transactions: reduce shares and cost proportionally
@@ -346,6 +358,7 @@ new_cost_basis = old_cost_basis × (remaining_quantity / original_quantity)
 
 **Portfolio Value**:
 Sum of:
+
 - Cash balance (from calculate_cash_balance)
 - Value of all holdings (sum of quantity × current_price for each holding)
 
@@ -375,6 +388,7 @@ Domain events represent significant occurrences in the domain. In Phase 1, these
 | TradeExecuted | Portfolio | Buy or sell trade completed | portfolio_id, ticker, quantity, price, trade_type, transaction_id |
 
 **Note**: In Phase 1, events are logged but not actively consumed. Phase 2+ will use events for:
+
 - Audit logging
 - Real-time notifications
 - Cache invalidation
@@ -385,6 +399,7 @@ Domain events represent significant occurrences in the domain. In Phase 1, these
 ## Type System Summary
 
 ### Primitive Types Used
+
 - `UUID`: Unique identifiers (from Python `uuid` module)
 - `Decimal`: Precise numeric calculations (from Python `decimal` module)
 - `String`: Text values (Python `str`)
@@ -392,12 +407,14 @@ Domain events represent significant occurrences in the domain. In Phase 1, these
 - `bool`: Boolean flags
 
 ### Custom Types
+
 - `TransactionType`: Enumeration (DEPOSIT, WITHDRAWAL, BUY, SELL)
 - `Money`: Value object (amount: Decimal, currency: String)
 - `Ticker`: Value object (symbol: String)
 - `Quantity`: Value object (shares: Decimal)
 
 ### Collection Types
+
 - `List[T]`: Ordered sequence of items
 - `Dict[K, V]`: Key-value mapping
 - `Optional[T]`: Value that may be None
@@ -408,17 +425,20 @@ Domain events represent significant occurrences in the domain. In Phase 1, these
 
 ### Value Object Validation
 All value objects validate their constraints in their constructor:
+
 - **Money**: Validates currency code and decimal precision
 - **Ticker**: Validates symbol format and length
 - **Quantity**: Validates non-negativity and decimal precision
 
 ### Entity Validation
 Entities validate their invariants on creation:
+
 - **Portfolio**: Validates name length and non-emptiness
 - **Transaction**: Validates type-specific constraints (e.g., BUY requires ticker)
 
 ### Domain Service Validation
 Domain services assume valid inputs (garbage in = exception):
+
 - Input transactions MUST be valid Transaction entities
 - Invalid data raises descriptive exceptions
 
@@ -457,6 +477,7 @@ DomainException (base class)
 ## Testing Strategy
 
 ### Value Object Tests
+
 - Test valid construction
 - Test invalid construction raises appropriate exception
 - Test arithmetic operations
@@ -464,6 +485,7 @@ DomainException (base class)
 - Test immutability (cannot modify after creation)
 
 ### Entity Tests
+
 - Test valid construction
 - Test invalid construction raises exception
 - Test invariants are maintained
@@ -471,6 +493,7 @@ DomainException (base class)
 - Test immutability where applicable
 
 ### Domain Service Tests
+
 - Test calculation correctness with various transaction sequences
 - Test edge cases (empty transaction list, zero balances)
 - Test cost basis calculations with multiple buy/sell cycles
@@ -491,6 +514,7 @@ DomainException (base class)
 ✅ Domain events for audit trail
 
 ### Future Enhancements (Phase 2+)
+
 - User entity and authentication
 - MarketPrice value object
 - Position entity with real-time P&L tracking

@@ -7,11 +7,13 @@ This checklist ensures database migrations are properly applied during deploymen
 ## Pre-Deployment
 
 1. **Verify Migration Files Exist**
+
    ```bash
    ls backend/migrations/versions/
    ```
 
 2. **Test Migrations Locally**
+
    ```bash
    # Start local database
    task docker:up
@@ -32,11 +34,13 @@ This checklist ensures database migrations are properly applied during deploymen
 ## Deployment
 
 1. **Deploy Application Code**
+
    ```bash
    task proxmox-vm:deploy
    ```
 
 2. **Run Migrations on Production**
+
    ```bash
    ssh root@192.168.4.112 "cd /opt/papertrade && \
      docker compose -f docker-compose.yml -f docker-compose.prod.yml exec backend \
@@ -44,6 +48,7 @@ This checklist ensures database migrations are properly applied during deploymen
    ```
 
 3. **Verify Migration Applied**
+
    ```bash
    ssh root@192.168.4.112 "cd /opt/papertrade && \
      docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db \
@@ -53,6 +58,7 @@ This checklist ensures database migrations are properly applied during deploymen
 ## Post-Deployment Verification
 
 1. **Check Backend Logs**
+
    ```bash
    task proxmox-vm:logs SERVICE=backend
    ```
@@ -73,6 +79,7 @@ This checklist ensures database migrations are properly applied during deploymen
 If migration fails:
 
 1. **Check Database Connection**
+
    ```bash
    ssh root@192.168.4.112 "cd /opt/papertrade && \
      docker compose -f docker-compose.yml -f docker-compose.prod.yml exec backend \
@@ -80,6 +87,7 @@ If migration fails:
    ```
 
 2. **Check Current Schema**
+
    ```bash
    ssh root@192.168.4.112 "cd /opt/papertrade && \
      docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T db \
@@ -112,6 +120,7 @@ Symptoms: `column tablename.columnname does not exist`
 Root Cause: Migration not applied but code deployed
 
 Fix:
+
 1. Run migrations (see Deployment step 2)
 2. Verify schema matches code expectations
 3. Restart backend if needed: `task proxmox-vm:restart SERVICE=backend`
@@ -139,12 +148,14 @@ Fix:
 **Root Challenge**: Alembic `env.py` didn't respect DATABASE_URL environment variable, always using SQLite from `alembic.ini`.
 
 **Resolution**:
+
 1. Manually added column: `ALTER TABLE portfolio_snapshots ADD COLUMN holdings_breakdown JSONB;`
 2. Created alembic_version table and marked migration as applied
 3. Fixed `migrations/env.py` to respect DATABASE_URL environment variable
 4. Committed fix in commit `8d1d967`
 
 **Lessons**:
+
 - Always test migrations in production-like environment before deploying
 - Verify Alembic configuration respects environment variables
 - Add migration step to deployment checklist

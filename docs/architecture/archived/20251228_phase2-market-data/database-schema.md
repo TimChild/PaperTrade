@@ -1,11 +1,12 @@
 # Phase 2 Market Data Integration - Database Schema
 
-**Created**: 2025-12-28
+**Created**: 2025-12-28  
 **Status**: Approved
 
 ## Overview
 
 This document specifies the database schema for storing historical price data. The schema is designed to:
+
 - Support fast time-range queries (for charts and backtesting)
 - Store full OHLCV data (Open, High, Low, Close, Volume)
 - Handle multiple price intervals (daily, hourly, minute)
@@ -39,9 +40,11 @@ Store all historical and current price data for stocks. This table is append-mos
 ### Constraints
 
 #### Primary Key
+
 - `id` (UUID)
 
 #### Unique Constraint
+
 - `(ticker, timestamp, interval)` - One price per ticker per timestamp per interval
 
 **Rationale**: Prevents duplicate entries. If Alpha Vantage returns same data twice, upsert updates existing record.
@@ -80,6 +83,7 @@ None (prices are independent data, not related to portfolios)
 | `idx_timestamp_partial` | `timestamp WHERE interval = '1day'` | PARTIAL BTREE | Daily price queries | Most common query pattern |
 
 **Index Strategy**:
+
 - Composite indexes for multi-column filters
 - Partial index for daily prices (most common interval)
 - Covering indexes (include columns to avoid table lookup)
@@ -152,6 +156,7 @@ CREATE TABLE price_history_2024_02 PARTITION OF price_history
 ```
 
 **When to Partition**:
+
 - Phase 2/3: NOT needed (tables <10M rows)
 - Phase 4+: Consider if >100M rows
 - Benefit: Faster queries (only scan relevant partitions)
@@ -160,22 +165,26 @@ CREATE TABLE price_history_2024_02 PARTITION OF price_history
 ### Storage Estimates
 
 **Assumptions**:
+
 - 500 tickers tracked
 - 1 year of daily data: 252 trading days per ticker
 - Total rows: 500 × 252 = 126,000 rows/year
 
 **Row Size**:
+
 - Fixed columns: ~100 bytes
 - OHLCV data: ~40 bytes
 - Indexes: ~80 bytes
 - **Total: ~220 bytes per row**
 
 **Storage**:
+
 - 1 year: 126K rows × 220 bytes = ~27 MB
 - 5 years: ~135 MB
 - 10 years: ~270 MB
 
 **With Intraday Data** (hourly):
+
 - 500 tickers × 252 days × 6.5 hours = 819,000 rows/year
 - 1 year: ~180 MB
 - 5 years: ~900 MB
@@ -203,6 +212,7 @@ Track which tickers to refresh in background job. Separate from price_history to
 ### Constraints
 
 #### Primary Key
+
 - `ticker`
 
 #### Check Constraints
@@ -282,6 +292,7 @@ backend/migrations/
 **File**: `backend/migrations/versions/002_phase2_price_history.py`
 
 **Upgrade Steps**:
+
 1. Create `price_history` table with all columns
 2. Create unique constraint `(ticker, timestamp, interval)`
 3. Create indexes (primary, unique, query optimization)
@@ -289,6 +300,7 @@ backend/migrations/
 5. Add comments to table and columns (documentation)
 
 **Downgrade Steps**:
+
 1. Drop indexes
 2. Drop table (CASCADE to remove all data)
 
@@ -299,11 +311,13 @@ backend/migrations/
 **File**: `backend/migrations/versions/003_phase2_ticker_watchlist.py`
 
 **Upgrade Steps**:
+
 1. Create `ticker_watchlist` table
 2. Create indexes
 3. Pre-populate with common stocks (AAPL, MSFT, etc.)
 
 **Downgrade Steps**:
+
 1. Drop table
 
 **Data Migration**: Insert common stock tickers
@@ -331,12 +345,14 @@ INSERT INTO ticker_watchlist (ticker, source, priority, added_at) VALUES
 **Purpose**: SQLModel ORM representation of price_history table
 
 **Key Features**:
+
 - Maps to `price_history` table
 - Includes validators for constraints
 - Provides helper methods (to_price_point, from_price_point)
 - Supports async queries
 
 **Relationship to Domain**:
+
 - NOT a domain entity (prices are external data)
 - Converts to/from `PricePoint` value object
 - Lives in adapters layer (persistence concern)
@@ -348,6 +364,7 @@ INSERT INTO ticker_watchlist (ticker, source, priority, added_at) VALUES
 **Purpose**: SQLModel ORM representation of ticker_watchlist table
 
 **Key Features**:
+
 - Maps to `ticker_watchlist` table
 - Includes priority management methods
 - Tracks refresh metadata
@@ -368,6 +385,7 @@ INSERT INTO ticker_watchlist (ticker, source, priority, added_at) VALUES
 ### Index Maintenance
 
 **PostgreSQL Auto-Vacuum**:
+
 - Runs automatically to reclaim space
 - Updates index statistics for query planner
 - No manual intervention needed
@@ -403,6 +421,7 @@ pool_recycle = 3600     # Recycle connections hourly
 
 ### Phase 2-3
 **Policy**: Retain all historical data indefinitely
+
 - **Rationale**: Required for backtesting, storage is cheap
 - **Cost**: ~1 GB per year (acceptable)
 
@@ -429,11 +448,13 @@ WHERE interval = '1min'
 ### Backup Strategy
 
 **PostgreSQL Backups**:
+
 - **Frequency**: Daily (automated)
 - **Retention**: 30 days
 - **Method**: AWS RDS automated snapshots (production)
 
 **Point-in-Time Recovery**:
+
 - WAL (Write-Ahead Logging) enabled
 - Can restore to any point within last 7 days
 
@@ -449,6 +470,7 @@ WHERE interval = '1min'
 ### Re-fetch Strategy
 
 If historical data is lost:
+
 1. Restore latest backup (gets most data)
 2. Identify gaps (query for missing days)
 3. Backfill gaps from Alpha Vantage (respecting rate limits)
@@ -461,6 +483,7 @@ If historical data is lost:
 **Fixture Files**: `backend/tests/fixtures/price_history_*.json`
 
 **Sample Data**:
+
 - 5 tickers (AAPL, MSFT, GOOGL, TSLA, SPY)
 - 1 year of daily prices (252 days each)
 - Realistic OHLCV data
@@ -489,6 +512,7 @@ DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 ```
 
 **Benefits**:
+
 - Fast (in-memory)
 - Isolated (each test gets fresh DB)
 - No cleanup needed

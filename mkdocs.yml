@@ -41,7 +41,8 @@ nav:
   - Planning:
       - Executive Summary: planning/executive-summary.md
       - Roadmap: planning/roadmap.md
-      - "Phase 5: Agent Platform Proposal": planning/agent-platform-proposal.md
+      - "Agent Platform — What Shipped": planning/agent-platform-completed.md
+      - "Agent Platform — Forward Proposal": planning/agent-platform-proposal.md
       - Features: planning/features.md
       - Project Strategy: planning/project_strategy.md
       - Future Ideas: planning/future-ideas.md

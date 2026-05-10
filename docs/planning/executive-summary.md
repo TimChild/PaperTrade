@@ -1,6 +1,6 @@
 # Zebu: Executive Summary
 
-**Version**: v1.0.0 — Production Deployed
+**Version**: v1.0.0 — Production Deployed  
 **Status**: Live at zebutrader.com (Phase 4 complete)
 
 ## What is Zebu?
@@ -145,7 +145,7 @@ See PROGRESS.md for the current reconciled test count.
 
 ---
 
-**Last Updated**: 2026-05-09
-**Project Repository**: https://github.com/TimChild/PaperTrade
-**Production URL**: https://zebutrader.com
+**Last Updated**: 2026-05-09  
+**Project Repository**: https://github.com/TimChild/PaperTrade  
+**Production URL**: https://zebutrader.com  
 **License**: MIT

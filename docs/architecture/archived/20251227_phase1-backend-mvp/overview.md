@@ -231,12 +231,14 @@ sequenceDiagram
 **Decision**: All portfolio state changes are recorded as immutable Transaction entities. Current state is derived by replaying the ledger.
 
 **Benefits**:
+
 - Complete audit trail automatically maintained
 - Point-in-time queries naturally supported (needed for Phase 3 backtesting)
 - No update anomalies or lost data
 - Simplified concurrency model
 
 **Trade-offs**:
+
 - Query performance requires aggregation (mitigated by caching in Phase 2+)
 - Cannot directly "update" a balance (must create compensating transaction)
 
@@ -244,18 +246,21 @@ sequenceDiagram
 **Decision**: Holdings are calculated on-demand from transactions, not stored separately.
 
 **Benefits**:
+
 - Single source of truth (transactions)
 - No synchronization issues between holdings and transactions
 - Simplified data model
 - Easier to implement new aggregation logic
 
 **Trade-offs**:
+
 - Must recalculate on each query (acceptable for MVP, optimize later with caching)
 
 ### 3. Clean Architecture Dependency Rule
 **Decision**: Strict layering with dependencies pointing inward only.
 
 **Benefits**:
+
 - Domain logic is pure and testable without external dependencies
 - Easy to swap implementations (InMemory vs SQLModel repositories)
 - Clear boundaries for testing
@@ -265,6 +270,7 @@ sequenceDiagram
 **Decision**: Application layer defines repository interfaces (ports), adapters implement them.
 
 **Benefits**:
+
 - Domain and application layers don't depend on database
 - Easy to test with in-memory implementations
 - Can swap databases without touching business logic
@@ -274,6 +280,7 @@ sequenceDiagram
 **Decision**: Use strongly-typed value objects (Money, Ticker, Quantity) instead of primitives.
 
 **Benefits**:
+
 - Compile-time type safety prevents errors
 - Encapsulates validation logic
 - Makes code more readable and self-documenting
@@ -283,6 +290,7 @@ sequenceDiagram
 **Decision**: Separate commands (writes) from queries (reads) in the application layer.
 
 **Benefits**:
+
 - Clear separation of concerns
 - Different optimization strategies for reads vs writes
 - Easier to reason about side effects
@@ -291,15 +299,18 @@ sequenceDiagram
 ## Technology Choices
 
 ### Backend Framework
+
 - **FastAPI**: Async support, auto-generated OpenAPI docs, excellent type integration
 - **SQLModel**: Combines Pydantic (validation) and SQLAlchemy (ORM)
 - **Python 3.12+**: Modern type hints, match statements, performance improvements
 
 ### Data Storage
+
 - **PostgreSQL**: ACID guarantees essential for financial transactions
 - **SQLite**: For local development and testing (same SQL dialect)
 
 ### Testing
+
 - **Pytest**: Standard Python testing framework
 - **InMemory Repositories**: Fast unit testing without database
 - **Test Containers**: Integration testing with real PostgreSQL (future)
@@ -326,6 +337,7 @@ sequenceDiagram
 ## Success Criteria
 
 ### Functional Requirements
+
 1. User can create a portfolio with initial cash deposit
 2. User can deposit additional cash to portfolio
 3. User can withdraw cash from portfolio (with sufficient balance validation)
@@ -337,6 +349,7 @@ sequenceDiagram
 9. User can view complete transaction history
 
 ### Non-Functional Requirements
+
 1. All transactions are immutable once created
 2. No direct balance storage - always derived from ledger
 3. Domain layer has zero external dependencies

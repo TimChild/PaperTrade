@@ -62,6 +62,7 @@ The trade form includes a backtest toggle that lets you execute trades at histor
 ### Trade Validation
 
 Trades are validated before execution:
+
 - **Sufficient funds** — Cash balance must cover the total cost (BUY)
 - **Sufficient shares** — Must own enough shares (SELL)
 - **Valid symbol** — Ticker must exist and be tradable
@@ -95,6 +96,7 @@ Available cash, updated after every trade.
 ### Transaction History
 
 Chronological list of all activity:
+
 - **Deposit** — Initial funding or subsequent deposits
 - **Withdrawal** — Cash withdrawals
 - **Buy** — Stock purchases
@@ -161,6 +163,7 @@ Prices are cached. Hard-refresh the page (Cmd+Shift+R / Ctrl+Shift+R) or wait fo
 React Query may take 1-2 seconds to refetch. Refresh the page if the portfolio doesn't appear.
 
 ### Docker development issues
+
 - Check services are running: `docker compose ps`
 - View logs: `docker compose logs -f backend`
 - Backend health: `curl http://localhost:8000/health`

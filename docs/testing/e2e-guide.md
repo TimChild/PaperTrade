@@ -15,6 +15,7 @@ task dev:frontend           # Frontend dev server
 ```
 
 **Service URLs:**
+
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:8000/docs
 - Health Check: http://localhost:8000/health
@@ -37,6 +38,7 @@ Quick validation checklist for releases or after major changes:
 8. **Error Handling** → Invalid symbols, insufficient funds show clear errors
 
 ### Test Data
+
 - **Valid Symbols**: AAPL, IBM (IBM required for demo API key in CI)
 - **Test Portfolios**: Use timestamp in name: "Test Portfolio 2026-01-26"
 - **Initial Deposit**: $10,000 typical test amount
@@ -64,17 +66,20 @@ task docker:clean  # WARNING: Deletes data
 ### Setup
 
 1. **Install Playwright** (if needed):
+
    ```bash
    cd frontend
    npx playwright install
    ```
 
 2. **Start Services**:
+
    ```bash
    task docker:build && task docker:up:all
    ```
 
 3. **Run Tests**:
+
    ```bash
    # Headless
    task test:e2e
@@ -94,6 +99,7 @@ task docker:clean  # WARNING: Deletes data
 Playwright MCP server enables browser automation via Model Context Protocol.
 
 **Prerequisites:**
+
 - MCP configured in `.vscode/mcp.json`
 - Services running: `task docker:up:all`
 
@@ -116,11 +122,13 @@ mcp_microsoft_pla_browser_network_requests()
 ```
 
 **Test User Credentials:**
+
 - Email: `orchestrator+clerk_test@papertrade.dev`
 - Password: `test-clerk-password`
 - 2FA: `424242`
 
 **Tips:**
+
 - Always take snapshot before interacting (gets current element refs)
 - Use IBM ticker for demo API key compatibility
 - Check console/network after critical operations
@@ -135,11 +143,13 @@ For orchestrators running comprehensive QA sessions.
 ### When to Run QA
 
 **Regular:**
+
 - Weekly quality checks
 - Before releases
 - After merging 3+ significant PRs
 
 **Event-Triggered:**
+
 - Major refactoring
 - Critical bug fixes
 - User-reported issues
@@ -147,12 +157,14 @@ For orchestrators running comprehensive QA sessions.
 ### QA Procedure
 
 1. **Assess State**
+
    ```bash
    git log --oneline --since="7 days ago" | head -20
    gh pr list --state open
    ```
 
 2. **Run QA Task**
+
    ```bash
    # Use reusable template
    gh agent-task create --custom-agent qa \
@@ -164,6 +176,7 @@ For orchestrators running comprehensive QA sessions.
 3. **Monitor** (30-45 min typical duration)
 
 4. **Review Report**
+
    ```bash
    ls -lt agent_docs/progress/ | grep qa | head -1
    cat agent_docs/progress/YYYY-MM-DD_HH-MM-SS_e2e-qa-report.md

@@ -10,11 +10,13 @@ This document lists items that still require manual updates to complete the tran
 The GitHub repository name is still `TimChild/PaperTrade` and needs to be manually renamed.
 
 **Steps**:
+
 1. Go to repository Settings → General
 2. Change repository name from "PaperTrade" to "Zebu" or "ZebuTrader"
 3. Update any external integrations that reference the old repository name
 
 **Impact**:
+
 - Git clone URLs will change
 - Existing clones will need to update their remote URL: `git remote set-url origin https://github.com/TimChild/Zebu.git`
 - CI badges in README.md will need updating
@@ -23,16 +25,19 @@ The GitHub repository name is still `TimChild/PaperTrade` and needs to be manual
 **Status**: ⏳ Optional (deferred)
 
 Database identifiers were intentionally kept as `papertrade` to avoid requiring immediate migration:
+
 - Database name: `papertrade_dev` (development), `papertrade` (production)
 - Database user: `papertrade`
 - SQLite filename: `papertrade.db`
 
 **When to migrate**:
+
 - When doing a fresh production deployment
 - During a planned maintenance window
 - When migrating to new infrastructure
 
 **Migration steps** (when ready):
+
 1. Create database dump: `pg_dump -U papertrade papertrade > backup.sql`
 2. Create new database: `CREATE DATABASE zebu_dev;`
 3. Create new user: `CREATE USER zebu WITH PASSWORD 'secure_password';`
@@ -46,6 +51,7 @@ Database identifiers were intentionally kept as `papertrade` to avoid requiring 
 The production Proxmox VM needs to be redeployed with the new branding.
 
 **Steps**:
+
 1. Update `.env.proxmox` with new configuration
 2. Run deployment script: `./scripts/proxmox-vm/deploy.sh`
 3. Update PROXMOX_VM_HOSTNAME to `zebu` (currently may be `papertrade`)
@@ -54,6 +60,7 @@ The production Proxmox VM needs to be redeployed with the new branding.
 6. Update DNS/domain configuration for zebutrader.com
 
 **Files to review before deployment**:
+
 - `.env.proxmox`
 - `scripts/proxmox-vm/deploy.sh`
 - `scripts/proxmox-vm/create-vm.sh`
@@ -69,6 +76,7 @@ git clone https://github.com/TimChild/PaperTrade.git
 ```
 
 **Files affected**:
+
 - `scripts/proxmox-vm/deploy.sh`
 - `.github/copilot-instructions.md` (example path references)
 
@@ -78,6 +86,7 @@ git clone https://github.com/TimChild/PaperTrade.git
 **Status**: ✅ Intentionally Preserved
 
 Historical documentation is intentionally unchanged to preserve project history:
+
 - `agent_tasks/progress/` - Historical agent work logs
 - `docs/architecture/` - Historical architecture decisions
 - Git commit messages
@@ -88,6 +97,7 @@ Historical documentation is intentionally unchanged to preserve project history:
 **Status**: ✅ Acceptable
 
 Some configuration files contain local file paths that reference the old repository name:
+
 - `.vscode/mcp.json` - Line 39: `/Users/timchild/github/PaperTrade`
 - `.github/copilot-instructions.md` - pylancePythonEnvironments path
 
@@ -101,6 +111,7 @@ Some configuration files contain local file paths that reference the old reposit
 Domain `zebutrader.com` is already registered (per Task 089).
 
 **Steps**:
+
 1. Configure NPMplus reverse proxy for zebutrader.com
 2. Update CORS origins in backend configuration
 3. Update frontend VITE_API_BASE_URL for production
@@ -110,6 +121,7 @@ Domain `zebutrader.com` is already registered (per Task 089).
 **Status**: ⏳ Review Needed
 
 Any monitoring or alerting services may reference "PaperTrade":
+
 - Application names in monitoring dashboards
 - Alert notification messages
 - Log aggregation service names
@@ -120,6 +132,7 @@ Any monitoring or alerting services may reference "PaperTrade":
 **Status**: ⏳ Review Needed
 
 Services that may need updating:
+
 - Clerk authentication (check application name in dashboard)
 - Alpha Vantage API (no changes needed - API key works regardless)
 - Any analytics or error tracking services

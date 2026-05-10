@@ -7,6 +7,7 @@ The Application Layer orchestrates the domain logic to fulfill user requests. It
 ## Dependency Rules
 
 The Application Layer:
+
 - ✅ MAY depend on the Domain layer
 - ✅ MAY define Port interfaces (contracts for adapters)
 - ✅ MAY use dependency injection to receive repository implementations
@@ -22,6 +23,7 @@ We separate **Commands** (write operations) from **Queries** (read operations):
 - **Queries**: Read state, return comprehensive data, have no side effects
 
 This separation provides:
+
 - Clear intent (is this changing state?)
 - Different optimization strategies (commands need transactions, queries can be cached)
 - Easier testing (queries are pure, commands have clear side effects)
@@ -223,12 +225,14 @@ Executes a buy or sell trade for a stock. Records a BUY or SELL transaction. Val
 #### Business Rules
 
 ##### BUY Rules
+
 1. **Positive Quantity**: quantity MUST be positive
 2. **Positive Price**: price_per_share MUST be positive
 3. **Sufficient Cash**: Portfolio MUST have enough cash for (quantity × price_per_share)
 4. **Currency Match**: price_per_share currency MUST match portfolio currency
 
 ##### SELL Rules
+
 1. **Positive Quantity**: quantity MUST be positive
 2. **Positive Price**: price_per_share MUST be positive
 3. **Sufficient Shares**: Portfolio MUST hold at least quantity shares of ticker
@@ -237,6 +241,7 @@ Executes a buy or sell trade for a stock. Records a BUY or SELL transaction. Val
 #### Process Flow
 
 **For BUY**:
+
 1. Validate input parameters
 2. Retrieve Portfolio using PortfolioRepository
 3. Get all Transactions using TransactionRepository
@@ -249,6 +254,7 @@ Executes a buy or sell trade for a stock. Records a BUY or SELL transaction. Val
 10. Return transaction_id and total_cost
 
 **For SELL**:
+
 1. Validate input parameters
 2. Retrieve Portfolio using PortfolioRepository
 3. Get all Transactions using TransactionRepository
@@ -584,6 +590,7 @@ None
 ### Concurrency Strategy
 
 Phase 1 uses **optimistic concurrency** at the database level:
+
 - Portfolio and Transaction tables have version columns
 - Concurrent modifications detected by version mismatch
 - Retry logic in adapters (not in use cases)
@@ -593,6 +600,7 @@ Phase 1 uses **optimistic concurrency** at the database level:
 **Commands** are **not idempotent** by design - calling CreatePortfolio twice creates two portfolios.
 
 Future phases may add:
+
 - Idempotency keys for commands
 - Deduplication based on client-provided request IDs
 
@@ -640,12 +648,14 @@ Adapters (FastAPI) convert exceptions to HTTP responses with this structure:
 Each use case should have unit tests using in-memory repository implementations:
 
 **Test Categories**:
+
 1. **Happy Path**: Valid inputs produce expected results
 2. **Validation**: Invalid inputs raise appropriate exceptions
 3. **Business Rules**: Rule violations raise appropriate exceptions
 4. **Edge Cases**: Empty portfolios, zero balances, exact balance matches
 
 **Example Test Cases for ExecuteTrade (BUY)**:
+
 - ✅ Valid buy with sufficient funds succeeds
 - ✅ Buy with insufficient funds raises InsufficientFundsError
 - ✅ Buy with zero quantity raises InvalidQuantityError
@@ -659,6 +669,7 @@ Each use case should have unit tests using in-memory repository implementations:
 Integration tests use real database (SQLite or PostgreSQL):
 
 **Test Categories**:
+
 1. **Persistence**: Data survives round-trip to database
 2. **Transactions**: Atomic operations succeed or roll back together
 3. **Concurrency**: Multiple operations don't corrupt state
@@ -695,11 +706,13 @@ Integration tests use real database (SQLite or PostgreSQL):
 Use cases return DTOs, not domain entities, to decouple the API from the domain model.
 
 ### DTO Naming Convention
+
 - **Input DTOs**: `{UseCaseName}Command` (e.g., `ExecuteTradeCommand`)
 - **Output DTOs**: `{UseCaseName}Result` (e.g., `ExecuteTradeResult`)
 - **Nested DTOs**: `{EntityName}DTO` (e.g., `HoldingDTO`, `TransactionDTO`)
 
 ### DTO Principles
+
 - DTOs are **immutable data containers**
 - DTOs do **not contain business logic**
 - DTOs can be **serialized to JSON** (for API responses)
@@ -721,6 +734,7 @@ ExecuteTrade(
 ```
 
 **Benefits**:
+
 - Testable (inject mock repositories)
 - Flexible (swap implementations)
 - Explicit dependencies (no hidden global state)
@@ -740,6 +754,7 @@ ExecuteTrade(
 ✅ GetTransactionHistory (with pagination)
 
 ### Future Use Cases (Phase 2+)
+
 - UpdatePortfolio (rename)
 - ArchivePortfolio (soft delete)
 - GetPortfolioPerformance (time-series value)

@@ -1,7 +1,7 @@
 # Production Readiness Checklist
 
-**Last Updated**: January 11, 2026
-**Agent**: quality-infra
+**Last Updated**: January 11, 2026  
+**Agent**: quality-infra  
 **Purpose**: Comprehensive checklist for production deployment verification
 
 ---
@@ -11,6 +11,7 @@
 This checklist ensures your Zebu deployment is production-ready. Complete all items before deploying to production or exposing to real users.
 
 **Deployment Stages:**
+
 1. **Pre-Deployment**: Setup and configuration
 2. **Deployment**: Initial deployment verification
 3. **Post-Deployment**: Ongoing monitoring and maintenance
@@ -350,6 +351,7 @@ This checklist ensures your Zebu deployment is production-ready. Complete all it
 For small-scale production (personal use, small team, low traffic):
 
 **Acceptable Simplifications:**
+
 - Manual monitoring instead of automated alerting
 - Weekly backup verification instead of daily
 - Manual security updates instead of automated
@@ -357,6 +359,7 @@ For small-scale production (personal use, small team, low traffic):
 - Visual monitoring instead of metrics dashboards
 
 **Non-Negotiable:**
+
 - HTTPS/SSL must be configured
 - Secrets must be strong and secure
 - Regular backups must be taken
@@ -368,6 +371,7 @@ For small-scale production (personal use, small team, low traffic):
 ## Production Readiness Score
 
 **Calculate your score:**
+
 - Pre-Deployment: _____ / 63 items
 - Deployment Verification: _____ / 24 items
 - Post-Deployment: _____ / 36 items
@@ -375,6 +379,7 @@ For small-scale production (personal use, small team, low traffic):
 **Overall: _____ / 123 items**
 
 **Recommended Minimum Scores:**
+
 - Pre-Deployment: 90% (57/63) before going live
 - Deployment Verification: 100% (24/24) before declaring success
 - Post-Deployment: 80% (29/36) within first week of production
@@ -394,6 +399,7 @@ For small-scale production (personal use, small team, low traffic):
 ---
 
 **Production Deployment Best Practices:**
+
 - Start small, iterate, improve
 - Document everything
 - Test in staging first

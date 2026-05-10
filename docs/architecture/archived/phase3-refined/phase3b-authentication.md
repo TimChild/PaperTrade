@@ -1,8 +1,8 @@
 # Phase 3b: User Authentication with Clerk
 
-**Duration**: 2-3 days
-**Priority**: CRITICAL (blocks production deployment)
-**Approach**: Third-party authentication (Clerk)
+**Duration**: 2-3 days  
+**Priority**: CRITICAL (blocks production deployment)  
+**Approach**: Third-party authentication (Clerk)  
 **Last Updated**: 2026-01-04
 
 ## Decision Summary
@@ -83,16 +83,19 @@ graph TB
 ### Key Principle: Auth is Infrastructure, Not Domain
 
 **Domain Layer** remains pure and auth-agnostic:
+
 - No knowledge of Clerk, JWT, or tokens
 - Works with `AuthenticatedUser` abstraction
 - Time-travel and backtesting logic stays in domain
 
 **Application Layer** uses `AuthPort` interface:
+
 - Verifies tokens via port
 - Gets user information via port
 - No direct Clerk dependency
 
 **Adapters Layer** implements `AuthPort`:
+
 - `ClerkAuthAdapter`: Production implementation using Clerk SDK
 - `InMemoryAuthAdapter`: Testing implementation with no external dependencies
 
@@ -118,10 +121,12 @@ graph TB
 ### ClerkAuthAdapter Implementation
 
 **Dependencies**:
+
 - `clerk-backend-api` (official Python SDK)
 - Environment variables: `CLERK_SECRET_KEY`
 
 **Responsibilities**:
+
 1. Verify Clerk session tokens from Authorization header
 2. Decode and validate token signature
 3. Extract user information from token claims
@@ -142,6 +147,7 @@ graph TB
 **Purpose**: Testing without Clerk dependency
 
 **Features**:
+
 - Pre-configured test users
 - No network calls
 - Deterministic behavior
@@ -168,11 +174,13 @@ Test creates InMemoryAuthAdapter with test users
 | `GET /api/v1/market/*` | GET | ❌ No | Public market data |
 
 **Authorization Pattern**:
+
 - List operations: Filter by `owner_id == current_user.id`
 - Single resource operations: Verify ownership, return 404 if not owner
 - Create operations: Auto-set `owner_id = current_user.id`
 
 **Why 404 instead of 403?**
+
 - Security: Don't leak existence of other users' portfolios
 - UX: Consistent "not found" message for missing/unauthorized
 
@@ -206,6 +214,7 @@ App wrapped in <ClerkProvider publishableKey={...}>
 ### Token Management
 
 **Automatic Token Injection**:
+
 - Clerk SDK automatically adds Authorization header to API requests
 - Tokens refresh automatically before expiry
 - No manual token storage or management needed
@@ -256,6 +265,7 @@ Frontend configures API client with Clerk session
 | `created_at` | TIMESTAMP | Unchanged | Creation timestamp |
 
 **Constraints**:
+
 - `owner_id` references `users.id` ON DELETE CASCADE
 - Index on `owner_id` for fast lookups
 - `owner_id` NOT NULL (every portfolio must have an owner)
@@ -265,12 +275,14 @@ Frontend configures API client with Clerk session
 **Existing Portfolios** (development data):
 
 **Option A: Assign to Test User** (RECOMMENDED)
+
 1. Create test user in Clerk (e.g., "test@papertrade.local")
 2. Add test user ID to users table
 3. Update all existing portfolios: `SET owner_id = '<test_user_clerk_id>'`
 4. Benefit: Preserves test data for development
 
 **Option B: Delete Existing Data**
+
 1. Truncate portfolios table
 2. Fresh start with authenticated users
 3. Benefit: Clean slate, no migration complexity
@@ -282,6 +294,7 @@ Frontend configures API client with Clerk session
 ### Token Security
 
 **Clerk Handles**:
+
 - Token generation and signing
 - Token expiration and refresh
 - Secure token storage (httpOnly cookies)
@@ -289,6 +302,7 @@ Frontend configures API client with Clerk session
 - Session management
 
 **Our Responsibility**:
+
 - Validate tokens on every protected endpoint
 - Use HTTPS in production
 - Configure CORS appropriately
@@ -297,6 +311,7 @@ Frontend configures API client with Clerk session
 ### Password Security
 
 **Clerk Handles**:
+
 - Password hashing (bcrypt/Argon2)
 - Password strength requirements
 - Breach detection
@@ -308,6 +323,7 @@ Frontend configures API client with Clerk session
 ### Authorization Security
 
 **Our Responsibility**:
+
 - Verify portfolio ownership on every request
 - Filter queries by authenticated user ID
 - Return 404 for unauthorized access (not 403)
@@ -318,6 +334,7 @@ Frontend configures API client with Clerk session
 ### Unit Tests (Domain Layer)
 
 **No Auth Dependencies**:
+
 - Domain logic remains pure
 - Tests pass `user_id` as parameter
 - No Clerk mocking needed
@@ -325,6 +342,7 @@ Frontend configures API client with Clerk session
 ### Integration Tests (Use Cases)
 
 **Use InMemoryAuthAdapter**:
+
 - Create test users in adapter
 - No Clerk service dependency
 - Fast, deterministic tests
@@ -343,6 +361,7 @@ Test: User can only see their own portfolios
 ### API Tests
 
 **Mock Clerk Token Validation**:
+
 - Use test tokens with known user IDs
 - Mock ClerkAuthAdapter.verify_token()
 - Test authorization logic without Clerk service
@@ -350,6 +369,7 @@ Test: User can only see their own portfolios
 ### E2E Tests
 
 **Use Clerk Test Environment**:
+
 - Clerk provides test environment for E2E
 - Create test users programmatically
 - Full authentication flow tested
@@ -360,6 +380,7 @@ Test: User can only see their own portfolios
 **Recommended Order** (2-3 days total):
 
 ### Day 1: Backend Foundation
+
 1. Add `clerk-backend-api` dependency
 2. Define `AuthPort` interface
 3. Implement `ClerkAuthAdapter`
@@ -368,6 +389,7 @@ Test: User can only see their own portfolios
 6. Add unit tests for adapters
 
 ### Day 2: Database & API
+
 1. Create database migration (users table, portfolios.owner_id)
 2. Run migration on development database
 3. Update API endpoints with auth middleware
@@ -375,6 +397,7 @@ Test: User can only see their own portfolios
 5. Add API integration tests
 
 ### Day 3: Frontend Integration
+
 1. Add `@clerk/clerk-react` dependency
 2. Wrap app in ClerkProvider
 3. Add SignIn and SignUp routes
@@ -385,6 +408,7 @@ Test: User can only see their own portfolios
 ## Success Criteria
 
 **Backend**:
+
 - [ ] ClerkAuthAdapter validates tokens from Clerk
 - [ ] InMemoryAuthAdapter works without Clerk dependency
 - [ ] All portfolio endpoints require authentication
@@ -393,6 +417,7 @@ Test: User can only see their own portfolios
 - [ ] Migration assigns existing portfolios to test user
 
 **Frontend**:
+
 - [ ] Users can sign up with email/password
 - [ ] Users can sign in with email/password
 - [ ] User button shows profile/sign out
@@ -401,11 +426,13 @@ Test: User can only see their own portfolios
 - [ ] Token automatically included in API requests
 
 **Testing**:
+
 - [ ] 90%+ of tests use InMemoryAuthAdapter (no Clerk)
 - [ ] API tests verify authorization logic
 - [ ] E2E test covers sign up → create portfolio → sign out → sign in flow
 
 **Documentation**:
+
 - [ ] API docs updated with authentication requirements
 - [ ] Environment variables documented (CLERK_SECRET_KEY, etc.)
 - [ ] Migration guide for existing data
@@ -436,31 +463,37 @@ VITE_CLERK_PUBLISHABLE_KEY=pk_test_...  # From Clerk dashboard
 ## Dependencies
 
 **Requires**:
+
 - None (independent feature)
 
 **Blocks**:
+
 - Production deployment (cannot deploy without auth)
 - Multi-user features
 - User-specific analytics (future)
 
 **Parallel Work**:
+
 - Can develop simultaneously with Phase 3a (SELL orders)
 - Can deploy before or after SELL implementation
 
 ## Notes
 
 **Design Decisions**:
+
 - Clerk over custom JWT: Saves time, not core value
 - Adapter pattern: Preserves Clean Architecture
 - InMemory adapter: 90% of tests infrastructure-free
 - 404 over 403: Security through obscurity
 
 **What We Lose vs Custom Auth**:
+
 - Full control over authentication logic
 - Zero vendor dependency
 - No recurring costs
 
 **What We Gain**:
+
 - 3-4 weeks of development time saved
 - Professional auth UI out-of-the-box
 - Better security (managed by experts)
@@ -468,6 +501,7 @@ VITE_CLERK_PUBLISHABLE_KEY=pk_test_...  # From Clerk dashboard
 - Focus on core product features
 
 **Future Enhancements**:
+
 - Social login (Google, GitHub) - Already supported by Clerk
 - Two-factor authentication - Clerk supports this
 - Email verification - Clerk handles this

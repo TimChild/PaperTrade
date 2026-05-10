@@ -1,6 +1,6 @@
 # Phase 2 Market Data Integration - Testing Strategy
 
-**Created**: 2025-12-28
+**Created**: 2025-12-28  
 **Status**: Approved
 
 ## Overview
@@ -18,6 +18,7 @@ This document outlines the comprehensive testing strategy for Phase 2 Market Dat
 ```
 
 **Distribution**:
+
 - **70% Unit Tests**: Fast, isolated, test business logic
 - **25% Integration Tests**: Test component interactions (DB, Redis, API)
 - **5% E2E Tests**: Test full user journeys (manual + automated)
@@ -41,7 +42,7 @@ This document outlines the comprehensive testing strategy for Phase 2 Market Dat
 ✅ OHLCV data validation (low ≤ high, etc.)
 ```
 
-**Test Count**: ~15 tests
+**Test Count**: ~15 tests  
 **Execution Time**: <10ms
 
 #### Application Layer Tests
@@ -58,7 +59,7 @@ This document outlines the comprehensive testing strategy for Phase 2 Market Dat
 ✅ get_supported_tickers() returns all tickers
 ```
 
-**Test Count**: ~12 tests
+**Test Count**: ~12 tests  
 **Execution Time**: <50ms
 
 **Updated Use Cases**:
@@ -71,7 +72,7 @@ This document outlines the comprehensive testing strategy for Phase 2 Market Dat
 ✅ GetHoldings handles missing ticker (price = $0)
 ```
 
-**Test Count**: ~10 tests
+**Test Count**: ~10 tests  
 **Execution Time**: <100ms
 
 #### Infrastructure Layer Tests
@@ -88,8 +89,8 @@ This document outlines the comprehensive testing strategy for Phase 2 Market Dat
 ✅ Thread safety (concurrent requests don't over-consume)
 ```
 
-**Test Count**: ~15 tests
-**Execution Time**: <100ms
+**Test Count**: ~15 tests  
+**Execution Time**: <100ms  
 **Tools**: fakeredis (in-memory Redis mock)
 
 **PriceCache** (Unit Tests with fakeredis):
@@ -104,8 +105,8 @@ This document outlines the comprehensive testing strategy for Phase 2 Market Dat
 ✅ TTL expiration (price removed after timeout)
 ```
 
-**Test Count**: ~10 tests
-**Execution Time**: <100ms
+**Test Count**: ~10 tests  
+**Execution Time**: <100ms  
 **Tools**: fakeredis
 
 ### 2. Integration Tests (Moderate Speed, Real Dependencies)
@@ -144,8 +145,8 @@ async def test_get_current_price_success():
 ✅ Error mapping (API errors → PaperTrade exceptions)
 ```
 
-**Test Count**: ~15 tests
-**Execution Time**: <500ms (replaying cassettes)
+**Test Count**: ~15 tests  
+**Execution Time**: <500ms (replaying cassettes)  
 **Tools**: pytest-recording
 
 **Recording Cassettes** (one-time setup):
@@ -161,6 +162,7 @@ git add tests/cassettes/*.yaml
 ```
 
 **Cassette Files**:
+
 - `cassettes/test_get_current_price_aapl.yaml`
 - `cassettes/test_get_current_price_ticker_not_found.yaml`
 - `cassettes/test_get_current_price_rate_limited.yaml`
@@ -199,8 +201,8 @@ async def test_db():
 ✅ Index usage (EXPLAIN query plan)
 ```
 
-**Test Count**: ~15 tests
-**Execution Time**: <1s (SQLite fast)
+**Test Count**: ~15 tests  
+**Execution Time**: <1s (SQLite fast)  
 **Tools**: SQLite (in-memory), Alembic (migrations)
 
 #### WatchlistManager (With Test Database)
@@ -216,7 +218,7 @@ async def test_db():
 ✅ Common stocks pre-populated after migration
 ```
 
-**Test Count**: ~8 tests
+**Test Count**: ~8 tests  
 **Execution Time**: <500ms
 
 ### 3. End-to-End Tests (Slow, Full Stack)
@@ -321,6 +323,7 @@ class NoOpCache:
 ### Fixtures
 
 **Backend Fixtures** (`backend/tests/fixtures/`):
+
 - `price_points.json` - Sample price data (5 tickers, 1 year)
 - `alpha_vantage_responses/` - Sample API responses
 - `market_data_scenarios.py` - Test scenario builders
@@ -365,6 +368,7 @@ interactions:
 ```
 
 **Benefits**:
+
 - No API key needed for tests
 - Fast (no network calls)
 - Deterministic (same response every time)
@@ -407,6 +411,7 @@ def test_price_cache_performance(benchmark, price_cache):
 **Tools**: Locust or k6
 
 **Scenario**:
+
 - 100 concurrent users
 - Each views portfolio (5 stocks)
 - Expected: <500ms response time
@@ -419,6 +424,7 @@ def test_price_cache_performance(benchmark, price_cache):
 **Tool**: CodeQL (GitHub built-in)
 
 **Checks**:
+
 - ✅ No hardcoded secrets (API keys, passwords)
 - ✅ No SQL injection (parametrized queries only)
 - ✅ No command injection
@@ -430,6 +436,7 @@ def test_price_cache_performance(benchmark, price_cache):
 **Tool**: git-secrets or GitHub secret scanning
 
 **Checks**:
+
 - ✅ .env not committed
 - ✅ API keys not in code
 - ✅ API keys not in logs
@@ -440,6 +447,7 @@ def test_price_cache_performance(benchmark, price_cache):
 **Tools**: pip-audit (backend), npm audit (frontend)
 
 **Checks**:
+
 - ✅ No known vulnerabilities in dependencies
 - ✅ Dependencies up to date
 
@@ -448,6 +456,7 @@ def test_price_cache_performance(benchmark, price_cache):
 ### GitHub Actions Workflow
 
 **On Pull Request**:
+
 1. Lint (ruff, ESLint)
 2. Type check (Pyright, TypeScript)
 3. Unit tests (pytest, Vitest)
@@ -456,6 +465,7 @@ def test_price_cache_performance(benchmark, price_cache):
 6. Coverage report (>80% target)
 
 **On Merge to Main**:
+
 1. All PR checks
 2. E2E tests (optional, manual)
 3. Deploy to staging (optional)
@@ -569,6 +579,7 @@ now = datetime.now()  # Wrong (naive datetime)
 ## Review Checklist
 
 Before merging PR:
+
 - [ ] All tests passing in CI
 - [ ] Coverage meets targets (85%+)
 - [ ] No flaky tests (run 3x to verify)

@@ -4,6 +4,7 @@
 
 ### Database (PostgreSQL)
 **Storage**: Individual price points per day
+
 - Table: `price_history`
 - Unique constraint: `(ticker, timestamp, source, interval)`
 - Each row = one price point for one day
@@ -11,12 +12,14 @@
 
 ### Redis Cache
 **Storage**: Date range chunks (current approach)
+
 - Key format: `{ticker}:history:{start_date}:{end_date}:{interval}`
 - Example: `AAPL:history:2026-01-01:2026-01-31:1day`
 - Stores: JSON array of ALL price points in that range
 
 ### API Layer (Alpha Vantage)
 **Fetches**: Batch data (all available history at once)
+
 - Returns: ~100 days of daily data in one API call
 - Rate limit: 5 calls/min, 500/day
 
@@ -44,6 +47,7 @@ AAPL:1day:2026-01-03  →  { ticker, price, timestamp, ... }
 ```
 
 **Cache lookup for range (Jan 1-31)**:
+
 - Check each day: `AAPL:1day:2026-01-01`, `AAPL:1day:2026-01-02`, ...
 - Return all cached days found
 - Only fetch missing days from database or API
@@ -65,10 +69,12 @@ AAPL:1day:2026-01-03  →  { ticker, price, timestamp, ... }
 ### Performance Analysis
 
 **Current approach (range caching)**:
+
 - Best case (exact match): 1 Redis GET → instant
 - Worst case (subset): SCAN all keys + filter → Task 155 complexity
 
 **Per-day approach**:
+
 - Best case (all days cached): 30 Redis GETs (pipelined) → ~10-20ms
 - Worst case (no cache): 30 Redis GETs → 30 DB queries → ~100ms
 
@@ -86,16 +92,19 @@ AAPL:1day:2026-01-03  →  { ticker, price, timestamp, ... }
 ### Implementation Strategy
 
 **Phase 1: Change Redis cache to per-day keys**
+
 - Modify `PriceCache.set_history()` to store each price point individually
 - Modify `PriceCache.get_history()` to fetch multiple days via pipeline
 - Update TTL logic (same per-day, just applied to individual keys)
 
 **Phase 2: Update Alpha Vantage adapter**
+
 - When API returns 100 days of data, store each day individually in Redis
 - Cache lookup checks all requested days, returns partial hits
 - Only fetch truly missing days from API
 
 **Phase 3: Optimize**
+
 - Use Redis pipelines (MGET) for batch day fetches
 - Consider Redis sorted sets for range queries if needed later
 
@@ -180,12 +189,14 @@ async def get_price_history(ticker, start, end, interval):
 ## Comparison to Task 155
 
 **Task 155 (subset matching)**:
+
 - Keeps range-based caching
 - Adds SCAN logic to find broader cached ranges
 - Filters cached data to requested subset
 - More complex, harder to debug
 
 **Per-day caching**:
+
 - Changes storage model
 - Simpler lookup (pipeline MGET)
 - Matches database granularity
@@ -196,6 +207,7 @@ async def get_price_history(ticker, start, end, interval):
 **Recommendation**: Go with per-day caching.
 
 **Rationale**:
+
 1. Aligns with database storage model (one row per day)
 2. Simpler mental model and code
 3. Better cache utilization (any overlapping days reused)
@@ -203,6 +215,7 @@ async def get_price_history(ticker, start, end, interval):
 5. Avoids Task 155 complexity (SCAN, key parsing, subset filtering)
 
 **Tradeoff**:
+
 - Slightly more Redis operations (pipelined, ~10-20ms for 30 days)
 - Worth it for simplicity and maintainability
 

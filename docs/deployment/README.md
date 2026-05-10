@@ -22,11 +22,13 @@ This directory contains comprehensive guides for deploying Zebu to production en
 ### Recommended Deployment Path
 
 **For Production (Proxmox VM)**:
+
 1. Follow **[Proxmox VM Deployment](./proxmox-vm-deployment.md)** guide
 2. Configure **[Domain & SSL](./domain-setup.md)** for custom domain
 3. Verify with **[Production Checklist](./production-checklist.md)**
 
 **For Local Development**:
+
 - Use Docker Compose: `task docker:up` (see root README.md)
 - No deployment needed - runs entirely on localhost
 
@@ -37,6 +39,7 @@ This directory contains comprehensive guides for deploying Zebu to production en
 ### 📘 [Proxmox VM Deployment](./proxmox-vm-deployment.md)
 
 **Complete production deployment guide** covering:
+
 - VM creation using community Docker script
 - Application deployment automation
 - Service management (start/stop/restart/logs)
@@ -44,6 +47,7 @@ This directory contains comprehensive guides for deploying Zebu to production en
 - CI/CD integration examples
 
 **Prerequisites**:
+
 - Proxmox VE 8.x+ server
 - SSH access to Proxmox host
 - Basic familiarity with Docker
@@ -55,6 +59,7 @@ This directory contains comprehensive guides for deploying Zebu to production en
 ### 🌐 [Domain & SSL Setup](./domain-setup.md)
 
 **Configure custom domain with automatic HTTPS** covering:
+
 - DNS configuration (Cloudflare example)
 - Reverse proxy setup (NPMplus)
 - SSL certificate automation (Let's Encrypt)
@@ -62,6 +67,7 @@ This directory contains comprehensive guides for deploying Zebu to production en
 - Troubleshooting common issues
 
 **Prerequisites**:
+
 - Deployed Zebu application (see Proxmox guide above)
 - Registered domain name
 - Access to DNS provider
@@ -74,6 +80,7 @@ This directory contains comprehensive guides for deploying Zebu to production en
 ### ✅ [Production Checklist](./production-checklist.md)
 
 **Comprehensive verification and best practices** covering:
+
 - Pre-deployment setup (infrastructure, security, database)
 - Deployment verification (services, network, performance)
 - Post-deployment operations (monitoring, backups, maintenance)
@@ -81,6 +88,7 @@ This directory contains comprehensive guides for deploying Zebu to production en
 - Incident response procedures
 
 **Use Cases**:
+
 - Final verification before public launch
 - Periodic security audits
 - Onboarding new team members
@@ -129,6 +137,7 @@ This directory contains comprehensive guides for deploying Zebu to production en
 ```
 
 **Key Points**:
+
 - **VM-based**: Full hardware virtualization for security and isolation
 - **Docker Compose**: All services in containers
 - **Reverse Proxy**: Handles SSL/TLS termination and routing

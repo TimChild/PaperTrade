@@ -5,6 +5,7 @@ This guide documents the alert rules configured in Grafana Cloud for Zebu produc
 ## Alert Philosophy
 
 Alerts should:
+
 - **Actionable**: Each alert should require human intervention
 - **Urgent**: Alerts indicate issues that need immediate attention
 - **Specific**: Clear diagnosis and remediation path
@@ -37,12 +38,14 @@ sum(rate({container="zebu-backend-prod"} | json | level="error" [5m])) > 0.1
 **Duration**: 5 minutes
 
 **Notification**:
+
 - **Summary**: "Backend error rate is above 0.1 errors/second"
 - **Description**: "Error rate: {{ $value }} errors/sec. Check logs for error patterns."
 - **Severity**: High
 - **Contact Point**: Email + Slack (if configured)
 
 **Remediation**:
+
 1. Check error logs in Grafana: `{container="zebu-backend-prod"} | json | level="error"`
 2. Identify top error types: Use Application Overview dashboard → Top 10 Errors panel
 3. Review recent deployments for code changes
@@ -51,6 +54,7 @@ sum(rate({container="zebu-backend-prod"} | json | level="error" [5m])) > 0.1
 6. If external service: Implement graceful degradation
 
 **False Positive Scenarios**:
+
 - Load testing or intentional error injection
 - Brief spike during deployment rollover
 
@@ -74,21 +78,26 @@ count_over_time({container="zebu-backend-prod"} | json | event =~ ".*rate limit.
 **Duration**: 1 minute
 
 **Notification**:
+
 - **Summary**: "Alpha Vantage rate limit exceeded"
 - **Description**: "Rate limit warnings detected. Users may receive stale cached data. Check API usage."
 - **Severity**: High
 - **Contact Point**: Email + Slack
 
 **Remediation**:
+
 1. **Immediate**: Verify stale cache is serving requests (degraded mode)
 2. **Check usage**:
+
    ```logql
    count_over_time({container="zebu-backend-prod"} | json | event="Alpha Vantage API called" [24h])
    ```
+
 3. **Short-term**: Increase cache TTL to reduce API calls
 4. **Long-term**: Consider upgrading to paid Alpha Vantage tier or adding alternative data source
 
 **Prevention**:
+
 - Monitor daily API usage proactively
 - Implement cache warming for popular tickers
 - Set up quota alerts at 80% and 90% thresholds
@@ -111,24 +120,29 @@ count_over_time({container="zebu-backend-prod"} [5m]) < 10
 **Duration**: 5 minutes
 
 **Notification**:
+
 - **Summary**: "Backend service may be down - no logs detected"
 - **Description**: "Backend container not producing logs. Service may be down or critically unhealthy."
 - **Severity**: Critical
 - **Contact Point**: Email + Slack + PagerDuty (if configured)
 
 **Remediation**:
+
 1. **Check container status**:
+
    ```bash
    ssh root@192.168.4.112
    docker ps -a | grep zebu-backend
    ```
 
 2. **Check container logs**:
+
    ```bash
    docker logs zebu-backend-prod --tail 100
    ```
 
 3. **Restart if crashed**:
+
    ```bash
    docker restart zebu-backend-prod
    ```
@@ -136,6 +150,7 @@ count_over_time({container="zebu-backend-prod"} [5m]) < 10
 4. **If restart fails**: Check for disk space, memory, or configuration issues
 
 5. **If persistent**: Full redeployment
+
    ```bash
    cd /opt/zebu
    docker-compose down
@@ -162,18 +177,22 @@ quantile_over_time(0.95, {container="zebu-backend-prod"} | json | unwrap duratio
 **Duration**: 5 minutes
 
 **Notification**:
+
 - **Summary**: "API response time degraded (P95 > 1s)"
 - **Description**: "P95 latency: {{ $value }}s. Investigate slow queries or external services."
 - **Severity**: Medium
 - **Contact Point**: Email
 
 **Remediation**:
+
 1. **Check database performance**:
+
    ```logql
    {container="zebu-postgres-prod"} |~ "duration.*ms" | regexp "duration: (?P<duration>[0-9.]+) ms" | duration > 1000
    ```
 
 2. **Check Alpha Vantage latency**:
+
    ```logql
    quantile_over_time(0.95, {container="zebu-backend-prod"} | json | event="Alpha Vantage API called" | unwrap duration_ms [5m])
    ```
@@ -181,6 +200,7 @@ quantile_over_time(0.95, {container="zebu-backend-prod"} | json | unwrap duratio
 3. **Check cache hit ratio** - low ratio = more slow API calls
 
 4. **Review slow endpoints**:
+
    ```logql
    {container="zebu-backend-prod"} | json | duration_seconds > 1.0
    ```
@@ -205,23 +225,28 @@ count_over_time({container="zebu-backend-prod"} | json | error =~ ".*connection 
 **Duration**: 2 minutes
 
 **Notification**:
+
 - **Summary**: "Database connection pool exhausted"
 - **Description**: "Connection pool errors detected. Increase pool size or investigate connection leaks."
 - **Severity**: High
 - **Contact Point**: Email + Slack
 
 **Remediation**:
+
 1. **Check active connections**:
+
    ```bash
    docker exec zebu-postgres-prod psql -U zebu -c "SELECT count(*) FROM pg_stat_activity;"
    ```
 
 2. **Check for long-running queries**:
+
    ```bash
    docker exec zebu-postgres-prod psql -U zebu -c "SELECT pid, now() - query_start AS duration, query FROM pg_stat_activity WHERE state = 'active' ORDER BY duration DESC;"
    ```
 
 3. **Temporary fix**: Restart backend to reset connections
+
    ```bash
    docker restart zebu-backend-prod
    ```
@@ -246,18 +271,22 @@ count_over_time({container="zebu-redis-prod"} [5m]) < 5
 **Duration**: 3 minutes
 
 **Notification**:
+
 - **Summary**: "Redis cache service may be down"
 - **Description**: "Redis not producing logs. Cache unavailable - expect high API usage."
 - **Severity**: High
 - **Contact Point**: Email + Slack
 
 **Remediation**:
+
 1. **Check Redis status**:
+
    ```bash
    docker exec zebu-redis-prod redis-cli ping
    ```
 
 2. **Restart if unresponsive**:
+
    ```bash
    docker restart zebu-redis-prod
    ```
@@ -284,18 +313,22 @@ count_over_time({container="zebu-redis-prod"} [5m]) < 5
 **Duration**: 5 minutes
 
 **Notification**:
+
 - **Summary**: "Alpha Vantage API usage at 80% of daily quota"
 - **Description**: "Current usage: {{ $value * 500 }} / 500 calls. Implement caching optimizations."
 - **Severity**: Medium
 - **Contact Point**: Email
 
 **Remediation**:
+
 1. **Monitor usage trend**: Check if spike or steady increase
 2. **Review cache configuration**: Ensure proper TTLs
 3. **Identify heavy tickers**:
+
    ```logql
    topk(10, count_over_time({container="zebu-backend-prod"} | json | event="Alpha Vantage API called" [24h]) by (ticker))
    ```
+
 4. **Consider**: Pre-warming cache for popular tickers, increasing TTL
 
 **Prevention**: Set up proactive monitoring at 70%, 80%, and 90% thresholds.

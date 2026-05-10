@@ -4,8 +4,8 @@
 
 This plan refines the initial 5-step approach based on critical analysis and research findings. It provides detailed task breakdowns, agent assignments, and quality gates.
 
-**Timeline**: 12-15 working days
-**Agents**: Architect (2 days), Frontend SWE (10-13 days)
+**Timeline**: 12-15 working days  
+**Agents**: Architect (2 days), Frontend SWE (10-13 days)  
 **Risk Level**: Low (incremental migration with rollback capability)
 
 ---
@@ -38,6 +38,7 @@ Architect + Frontend SWE (collaborative)
 **Agent**: Frontend SWE
 
 **Acceptance Criteria**:
+
 - [ ] Two distinct Dashboard designs implemented in `__prototypes__/` directory
 - [ ] Both use current data (real portfolio API calls)
 - [ ] Both are fully interactive (clickable cards, navigation works)
@@ -46,6 +47,7 @@ Architect + Frontend SWE (collaborative)
 - [ ] Screenshots captured for comparison
 
 **File Changes**:
+
 - Create `frontend/src/pages/__prototypes__/DashboardVariantA.tsx`
 - Create `frontend/src/pages/__prototypes__/DashboardVariantB.tsx`
 - Create route in `App.tsx` to access prototypes (e.g., `/prototypes/dashboard-a`)
@@ -53,6 +55,7 @@ Architect + Frontend SWE (collaborative)
 **Dependencies**: None
 
 **Risk Mitigation**:
+
 - Prototypes in separate directory (won't affect production)
 - Feature flag to enable/disable prototype routes
 
@@ -62,12 +65,14 @@ Architect + Frontend SWE (collaborative)
 **Agent**: Architect
 
 **Acceptance Criteria**:
+
 - [ ] Evaluation criteria defined (readability, data density, aesthetic appeal)
 - [ ] Stakeholder feedback collected (or self-evaluated if solo)
 - [ ] Design direction chosen (Variant A, B, or hybrid)
 - [ ] Decision documented with rationale
 
 **Evaluation Criteria**:
+
 1. **Readability**: Can user quickly find portfolio value, daily change?
 2. **Data Density**: How much info visible without scrolling?
 3. **Visual Hierarchy**: Is most important info most prominent?
@@ -84,6 +89,7 @@ Architect + Frontend SWE (collaborative)
 **Agent**: Frontend SWE
 
 **Acceptance Criteria**:
+
 - [ ] Portfolio Detail screen redesigned in chosen direction
 - [ ] Includes: portfolio summary, holdings table, trade form, transaction list
 - [ ] Charts styled consistently (Recharts colors match design system)
@@ -91,6 +97,7 @@ Architect + Frontend SWE (collaborative)
 - [ ] All interactive elements functional
 
 **File Changes**:
+
 - Create `frontend/src/pages/__prototypes__/PortfolioDetailPrototype.tsx`
 - Document any Recharts theme configuration needed
 
@@ -102,6 +109,7 @@ Architect + Frontend SWE (collaborative)
 **Agent**: Architect
 
 **Acceptance Criteria**:
+
 - [ ] Color palette documented (HSL format for all colors)
 - [ ] Typography scale defined (font sizes, weights, line heights)
 - [ ] Spacing scale defined (padding/margin values)
@@ -126,6 +134,7 @@ Architect + Frontend SWE (collaborative)
 ---
 
 ### Success Criteria
+
 - [ ] Design direction chosen and documented
 - [ ] 2 screens prototyped in chosen direction
 - [ ] Design tokens extracted and documented
@@ -133,6 +142,7 @@ Architect + Frontend SWE (collaborative)
 
 ### Checkpoint: Stakeholder Review
 **Before proceeding to Phase 2**, review prototypes and get approval:
+
 - Do the designs meet user needs?
 - Is the visual direction appropriate for financial app?
 - Are design tokens comprehensive?
@@ -165,6 +175,7 @@ Frontend SWE
 **Agent**: Frontend SWE
 
 **Acceptance Criteria**:
+
 - [ ] Colors extended with custom palette (primary, positive, negative)
 - [ ] Typography extended (font sizes, weights, families)
 - [ ] Spacing extended (if custom values needed beyond defaults)
@@ -213,6 +224,7 @@ export default {
 **Dependencies**: Task 1.4 complete (design tokens extracted)
 
 **Validation**:
+
 - Run `npm run build` to ensure Tailwind config is valid
 - Check that Tailwind IntelliSense autocompletes new tokens
 
@@ -222,6 +234,7 @@ export default {
 **Agent**: Frontend SWE
 
 **Acceptance Criteria**:
+
 - [ ] CSS variables defined in `:root` (light mode)
 - [ ] CSS variables defined in `:root.dark` (dark mode, if in scope)
 - [ ] HSL format used (easier to manipulate opacity)
@@ -263,6 +276,7 @@ export default {
 **Dependencies**: Task 2.1 complete
 
 **Validation**:
+
 - Inspect elements in browser to verify CSS variables are applied
 - Toggle dark mode (add `.dark` class to `<html>`) to test theme switching
 
@@ -272,12 +286,14 @@ export default {
 **Agent**: Frontend SWE
 
 **Acceptance Criteria**:
+
 - [ ] All design tokens documented with examples
 - [ ] Usage guidelines for each token category
 - [ ] Code snippets showing how to use tokens
 - [ ] Visual examples (color swatches, typography samples)
 
 **File Changes**:
+
 - Create `docs/design-system/tokens.md`
 
 **Structure**:
@@ -310,6 +326,7 @@ export default {
 ---
 
 ### Success Criteria
+
 - [ ] All design tokens implemented in Tailwind config
 - [ ] CSS variables setup for runtime theming
 - [ ] Documentation complete and accurate
@@ -317,6 +334,7 @@ export default {
 
 ### Quality Gate: Token Validation
 Before proceeding to Phase 3:
+
 1. Create a simple test page showing all tokens (colors, typography, spacing)
 2. Verify tokens render correctly in light mode (and dark mode if in scope)
 3. Confirm Tailwind autocomplete works for new tokens
@@ -375,23 +393,28 @@ npx shadcn-ui@latest add card
 **Components to Build**:
 
 **Button**:
+
 - Variants: `default`, `outline`, `ghost`, `danger`
 - Sizes: `sm`, `md`, `lg`
 - States: `default`, `hover`, `focus`, `disabled`, `loading`
 
 **Badge**:
+
 - Variants: `default`, `success`, `warning`, `danger`
 - Sizes: `sm`, `md`
 
 **Card**:
+
 - Variants: `default`, `elevated` (with shadow)
 - Sections: `CardHeader`, `CardContent`, `CardFooter`
 
 **Spinner**:
+
 - Sizes: `sm`, `md`, `lg`
 - Colors: Inherit from design system
 
 **Acceptance Criteria**:
+
 - [ ] All components use CVA for variant management
 - [ ] All components are TypeScript with full type safety
 - [ ] All components use design system tokens (no hardcoded colors)
@@ -452,6 +475,7 @@ export function Button({ className, variant, size, ...props }: ButtonProps) {
 **Dependencies**: Phase 2 complete (design tokens available)
 
 **Validation**:
+
 - Run unit tests: `npm run test:unit`
 - Visual check: Create Storybook stories (future) or test page
 
@@ -463,22 +487,27 @@ export function Button({ className, variant, size, ...props }: ButtonProps) {
 **Components to Build**:
 
 **Input**:
+
 - Types: `text`, `number`, `email`, `password`
 - States: `default`, `error`, `disabled`
 - Sizes: `sm`, `md`, `lg`
 
 **Label**:
+
 - Required indicator (red asterisk)
 - Optional indicator "(optional)"
 
 **Select**:
+
 - Native `<select>` with styled wrapper
 - (Advanced Combobox with search can be added later)
 
 **Checkbox**:
+
 - States: `unchecked`, `checked`, `indeterminate`, `disabled`
 
 **Acceptance Criteria**:
+
 - [ ] All form components follow WCAG accessibility (labels, ARIA)
 - [ ] Error states clearly visible (red border, error message)
 - [ ] Focus states prominent (ring-2 ring-primary)
@@ -496,6 +525,7 @@ frontend/src/components/ui/
 **Dependencies**: Task 3.1 complete
 
 **Validation**:
+
 - Build a sample form using all components
 - Test keyboard navigation (Tab, Enter, Space)
 - Run accessibility audit (axe-core)
@@ -508,21 +538,25 @@ frontend/src/components/ui/
 **Components to Build**:
 
 **Dialog**:
+
 - Replaces existing `Dialog.tsx` with shadcn/ui version
 - Uses Radix UI primitives (focus trap, ESC to close)
 - Variants: `default`, `large`
 
 **Tabs**:
+
 - Keyboard navigation (Arrow keys)
 - Supports controlled/uncontrolled
 
 **Table**:
+
 - Styled wrapper for `<table>` elements
 - Sticky header support
 - Zebra striping (even:bg-gray-50)
 - Responsive (horizontal scroll on mobile)
 
 **Acceptance Criteria**:
+
 - [ ] Dialog has proper focus management (trap, restore)
 - [ ] Tabs support keyboard navigation (Arrow keys, Home, End)
 - [ ] Table is responsive (scrollable on mobile)
@@ -539,6 +573,7 @@ frontend/src/components/ui/
 **Dependencies**: Task 3.2 complete
 
 **Validation**:
+
 - Manually test focus trap in Dialog
 - Test Tabs keyboard navigation
 - Test Table responsiveness at 375px width
@@ -551,21 +586,25 @@ frontend/src/components/ui/
 **Components to Build**:
 
 **StatCard**:
+
 - Shows label + value + optional trend
 - Variants: `default`, `positive`, `negative`
 - Used in MetricsCards, PortfolioSummaryCard
 
 **PercentBadge**:
+
 - Shows percentage with up/down arrow
 - Auto-colors based on positive/negative value
 - Used in holdings table, portfolio cards
 
 **CurrencyDisplay**:
+
 - Formats currency with proper separators
 - Handles large numbers (1.5M, 2.3B)
 - Right-aligned for tables
 
 **Acceptance Criteria**:
+
 - [ ] Components use formatters from `@/utils/formatters`
 - [ ] Auto-coloring based on data (positive = green, negative = red)
 - [ ] Accessible color contrast (not color-only indicators)
@@ -602,12 +641,14 @@ export function PercentBadge({ value, showArrow = true }: PercentBadgeProps) {
 **Dependencies**: Task 3.3 complete
 
 **Validation**:
+
 - Render each component with sample data
 - Test edge cases (zero, very large numbers, negative values)
 
 ---
 
 ### Success Criteria
+
 - [ ] All 16 components built and tested
 - [ ] Unit tests pass for all components
 - [ ] Accessibility audit passes (no critical issues)
@@ -615,6 +656,7 @@ export function PercentBadge({ value, showArrow = true }: PercentBadgeProps) {
 
 ### Quality Gate: Component Library Validation
 Before proceeding to Phase 4:
+
 1. Create a showcase page with all components and variants
 2. Run automated accessibility audit (axe-core)
 3. Verify bundle size increase is <50KB (use rollup-plugin-visualizer)
@@ -643,6 +685,7 @@ Frontend SWE
 | 4. Debug Page | Low | Low | 0.5 days |
 
 **Rationale for Order**:
+
 - Dashboard first (most visible, highest impact)
 - Portfolio Detail second (complex, needs careful testing)
 - Analytics third (lower priority, can parallelize with QA)
@@ -676,6 +719,7 @@ export function Dashboard() {
 ```
 
 **Benefits**:
+
 - Instant rollback (flip flag to `false`)
 - A/B testing possible (future)
 - Gradual rollout (enable for subset of users)
@@ -688,6 +732,7 @@ export function Dashboard() {
 **Agent**: Frontend SWE
 
 **Changes**:
+
 - Replace inline Tailwind classes with component primitives
 - Use `<Card>`, `<Button>`, `<Badge>` components
 - Apply design system colors/spacing
@@ -695,6 +740,7 @@ export function Dashboard() {
 - Keep test IDs stable (don't break E2E tests)
 
 **Acceptance Criteria**:
+
 - [ ] Dashboard uses design system components (no inline Tailwind for colors)
 - [ ] E2E tests pass (all existing tests still work)
 - [ ] Visual comparison matches prototype from Phase 1
@@ -702,11 +748,13 @@ export function Dashboard() {
 - [ ] No accessibility regressions (run axe-core)
 
 **File Changes**:
+
 - Create `frontend/src/pages/DashboardNew.tsx` (new version)
 - Keep `frontend/src/pages/Dashboard.tsx` (legacy, can delete after migration)
 - Update `App.tsx` to use feature flag
 
 **Validation**:
+
 - Run E2E tests: `npm run test:e2e`
 - Manual visual check at all breakpoints
 - Accessibility audit (axe-core)
@@ -721,6 +769,7 @@ export function Dashboard() {
 **Agent**: Frontend SWE
 
 **Changes**:
+
 - **PortfolioSummaryCard**: Use `<StatCard>` component
 - **HoldingsTable**: Use `<Table>` wrapper, `<PercentBadge>`, `<CurrencyDisplay>`
 - **TradeForm**: Use `<Input>`, `<Button>`, `<Label>` components
@@ -728,6 +777,7 @@ export function Dashboard() {
 - **Charts**: Apply Recharts theme (use design system colors)
 
 **Acceptance Criteria**:
+
 - [ ] All sub-components migrated to design system
 - [ ] Charts use design system colors (not Recharts defaults)
 - [ ] E2E tests pass (trade workflow still works)
@@ -735,11 +785,13 @@ export function Dashboard() {
 - [ ] Loading states use new `<Spinner>` component
 
 **File Changes**:
+
 - Create `frontend/src/pages/PortfolioDetailNew.tsx`
 - Update `frontend/src/components/features/portfolio/` components
 - Keep legacy versions temporarily (delete after migration)
 
 **Validation**:
+
 - Run E2E tests: `npm run test:e2e` (critical: trade workflow)
 - Manual testing: Execute buy/sell orders
 - Chart visual check (colors match design system)
@@ -754,12 +806,14 @@ export function Dashboard() {
 **Agent**: Frontend SWE
 
 **Changes**:
+
 - **MetricsCards**: Use `<StatCard>` component
 - **PerformanceChart**: Apply Recharts theme
 - **CompositionChart**: Apply Recharts theme
 - **Page layout**: Use design system spacing/typography
 
 **Acceptance Criteria**:
+
 - [ ] All metrics cards use `<StatCard>` component
 - [ ] Charts use design system colors
 - [ ] Loading states consistent (use `<Spinner>`)
@@ -767,10 +821,12 @@ export function Dashboard() {
 - [ ] E2E tests pass (if any for analytics page)
 
 **File Changes**:
+
 - Create `frontend/src/pages/PortfolioAnalyticsNew.tsx`
 - Update `frontend/src/components/features/analytics/` components
 
 **Validation**:
+
 - Manual testing: View analytics for portfolio with data
 - Test empty state (new portfolio with no data)
 - Chart visual check (colors, responsiveness)
@@ -785,18 +841,22 @@ export function Dashboard() {
 **Agent**: Frontend SWE
 
 **Changes**:
+
 - Minimal changes (low priority page)
 - Apply basic design system (buttons, cards)
 - Ensure consistent with other screens
 
 **Acceptance Criteria**:
+
 - [ ] Debug page uses design system components
 - [ ] Functionality unchanged
 
 **File Changes**:
+
 - Update `frontend/src/pages/Debug.tsx`
 
 **Validation**:
+
 - Manual check (functionality still works)
 
 **Dependencies**: Task 4.3 complete
@@ -804,6 +864,7 @@ export function Dashboard() {
 ---
 
 ### Success Criteria
+
 - [ ] All 4 screens migrated to design system
 - [ ] All E2E tests pass (no regressions)
 - [ ] Visual consistency across all screens
@@ -812,6 +873,7 @@ export function Dashboard() {
 
 ### Quality Gate: Migration Validation
 After all screens migrated:
+
 1. Run full E2E test suite: `npm run test:e2e`
 2. Manual smoke test (navigate through all screens)
 3. Accessibility audit on all migrated screens
@@ -847,12 +909,14 @@ Frontend SWE + QA (if available)
 **Agent**: Frontend SWE or QA
 
 **Browsers to Test**:
+
 - Chrome (latest)
 - Firefox (latest)
 - Safari (latest, macOS and iOS)
 - Edge (latest)
 
 **Test Scenarios**:
+
 1. Navigate through all screens
 2. Execute buy/sell trade
 3. View analytics charts
@@ -860,6 +924,7 @@ Frontend SWE + QA (if available)
 5. Test responsive breakpoints (mobile, tablet, desktop)
 
 **Acceptance Criteria**:
+
 - [ ] All features work on all browsers
 - [ ] No visual glitches (layout, colors, fonts)
 - [ ] No console errors
@@ -875,16 +940,19 @@ Frontend SWE + QA (if available)
 **Agent**: Frontend SWE
 
 **Automated Testing**:
+
 - Run axe-core on all pages: `npx @axe-core/cli http://localhost:5173`
 - Run Lighthouse accessibility audit
 - Check for common issues (missing alt text, low contrast, missing labels)
 
 **Manual Testing**:
+
 - Keyboard-only navigation (Tab, Enter, Escape, Arrow keys)
 - Screen reader testing (VoiceOver on Mac, NVDA on Windows)
 - WCAG 2.1 AA checklist: https://www.w3.org/WAI/WCAG21/quickref/
 
 **Acceptance Criteria**:
+
 - [ ] No critical axe-core violations
 - [ ] Lighthouse accessibility score ≥90
 - [ ] All interactive elements keyboard accessible
@@ -914,21 +982,25 @@ npm run build
 ```
 
 **Metrics to Check**:
+
 - Total bundle size (gzipped)
 - Increase from baseline (<50KB)
 - Largest chunks (identify opportunities to code-split)
 
 **Lighthouse Performance**:
+
 - Run Lighthouse on all pages
 - Target: ≥90 performance score
 - Check: First Contentful Paint, Time to Interactive, Total Blocking Time
 
 **Optimization Strategies** (if needed):
+
 - Lazy load Analytics page (use React.lazy)
 - Optimize Recharts imports (import specific components)
 - Reduce unused Radix UI primitives
 
 **Acceptance Criteria**:
+
 - [ ] Bundle size increase <50KB from baseline
 - [ ] Lighthouse performance score ≥90
 - [ ] No unused dependencies in bundle
@@ -961,12 +1033,14 @@ npm run build
    - Code examples
 
 **Cleanup**:
+
 - Delete prototype files (`__prototypes__/` directory)
 - Delete legacy components (if migration complete)
 - Remove feature flags (if not keeping for A/B testing)
 - Update README with design system info
 
 **Acceptance Criteria**:
+
 - [ ] All documentation complete and accurate
 - [ ] No dead code (legacy components deleted)
 - [ ] Feature flags removed or documented
@@ -977,6 +1051,7 @@ npm run build
 ---
 
 ### Success Criteria
+
 - [ ] Cross-browser testing complete (no critical issues)
 - [ ] Accessibility audit complete (WCAG 2.1 AA compliant)
 - [ ] Performance benchmarks met (Lighthouse ≥90, bundle <+50KB)
@@ -985,6 +1060,7 @@ npm run build
 
 ### Final Checkpoint: Production Readiness
 Before deploying to production:
+
 1. All E2E tests passing
 2. All accessibility issues resolved
 3. Performance benchmarks met
@@ -996,12 +1072,14 @@ Before deploying to production:
 ## Summary: Task Breakdown by Agent
 
 ### Architect (2 days)
+
 - Task 1.2: Design evaluation & selection (0.5 days)
 - Task 1.4: Design token extraction (0.5 days)
 - Task 2.3: Token documentation (0.5 days) - Can delegate to Frontend SWE
 - Review & guidance throughout (0.5 days)
 
 ### Frontend SWE (10-13 days)
+
 - Task 1.1: Dashboard prototyping (1 day)
 - Task 1.3: Portfolio Detail prototyping (1 day)
 - Task 2.1: Tailwind config extension (1 day)
@@ -1011,6 +1089,7 @@ Before deploying to production:
 - Task 5.1-5.4: Polish & validation (2 days)
 
 ### Parallelization Opportunities
+
 - Task 1.3 can start once Task 1.2 is complete (don't wait for full Phase 1)
 - Task 3.1-3.4 can be parallelized if multiple developers available
 - Task 4.3 (Analytics migration) can overlap with Task 5.1-5.2 (QA)

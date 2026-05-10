@@ -1,7 +1,7 @@
 # Phase 3a: SELL Order Functionality
 
-**Duration**: 2-3 weeks
-**Priority**: HIGH
+**Duration**: 2-3 weeks  
+**Priority**: HIGH  
 **Dependencies**: None (builds on Phase 2)
 
 ## Objective
@@ -11,6 +11,7 @@ Enable users to sell stocks they own, completing the basic buy/sell trading loop
 ## Current State
 
 **What Exists**:
+
 - ✅ BUY orders fully implemented
 - ✅ Transaction ledger with BUY type
 - ✅ Holdings calculation from transactions
@@ -18,6 +19,7 @@ Enable users to sell stocks they own, completing the basic buy/sell trading loop
 - ✅ Market data integration for current prices
 
 **What's Missing**:
+
 - ❌ SELL transaction type implementation
 - ❌ Holdings validation (sufficient quantity check)
 - ❌ Holdings reduction logic
@@ -51,6 +53,7 @@ Transaction
 ### Holdings Calculation Update
 
 **Current Logic** (simplified):
+
 1. Filter transactions by ticker
 2. Sum BUY quantities
 3. Calculate average cost basis
@@ -68,6 +71,7 @@ Transaction
 | 6 | Return holding or None | If quantity > 0, return Holding; else None |
 
 **Edge Cases to Handle**:
+
 - Selling ALL shares → Holding disappears
 - Multiple buys at different prices → Weighted average cost
 - Selling before buying same ticker again → Cost basis resets
@@ -87,6 +91,7 @@ Transaction
 | timestamp | datetime | When sold | Not in future |
 
 **Calculation**:
+
 - `gain_loss = (sell_price - cost_basis) * quantity_sold`
 - `percentage = (sell_price / cost_basis - 1) * 100`
 
@@ -228,6 +233,7 @@ graph TD
 ### Trade Form Component
 
 **Current State**:
+
 - Dropdown shows only "BUY" option
 - Form submits BUY trades
 
@@ -258,6 +264,7 @@ graph TD
 | Symbol, Quantity, Avg Cost, Current Price, Value, Gain/Loss | **Quick Sell** (button) |
 
 **Quick Sell Button**:
+
 - Pre-fills trade form with ticker and owned quantity
 - Sets action to "SELL"
 - Focuses form for user confirmation
@@ -265,6 +272,7 @@ graph TD
 ## Data Migration
 
 **Database Schema**: No changes needed!
+
 - `transactions` table already has `type` column (ENUM)
 - SELL is just a new enum value
 - Existing data unaffected
@@ -386,25 +394,30 @@ graph TD
 ## Dependencies
 
 **Requires**:
+
 - Phase 2 (market data) - complete ✅
 - Transaction ledger - complete ✅
 
 **Blocks**:
+
 - Phase 3c (analytics) - needs realized P&L
 - Phase 3c (backtesting) - needs full trading
 
 **Parallel Work Opportunities**:
+
 - Phase 3b (auth) can be developed simultaneously
 
 ## Notes
 
 **Design Decisions**:
+
 - SELL quantity stored as positive (easier to read)
 - Holdings disappear when quantity = 0 (cleaner than zero holdings)
 - Cost basis is weighted average (simpler than FIFO/LIFO)
 - Server-side validation is authoritative (client-side is UX hint)
 
 **Alternatives Considered**:
+
 - FIFO/LIFO cost basis → Rejected (complex, overkill for MVP)
 - Separate realized gains table → Deferred to Phase 3c
 - Require price parameter → Rejected (security issue, like BUY)

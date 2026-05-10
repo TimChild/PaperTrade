@@ -1,6 +1,6 @@
 # Phase 2 Market Data Integration - Interface Specifications
 
-**Created**: 2025-12-28
+**Created**: 2025-12-28  
 **Status**: Approved
 
 ## Overview
@@ -36,6 +36,7 @@ Represents a single price observation for a ticker at a specific point in time.
 | volume | Integer or None | Trading volume | Must be non-negative if present |
 
 ### Invariants
+
 - All Money values (price, open, high, low, close) must have same currency
 - If OHLCV data present: low ≤ open, close ≤ high
 - timestamp must be in UTC (no naive datetimes)
@@ -43,6 +44,7 @@ Represents a single price observation for a ticker at a specific point in time.
 
 ### Equality Semantics
 Two PricePoint objects are equal if:
+
 - ticker.symbol matches
 - price matches
 - timestamp matches (to the second)
@@ -71,6 +73,7 @@ Defines the contract for fetching market data. This is a **port** (Protocol inte
 **Application Layer** - Port interface (adapters implement it)
 
 ### Design Philosophy
+
 - **Read-only**: Market data is external; we don't change it
 - **Async**: Network calls may be slow
 - **Time-aware**: Support historical queries for Phase 3
@@ -93,6 +96,7 @@ Defines the contract for fetching market data. This is a **port** (Protocol inte
 | **Staleness** | Result includes timestamp; caller can check freshness |
 
 **Semantics**:
+
 - Returns most recent price available (may be delayed vs. real-time)
 - If market closed, returns last closing price
 - Source field indicates if cached or fresh from API
@@ -112,6 +116,7 @@ Defines the contract for fetching market data. This is a **port** (Protocol inte
 | **Critical For** | Phase 3 "Time Machine" backtesting |
 
 **Semantics**:
+
 - If exact timestamp not available, return closest price within ±1 hour (configurable)
 - If timestamp in future, raise MarketDataUnavailableError
 - If timestamp before available data, raise MarketDataUnavailableError
@@ -131,6 +136,7 @@ Defines the contract for fetching market data. This is a **port** (Protocol inte
 | **Ordering** | Results ordered chronologically (oldest first) |
 
 **Semantics**:
+
 - interval options: "1min", "5min", "15min", "30min", "1hour", "1day"
 - Returns empty list if no data in range (not an error)
 - May return partial data if some periods missing
@@ -138,6 +144,7 @@ Defines the contract for fetching market data. This is a **port** (Protocol inte
 - end timestamp is inclusive (includes data up to and including end)
 
 **Interval Semantics**:
+
 - "1day": One price per day (typically closing price)
 - "1hour": One price per hour during market hours
 - "1min": One price per minute (high frequency, use with caution)
@@ -155,6 +162,7 @@ Defines the contract for fetching market data. This is a **port** (Protocol inte
 | **Caching** | SHOULD be cached aggressively (list changes infrequently) |
 
 **Semantics**:
+
 - Returns all tickers for which we have ANY price data
 - Used for frontend search/autocomplete
 - May include tickers not currently tracked
@@ -196,6 +204,7 @@ Defines the contract for fetching market data. This is a **port** (Protocol inte
 | **HTTP Status** | 503 Service Unavailable (when converted to API error) |
 
 **Example Messages**:
+
 - `"Market data unavailable: API rate limit exceeded. Retry after 2025-12-28 15:00:00 UTC"`
 - `"Market data unavailable: Alpha Vantage API is not responding"`
 - `"Market data unavailable: No cached data for TSLA and API unavailable"`
@@ -245,10 +254,12 @@ Manages API rate limiting using token bucket algorithm.
 ### Configuration
 
 Default configuration (Alpha Vantage free tier):
+
 - tokens_per_minute: 5
 - tokens_per_day: 500
 
 Must be configurable for premium tier upgrades:
+
 - tokens_per_minute: 75 (premium example)
 - tokens_per_day: 100,000 (premium example)
 
@@ -294,6 +305,7 @@ Example: `papertrade:price:AAPL`
 PricePoint objects must be serialized to JSON for Redis storage.
 
 ### Cache Eviction
+
 - TTL-based eviction (automatic by Redis)
 - Manual eviction via `delete()` method
 - LRU eviction if Redis memory limit reached
@@ -320,11 +332,13 @@ Manages persistence of historical price data in PostgreSQL.
 | get_all_tickers | None | List[Ticker] | Get all tickers with price data |
 
 ### Constraints
+
 - Unique constraint: (ticker, timestamp, interval)
 - If duplicate save, update existing record (upsert behavior)
 - Efficient indexing for time-range queries
 
 ### Performance Requirements
+
 - get_latest: <50ms
 - get_at: <100ms
 - get_history (1 year daily): <500ms
@@ -354,6 +368,7 @@ Implements MarketDataPort using Alpha Vantage API as data source.
 ### Implementation Strategy
 
 **get_current_price() logic**:
+
 1. Check cache (Redis) for ticker
    - HIT: Return cached price
 2. Check repository (PostgreSQL) for latest price
@@ -366,11 +381,13 @@ Implements MarketDataPort using Alpha Vantage API as data source.
    - ERROR: Return stale data OR raise appropriate error
 
 **get_price_at() logic**:
+
 1. Query repository for price closest to timestamp
    - HIT: Return
    - MISS: May need to call API for historical data (Phase 2b)
 
 **get_price_history() logic**:
+
 1. Query repository for date range
    - If sufficient data: Return
    - If gaps: May need to backfill from API (Phase 2b)
@@ -394,6 +411,7 @@ Implements MarketDataPort using Alpha Vantage API as data source.
 | Network timeout | MarketDataUnavailableError |
 
 ### Retry Strategy
+
 - Retry on transient errors (5xx, timeouts): Up to 3 attempts with exponential backoff
 - Do NOT retry on 4xx errors (bad request, invalid ticker)
 - Do NOT retry on rate limit (wait for token refill)
@@ -423,6 +441,7 @@ These specifications are NOT implementation code. Translate them into actual Pyt
 
 ### Consistency with Phase 1
 Review Phase 1 implementations for:
+
 - Value object patterns (Money, Ticker)
 - Port definition patterns (PortfolioRepository, TransactionRepository)
 - Exception hierarchy (domain/exceptions.py)
@@ -431,17 +450,21 @@ Review Phase 1 implementations for:
 ### Where to Put Files
 
 **Domain Layer** (if PricePoint is domain value object):
+
 - `backend/src/papertrade/domain/value_objects/price_point.py`
 
 **Application Layer**:
+
 - `backend/src/papertrade/application/ports/market_data_port.py`
 - `backend/src/papertrade/application/exceptions.py` (extend for MarketDataError hierarchy)
 
 **Adapters Layer**:
+
 - `backend/src/papertrade/adapters/outbound/alpha_vantage_adapter.py`
 - `backend/src/papertrade/adapters/outbound/price_repository.py`
 
 **Infrastructure Layer**:
+
 - `backend/src/papertrade/infrastructure/cache/price_cache.py`
 - `backend/src/papertrade/infrastructure/rate_limiter.py`
 
@@ -450,6 +473,7 @@ Review Phase 1 implementations for:
 ## Questions for Implementation
 
 If specifications are unclear:
+
 1. Check Phase 1 architecture plans for similar patterns
 2. Review existing code for consistency
 3. Document assumptions in implementation

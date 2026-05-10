@@ -20,6 +20,7 @@
 ### Recommendation: **shadcn/ui** ✅
 
 **Reasoning**:
+
 1. **Zero runtime dependencies**: We own all code, no version conflicts
 2. **Tailwind-native**: Matches existing codebase patterns
 3. **Accessibility included**: Radix UI primitives underneath
@@ -27,10 +28,12 @@
 5. **Performance**: Only bundle what we use (tree-shaking works perfectly)
 
 **Trade-offs**:
+
 - Manual updates (but infrequent - components are stable)
 - More initial setup (but one-time cost)
 
 **When to use alternatives**:
+
 - **Headless UI**: If we wanted zero dependencies AND simpler components (we don't need simpler)
 - **Radix UI directly**: If we preferred controlled updates via npm (we prefer code ownership)
 
@@ -54,6 +57,7 @@
 ### Recommendation: **CVA (class-variance-authority)** ✅
 
 **Reasoning**:
+
 1. **Industry standard**: Used by shadcn/ui, battle-tested in production
 2. **Type-safe variants**: TypeScript autocomplete for variant props
 3. **Small bundle**: 1.3KB (negligible)
@@ -87,6 +91,7 @@ const buttonVariants = cva(
 ```
 
 **Trade-offs**:
+
 - 1.3KB bundle increase (acceptable)
 - Learning curve (but minimal - clear documentation)
 
@@ -110,6 +115,7 @@ const buttonVariants = cva(
 ### Recommendation: **Tailwind `dark:` classes** ✅ (for MVP)
 
 **Reasoning**:
+
 1. **Simplest approach**: Add `dark:` prefix to any Tailwind class
 2. **Type-safe**: Tailwind autocomplete works perfectly
 3. **Co-located**: Light and dark styles in same component (easier to maintain)
@@ -131,6 +137,7 @@ export default {
 ```
 
 **When to use CSS Variables**:
+
 - If we need runtime theme switching beyond dark/light (e.g., user-selected brand colors)
 - If we need to calculate colors dynamically (e.g., opacity variations)
 
@@ -155,16 +162,19 @@ export default {
 ### Recommendation: **Hybrid Approach** ✅
 
 **Static Tokens** → Tailwind Config:
+
 - Spacing (padding, margin, gap)
 - Typography (font sizes, line heights, font families)
 - Breakpoints (responsive design)
 - Shadows, borders, radii
 
 **Dynamic Tokens** → CSS Custom Properties:
+
 - Colors (for dark mode or future theming)
 - Opacity values (if needed for color variations)
 
 **Programmatic Tokens** → TypeScript:
+
 - Chart colors (Recharts configuration)
 - Animation durations (shared with Zustand/TanStack Query)
 
@@ -209,6 +219,7 @@ colors: {
 ```
 
 **Benefits**:
+
 - Static tokens: Build-time optimization (Tailwind purges unused)
 - Dynamic tokens: Runtime theming flexibility (dark mode, future themes)
 - Type-safe: Tailwind autocomplete works for both
@@ -231,6 +242,7 @@ colors: {
 | **Background (Dark)** | Dark Gray (#111827) | Reduces eye strain for long sessions |
 
 **Accessibility Considerations**:
+
 - Ensure 4.5:1 contrast ratio (WCAG AA) for all text
 - Use icons/symbols in addition to color (e.g., ↑ for positive, ↓ for negative)
 - Avoid red/green for critical information only (8% of men are colorblind)
@@ -248,6 +260,7 @@ colors: {
 | **Comparison (Multiple Stocks)** | Multi-line chart | LineChart with multiple lines ✅ |
 
 **Design Principles**:
+
 1. **Minimize chart junk**: Remove unnecessary gridlines, borders, backgrounds
 2. **Readable axes**: Large enough font (12px minimum), clear labels
 3. **Tooltips**: Show exact values on hover (Recharts built-in)
@@ -274,6 +287,7 @@ const chartColors = {
 ### Table Design for Financial Data
 
 **Best Practices**:
+
 1. **Right-align numbers**: Easier to compare magnitudes
 2. **Monospace font for numbers**: Aligns decimal points (use `font-mono`)
 3. **Conditional formatting**: Color-code positive/negative values
@@ -306,6 +320,7 @@ const chartColors = {
 ### Mobile-First Considerations
 
 **Critical for Trading Apps**:
+
 1. **Touch targets**: Minimum 44x44px for buttons (WCAG guideline)
 2. **Readable text**: Minimum 16px font size (avoid mobile zoom)
 3. **Condensed data**: Show only critical info on small screens (hide less important columns)
@@ -313,6 +328,7 @@ const chartColors = {
 5. **Sticky actions**: Keep trade button visible (sticky bottom bar)
 
 **Responsive Breakpoints**:
+
 - **Mobile**: <640px (1 column layout)
 - **Tablet**: 640-1024px (2 column layout)
 - **Desktop**: >1024px (3+ column layout, side panels)
@@ -333,6 +349,7 @@ const chartColors = {
 ### Tailwind Purging & Bundle Size
 
 **Current State**:
+
 - Tailwind CSS production build: ~10-15KB (purged)
 - React + React DOM: ~130KB (gzipped)
 - TanStack Query + Zustand: ~20KB
@@ -352,6 +369,7 @@ const chartColors = {
 | **Total estimated increase** | +15-20KB | **Acceptable** (<50KB budget) |
 
 **Bundle Size Gates**:
+
 - **Target**: <50KB increase from design system
 - **Monitor**: Use Vite's rollup-plugin-visualizer
 - **Action**: If exceeds budget, audit and remove unused code
@@ -372,16 +390,19 @@ const chartColors = {
 ### Runtime vs. Build-Time Styling
 
 **Build-Time (Recommended)**:
+
 - Tailwind classes → Purged CSS (minimal runtime cost)
 - Static color tokens in Tailwind config
 - Pre-compiled component variants
 
 **Runtime (Minimize)**:
+
 - Dynamic theme switching (CSS variables only)
 - Conditional classes based on data (positive/negative colors)
 - Chart color configuration (Recharts props)
 
 **Performance Impact**:
+
 - Build-time: 0ms runtime overhead
 - Runtime: <1ms for CSS variable lookup (negligible)
 
@@ -392,12 +413,14 @@ const chartColors = {
 ### Focus Management
 
 **Radix UI Primitives** (via shadcn/ui):
+
 - **Dialog**: Auto-focus first interactive element, trap focus, restore on close
 - **Menu**: Arrow key navigation, escape to close
 - **Tabs**: Arrow key navigation between tabs
 - **Combobox**: Type-ahead search, keyboard selection
 
 **Custom Components**:
+
 - Add `focus-visible:ring-2` to all interactive elements
 - Use `tabIndex={0}` for custom clickable elements
 - Test with keyboard-only navigation (Tab, Enter, Space, Escape)
@@ -405,11 +428,13 @@ const chartColors = {
 ### ARIA Attributes
 
 **Radix UI Handles**:
+
 - `aria-labelledby`, `aria-describedby` (automatic)
 - `aria-expanded`, `aria-selected` (state management)
 - `role` attributes (button, dialog, menu, etc.)
 
 **Manual ARIA** (only when needed):
+
 - `aria-label` for icon-only buttons
 - `aria-live` for real-time price updates (screen reader announcements)
 - `aria-busy` for loading states
@@ -417,12 +442,14 @@ const chartColors = {
 ### Keyboard Navigation
 
 **Required Keyboard Shortcuts**:
+
 - **Tab**: Navigate between interactive elements
 - **Enter/Space**: Activate buttons
 - **Escape**: Close dialogs/menus
 - **Arrow Keys**: Navigate lists/menus (Radix UI handles)
 
 **Future Enhancements**:
+
 - `/` to focus search
 - `?` to show keyboard shortcuts
 - `Ctrl+K` for command palette (future)
@@ -436,12 +463,14 @@ const chartColors = {
 **Recommendation**: Skip for MVP (overhead too high).
 
 **Why Skip**:
+
 - Setup complexity (Chromatic/Percy integration)
 - Maintenance burden (update snapshots frequently)
 - Slow CI builds (screenshot generation)
 - Limited value (we have E2E tests for functionality)
 
 **When to Add** (Phase 4+):
+
 - After design system stabilizes
 - When design changes become less frequent
 - If we have dedicated QA resources
@@ -449,11 +478,13 @@ const chartColors = {
 ### Accessibility Testing
 
 **Automated** (CI Pipeline):
+
 - **axe-core** via Playwright (E2E tests)
 - **Lighthouse** accessibility score (threshold: ≥90)
 - **ESLint plugin**: eslint-plugin-jsx-a11y
 
 **Manual** (Pre-Deployment):
+
 - Screen reader testing (VoiceOver on Mac, NVDA on Windows)
 - Keyboard-only navigation (Tab, Enter, Escape, Arrow keys)
 - WCAG 2.1 AA checklist (https://www.w3.org/WAI/WCAG21/quickref/)
@@ -461,6 +492,7 @@ const chartColors = {
 ### E2E Testing During Migration
 
 **Strategy**:
+
 - **Keep existing E2E tests**: Don't rewrite, just update selectors
 - **Update test IDs incrementally**: One screen at a time
 - **Run tests after each screen migration**: Fail fast if broken
@@ -492,6 +524,6 @@ await page.getByTestId('portfolio-card-123').click()
 | **Testing** | Playwright + axe-core | E2E + automated a11y, skip visual regression for MVP |
 | **Bundle Analysis** | Vite rollup-plugin-visualizer | Monitor bundle size |
 
-**Total Bundle Impact**: +15-20KB (well within <50KB budget)
-**Timeline**: 12-15 days (includes design exploration + implementation)
+**Total Bundle Impact**: +15-20KB (well within <50KB budget)  
+**Timeline**: 12-15 days (includes design exploration + implementation)  
 **Risk Level**: Low (incremental migration with feature flags)

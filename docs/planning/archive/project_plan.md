@@ -1,6 +1,7 @@
 # Zebu Project Plan
 
 **Note**: This is the **original project plan** from December 2025. For the **refined architecture plans** based on Phase 1-2 learnings, see:
+
 - **Phase 3 Refined**: `docs/architecture/phase3-refined/` (SELL → Auth → Analytics)
 - **Phase 4 Refined**: `docs/architecture/phase4-refined/` (UX, Orders, Multi-Provider, Observability)
 - **Product Roadmap**: `product-roadmap.md` (user-facing)
@@ -20,6 +21,7 @@ This document outlines the development phases for Zebu, a stock market emulation
 **Goal**: Establish solid project infrastructure and development practices.
 
 **Deliverables**:
+
 - [x] Repository setup with proper structure
 - [x] Copilot agent instructions
 - [x] PR templates and contribution guidelines
@@ -31,6 +33,7 @@ This document outlines the development phases for Zebu, a stock market emulation
 - [x] Frontend project scaffolding (React + Vite + TypeScript)
 
 **Success Criteria**: ✅ All criteria met
+
 - `task setup` successfully configures local environment
 - `task dev` starts all services
 - `task test` runs all tests
@@ -45,6 +48,7 @@ This document outlines the development phases for Zebu, a stock market emulation
 **Status**: Core vertical integration complete, quality assessment in progress
 
 **Core Features**:
+
 - User authentication (simple, possibly just session-based initially)
 - Portfolio creation with initial cash deposit
 - View portfolio balance and holdings
@@ -77,6 +81,7 @@ Transaction (Ledger Entry)
 ```
 
 **Technical Tasks**:
+
 - [x] Domain layer: Entity and Value Object definitions
 - [x] Application layer: Use cases (CreatePortfolio, ExecuteTrade, GetPortfolioValue)
 - [x] Adapters: InMemory repositories for testing
@@ -88,6 +93,7 @@ Transaction (Ledger Entry)
 - [ ] Quality assessment and refactoring (Task 010 in progress)
 
 **Success Criteria**: ✅ All core criteria met
+
 - ✅ User can deposit $10K virtual cash
 - ✅ User can buy shares of a stock (mock prices)
 - ✅ Portfolio value correctly reflects holdings × current prices
@@ -96,6 +102,7 @@ Transaction (Ledger Entry)
 - 🔄 Code quality assessment complete (in progress)
 
 **Metrics**:
+
 - 195 backend tests passing (82% coverage)
 - 20 frontend tests passing (87% coverage)
 - Full-stack vertical integration working
@@ -110,12 +117,14 @@ Transaction (Ledger Entry)
 **Status**: Ready to start after Phase 1 quality work
 
 **Core Features**:
+
 - Integration with market data API (Alpha Vantage or Finnhub)
 - Real-time(ish) price updates
 - Price caching to respect API rate limits
 - Historical price data storage
 
 **Technical Tasks**:
+
 - [ ] MarketDataPort interface definition
 - [ ] Alpha Vantage adapter implementation
 - [ ] Redis caching layer for prices
@@ -137,6 +146,7 @@ class MarketDataPort(Protocol):
 ```
 
 **Success Criteria**:
+
 - Portfolio shows real market prices
 - Prices cached appropriately (respect API limits)
 - Price updates propagate to frontend
@@ -161,12 +171,14 @@ class MarketDataPort(Protocol):
 **Goal**: User can start a portfolio at a past date and simulate trading with historical prices.
 
 **Core Features**:
+
 - Select a start date in the past
 - Execute trades using historical prices
 - "Fast forward" through time
 - Compare backtested strategies
 
 **Technical Tasks**:
+
 - [ ] Batch ingestion of historical price data
 - [ ] Time-aware Use Cases (`current_time` parameter)
 - [ ] Historical MarketDataProvider
@@ -194,6 +206,7 @@ async def execute_trade(
 ```
 
 **Success Criteria**:
+
 - User can create portfolio starting Jan 1, 2024
 - Trades execute at correct historical prices
 - Portfolio value calculated correctly for any point in time
@@ -217,12 +230,14 @@ async def execute_trade(
 **Goal**: Add realistic trading costs and constraints.
 
 **Core Features**:
+
 - Transaction fees (configurable strategies)
 - Slippage modeling
 - Market hours enforcement
 - Position limits
 
 **Technical Tasks**:
+
 - [ ] FeeStrategy interface and implementations
 - [ ] SlippageModel interface and implementations
 - [ ] Trading calendar (market hours/holidays)
@@ -257,6 +272,7 @@ class PercentageFeeStrategy:
 ```
 
 **Success Criteria**:
+
 - Trades correctly deduct fees
 - Slippage affects executed prices
 - Market hours respected (or explicitly overridden for backtesting)
@@ -269,12 +285,14 @@ class PercentageFeeStrategy:
 **Goal**: User can define trading rules that execute automatically.
 
 **Core Features**:
+
 - Rule definition (condition → action)
 - Strategy templates
 - Scheduled strategy evaluation
 - Execution logging
 
 **Technical Tasks**:
+
 - [ ] Rule/Strategy domain model
 - [ ] Condition evaluation engine
 - [ ] Strategy scheduler integration
@@ -306,6 +324,7 @@ class PriceDropCondition(Condition):
 ```
 
 **Success Criteria**:
+
 - User can create "Buy AAPL if it drops 5% in a day" rule
 - Rules evaluated on schedule
 - Actions executed automatically
@@ -316,6 +335,7 @@ class PriceDropCondition(Condition):
 ## Cross-Cutting Concerns
 
 ### Testing Strategy (All Phases)
+
 - Unit tests for domain logic
 - Integration tests for use cases + repositories
 - API contract tests
@@ -323,12 +343,14 @@ class PriceDropCondition(Condition):
 - Property-based tests for financial calculations
 
 ### Documentation (All Phases)
+
 - API documentation (OpenAPI auto-generated)
 - Architecture Decision Records (ADRs)
 - Agent progress documentation
 - User guides (as features stabilize)
 
 ### Observability (Phase 2+)
+
 - Structured logging
 - Error tracking
 - Performance metrics
@@ -360,6 +382,7 @@ class PriceDropCondition(Condition):
 ## Review Points
 
 After each phase:
+
 1. Demo completed features
 2. Review architecture for emerging patterns
 3. Update agent instructions with learned conventions
