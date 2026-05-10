@@ -1,14 +1,14 @@
 """TriggerEvaluationService - evaluates ACTIVE triggers each scheduler tick.
 
 Phase F-2 of the agent platform, extended in F-3 to optionally hand off
-to the :class:`TriggerInvocationOrchestrator` when a fire is detected.
-Mirrors :class:`StrategyExecutionService` in shape but for the new
-trigger-fire path: the service lists evaluable triggers, computes the
-condition's required inputs from the ledger + market data, runs the
-per-condition evaluator (currently :func:`evaluate_drawdown` only),
-and on a fire either returns the "would fire" envelope (F-2 default)
-or hands off to the orchestrator (F-3, gated by
-``ZEBU_TRIGGER_FIRES_ENABLED``).
+to the :class:`TriggerInvocationOrchestrator` when a fire is detected,
+and extended in F-4 with the volatility-spike and earnings-proximity
+evaluators. Mirrors :class:`StrategyExecutionService` in shape but for
+the new trigger-fire path: the service lists evaluable triggers,
+computes the condition's required inputs from the ledger + market data,
+runs the per-condition evaluator, and on a fire either returns the
+"would fire" envelope (F-2 default) or hands off to the orchestrator
+(F-3, gated by ``ZEBU_TRIGGER_FIRES_ENABLED``).
 
 **F-3 wiring**: when the orchestrator is supplied at construction
 time AND the runtime feature flag is on, the service calls
@@ -17,13 +17,22 @@ result. The flag exists so this PR is safe to merge with the actual
 fire path off in production until Tim opts in. Tests pass an
 in-memory orchestrator so coverage is high regardless of the flag.
 
+**F-4 update**: VOLATILITY_SPIKE and EARNINGS_PROXIMITY now dispatch to
+their respective evaluators (PR #262). The dispatch is done via ``match``
+on :class:`ConditionType` — adding a new condition type is "extend the
+match arm and add the evaluator". Only ``CUSTOM_RULE`` still raises
+:class:`NotImplementedError` (intentional — see Phase F design Q1).
+
 The service composes the I/O around the per-condition evaluators (which
-are pure functions on inputs). The ledger walk and price fetching all
-happen here; the evaluators receive a fully-resolved value series.
+are pure functions on inputs, except for ``evaluate_earnings_proximity``
+which takes the calendar port directly per design §2.1.4). The ledger
+walk and price fetching all happen here; the evaluators receive
+fully-resolved value series.
 
 References:
 - ``docs/architecture/phase-f-agent-in-the-loop.md`` §2.1, §3 (sequence),
-  §5 (scheduler runtime), §10 Q6 (recompute from ledger).
+  §5 (scheduler runtime), §10 Q5 (stub earnings calendar adapter),
+  §10 Q6 (recompute from ledger).
 - :class:`StrategyExecutionService` for the structural sibling.
 """
 
@@ -38,6 +47,7 @@ from zebu.application.exceptions import (
     MarketDataUnavailableError,
     TickerNotFoundError,
 )
+from zebu.application.ports.earnings_calendar_port import EarningsCalendarPort
 from zebu.application.ports.market_data_port import MarketDataPort
 from zebu.application.ports.portfolio_repository import PortfolioRepository
 from zebu.application.ports.strategy_activation_repository import (
@@ -53,6 +63,18 @@ from zebu.application.services.trigger_evaluators.drawdown import (
     evaluate_drawdown,
     lookback_window,
 )
+from zebu.application.services.trigger_evaluators.earnings_proximity import (
+    EarningsEvaluationData,
+    EarningsEvaluatorInput,
+    evaluate_earnings_proximity,
+)
+from zebu.application.services.trigger_evaluators.volatility_spike import (
+    TickerClose,
+    VolatilityEvaluationData,
+    VolatilityEvaluatorInput,
+    evaluate_volatility_spike,
+    volatility_window,
+)
 from zebu.application.services.trigger_invocation_orchestrator import (
     TriggerInvocationOrchestrator,
 )
@@ -67,6 +89,16 @@ from zebu.domain.value_objects.trigger_condition import (
     ConditionType,
     DrawdownMetric,
     DrawdownParams,
+    EarningsParams,
+    VolatilityParams,
+)
+
+# Discriminated-union of the per-condition evaluation-data shapes.
+# Used on :class:`TriggerEvaluationResult` so a single result envelope
+# can carry the snapshot for any evaluator. Adding a new condition
+# type extends this union plus the dispatch arm in ``_evaluate_one``.
+type EvaluationData = (
+    DrawdownEvaluationData | VolatilityEvaluationData | EarningsEvaluationData
 )
 
 logger = logging.getLogger(__name__)
@@ -126,7 +158,7 @@ class TriggerEvaluationResult(TypedDict):
     trigger_id: UUID
     activation_id: UUID
     fired: bool
-    evaluation_data: DrawdownEvaluationData | None
+    evaluation_data: EvaluationData | None
     error: str | None
     fire_record_id: UUID | None
     decision: str | None
@@ -188,6 +220,8 @@ class TriggerEvaluationService:
         portfolio_repo: PortfolioRepository,
         transaction_repo: TransactionRepository,
         market_data: MarketDataPort,
+        earnings_calendar: EarningsCalendarPort,
+        earnings_calendar_label: str = "stub",
         orchestrator: TriggerInvocationOrchestrator | None = None,
         fires_enabled_override: bool | None = None,
     ) -> None:
@@ -201,17 +235,26 @@ class TriggerEvaluationService:
             activation_repo: Read-only resolution from the trigger's
                 activation_id to the activation entity.
             strategy_repo: Read-only resolution from the activation's
-                strategy_id to the strategy entity. Used by future
-                evaluators (e.g. :func:`evaluate_volatility`) that need
-                the ticker list; the drawdown evaluator only uses it
-                for the ``PER_TICKER`` mode.
+                strategy_id to the strategy entity. Used by both the
+                volatility evaluator (resolves the ticker universe) and
+                the drawdown evaluator (PER_TICKER mode).
             portfolio_repo: Read-only resolution from the activation's
                 portfolio_id to the portfolio entity.
             transaction_repo: Read-only access to the portfolio's
                 transaction ledger (drawdown is recomputed from this
                 per design Q6).
-            market_data: Port for fetching price history (used by the
-                drawdown evaluator and the future volatility evaluator).
+            market_data: Port for fetching price history (drawdown +
+                volatility evaluators).
+            earnings_calendar: Port for fetching upcoming earnings
+                events. F-4 default is the
+                :class:`StubEarningsCalendarAdapter` (always returns
+                empty) — real source attaches via a third-party MCP at
+                runtime per design Q5.
+            earnings_calendar_label: String identifier for the
+                earnings calendar source. Echoed into
+                :class:`EarningsEvaluationData.source` for the audit
+                row. Defaults to ``"stub"``; production wiring should
+                pass a more specific label (e.g. ``"brave_mcp"``).
             orchestrator: F-3 — the
                 :class:`TriggerInvocationOrchestrator`. When ``None``,
                 the service stops at "would fire" results (F-2 behavior;
@@ -230,6 +273,8 @@ class TriggerEvaluationService:
         self._portfolio_repo = portfolio_repo
         self._transaction_repo = transaction_repo
         self._market_data = market_data
+        self._earnings_calendar = earnings_calendar
+        self._earnings_calendar_label = earnings_calendar_label
         self._orchestrator = orchestrator
         self._fires_enabled_override = fires_enabled_override
 
@@ -375,7 +420,7 @@ class TriggerEvaluationService:
         self,
         *,
         trigger: StrategyConditionTrigger,
-        evaluation_data: DrawdownEvaluationData | None,
+        evaluation_data: EvaluationData | None,
     ) -> tuple[UUID | None, str | None, str | None]:
         """Optionally delegate to the orchestrator on a fire.
 
@@ -429,13 +474,15 @@ class TriggerEvaluationService:
         trigger: StrategyConditionTrigger,
         *,
         now: datetime,
-    ) -> tuple[bool, DrawdownEvaluationData | None]:
+    ) -> tuple[bool, EvaluationData | None]:
         """Resolve inputs and dispatch to the right per-condition evaluator.
 
-        F-2 only handles :class:`ConditionType.DRAWDOWN_THRESHOLD`. Other
-        condition types raise :class:`NotImplementedError` — caller
-        catches and surfaces it as a per-trigger error so the cycle
-        keeps moving.
+        F-4 handles all three concrete condition types (DRAWDOWN_THRESHOLD,
+        VOLATILITY_SPIKE, EARNINGS_PROXIMITY). ``CUSTOM_RULE`` raises
+        :class:`NotImplementedError` — caller catches and surfaces it
+        as a per-trigger error so the cycle keeps moving. Per design
+        Q1, CUSTOM_RULE is deferred indefinitely (predicate evaluation
+        is its own design problem).
 
         Args:
             trigger: The trigger to evaluate.
@@ -449,8 +496,8 @@ class TriggerEvaluationService:
                 the trigger no longer exists (caught by
                 :meth:`_safe_evaluate_one`).
             NotImplementedError: When the trigger's condition type is
-                not yet supported by the F-2 evaluator (only DRAWDOWN
-                is wired). F-4 lifts this for VOLATILITY / EARNINGS.
+                ``CUSTOM_RULE`` (intentionally unimplemented per
+                Phase F design Q1).
         """
         activation = await self._activation_repo.get(trigger.activation_id)
         if activation is None:
@@ -475,15 +522,38 @@ class TriggerEvaluationService:
                     params=trigger.condition_params,
                     now=now,
                 )
-            case (
-                ConditionType.VOLATILITY_SPIKE
-                | ConditionType.EARNINGS_PROXIMITY
-                | ConditionType.CUSTOM_RULE
-            ):
+            case ConditionType.VOLATILITY_SPIKE:
+                if not isinstance(trigger.condition_params, VolatilityParams):
+                    raise ValueError(
+                        f"Trigger {trigger.id} has VOLATILITY_SPIKE type "
+                        f"but condition_params is "
+                        f"{type(trigger.condition_params).__name__}"
+                    )
+                return await self._evaluate_volatility_spike(
+                    trigger=trigger,
+                    activation=activation,
+                    params=trigger.condition_params,
+                    now=now,
+                )
+            case ConditionType.EARNINGS_PROXIMITY:
+                if not isinstance(trigger.condition_params, EarningsParams):
+                    raise ValueError(
+                        f"Trigger {trigger.id} has EARNINGS_PROXIMITY type "
+                        f"but condition_params is "
+                        f"{type(trigger.condition_params).__name__}"
+                    )
+                return await self._evaluate_earnings_proximity(
+                    trigger=trigger,
+                    activation=activation,
+                    params=trigger.condition_params,
+                    now=now,
+                )
+            case ConditionType.CUSTOM_RULE:
                 raise NotImplementedError(
                     f"Condition type {trigger.condition_type.value} is not "
-                    "yet supported (F-4 ships VOLATILITY + EARNINGS; "
-                    "CUSTOM_RULE is deferred — see Phase F design Q1)."
+                    "supported (CUSTOM_RULE is deferred per Phase F "
+                    "design Q1 — predicate evaluation needs its own "
+                    "design pass)."
                 )
 
     async def _evaluate_drawdown(
@@ -538,6 +608,132 @@ class TriggerEvaluationService:
             )
 
         return evaluate_drawdown(params=params, inputs=inputs)
+
+    async def _evaluate_volatility_spike(
+        self,
+        *,
+        trigger: StrategyConditionTrigger,
+        activation: StrategyActivation,
+        params: VolatilityParams,
+        now: datetime,
+    ) -> tuple[bool, VolatilityEvaluationData | None]:
+        """Build volatility inputs from market data + dispatch the evaluator.
+
+        Resolves the ticker universe (the ``params.tickers`` subset
+        when set, otherwise the strategy's ticker list), fetches each
+        ticker's daily-close history for ``params.over_days``, and
+        forwards to :func:`evaluate_volatility_spike`.
+
+        The evaluator's "fire if any ticker exceeds threshold"
+        semantics short-circuit on the first hit; the composer's
+        ordering is the strategy's ticker list (or the explicit subset)
+        in user-supplied order, with ``Ticker`` symbols sorted to keep
+        the choice deterministic across runs.
+        """
+        del trigger  # accepted for symmetry with sibling methods
+        tickers = await self._resolve_universe_tickers(
+            strategy_id=activation.strategy_id,
+            params_tickers=params.tickers,
+        )
+        if not tickers:
+            return False, None
+
+        window_start, window_end = volatility_window(
+            now=now, over_days=params.over_days
+        )
+        history_by_ticker = await self._fetch_price_history_for_window(
+            tickers=tickers, start=window_start, end=window_end
+        )
+
+        inputs: list[VolatilityEvaluatorInput] = []
+        for ticker in tickers:
+            history = history_by_ticker.get(ticker.symbol, [])
+            if not history:
+                continue
+            closes = tuple(
+                TickerClose(
+                    observed_at=point.timestamp,
+                    close=(
+                        point.close.amount
+                        if point.close is not None
+                        else point.price.amount
+                    ),
+                )
+                for point in history
+            )
+            inputs.append(
+                VolatilityEvaluatorInput(
+                    ticker=ticker.symbol,
+                    closes=closes,
+                    window_start=window_start,
+                    window_end=window_end,
+                )
+            )
+
+        return evaluate_volatility_spike(params=params, inputs=inputs)
+
+    async def _evaluate_earnings_proximity(
+        self,
+        *,
+        trigger: StrategyConditionTrigger,
+        activation: StrategyActivation,
+        params: EarningsParams,
+        now: datetime,
+    ) -> tuple[bool, EarningsEvaluationData | None]:
+        """Resolve the ticker universe and dispatch the earnings evaluator.
+
+        With the F-4 default :class:`StubEarningsCalendarAdapter` the
+        evaluator never fires (the adapter returns ``[]``); attaching
+        a real source via DI flips this on without touching the
+        evaluator. Per design Q5 the upstream-source decision (Brave /
+        Tavily / dedicated feed) is deferred to a follow-up.
+        """
+        del trigger  # accepted for symmetry with sibling methods
+        tickers = await self._resolve_universe_tickers(
+            strategy_id=activation.strategy_id,
+            params_tickers=params.tickers,
+        )
+        if not tickers:
+            return False, None
+
+        ticker_symbols = [t.symbol for t in tickers]
+        evaluator_input = EarningsEvaluatorInput(
+            tickers=ticker_symbols,
+            now=now,
+        )
+        return await evaluate_earnings_proximity(
+            params=params,
+            inputs=evaluator_input,
+            earnings_calendar=self._earnings_calendar,
+            source_label=self._earnings_calendar_label,
+        )
+
+    async def _resolve_universe_tickers(
+        self,
+        *,
+        strategy_id: UUID,
+        params_tickers: list[Ticker] | None,
+    ) -> list[Ticker]:
+        """Resolve the ticker universe to evaluate against.
+
+        - When ``params_tickers`` is set: use it verbatim. The API
+          layer is responsible for ensuring it's a subset of the
+          strategy's tickers; here we trust the persisted entity.
+        - When ``params_tickers`` is None: resolve from the strategy.
+          A missing strategy returns ``[]`` — the evaluator will
+          short-circuit to no-fire, which is the safe default for a
+          stale activation pointing at a deleted strategy.
+
+        Tickers are sorted alphabetically so the "first hit"
+        short-circuit is deterministic across runs.
+        """
+        if params_tickers is not None:
+            return sorted(params_tickers, key=lambda t: t.symbol)
+
+        strategy = await self._strategy_repo.get(strategy_id)
+        if strategy is None:
+            return []
+        return [Ticker(symbol) for symbol in sorted(strategy.tickers)]
 
     async def _build_portfolio_total_input(
         self,

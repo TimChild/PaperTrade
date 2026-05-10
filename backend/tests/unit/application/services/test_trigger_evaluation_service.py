@@ -224,6 +224,13 @@ def _build_service(
     transaction_repo: InMemoryTransactionRepository,
     market_data: InMemoryMarketDataAdapter,
 ) -> TriggerEvaluationService:
+    # F-4: the service requires an EarningsCalendarPort; the stub
+    # adapter is the safe default for tests that don't exercise the
+    # earnings path.
+    from zebu.adapters.outbound.earnings.stub_calendar_adapter import (
+        StubEarningsCalendarAdapter,
+    )
+
     return TriggerEvaluationService(
         trigger_repo=trigger_repo,
         activation_repo=activation_repo,
@@ -231,6 +238,7 @@ def _build_service(
         portfolio_repo=portfolio_repo,
         transaction_repo=transaction_repo,
         market_data=market_data,
+        earnings_calendar=StubEarningsCalendarAdapter(),
     )
 
 
