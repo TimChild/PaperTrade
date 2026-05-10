@@ -114,7 +114,7 @@ describe('StrategyCard', () => {
     await user.click(deleteBtn)
 
     expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument()
-    expect(screen.getByText('Delete Strategy')).toBeInTheDocument()
+    expect(screen.getByText(/delete strategy/i)).toBeInTheDocument()
   })
 
   it('hides confirm dialog when cancel is clicked', async () => {

@@ -89,8 +89,10 @@ describe('ConfirmDialog', () => {
       />
     )
 
+    // Editorial muted loss tone via the Button `destructive` variant.
+    // Was `bg-red-600` pre-revamp.
     const confirmButton = screen.getByTestId('confirm-dialog-confirm')
-    expect(confirmButton).toHaveClass('bg-red-600')
+    expect(confirmButton).toHaveClass('bg-loss')
   })
 
   it('should disable buttons when isLoading is true', () => {

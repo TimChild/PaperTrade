@@ -1,63 +1,64 @@
 import { useNavigate } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
 import { Home, ArrowLeft } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Eyebrow } from '@/components/ui/Eyebrow'
 
 /**
- * NotFound component - 404 page for invalid routes
+ * Editorial 404 — eyebrow ("Page not found"), 404 in display serif as a
+ * supersized number, supporting copy, two CTAs.
  *
- * This page is displayed when a user navigates to a route that doesn't exist.
- * It follows the design system with proper spacing, typography, and theming.
+ * Sits centered against the bare canvas — no card chrome.
  */
-export function NotFound() {
+export function NotFound(): React.JSX.Element {
   const navigate = useNavigate()
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
-      <div className="text-center max-w-md">
-        {/* 404 Error Code */}
-        <div className="mb-8">
-          <h1 className="text-9xl font-bold text-primary">404</h1>
-        </div>
-
-        {/* Error Message */}
-        <h2 className="text-3xl font-bold text-foreground mb-4">
-          Page Not Found
-        </h2>
-
-        <p className="text-lg text-muted-foreground mb-8">
-          The page you're looking for doesn't exist or has been moved.
+    <div className="min-h-[80vh] bg-canvas flex items-center justify-center px-6">
+      <div className="text-center max-w-md w-full">
+        <Eyebrow>Page not found</Eyebrow>
+        <p
+          className="mt-3 font-display text-[6rem] sm:text-[8rem] leading-none tracking-tight text-amber tabular-nums"
+          aria-hidden="true"
+        >
+          404
+        </p>
+        <h1 className="mt-4 font-display text-display-md text-ink">
+          Nothing here
+        </h1>
+        <p className="mt-3 text-body-sm text-ink-muted">
+          The page you&rsquo;re looking for doesn&rsquo;t exist or has been
+          moved.
         </p>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
           <Button
             onClick={() => navigate(-1)}
-            variant="outline"
+            variant="secondary"
             className="inline-flex items-center gap-2"
+            data-testid="not-found-back-button"
           >
             <ArrowLeft className="h-4 w-4" />
-            Go Back
+            Go back
           </Button>
 
           <Button
             onClick={() => navigate('/dashboard')}
             className="inline-flex items-center gap-2"
+            data-testid="not-found-home-button"
           >
             <Home className="h-4 w-4" />
-            Return to Dashboard
+            Return to dashboard
           </Button>
         </div>
 
-        {/* Helpful Links */}
-        <div className="mt-12 pt-8 border-t border-border">
-          <p className="text-sm text-muted-foreground mb-4">
-            Looking for something specific?
-          </p>
-          <ul className="text-sm space-y-2">
+        <div className="mt-12 pt-8 border-t border-hairline">
+          <Eyebrow>Quick links</Eyebrow>
+          <ul className="mt-3 text-body-sm space-y-2">
             <li>
               <button
                 onClick={() => navigate('/dashboard')}
-                className="text-primary hover:underline"
+                className="text-amber hover:text-amber-hover transition-colors"
+                style={{ minHeight: 'auto' }}
               >
                 View your portfolios
               </button>
@@ -67,7 +68,8 @@ export function NotFound() {
                 href="https://github.com/TimChild/PaperTrade"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary hover:underline"
+                className="text-amber hover:text-amber-hover transition-colors"
+                style={{ minHeight: 'auto' }}
               >
                 Report an issue on GitHub
               </a>

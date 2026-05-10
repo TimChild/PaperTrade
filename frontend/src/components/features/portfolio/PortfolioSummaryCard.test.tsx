@@ -62,8 +62,9 @@ describe('PortfolioSummaryCard', () => {
     render(<PortfolioSummaryCard portfolio={mockPortfolio} />, {
       wrapper: Wrapper,
     })
-    const cashBalanceElement = screen.getByText('Cash Balance').parentElement
-    expect(cashBalanceElement).toHaveTextContent('$25,000.00')
+    const cashLabel = screen.getByText(/cash balance/i)
+    const cashBalanceRow = cashLabel.parentElement
+    expect(cashBalanceRow).toHaveTextContent('$25,000.00')
   })
 
   it('shows loading state when isLoading is true', () => {
@@ -83,7 +84,7 @@ describe('PortfolioSummaryCard', () => {
       wrapper: Wrapper,
     })
     // Holdings value = totalValue - cashBalance = 156750 - 25000 = 131750
-    expect(screen.getByText('Holdings Value')).toBeInTheDocument()
+    expect(screen.getByText(/holdings value/i)).toBeInTheDocument()
     const holdingsValueText = screen.getByText('$131,750.00')
     expect(holdingsValueText).toBeInTheDocument()
   })
@@ -97,7 +98,7 @@ describe('PortfolioSummaryCard', () => {
     render(<PortfolioSummaryCard portfolio={portfolioWithNoHoldings} />, {
       wrapper: Wrapper,
     })
-    expect(screen.queryByText('Holdings Value')).not.toBeInTheDocument()
+    expect(screen.queryByText(/holdings value/i)).not.toBeInTheDocument()
   })
 
   it('displays negative change correctly', () => {
@@ -124,7 +125,9 @@ describe('PortfolioSummaryCard', () => {
     })
     const caption = screen.getByTestId('portfolio-last-updated')
     expect(caption).toBeInTheDocument()
-    expect(caption.textContent).toMatch(/^Last updated: /)
+    // Editorial format uses "Last updated · " (mid-dot separator).
+    // Was "Last updated: " pre-revamp.
+    expect(caption.textContent).toMatch(/^Last updated [·:] /)
   })
 
   it('omits the "Last updated" caption when balanceAsOf is missing', () => {

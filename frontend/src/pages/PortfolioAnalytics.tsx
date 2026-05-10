@@ -1,7 +1,11 @@
 /**
- * Portfolio Analytics page displaying performance charts and metrics
+ * Portfolio Analytics — editorial drilldown into a portfolio's performance
+ * over time. Sections (eyebrow + serif heading) separate the metric grid,
+ * value-over-time chart, composition-over-time stacked area, and the
+ * holdings pie. No card chrome around the charts.
  */
 import { useParams, Link } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
 import { usePortfolio } from '@/hooks/usePortfolio'
 import { PerformanceChart } from '@/components/features/analytics/PerformanceChart'
 import { CompositionChart } from '@/components/features/analytics/CompositionChart'
@@ -9,6 +13,8 @@ import { MetricsCards } from '@/components/features/analytics/MetricsCards'
 import { CompositionOverTimeChart } from '@/components/features/analytics/CompositionOverTimeChart'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { ErrorDisplay } from '@/components/ui/ErrorDisplay'
+import { Eyebrow } from '@/components/ui/Eyebrow'
+import { SectionHeader } from '@/components/ui/SectionHeader'
 
 export function PortfolioAnalytics(): React.JSX.Element {
   const { id } = useParams<{ id: string }>()
@@ -18,97 +24,149 @@ export function PortfolioAnalytics(): React.JSX.Element {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <LoadingSpinner size="lg" className="py-12" />
-      </div>
+      <PageFrame>
+        <div className="py-12">
+          <LoadingSpinner size="lg" />
+        </div>
+      </PageFrame>
     )
   }
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+      <PageFrame>
         <ErrorDisplay error={error} />
-        <Link
-          to="/dashboard"
-          className="mt-4 inline-block text-blue-600 hover:underline dark:text-blue-400 text-sm sm:text-base"
-        >
-          ← Back to Dashboard
-        </Link>
-      </div>
+        <div className="mt-6">
+          <BackLink portfolioId={portfolioId} />
+        </div>
+      </PageFrame>
     )
   }
 
   if (!portfolioId) {
     return (
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <p className="text-red-500">Portfolio not found</p>
-        <Link
-          to="/dashboard"
-          className="mt-4 inline-block text-blue-600 hover:underline dark:text-blue-400 text-sm sm:text-base"
-        >
-          ← Back to Dashboard
-        </Link>
-      </div>
+      <PageFrame>
+        <div className="rounded-editorial border border-hairline bg-loss-soft/40 p-6">
+          <Eyebrow className="text-loss">Not found</Eyebrow>
+          <p className="mt-2 text-body-md text-ink">Portfolio not found.</p>
+        </div>
+        <div className="mt-6">
+          <BackLink portfolioId="" />
+        </div>
+      </PageFrame>
     )
   }
 
   return (
-    <div
-      className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8"
-      data-testid="portfolio-analytics"
-    >
-      {/* Header with navigation */}
-      <div className="mb-6 sm:mb-8">
-        <Link
-          to={`/portfolio/${portfolioId}`}
-          data-testid="analytics-back-link"
-          className="mb-3 sm:mb-4 inline-flex items-center text-blue-600 hover:underline dark:text-blue-400 text-sm sm:text-base"
-        >
-          ← Back to Portfolio
-        </Link>
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white">
-          {portfolio?.name} - Analytics
-        </h1>
+    <PageFrame>
+      <div
+        className="reveal"
+        style={{ ['--reveal-delay' as string]: '0ms' }}
+        data-testid="portfolio-analytics"
+      >
+        <BackLink portfolioId={portfolioId} />
       </div>
 
-      <div className="space-y-6 sm:space-y-8">
-        {/* Performance Summary */}
-        <section>
-          <h2 className="mb-3 sm:mb-4 text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
-            Performance Summary
-          </h2>
-          <MetricsCards portfolioId={portfolioId} />
-        </section>
+      <header
+        className="mt-6 sm:mt-8 reveal"
+        style={{ ['--reveal-delay' as string]: '60ms' }}
+      >
+        <Eyebrow>Analytics</Eyebrow>
+        <h1 className="mt-1 font-display text-display-md sm:text-display-lg tracking-tight text-ink">
+          {portfolio?.name}
+        </h1>
+      </header>
 
-        {/* Performance Chart */}
-        <section>
-          <h3 className="mb-3 sm:mb-4 text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-            Portfolio Value Over Time
-          </h3>
-          <div className="rounded-lg bg-white p-3 sm:p-4 shadow dark:bg-gray-800">
-            <PerformanceChart portfolioId={portfolioId} />
-          </div>
-        </section>
+      {/* Hairline rule */}
+      <div
+        className="mt-6 sm:mt-8 border-t border-hairline reveal"
+        style={{ ['--reveal-delay' as string]: '90ms' }}
+      />
 
-        {/* Composition Over Time Chart */}
-        <section>
-          <h3 className="mb-3 sm:mb-4 text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-            Portfolio Composition Over Time
-          </h3>
-          <div className="rounded-lg bg-white p-3 sm:p-4 shadow dark:bg-gray-800">
-            <CompositionOverTimeChart portfolioId={portfolioId} />
-          </div>
-        </section>
+      {/* Performance Summary — metrics grid */}
+      <section
+        className="mt-8 sm:mt-10 reveal"
+        style={{ ['--reveal-delay' as string]: '120ms' }}
+      >
+        <SectionHeader
+          eyebrow="Snapshot"
+          title="Performance summary"
+          size="sm"
+        />
+        <MetricsCards portfolioId={portfolioId} />
+      </section>
 
-        {/* Composition Chart */}
-        <section>
-          <h3 className="mb-3 sm:mb-4 text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-            Holdings Composition
-          </h3>
-          <div className="rounded-lg bg-white p-3 sm:p-4 shadow dark:bg-gray-800">
-            <CompositionChart portfolioId={portfolioId} />
-          </div>
-        </section>
+      {/* Performance Chart */}
+      <section
+        className="mt-12 sm:mt-16 reveal"
+        style={{ ['--reveal-delay' as string]: '180ms' }}
+      >
+        <SectionHeader
+          eyebrow="Trajectory"
+          title="Portfolio value over time"
+          size="sm"
+        />
+        <PerformanceChart portfolioId={portfolioId} />
+      </section>
+
+      {/* Composition Over Time */}
+      <section
+        className="mt-12 sm:mt-16 reveal"
+        style={{ ['--reveal-delay' as string]: '240ms' }}
+      >
+        <SectionHeader
+          eyebrow="Allocation"
+          title="Composition over time"
+          size="sm"
+          description="Stacked cash and per-ticker holdings, evaluated at each daily snapshot."
+        />
+        <CompositionOverTimeChart portfolioId={portfolioId} />
+      </section>
+
+      {/* Composition pie */}
+      <section
+        className="mt-12 sm:mt-16 reveal"
+        style={{ ['--reveal-delay' as string]: '300ms' }}
+      >
+        <SectionHeader
+          eyebrow="Allocation"
+          title="Holdings composition"
+          size="sm"
+          description="Today's allocation across cash and each open position."
+        />
+        <CompositionChart portfolioId={portfolioId} />
+      </section>
+    </PageFrame>
+  )
+}
+
+interface BackLinkProps {
+  portfolioId: string
+}
+
+function BackLink({ portfolioId }: BackLinkProps): React.JSX.Element {
+  return (
+    <Link
+      to={portfolioId ? `/portfolio/${portfolioId}` : '/dashboard'}
+      data-testid="analytics-back-link"
+      className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink text-body-sm transition-colors"
+      style={{ minHeight: 'auto' }}
+    >
+      <ArrowLeft className="h-3.5 w-3.5" />
+      {portfolioId ? 'Portfolio' : 'Dashboard'}
+    </Link>
+  )
+}
+
+function PageFrame({
+  children,
+}: {
+  children: React.ReactNode
+}): React.JSX.Element {
+  return (
+    <div className="min-h-screen bg-canvas">
+      <div className="mx-auto max-w-[1240px] px-5 sm:px-8 lg:px-12 py-8 sm:py-12 lg:py-16">
+        {children}
       </div>
     </div>
   )

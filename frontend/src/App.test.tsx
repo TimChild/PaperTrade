@@ -55,9 +55,13 @@ describe('App', () => {
       </ClerkProvider>
     )
 
-    // Wait for data to load (MSW will respond)
+    // Wait for data to load (MSW will respond) — Wave 2 editorial title.
+    // Was "Portfolio Dashboard" pre-revamp.
     await waitFor(() => {
-      expect(screen.getByText('Portfolio Dashboard')).toBeInTheDocument()
+      // The editorial dashboard renders an <h1> "Portfolios" heading.
+      expect(
+        screen.getByRole('heading', { name: /^portfolios$/i, level: 1 })
+      ).toBeInTheDocument()
     })
   })
 
@@ -72,9 +76,10 @@ describe('App', () => {
       </ClerkProvider>
     )
 
+    // Editorial subtitle. Was "Track your investments and performance" pre-revamp.
     await waitFor(() => {
       expect(
-        screen.getByText(/Track your investments and performance/i)
+        screen.getByText(/Track positions, performance, and cash/i)
       ).toBeInTheDocument()
     })
   })

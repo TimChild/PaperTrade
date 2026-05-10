@@ -1,5 +1,7 @@
 /**
- * Stacked area chart showing portfolio composition over time
+ * Editorial stacked area chart — portfolio composition over time. Uses the
+ * cool chart palette plus the warm amber as a single accent. Sits flush;
+ * no card chrome.
  */
 import { useState } from 'react'
 import {
@@ -15,7 +17,6 @@ import {
 import { usePerformance } from '@/hooks/useAnalytics'
 import { formatCurrency, formatDate } from '@/utils/formatters'
 import type { TimeRange } from '@/services/api/analytics'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
 interface CompositionOverTimeChartProps {
@@ -25,16 +26,16 @@ interface CompositionOverTimeChartProps {
 const TIME_RANGES: TimeRange[] = ['1W', '1M', '3M', '1Y', 'ALL']
 
 const TICKER_COLORS = [
-  '#3b82f6', // blue
-  '#10b981', // green
-  '#f59e0b', // amber
-  '#ef4444', // red
-  '#8b5cf6', // purple
-  '#ec4899', // pink
-  '#06b6d4', // cyan
-  '#f97316', // orange
+  'hsl(var(--chart-line-1))',
+  'hsl(var(--chart-line-2))',
+  'hsl(var(--chart-line-3))',
+  'hsl(var(--chart-line-4))',
+  'hsl(var(--accent-amber))',
+  'hsl(var(--ink-muted))',
+  'hsl(195 25% 38%)',
+  'hsl(215 20% 45%)',
 ]
-const CASH_COLOR = '#6b7280' // gray
+const CASH_COLOR = 'hsl(var(--ink-faint))'
 
 function getTickerColor(index: number): string {
   return TICKER_COLORS[index % TICKER_COLORS.length]
@@ -50,7 +51,6 @@ function buildChartData(
     holdings_breakdown?: { ticker: string; value: number }[]
   }[]
 ): { rows: ChartRow[]; keys: string[] } {
-  // Collect all unique ticker/segment keys across all data points
   const tickerSet = new Set<string>()
   let hasAnyBreakdown = false
 
@@ -63,7 +63,6 @@ function buildChartData(
     }
   }
 
-  // If no breakdown data at all, fall back to aggregate "Holdings" key
   if (!hasAnyBreakdown) {
     const rows = dataPoints.map((point) => ({
       date: point.date,
@@ -82,13 +81,11 @@ function buildChartData(
     const row: ChartRow = { date: point.date, Cash: point.cash_balance }
 
     if (point.holdings_breakdown && point.holdings_breakdown.length > 0) {
-      // Full breakdown available
       for (const ticker of tickers) {
         const item = point.holdings_breakdown.find((b) => b.ticker === ticker)
         row[ticker] = item ? item.value : 0
       }
     } else {
-      // Old snapshot: spread holdings_value across a "Holdings" bucket, zero individual tickers
       row['Holdings'] = point.holdings_value
       for (const ticker of tickers) {
         row[ticker] = 0
@@ -98,9 +95,6 @@ function buildChartData(
     return row
   })
 
-  // Determine which keys to render (exclude any that are always 0)
-  // 'Holdings' is placed after 'Cash' but before individual tickers so that
-  // in mixed data sets it stacks logically between cash and position-level areas
   const potentialKeys = ['Cash', 'Holdings', ...tickers]
   const activeKeys = potentialKeys.filter((key) =>
     rows.some((row) => (row[key] as number) > 0)
@@ -117,143 +111,129 @@ export function CompositionOverTimeChart({
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <div data-testid="composition-over-time-chart-loading">
-            Loading chart...
-          </div>
-        </CardContent>
-      </Card>
+      <div
+        data-testid="composition-over-time-chart-loading"
+        className="flex h-[400px] items-center justify-center text-body-sm text-ink-muted"
+      >
+        Loading chart...
+      </div>
     )
   }
 
   if (error) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <div
-            data-testid="composition-over-time-chart-error"
-            className="text-negative"
-          >
-            Failed to load composition data
-          </div>
-        </CardContent>
-      </Card>
+      <div
+        data-testid="composition-over-time-chart-error"
+        className="rounded-editorial border border-hairline bg-loss-soft/40 p-6 text-body-sm text-ink"
+      >
+        Failed to load composition data
+      </div>
     )
   }
 
   if (!data || data.data_points.length === 0) {
     return (
-      <Card>
-        <CardContent className="pt-6">
-          <div
-            data-testid="composition-over-time-chart-empty"
-            className="flex flex-col items-center gap-3"
-          >
-            <p className="text-foreground-secondary text-center">
-              No composition data available yet.
-            </p>
-            <p className="text-sm text-foreground-tertiary text-center">
-              Composition charts update daily after market close. Check back
-              tomorrow!
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <div
+        data-testid="composition-over-time-chart-empty"
+        className="flex h-[300px] flex-col items-center justify-center gap-2 rounded-editorial border border-hairline bg-canvas-raised/40 p-6"
+      >
+        <p className="text-body-sm text-ink">
+          No composition data available yet.
+        </p>
+        <p className="text-body-sm text-ink-muted">
+          Composition charts update daily after market close. Check back
+          tomorrow.
+        </p>
+      </div>
     )
   }
 
   const { rows, keys } = buildChartData(data.data_points)
-
-  // Assign colors: Cash → CASH_COLOR, others → TICKER_COLORS
   const tickerKeys = keys.filter((k) => k !== 'Cash')
 
   return (
-    <Card data-testid="composition-over-time-chart">
-      <CardHeader>
-        <CardTitle className="text-heading-md">Composition</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {/* Time Range Selector */}
-        <div className="mb-4 flex gap-2">
-          {TIME_RANGES.map((r) => (
-            <Button
-              key={r}
-              data-testid={`composition-range-${r}`}
-              variant={range === r ? 'default' : 'secondary'}
-              size="sm"
-              onClick={() => setRange(r)}
-            >
-              {r}
-            </Button>
+    <div data-testid="composition-over-time-chart">
+      <div className="mb-5 flex flex-wrap gap-2">
+        {TIME_RANGES.map((r) => (
+          <Button
+            key={r}
+            data-testid={`composition-range-${r}`}
+            variant={range === r ? 'default' : 'secondary'}
+            size="sm"
+            onClick={() => setRange(r)}
+          >
+            {r}
+          </Button>
+        ))}
+      </div>
+
+      <ResponsiveContainer width="100%" height={400}>
+        <AreaChart data={rows}>
+          <CartesianGrid
+            strokeDasharray="2 4"
+            stroke="hsl(var(--chart-grid))"
+          />
+          <XAxis
+            dataKey="date"
+            tickFormatter={(date) => formatDate(date, 'short')}
+            stroke="hsl(var(--chart-axis))"
+            style={{ fontSize: '11px', fontFamily: 'var(--font-mono)' }}
+          />
+          <YAxis
+            tickFormatter={(value) => formatCurrency(value, 'USD', 'compact')}
+            stroke="hsl(var(--chart-axis))"
+            style={{ fontSize: '11px', fontFamily: 'var(--font-mono)' }}
+          />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: 'hsl(var(--canvas-raised))',
+              border: '1px solid hsl(var(--hairline))',
+              borderRadius: '0.25rem',
+              color: 'hsl(var(--ink))',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '12px',
+            }}
+            cursor={{ stroke: 'hsl(var(--chart-crosshair))', strokeWidth: 1 }}
+            formatter={(value: number | undefined, name: string | undefined) =>
+              value !== undefined
+                ? [formatCurrency(value), name ?? '']
+                : ['---', name ?? '']
+            }
+            labelFormatter={(label) => formatDate(label, 'long')}
+          />
+          <Legend
+            wrapperStyle={{
+              fontFamily: 'var(--font-sans)',
+              fontSize: '12px',
+              color: 'hsl(var(--ink-muted))',
+            }}
+          />
+
+          {keys.includes('Cash') && (
+            <Area
+              key="Cash"
+              type="monotone"
+              dataKey="Cash"
+              stackId="composition"
+              stroke={CASH_COLOR}
+              fill={CASH_COLOR}
+              fillOpacity={0.55}
+            />
+          )}
+
+          {tickerKeys.map((ticker, index) => (
+            <Area
+              key={ticker}
+              type="monotone"
+              dataKey={ticker}
+              stackId="composition"
+              stroke={getTickerColor(index)}
+              fill={getTickerColor(index)}
+              fillOpacity={0.55}
+            />
           ))}
-        </div>
-
-        {/* Chart */}
-        <ResponsiveContainer width="100%" height={400}>
-          <AreaChart data={rows}>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="hsl(var(--foreground) / 0.1)"
-            />
-            <XAxis
-              dataKey="date"
-              tickFormatter={(date) => formatDate(date, 'short')}
-              stroke="hsl(var(--foreground) / 0.5)"
-              style={{ fontSize: '12px' }}
-            />
-            <YAxis
-              tickFormatter={(value) => formatCurrency(value, 'USD', 'compact')}
-              stroke="hsl(var(--foreground) / 0.5)"
-              style={{ fontSize: '12px' }}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: 'hsl(var(--background))',
-                border: '1px solid hsl(var(--foreground) / 0.2)',
-                borderRadius: '8px',
-                color: 'hsl(var(--foreground))',
-              }}
-              formatter={(
-                value: number | undefined,
-                name: string | undefined
-              ) =>
-                value !== undefined
-                  ? [formatCurrency(value), name ?? '']
-                  : ['---', name ?? '']
-              }
-              labelFormatter={(label) => formatDate(label, 'long')}
-            />
-            <Legend />
-
-            {/* Cash area at the bottom (stackId groups them) */}
-            {keys.includes('Cash') && (
-              <Area
-                key="Cash"
-                type="monotone"
-                dataKey="Cash"
-                stackId="composition"
-                stroke={CASH_COLOR}
-                fill={CASH_COLOR}
-                fillOpacity={0.7}
-              />
-            )}
-
-            {/* One area per ticker stacked on top */}
-            {tickerKeys.map((ticker, index) => (
-              <Area
-                key={ticker}
-                type="monotone"
-                dataKey={ticker}
-                stackId="composition"
-                stroke={getTickerColor(index)}
-                fill={getTickerColor(index)}
-                fillOpacity={0.7}
-              />
-            ))}
-          </AreaChart>
-        </ResponsiveContainer>
-      </CardContent>
-    </Card>
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
   )
 }

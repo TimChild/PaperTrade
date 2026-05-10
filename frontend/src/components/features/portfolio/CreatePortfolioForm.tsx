@@ -1,5 +1,5 @@
 /**
- * Portfolio creation form component
+ * Editorial portfolio creation form. Used inside the Dialog.
  */
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -25,7 +25,7 @@ export function CreatePortfolioForm({
   const createPortfolio = useCreatePortfolio()
   const navigate = useNavigate()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
     setError(null)
 
@@ -57,11 +57,9 @@ export function CreatePortfolioForm({
       if (onSuccess) {
         onSuccess(result.portfolio_id)
       } else {
-        // Navigate to the new portfolio by default
         navigate(`/portfolio/${result.portfolio_id}`)
       }
 
-      // Show success toast after navigation to ensure it appears on the new page
       toasts.portfolioCreated(name.trim())
     } catch (err) {
       setError(
@@ -73,9 +71,9 @@ export function CreatePortfolioForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Portfolio Name */}
-      <div>
+      <div className="space-y-1.5">
         <Label htmlFor="portfolio-name">
-          Portfolio Name <span className="text-negative">*</span>
+          Portfolio name <span className="text-loss">*</span>
         </Label>
         <Input
           id="portfolio-name"
@@ -85,22 +83,19 @@ export function CreatePortfolioForm({
           onChange={(e) => setName(e.target.value)}
           required
           maxLength={100}
-          placeholder="My Investment Portfolio"
+          placeholder="My investment portfolio"
           aria-describedby="portfolio-name-help"
         />
-        <p
-          id="portfolio-name-help"
-          className="mt-1 text-xs text-foreground-tertiary"
-        >
-          Give your portfolio a descriptive name (1-100 characters)
+        <p id="portfolio-name-help" className="text-body-sm text-ink-subtle">
+          Give your portfolio a descriptive name (1–100 characters).
         </p>
       </div>
 
       {/* Initial Deposit */}
-      <div>
-        <Label htmlFor="initial-deposit">Initial Deposit (USD)</Label>
-        <div className="mt-1 flex items-center">
-          <span className="mr-2 text-foreground-secondary">$</span>
+      <div className="space-y-1.5">
+        <Label htmlFor="initial-deposit">Initial deposit (USD)</Label>
+        <div className="flex items-center gap-2">
+          <span className="text-ink-muted font-tabular text-body-sm">$</span>
           <Input
             id="initial-deposit"
             data-testid="create-portfolio-deposit-input"
@@ -112,18 +107,15 @@ export function CreatePortfolioForm({
             aria-describedby="initial-deposit-help"
           />
         </div>
-        <p
-          id="initial-deposit-help"
-          className="mt-1 text-xs text-foreground-tertiary"
-        >
-          Start with an initial cash balance (must be greater than $0.00)
+        <p id="initial-deposit-help" className="text-body-sm text-ink-subtle">
+          Start with an initial cash balance (must be greater than $0.00).
         </p>
       </div>
 
       {/* Error Message */}
       {error && (
         <div
-          className="rounded-md bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900 dark:text-red-200"
+          className="rounded-editorial border border-hairline bg-loss-soft/40 p-3 text-body-sm text-ink"
           role="alert"
         >
           {error}
@@ -133,7 +125,7 @@ export function CreatePortfolioForm({
       {/* API Error (from mutation) */}
       {createPortfolio.isError && (
         <div
-          className="rounded-md bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900 dark:text-red-200"
+          className="rounded-editorial border border-hairline bg-loss-soft/40 p-3 text-body-sm text-ink"
           role="alert"
         >
           {createPortfolio.error instanceof Error
@@ -147,7 +139,7 @@ export function CreatePortfolioForm({
         {onCancel && (
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             data-testid="create-portfolio-cancel-button"
             onClick={onCancel}
             className="flex-1"
@@ -161,7 +153,7 @@ export function CreatePortfolioForm({
           disabled={createPortfolio.isPending}
           className="flex-1"
         >
-          {createPortfolio.isPending ? 'Creating...' : 'Create Portfolio'}
+          {createPortfolio.isPending ? 'Creating...' : 'Create portfolio'}
         </Button>
       </div>
     </form>

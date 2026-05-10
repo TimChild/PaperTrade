@@ -1,14 +1,14 @@
 /**
- * Metrics cards component displaying portfolio performance metrics
+ * Editorial metrics cards for portfolio analytics — six MetricStats laid
+ * out as a 2/3/6-column grid. Total gain/loss + return are tone-coded
+ * (gain/loss); the rest are neutral ink.
  *
  * "Current Value" and the gain/return derived from it use the live balance
  * (computed from holdings * current_price), which matches the value shown on
  * the portfolio detail card. Time-series stats — Starting/Highest/Lowest —
- * still come from the daily snapshot history. This keeps the analytics
- * "Current Value" stat aligned with the detail page (and the user's mental
- * model of "what's the portfolio worth right now"), while preserving the
- * snapshot-driven definition of period extremes.
+ * still come from the daily snapshot history.
  */
+import { MetricStat } from '@/components/ui/MetricStat'
 import { usePerformance } from '@/hooks/useAnalytics'
 import { usePortfolioBalance } from '@/hooks/usePortfolio'
 import { formatCurrency, formatPercent } from '@/utils/formatters'
@@ -32,12 +32,22 @@ export function MetricsCards({
   } = usePortfolioBalance(portfolioId)
 
   if (performanceLoading || balanceLoading) {
-    return <div data-testid="metrics-cards-loading">Loading metrics...</div>
+    return (
+      <div
+        data-testid="metrics-cards-loading"
+        className="text-body-sm text-ink-muted"
+      >
+        Loading metrics...
+      </div>
+    )
   }
 
   if (performanceError || balanceError) {
     return (
-      <div data-testid="metrics-cards-error" className="text-red-500">
+      <div
+        data-testid="metrics-cards-error"
+        className="rounded-editorial border border-hairline bg-loss-soft/40 p-4 text-body-sm text-ink"
+      >
         Failed to load performance metrics. Please try again.
       </div>
     )
@@ -45,7 +55,10 @@ export function MetricsCards({
 
   if (!performance?.metrics) {
     return (
-      <div data-testid="metrics-cards-empty" className="text-gray-500">
+      <div
+        data-testid="metrics-cards-empty"
+        className="rounded-editorial border border-hairline bg-canvas-raised/40 p-4 text-body-sm text-ink-muted"
+      >
         No performance data available yet. Metrics will be calculated after the
         first daily snapshot is generated.
       </div>
@@ -53,10 +66,6 @@ export function MetricsCards({
   }
 
   const { metrics } = performance
-  // Use the live total value as "Current Value" so analytics stays aligned
-  // with the detail card. Fall back to the last snapshot's ending_value if
-  // the balance call has not resolved yet (shouldn't happen given the loading
-  // gate above, but keeps the type narrow).
   const liveCurrentValue =
     balance != null ? parseFloat(balance.total_value) : metrics.ending_value
   const liveAbsoluteGain = liveCurrentValue - metrics.starting_value
@@ -65,75 +74,58 @@ export function MetricsCards({
       ? (liveCurrentValue / metrics.starting_value - 1) * 100
       : 0
   const isPositive = liveAbsoluteGain >= 0
-  // Stretch the period's high/low so they remain consistent with the live
-  // current value (otherwise a current value above the snapshot high — or
-  // below the snapshot low — would render an impossible-looking row).
   const liveHighest = Math.max(metrics.highest_value, liveCurrentValue)
   const liveLowest = Math.min(metrics.lowest_value, liveCurrentValue)
 
-  const cards = [
-    {
-      label: 'Total Gain/Loss',
-      value: formatCurrency(Math.abs(liveAbsoluteGain)),
-      trend: isPositive ? 'up' : 'down',
-      testId: 'metric-total-gain-loss',
-    },
-    {
-      label: 'Return',
-      value: formatPercent(Math.abs(livePercentageGain / 100)),
-      trend: isPositive ? 'up' : 'down',
-      testId: 'metric-return',
-    },
-    {
-      label: 'Starting Value',
-      value: formatCurrency(metrics.starting_value),
-      testId: 'metric-starting-value',
-    },
-    {
-      label: 'Current Value',
-      value: formatCurrency(liveCurrentValue),
-      testId: 'metric-current-value',
-    },
-    {
-      label: 'Highest Value',
-      value: formatCurrency(liveHighest),
-      testId: 'metric-highest-value',
-    },
-    {
-      label: 'Lowest Value',
-      value: formatCurrency(liveLowest),
-      testId: 'metric-lowest-value',
-    },
-  ]
+  // Pre-format the gain/loss display value with sign so the snapshot tests
+  // looking for `-$1,500.00` (with the leading minus) keep matching.
+  const gainDisplay = `${isPositive ? '' : '-'}${formatCurrency(Math.abs(liveAbsoluteGain))}`
+  const returnDisplay = `${isPositive ? '' : '-'}${formatPercent(Math.abs(livePercentageGain / 100))}`
+  const tone = isPositive ? 'gain' : 'loss'
 
   return (
     <div
       data-testid="metrics-cards"
-      className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6"
+      className="grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-3 lg:grid-cols-6"
     >
-      {cards.map((card) => (
-        <div
-          key={card.testId}
-          className="rounded-lg bg-white p-4 shadow dark:bg-gray-800"
-          data-testid={card.testId}
-        >
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            {card.label}
-          </p>
-          <p
-            className={`text-xl font-semibold ${
-              card.trend === 'up'
-                ? 'text-green-600 dark:text-green-400'
-                : card.trend === 'down'
-                  ? 'text-red-600 dark:text-red-400'
-                  : 'text-gray-900 dark:text-white'
-            }`}
-          >
-            {card.trend === 'down' && '-'}
-            {card.value}
-          </p>
-        </div>
-      ))}
+      <MetricStat
+        label="Total gain/loss"
+        value={gainDisplay}
+        size="sm"
+        tone={tone}
+        testId="metric-total-gain-loss"
+      />
+      <MetricStat
+        label="Return"
+        value={returnDisplay}
+        size="sm"
+        tone={tone}
+        testId="metric-return"
+      />
+      <MetricStat
+        label="Starting value"
+        value={formatCurrency(metrics.starting_value)}
+        size="sm"
+        testId="metric-starting-value"
+      />
+      <MetricStat
+        label="Current value"
+        value={formatCurrency(liveCurrentValue)}
+        size="sm"
+        testId="metric-current-value"
+      />
+      <MetricStat
+        label="Highest value"
+        value={formatCurrency(liveHighest)}
+        size="sm"
+        testId="metric-highest-value"
+      />
+      <MetricStat
+        label="Lowest value"
+        value={formatCurrency(liveLowest)}
+        size="sm"
+        testId="metric-lowest-value"
+      />
     </div>
   )
 }

@@ -1,6 +1,15 @@
 /**
- * Metrics comparison table for multiple backtests
+ * Editorial metrics-comparison table — hairline DataTable primitives,
+ * tabular-mono numerics, gain/loss tones for highlighted best/worst cells.
  */
+import {
+  DataTable,
+  DataTableHead,
+  DataTableBody,
+  DataRow,
+  DataCell,
+  DataHeaderCell,
+} from '@/components/ui/DataRow'
 import { formatCurrency, formatPercent, formatDate } from '@/utils/formatters'
 import type { BacktestRunResponse } from '@/services/api/types'
 
@@ -38,9 +47,8 @@ function getReturnHighlights(
 }
 
 function getCellClass(highlight: HighlightType): string {
-  if (highlight === 'best')
-    return 'bg-green-50 dark:bg-green-900/20 font-semibold'
-  if (highlight === 'worst') return 'bg-red-50 dark:bg-red-900/20'
+  if (highlight === 'best') return 'bg-gain-soft/60 font-semibold'
+  if (highlight === 'worst') return 'bg-loss-soft/60'
   return ''
 }
 
@@ -52,7 +60,7 @@ export function ComparisonTable({
     return (
       <p
         data-testid="comparison-table-empty"
-        className="text-gray-500 dark:text-gray-400"
+        className="text-body-sm text-ink-muted"
       >
         No backtests to compare
       </p>
@@ -80,149 +88,116 @@ export function ComparisonTable({
   const maxDrawdownHighlights = getReturnHighlights(maxDrawdownValues, true)
 
   return (
-    <div
-      data-testid="comparison-table"
-      className="w-full overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700"
-    >
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
-            <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">
-              Metric
-            </th>
-            {backtests.map((b) => (
-              <th
+    <DataTable testId="comparison-table">
+      <DataTableHead>
+        <DataHeaderCell>Metric</DataHeaderCell>
+        {backtests.map((b) => (
+          <DataHeaderCell key={b.id}>{b.backtest_name}</DataHeaderCell>
+        ))}
+      </DataTableHead>
+      <DataTableBody>
+        {/* Strategy Name */}
+        <DataRow>
+          <DataCell emphasis="primary">Strategy</DataCell>
+          {backtests.map((b) => (
+            <DataCell key={b.id} tone="muted">
+              {b.strategy_id !== null
+                ? (strategyNames[b.strategy_id] ?? '—')
+                : '—'}
+            </DataCell>
+          ))}
+        </DataRow>
+
+        {/* Date Range */}
+        <DataRow>
+          <DataCell emphasis="primary">Date range</DataCell>
+          {backtests.map((b) => (
+            <DataCell key={b.id} tone="muted" numeric>
+              {formatDate(b.start_date, false)} –{' '}
+              {formatDate(b.end_date, false)}
+            </DataCell>
+          ))}
+        </DataRow>
+
+        {/* Initial Cash */}
+        <DataRow>
+          <DataCell emphasis="primary">Initial cash</DataCell>
+          {backtests.map((b) => (
+            <DataCell key={b.id} tone="muted" numeric>
+              {formatCurrency(parseFloat(b.initial_cash))}
+            </DataCell>
+          ))}
+        </DataRow>
+
+        {/* Total Return % */}
+        <DataRow>
+          <DataCell emphasis="primary">Total return</DataCell>
+          {backtests.map((b, i) => {
+            const val = totalReturnValues[i]
+            return (
+              <DataCell
                 key={b.id}
-                className="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300"
+                numeric
+                className={getCellClass(totalReturnHighlights[i])}
+                testId={`total-return-${b.id}`}
               >
-                {b.backtest_name}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {/* Strategy Name */}
-          <tr className="border-b border-gray-100 dark:border-gray-800">
-            <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-300">
-              Strategy
-            </td>
-            {backtests.map((b) => (
-              <td
+                {val !== null ? formatPercent(val / 100) : '---'}
+              </DataCell>
+            )
+          })}
+        </DataRow>
+
+        {/* Annualized Return % */}
+        <DataRow>
+          <DataCell emphasis="primary">Annualized return</DataCell>
+          {backtests.map((b, i) => {
+            const val = annualizedReturnValues[i]
+            return (
+              <DataCell
                 key={b.id}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400"
+                numeric
+                className={getCellClass(annualizedReturnHighlights[i])}
+                testId={`annualized-return-${b.id}`}
               >
-                {b.strategy_id !== null
-                  ? (strategyNames[b.strategy_id] ?? '—')
-                  : '—'}
-              </td>
-            ))}
-          </tr>
+                {val !== null ? formatPercent(val / 100) : '---'}
+              </DataCell>
+            )
+          })}
+        </DataRow>
 
-          {/* Date Range */}
-          <tr className="border-b border-gray-100 dark:border-gray-800">
-            <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-300">
-              Date Range
-            </td>
-            {backtests.map((b) => (
-              <td
+        {/* Max Drawdown % */}
+        <DataRow>
+          <DataCell emphasis="primary">Max drawdown</DataCell>
+          {backtests.map((b, i) => {
+            const val = maxDrawdownValues[i]
+            return (
+              <DataCell
                 key={b.id}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400"
+                numeric
+                className={getCellClass(maxDrawdownHighlights[i])}
+                testId={`max-drawdown-${b.id}`}
               >
-                {formatDate(b.start_date, false)} –{' '}
-                {formatDate(b.end_date, false)}
-              </td>
-            ))}
-          </tr>
+                {val !== null ? formatPercent(val / 100, false) : '---'}
+              </DataCell>
+            )
+          })}
+        </DataRow>
 
-          {/* Initial Cash */}
-          <tr className="border-b border-gray-100 dark:border-gray-800">
-            <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-300">
-              Initial Cash
-            </td>
-            {backtests.map((b) => (
-              <td
-                key={b.id}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400"
-              >
-                {formatCurrency(parseFloat(b.initial_cash))}
-              </td>
-            ))}
-          </tr>
-
-          {/* Total Return % */}
-          <tr className="border-b border-gray-100 dark:border-gray-800">
-            <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-300">
-              Total Return
-            </td>
-            {backtests.map((b, i) => {
-              const val = totalReturnValues[i]
-              return (
-                <td
-                  key={b.id}
-                  className={`px-4 py-2 ${getCellClass(totalReturnHighlights[i])}`}
-                  data-testid={`total-return-${b.id}`}
-                >
-                  {val !== null ? formatPercent(val / 100) : '---'}
-                </td>
-              )
-            })}
-          </tr>
-
-          {/* Annualized Return % */}
-          <tr className="border-b border-gray-100 dark:border-gray-800">
-            <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-300">
-              Annualized Return
-            </td>
-            {backtests.map((b, i) => {
-              const val = annualizedReturnValues[i]
-              return (
-                <td
-                  key={b.id}
-                  className={`px-4 py-2 ${getCellClass(annualizedReturnHighlights[i])}`}
-                  data-testid={`annualized-return-${b.id}`}
-                >
-                  {val !== null ? formatPercent(val / 100) : '---'}
-                </td>
-              )
-            })}
-          </tr>
-
-          {/* Max Drawdown % */}
-          <tr className="border-b border-gray-100 dark:border-gray-800">
-            <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-300">
-              Max Drawdown
-            </td>
-            {backtests.map((b, i) => {
-              const val = maxDrawdownValues[i]
-              return (
-                <td
-                  key={b.id}
-                  className={`px-4 py-2 ${getCellClass(maxDrawdownHighlights[i])}`}
-                  data-testid={`max-drawdown-${b.id}`}
-                >
-                  {val !== null ? formatPercent(val / 100, false) : '---'}
-                </td>
-              )
-            })}
-          </tr>
-
-          {/* Total Trades */}
-          <tr>
-            <td className="px-4 py-2 font-medium text-gray-700 dark:text-gray-300">
-              Total Trades
-            </td>
-            {backtests.map((b) => (
-              <td
-                key={b.id}
-                className="px-4 py-2 text-gray-600 dark:text-gray-400"
-                data-testid={`total-trades-${b.id}`}
-              >
-                {b.total_trades !== null ? b.total_trades : '---'}
-              </td>
-            ))}
-          </tr>
-        </tbody>
-      </table>
-    </div>
+        {/* Total Trades */}
+        <DataRow>
+          <DataCell emphasis="primary">Total trades</DataCell>
+          {backtests.map((b) => (
+            <DataCell
+              key={b.id}
+              tone="muted"
+              numeric
+              testId={`total-trades-${b.id}`}
+            >
+              {b.total_trades !== null ? b.total_trades : '---'}
+            </DataCell>
+          ))}
+        </DataRow>
+      </DataTableBody>
+    </DataTable>
   )
 }

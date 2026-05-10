@@ -1,5 +1,7 @@
 /**
  * Tests for ActivationStatusBadge.
+ *
+ * Editorial palette: muted gain / amber soft / ink-subtle / muted loss.
  */
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
@@ -12,10 +14,10 @@ describe('ActivationStatusBadge', () => {
     label: string
     classFragment: string
   }> = [
-    { status: 'ACTIVE', label: 'Active', classFragment: 'bg-green-100' },
-    { status: 'PAUSED', label: 'Paused', classFragment: 'bg-yellow-100' },
-    { status: 'STOPPED', label: 'Stopped', classFragment: 'bg-gray-100' },
-    { status: 'ERROR', label: 'Error', classFragment: 'bg-red-100' },
+    { status: 'ACTIVE', label: 'Active', classFragment: 'bg-gain-soft' },
+    { status: 'PAUSED', label: 'Paused', classFragment: 'bg-amber-soft' },
+    { status: 'STOPPED', label: 'Stopped', classFragment: 'text-ink-subtle' },
+    { status: 'ERROR', label: 'Error', classFragment: 'bg-loss-soft' },
   ]
 
   it.each(cases)(

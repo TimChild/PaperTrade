@@ -75,8 +75,9 @@ describe('Dialog', () => {
       </Dialog>
     )
 
+    // Editorial restrained radius. Was `rounded-lg` pre-revamp.
     const dialog = container.querySelector('dialog')
     expect(dialog).toBeInTheDocument()
-    expect(dialog).toHaveClass('rounded-lg')
+    expect(dialog).toHaveClass('rounded-editorial')
   })
 })

@@ -1,40 +1,47 @@
 /**
- * Backtest metrics display component
+ * Backtest metrics — editorial 5-up grid of MetricStats. Each tile pairs a
+ * small-caps label with a display-serif tabular value; gain/loss tones
+ * use the muted gain/loss palette.
  */
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { MetricStat } from '@/components/ui/MetricStat'
+import { Eyebrow } from '@/components/ui/Eyebrow'
 import { formatCurrency, formatPercent, formatDate } from '@/utils/formatters'
 import type { BacktestRunResponse, BacktestStatus } from '@/services/api/types'
 
+const STATUS_LABELS: Record<BacktestStatus, string> = {
+  COMPLETED: 'Completed',
+  PENDING: 'Pending',
+  RUNNING: 'Running',
+  FAILED: 'Failed',
+}
+
 const STATUS_STYLES: Record<BacktestStatus, string> = {
-  COMPLETED:
-    'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-  PENDING:
-    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-  RUNNING:
-    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-  FAILED: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+  COMPLETED: 'bg-gain-soft text-gain',
+  PENDING: 'bg-amber-soft text-amber',
+  RUNNING: 'bg-amber-soft text-amber',
+  FAILED: 'bg-loss-soft text-loss',
 }
 
-interface MetricCardProps {
-  label: string
-  value: string
-  testId: string
-  valueClassName?: string
+interface BacktestStatusBadgeProps {
+  status: BacktestStatus
 }
 
-function MetricCard({
-  label,
-  value,
-  testId,
-  valueClassName = '',
-}: MetricCardProps): React.JSX.Element {
+/**
+ * Inline backtest status badge — mirrors ActivationStatusBadge tones.
+ * Reused by BacktestResult and BacktestMetrics.
+ */
+export function BacktestStatusBadge({
+  status,
+}: BacktestStatusBadgeProps): React.JSX.Element {
   return (
-    <Card data-testid={testId}>
-      <CardContent className="pt-4">
-        <p className="text-sm text-gray-500 dark:text-gray-400">{label}</p>
-        <p className={`mt-1 text-xl font-bold ${valueClassName}`}>{value}</p>
-      </CardContent>
-    </Card>
+    <span
+      data-testid="backtest-status-badge"
+      role="status"
+      aria-label={`Backtest status: ${STATUS_LABELS[status]}`}
+      className={`inline-flex items-center font-eyebrow rounded-editorial px-2 py-1 ${STATUS_STYLES[status]}`}
+    >
+      {STATUS_LABELS[status]}
+    </span>
   )
 }
 
@@ -58,77 +65,76 @@ export function BacktestMetrics({
       ? parseFloat(backtest.max_drawdown_pct) / 100
       : null
 
-  const getReturnClass = (value: number | null): string => {
-    if (value === null) return ''
-    return value >= 0
-      ? 'text-green-600 dark:text-green-400'
-      : 'text-red-600 dark:text-red-400'
+  const returnTone = (value: number | null): 'neutral' | 'gain' | 'loss' => {
+    if (value === null) return 'neutral'
+    return value >= 0 ? 'gain' : 'loss'
   }
 
   return (
     <div data-testid="backtest-metrics">
-      <div className="mb-4 flex items-center gap-3">
-        <CardHeader className="p-0">
-          <CardTitle>Metrics</CardTitle>
-        </CardHeader>
-        <span
-          className={`rounded-full px-3 py-1 text-sm font-medium ${STATUS_STYLES[backtest.status]}`}
-          data-testid="backtest-status-badge"
-        >
-          {backtest.status}
-        </span>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <Eyebrow>Performance</Eyebrow>
+          <h2 className="mt-1.5 font-display text-display-sm tracking-tight text-ink">
+            Metrics
+          </h2>
+        </div>
+        <BacktestStatusBadge status={backtest.status} />
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-        <MetricCard
-          label="Initial Cash"
+      <div className="grid grid-cols-2 gap-x-6 gap-y-8 sm:grid-cols-3 lg:grid-cols-5">
+        <MetricStat
+          label="Initial cash"
           value={formatCurrency(parseFloat(backtest.initial_cash))}
+          size="sm"
           testId="metric-initial-cash"
         />
-        <MetricCard
-          label="Total Return"
+        <MetricStat
+          label="Total return"
           value={
             totalReturnPct !== null ? formatPercent(totalReturnPct) : '---'
           }
+          size="sm"
+          tone={returnTone(totalReturnPct)}
           testId="metric-total-return"
-          valueClassName={getReturnClass(totalReturnPct)}
         />
-        <MetricCard
-          label="Annualized Return"
+        <MetricStat
+          label="Annualized return"
           value={
             annualizedReturnPct !== null
               ? formatPercent(annualizedReturnPct)
               : '---'
           }
+          size="sm"
+          tone={returnTone(annualizedReturnPct)}
           testId="metric-annualized-return"
-          valueClassName={getReturnClass(annualizedReturnPct)}
         />
-        <MetricCard
-          label="Max Drawdown"
+        <MetricStat
+          label="Max drawdown"
           value={
             maxDrawdownPct !== null
               ? formatPercent(maxDrawdownPct, false)
               : '---'
           }
-          testId="metric-max-drawdown"
-          valueClassName={
-            maxDrawdownPct !== null && maxDrawdownPct < 0
-              ? 'text-red-600 dark:text-red-400'
-              : ''
+          size="sm"
+          tone={
+            maxDrawdownPct !== null && maxDrawdownPct < 0 ? 'loss' : 'neutral'
           }
+          testId="metric-max-drawdown"
         />
-        <MetricCard
-          label="Total Trades"
+        <MetricStat
+          label="Total trades"
           value={
             backtest.total_trades !== null
               ? String(backtest.total_trades)
               : '---'
           }
+          size="sm"
           testId="metric-total-trades"
         />
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-4 text-sm text-gray-500 dark:text-gray-400">
+      <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 font-tabular text-body-sm text-ink-muted">
         <span data-testid="backtest-date-range">
           {formatDate(backtest.start_date, false)} –{' '}
           {formatDate(backtest.end_date, false)}
