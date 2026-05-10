@@ -115,22 +115,31 @@ export function AskAnAgentButton({
       >
         Ask an agent
       </button>
-      <Dialog
-        isOpen={isOpen}
-        onClose={handleClose}
-        // Hide the built-in dialog header — the form panel renders its
-        // own editorial header (eyebrow + display heading).
-        className="max-w-2xl w-[92vw] p-0"
-      >
-        <div data-testid={dialogTestId}>
-          <CreateExplorationTaskForm
-            key={formKey}
-            onCancel={handleClose}
-            initialValues={initialValues}
-            onSubmitted={handleSubmitted}
-          />
-        </div>
-      </Dialog>
+      {/* Conditional render — the native <dialog> keeps its children in
+          DOM even when closed, which lets Playwright match hidden
+          <option> rows in the form's portfolio select and breaks
+          unrelated E2E tests on the host page (the trading test's
+          `getByText(/buy/i).first()` matched a hidden "Buy-Sell
+          Portfolio…" option). Mounting the form only when open keeps
+          its tree out of DOM when closed. */}
+      {isOpen && (
+        <Dialog
+          isOpen={isOpen}
+          onClose={handleClose}
+          // Hide the built-in dialog header — the form panel renders its
+          // own editorial header (eyebrow + display heading).
+          className="max-w-2xl w-[92vw] p-0"
+        >
+          <div data-testid={dialogTestId}>
+            <CreateExplorationTaskForm
+              key={formKey}
+              onCancel={handleClose}
+              initialValues={initialValues}
+              onSubmitted={handleSubmitted}
+            />
+          </div>
+        </Dialog>
+      )}
     </>
   )
 }
