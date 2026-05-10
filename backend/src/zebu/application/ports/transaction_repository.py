@@ -83,6 +83,7 @@ class TransactionRepository(Protocol):
         transaction: Transaction,
         *,
         api_key_id: UUID | None = None,
+        trigger_id: UUID | None = None,
     ) -> None:
         """Persist a new transaction (append-only, no updates).
 
@@ -97,6 +98,13 @@ class TransactionRepository(Protocol):
                 may ignore the kwarg; production adapters MUST stamp it onto
                 the row so the activity-feed aggregator can join back to
                 ``api_keys.label`` for the actor identity column.
+            trigger_id: Phase F-5 — ID of the StrategyConditionTrigger that
+                produced this transaction (when the trade was the result of
+                a woken-agent BUY/SELL decision). None for trades that did
+                NOT come from a trigger fire — direct human-initiated trades,
+                daily-strategy execution-loop trades, etc. The activity feed
+                joins on this column to connect a trade back to the fire
+                that produced it.
 
         Raises:
             RepositoryError: If transaction already exists or save fails
@@ -108,6 +116,7 @@ class TransactionRepository(Protocol):
         transactions: list[Transaction],
         *,
         api_key_id: UUID | None = None,
+        trigger_id: UUID | None = None,
     ) -> None:
         """Persist multiple new transactions in a single bulk insert.
 
@@ -122,6 +131,10 @@ class TransactionRepository(Protocol):
             api_key_id: Phase H2 — stamped uniformly onto every row in the
                 batch (the request itself only has one auth context). None
                 for Clerk Bearer / human-via-UI.
+            trigger_id: Phase F-5 — stamped uniformly onto every row in the
+                batch when the trades all originate from the same trigger
+                fire (the typical case — one fire produces one BUY or one
+                SELL, not a mix). None for non-trigger-driven trades.
 
         Raises:
             RepositoryError: If any transaction ID already exists or

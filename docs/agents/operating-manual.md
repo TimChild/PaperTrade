@@ -323,6 +323,40 @@ Every decision lands in the `TriggerFireRecord` table:
 
 Full design: [`docs/architecture/phase-f-agent-in-the-loop.md`](../architecture/phase-f-agent-in-the-loop.md).
 
+### 3.5.2 Configuring triggers via the API
+
+As of Phase F-5, the trigger CRUD + fire-log endpoints are live. Use them when you want to attach an agent-in-the-loop trigger to one of your activations. The trigger configuration UI is deferred to Phase G — for now, every interaction goes through the API directly.
+
+The minimal "attach a drawdown trigger" call:
+
+```bash
+curl -X POST "https://zebutrader.com/api/v1/activations/$ACTIVATION_ID/triggers" \
+    -H "Authorization: ApiKey $ZEBU_API_KEY" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "condition_type": "DRAWDOWN_THRESHOLD",
+      "condition_params": {
+        "threshold_pct": "5",
+        "lookback_days": 30,
+        "metric": "PORTFOLIO_TOTAL"
+      },
+      "agent_prompt": "Decide whether to hold the position based on news context. If a major catalyst is pending (earnings within 5 days, M&A rumour), call NEEDS_HUMAN; otherwise prefer HOLD over forced trades.",
+      "cooldown_seconds": 21600,
+      "priority": 0
+    }'
+```
+
+The other endpoints follow the same shape:
+
+- `GET    /api/v1/activations/{id}/triggers` — list all triggers on the activation (paginated; includes terminal-status history).
+- `GET    /api/v1/triggers/{id}` — fetch one trigger.
+- `PATCH  /api/v1/triggers/{id}` — update mutable fields (`agent_prompt`, `cooldown_seconds`, `priority`, `condition_params`, `status`).
+- `DELETE /api/v1/triggers/{id}` — soft-delete (transitions the trigger to `EXPIRED`; the row stays for audit).
+- `GET    /api/v1/triggers/{id}/fires` — paginated fire-log records, newest-first.
+- `POST   /api/v1/triggers/disable-all` — per-user kill switch.
+
+**Important behavioural rule:** `MANUALLY_DISABLED` is terminal. `PATCH` cannot lift a disabled trigger; the documented path is "delete and recreate." This keeps the audit story clean: a `MANUALLY_DISABLED` row in the database always means "the kill switch ran here," never "the user re-enabled this."
+
 ### 3.6 If the task is truly out of scope
 
 `abandon_exploration_task` is **creator-only** — you can't use it as a claiming agent. If you've claimed something you can't do:
