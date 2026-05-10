@@ -65,7 +65,7 @@ WORKDIR /app
 
 # Copy Python environment and application from builder
 COPY --from=builder --chown=appuser:appuser /app /app
-COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Set environment variables
