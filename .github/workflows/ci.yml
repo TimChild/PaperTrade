@@ -264,6 +264,15 @@ jobs:
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.CLERK_PUBLISHABLE_KEY }}
           E2E_CLERK_USER_EMAIL: ${{ vars.E2E_CLERK_USER_EMAIL }}
+          # `task test:e2e` re-runs `docker:up:all` as a dep, which causes
+          # `docker compose up -d` to recreate the backend container with the
+          # current step's env vars. Without `MARKET_DATA_PROVIDER` set here
+          # the backend silently falls back to `alpha_vantage`, breaking any
+          # E2E flow that relies on the deterministic mock provider — most
+          # visibly, strategy creation, which validates tickers against the
+          # adapter's supported-tickers list (Alpha Vantage's list comes from
+          # the empty CI DB, so every ticker is rejected).
+          MARKET_DATA_PROVIDER: mock
 
       - name: Upload Playwright report
         if: always()

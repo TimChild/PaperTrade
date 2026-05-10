@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { StrategyActivationPanel } from './StrategyActivationPanel'
 import { useDeleteStrategy } from '@/hooks/useStrategies'
 import { formatDate } from '@/utils/formatters'
 import type { StrategyResponse, StrategyType } from '@/services/api/types'
@@ -77,6 +78,8 @@ export function StrategyCard({
               ))}
             </div>
           </div>
+          {/* Live activation surface — shows status + Activate/Run Now/Deactivate. */}
+          <StrategyActivationPanel strategy={strategy} />
           <div className="flex items-center justify-between">
             <p className="text-xs text-gray-400 dark:text-gray-500">
               Created {formatDate(strategy.created_at, false)}
