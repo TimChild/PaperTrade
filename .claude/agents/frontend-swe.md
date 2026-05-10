@@ -53,8 +53,9 @@ frontend/src/
 - **No `useEffect` to sync props to state.** Use the `key` prop pattern — see "Anti-patterns" below.
 - **Explicit return types** on all functions.
 - **`data-testid`** on every interactive element. Naming: `{component}-{element}-{variant?}`, kebab-case. See `docs/testing/standards.md`.
-- **Color** for financial change: green/red dual-mode (`text-green-600 dark:text-green-400`). Use Intl for currency formatting.
-- **Accessibility**: keyboard-navigable, ARIA labels, semantic HTML, sufficient contrast.
+- **Color** for financial change: editorial gain/loss tokens (`text-gain` / `text-loss`); dual-mode handled via the design tokens. Use Intl for currency formatting.
+- **Accessibility**: keyboard-navigable, ARIA labels, semantic HTML, sufficient contrast (test against the editorial canvas `#0c1116`).
+- **Fake API keys / tokens / secrets in tests**: use ONLY the placeholders allowlisted in `.gitleaks.toml` (`zk_test_abcdef0123456789`, `NOT-A-REAL-API-KEY`, `sk_test_dummy`, `test-api-key`, `demo-api-key`). Inventing high-entropy fakes will fail CI's gitleaks check — and gitleaks scans every commit in PR history, so a mid-PR fix won't help (you'll need to squash). Unit tests under `frontend/src/**/*.test.tsx` are NOT covered by the path allowlist; only the regex allowlist applies there.
 
 ## Coding standard
 
