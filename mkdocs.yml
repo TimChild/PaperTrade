@@ -47,6 +47,8 @@ nav:
       - Project Strategy: planning/project_strategy.md
       - Future Ideas: planning/future-ideas.md
       - Deployment Strategy: planning/deployment_strategy.md
+  - Agents:
+      - "Operating Manual": agents/operating-manual.md
   - Deployment:
       - Overview: deployment/README.md
       - Domain Setup: deployment/domain-setup.md
