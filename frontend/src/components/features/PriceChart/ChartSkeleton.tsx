@@ -3,9 +3,20 @@
  * Displays while chart data is being fetched
  */
 
-export function ChartSkeleton(): React.JSX.Element {
+interface ChartSkeletonProps {
+  'data-testid'?: string
+}
+
+export function ChartSkeleton({
+  'data-testid': testId = 'price-chart-loading',
+}: ChartSkeletonProps = {}): React.JSX.Element {
   return (
-    <div className="animate-pulse">
+    <div
+      className="animate-pulse"
+      data-testid={testId}
+      role="status"
+      aria-label="Loading price chart"
+    >
       {/* Price stats skeleton */}
       <div className="mb-4 flex items-baseline gap-4">
         <div className="h-9 w-32 rounded bg-gray-300 dark:bg-gray-700"></div>

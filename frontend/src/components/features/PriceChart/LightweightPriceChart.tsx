@@ -1,8 +1,12 @@
 /**
  * Price chart component using TradingView Lightweight Charts
  * Alternative implementation to Recharts-based PriceChart
+ *
+ * Timeframe selection is shared across all chart instances on a page via
+ * `usePriceChartStore` — clicking a timeframe button on any chart updates
+ * every chart that's mounted. See `frontend/src/stores/priceChartStore.ts`.
  */
-import { useState, useMemo, useEffect, useLayoutEffect, useRef } from 'react'
+import { useMemo, useEffect, useLayoutEffect, useRef } from 'react'
 import {
   createChart,
   createSeriesMarkers,
@@ -25,10 +29,10 @@ import { PriceStats } from './PriceStats'
 import { ChartSkeleton } from './ChartSkeleton'
 import { ChartError } from './ChartError'
 import { PriceChartError } from './PriceChartError'
-import type { TimeRange } from '@/types/price'
 import type { ApiError } from '@/types/errors'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { isApiError } from '@/utils/priceErrors'
+import { usePriceChartStore } from '@/stores/priceChartStore'
 
 // Trade marker colors
 const TRADE_COLORS = {
@@ -38,7 +42,6 @@ const TRADE_COLORS = {
 
 interface LightweightPriceChartProps {
   ticker: string
-  initialTimeRange?: TimeRange
   portfolioId?: string
   onChartClick?: (data: {
     ticker: string
@@ -57,12 +60,16 @@ interface TradeMarker {
 
 export function LightweightPriceChart({
   ticker,
-  initialTimeRange = '1M',
   portfolioId,
   onChartClick,
 }: LightweightPriceChartProps): React.JSX.Element {
-  const [timeRange, setTimeRange] = useState<TimeRange>(initialTimeRange)
-  const { data, isLoading, error, refetch } = usePriceHistory(ticker, timeRange)
+  const timeRange = usePriceChartStore((state) => state.selectedTimeframe)
+  const setTimeRange = usePriceChartStore((state) => state.setSelectedTimeframe)
+
+  const { data, isLoading, isFetching, error, refetch } = usePriceHistory(
+    ticker,
+    timeRange
+  )
   const { effectiveTheme } = useTheme()
 
   // Fetch transactions if portfolioId is provided
@@ -284,8 +291,22 @@ export function LightweightPriceChart({
     }
   }, [])
 
-  // Loading state
-  if (isLoading) {
+  // Loading-state strategy
+  // ---------------------
+  // We only show the full skeleton on the *true initial load* — i.e. when we
+  // have no data yet AND a fetch is in flight. On subsequent fetches (e.g.
+  // the user changes the shared timeframe), we keep the previous chart on
+  // screen and surface a subtle in-place "Updating…" pill instead of
+  // unmounting the chart and flashing the skeleton. That avoids a layout
+  // jump every time the timeframe changes.
+  //
+  // `isLoading` from TanStack Query == "no data AND a fetch is in flight",
+  // so `isLoading` alone is the right signal for the initial-load skeleton.
+  // `isFetching` is used only to drive the inline indicator below.
+  const showInitialSkeleton = isLoading && !data
+  const showInlineUpdating = isFetching && !showInitialSkeleton
+
+  if (showInitialSkeleton) {
     return (
       <Card>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
@@ -295,7 +316,7 @@ export function LightweightPriceChart({
           <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
         </CardHeader>
         <CardContent>
-          <ChartSkeleton />
+          <ChartSkeleton data-testid="price-chart-loading" />
         </CardContent>
       </Card>
     )
@@ -339,7 +360,9 @@ export function LightweightPriceChart({
     )
   }
 
-  // No data state
+  // No data state — only show this once a fetch has *settled* with no
+  // results. While `isFetching` is true (e.g. mid-timeframe-change), the
+  // previous chart stays on screen via the render branch below.
   if (!data || data.prices.length === 0) {
     // Provide helpful message for 1D view on weekends/holidays
     const isOneDayView = timeRange === '1D'
@@ -356,7 +379,10 @@ export function LightweightPriceChart({
           <TimeRangeSelector selected={timeRange} onChange={setTimeRange} />
         </CardHeader>
         <CardContent>
-          <div className="flex h-64 items-center justify-center">
+          <div
+            className="flex h-64 items-center justify-center"
+            data-testid="price-chart-empty"
+          >
             <p className="text-foreground-secondary text-center px-4">
               {emptyMessage}
             </p>
@@ -405,7 +431,22 @@ export function LightweightPriceChart({
             className="mb-4 rounded-lg border border-yellow-400 bg-yellow-100 px-4 py-2 text-sm text-yellow-800 dark:border-yellow-600 dark:bg-yellow-950 dark:text-yellow-200"
             data-testid="dev-warning-banner"
           >
-            ⚠️ Development Mode: Using mock data due to API error
+            Development Mode: Using mock data due to API error
+          </div>
+        )}
+
+        {/* Inline updating indicator — visible during a refetch but does NOT
+            unmount the chart. Avoids the loading-state flash on timeframe
+            change. */}
+        {showInlineUpdating && (
+          <div
+            className="mb-2 flex items-center gap-2 text-xs text-foreground-secondary"
+            data-testid="price-chart-updating"
+            role="status"
+            aria-live="polite"
+          >
+            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-blue-500" />
+            <span>Updating…</span>
           </div>
         )}
 
