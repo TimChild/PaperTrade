@@ -48,6 +48,7 @@ topk(10, count_over_time({container="zebu-backend-prod"} | json | level="error" 
 ```
 
 **What to look for**:
+
 - Repeated error messages (indicates systemic issue)
 - New error types (indicates recent code change or external failure)
 - Spike in errors (indicates sudden issue)
@@ -120,6 +121,7 @@ sum(count_over_time({container="zebu-backend-prod"} | json | event =~ "Price fet
 **If cache hit ratio is low (<80%)**:
 
 1. **Check Redis is running**:
+
    ```logql
    {container="zebu-redis-prod"}
    ```
@@ -127,6 +129,7 @@ sum(count_over_time({container="zebu-backend-prod"} | json | event =~ "Price fet
    If no logs: Redis container may be down.
 
 2. **Check for cache evictions**:
+
    ```logql
    {container="zebu-redis-prod"} |~ "evict"
    ```
@@ -134,6 +137,7 @@ sum(count_over_time({container="zebu-backend-prod"} | json | event =~ "Price fet
    High evictions = Redis out of memory.
 
 3. **Review cache TTL settings**:
+
    ```bash
    # Check current TTL configuration
    ssh root@192.168.4.112
@@ -143,11 +147,13 @@ sum(count_over_time({container="zebu-backend-prod"} | json | event =~ "Price fet
 ### Cache Performance Optimization
 
 **Increase TTL for stable data**:
+
 - Historical prices (> 1 day old): 7 days TTL
 - Recent prices: 1 hour TTL
 - Current prices (intraday): 5 minutes TTL
 
 **Warm cache proactively**:
+
 - Pre-fetch popular tickers on application start
 - Background job to refresh cache before expiry
 
@@ -164,6 +170,7 @@ count_over_time({container="zebu-backend-prod"} | json | event="Alpha Vantage AP
 ```
 
 **Free Tier Limits**:
+
 - 5 calls/minute
 - 500 calls/day
 
@@ -182,6 +189,7 @@ count_over_time({container="zebu-backend-prod"} | json | event="Alpha Vantage AP
 **Immediate Actions**:
 
 1. **Extend cache TTL** (temporary hotfix):
+
    ```bash
    # Update cache TTL in backend configuration
    # Requires code change + redeploy (not immediate)
@@ -255,6 +263,7 @@ quantile_over_time(0.95, {container="zebu-backend-prod"} | json | unwrap duratio
 ### Backend Service Unresponsive
 
 **Symptoms**:
+
 - No logs appearing in Grafana
 - Users reporting 502/504 errors
 - Health check failing
@@ -291,6 +300,7 @@ docker-compose restart
 ### Database Connection Issues
 
 **Symptoms**:
+
 - Errors like "connection pool exhausted"
 - "unable to connect to database"
 
@@ -321,6 +331,7 @@ docker restart zebu-postgres-prod
 ### Redis Cache Unavailable
 
 **Symptoms**:
+
 - High Alpha Vantage API usage
 - Slow response times
 - Cache-related errors
@@ -350,6 +361,7 @@ docker exec zebu-redis-prod redis-cli INFO stats
 ### High Memory Usage
 
 **Symptoms**:
+
 - OOMKilled containers
 - Slow performance
 

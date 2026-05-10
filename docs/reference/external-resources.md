@@ -14,6 +14,7 @@ This file contains links to external documentation, APIs, and resources relevant
 ## Framework Documentation
 
 ### Backend
+
 | Technology | Documentation |
 |------------|---------------|
 | FastAPI | https://fastapi.tiangolo.com/ |
@@ -23,6 +24,7 @@ This file contains links to external documentation, APIs, and resources relevant
 | Uvicorn | https://www.uvicorn.org/ |
 
 ### Frontend
+
 | Technology | Documentation |
 |------------|---------------|
 | React | https://react.dev/ |
@@ -34,6 +36,7 @@ This file contains links to external documentation, APIs, and resources relevant
 | React Router | https://reactrouter.com/ |
 
 ### Testing
+
 | Technology | Documentation |
 |------------|---------------|
 | Pytest | https://docs.pytest.org/ |
@@ -43,6 +46,7 @@ This file contains links to external documentation, APIs, and resources relevant
 | Playwright | https://playwright.dev/docs/intro |
 
 ### Infrastructure
+
 | Technology | Documentation |
 |------------|---------------|
 | AWS CDK | https://docs.aws.amazon.com/cdk/ |
@@ -53,6 +57,7 @@ This file contains links to external documentation, APIs, and resources relevant
 | Redis | https://redis.io/docs/ |
 
 ### Development Tools
+
 | Tool | Documentation |
 |------|---------------|
 | Ruff | https://docs.astral.sh/ruff/ |

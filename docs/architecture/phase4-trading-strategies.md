@@ -17,6 +17,7 @@ All phases have been implemented and merged:
 - **Phase 4.4** – Polish: ticker validation against supported tickers, 503 error handling for missing data, integration tests for all strategy types
 
 ### Notes on Deviations
+
 - No deviations from the original architecture plan were required.
 - The `InsufficientHistoricalDataError` 503 response and ticker validation were added as polish items after the core implementation was complete.
 
@@ -44,6 +45,7 @@ Phase 4 lets users define trading strategies, run them over historical periods, 
 A **backtest** runs a strategy over a historical date range (e.g., 1 Jan–31 Dec 2025) and produces a real `Portfolio` record of type `BACKTEST`. Because backtest portfolios are first-class portfolios, all existing analytics endpoints (performance charts, composition, holdings) work automatically with zero changes.
 
 **What is new:**
+
 - `PortfolioType` field on `Portfolio` (PAPER_TRADING | BACKTEST)
 - `Strategy` entity: a reusable, named strategy template with parameters
 - `BacktestRun` entity: tracks execution, status, and summary metrics
@@ -289,6 +291,7 @@ sequenceDiagram
 This service is responsible for ensuring all required price data exists **before** the simulation loop starts. It is the single point of failure for data availability — if any ticker is missing data for the date range, the backtest fails early with a clear error.
 
 **Responsibilities:**
+
 1. Accept a list of tickers, a date range (extended by the warm-up window), and the interval
 2. Call `get_price_history(ticker, start, end, interval="1day")` once per ticker
 3. Build an indexed structure: `dict[str, dict[date, PricePoint]]` (ticker symbol → date → price)
@@ -302,6 +305,7 @@ This service is responsible for ensuring all required price data exists **before
 This component maintains in-memory portfolio state and creates Transaction domain objects using the shared `trade_factory` functions. It is **not** a service or handler — it is a stateful helper used only by `BacktestExecutor`.
 
 **State maintained:**
+
 - `cash_balance`: Decimal (starts at initial_cash)
 - `holdings`: dict[str, Decimal] (ticker symbol → quantity)
 - `transactions`: list[Transaction] (accumulated, not yet saved)
@@ -571,6 +575,7 @@ Index: `idx_strategy_user_id` on `(user_id)`
 | `total_trades` | INTEGER | NULLABLE |
 
 Indexes:
+
 - `idx_backtest_run_user_id` on `(user_id)`
 - `idx_backtest_run_portfolio_id` on `(portfolio_id)` (unique)
 - `idx_backtest_run_strategy_id` on `(strategy_id)`
@@ -590,10 +595,12 @@ Indexes:
 **Two migrations are recommended** (one per concern, easier to reason about and roll back):
 
 **Migration 1: `add_portfolio_type`**
+
 - Add `portfolio_type VARCHAR(20) NOT NULL DEFAULT 'PAPER_TRADING'` to `portfolios`
 - All existing rows get `PAPER_TRADING` via the column default — no data transformation required
 
 **Migration 2: `add_strategy_and_backtest_tables`**
+
 - Create `strategies` table
 - Create `backtest_runs` table
 
@@ -608,6 +615,7 @@ Order: Migration 1 must run before Migration 2 (backtest_runs references portfol
 ### Methodology
 
 All estimates assume:
+
 - Alpha Vantage historical data is already in PostgreSQL (one-time API call)
 - Redis is available and functional
 - PostgreSQL is local or low-latency (<1ms per query)
@@ -668,6 +676,7 @@ This fix must land before any backtest execution code is written.
 **Goal:** Add new domain entities, fix snapshot bug, extract shared trade logic, and create DB schema.
 
 Steps:
+
 1. Fix `backfill_snapshots()` in `snapshot_job.py` to use `get_price_at()`
 2. Extract `trade_factory.py` — `create_buy_transaction()` and `create_sell_transaction()` as pure domain functions
 3. Refactor `BuyStockHandler` and `SellStockHandler` to call `trade_factory` functions (no behavior change, existing tests pass)
@@ -689,6 +698,7 @@ Steps:
 **Goal:** Implement the simulation engine and the first strategy.
 
 Steps:
+
 1. Implement `HistoricalDataPreparer` application service
 2. Implement `BacktestTransactionBuilder` (stateful helper class, not a service)
 3. Implement `StrategyProtocol` (Python `Protocol` defining the strategy interface)
@@ -705,6 +715,7 @@ Steps:
 **Goal:** Strategy CRUD and the remaining two strategy types.
 
 Steps:
+
 1. Add `POST /strategies`, `GET /strategies`, `GET /strategies/{id}`, `DELETE /strategies` endpoints
 2. Implement `DollarCostAveragingStrategy`
 3. Implement `MovingAverageCrossoverStrategy`
@@ -719,6 +730,7 @@ Steps:
 **Goal:** UX improvements and reliability.
 
 Steps:
+
 1. Validate strategy tickers against `get_supported_tickers()` in `POST /strategies`
 2. Add date range maximum (3 years) guard in `POST /backtests`
 3. Add `503` response handling when `HistoricalDataPreparer` fails
@@ -787,6 +799,7 @@ Steps:
 **How this works:**
 
 Today, `BuyStockHandler.execute()` does three things in sequence:
+
 1. **Fetch state** — load portfolio, load all transactions, calculate cash balance via `PortfolioCalculator`
 2. **Validate and create** — check `cash >= cost`, construct `Transaction` domain object with correct `cash_change`, `ticker`, `quantity`, `price_per_share`
 3. **Persist** — save the transaction to the repository
@@ -827,6 +840,7 @@ def create_buy_transaction(
 An equivalent `create_sell_transaction()` checks holdings.
 
 After the refactor:
+
 - `BuyStockHandler.execute()` calls `create_buy_transaction()` — no behavior change, same tests pass
 - `BacktestTransactionBuilder` calls `create_buy_transaction()` — zero duplicated validation
 - If trade rules ever change (e.g., adding fees, position limits), the change is made in one place
@@ -955,6 +969,7 @@ These are genuine ambiguities that should be resolved during implementation, not
 **Impact:** DCA amount-based signals produce fractional quantities. The current `Quantity` value object uses `Decimal` precision.
 
 **Options:**
+
 - (A) Whole shares only: `floor(amount / price)`. Simple, but produces leftover cash that can skew DCA results.
 - (B) Fractional shares: Allow `Quantity` with up to 4 decimal places. Accurate, but affects existing whole-share assumptions throughout the system.
 
@@ -967,6 +982,7 @@ These are genuine ambiguities that should be resolved during implementation, not
 **Question:** How should the simulation handle the warm-up period for Moving Average Crossover (the first `slow_window` days before enough data exists for an SMA signal)?
 
 **Options:**
+
 - (A) Skip trading entirely during warm-up — cash sits idle.
 - (B) Hold cash until first BUY signal, then invest on first BUY.
 
@@ -981,6 +997,7 @@ These are genuine ambiguities that should be resolved during implementation, not
 **Question:** When a user deletes a strategy, what happens to backtest runs that reference it?
 
 **Options:**
+
 - (A) Block deletion if any backtest run references the strategy.
 - (B) Allow deletion; set `strategy_id = NULL` on affected backtest runs (already designed this way).
 - (C) Soft delete — mark strategy as deleted, keep it in DB.
@@ -998,6 +1015,7 @@ These are genuine ambiguities that should be resolved during implementation, not
 **Impact:** A `BACKTEST` portfolio with no snapshots could be left orphaned.
 
 **Options:**
+
 - (A) No cleanup — leave orphaned portfolio, mark `BacktestRun.status = FAILED`. User can delete portfolio manually.
 - (B) Transactional cleanup — wrap entire execution in a DB transaction; roll back portfolio + transactions on failure.
 - (C) Compensating delete — on failure, delete the portfolio and all its transactions.
@@ -1041,6 +1059,7 @@ These are genuine ambiguities that should be resolved during implementation, not
 **Impact:** The synchronous v1 design would time out.
 
 **Options:**
+
 - (A) Pre-check: if any ticker lacks price history, return `503` immediately with "please add tickers to watchlist first."
 - (B) Pre-warm endpoint: users can explicitly trigger data pre-fetch for a ticker before backtesting.
 - (C) Async execution (not for v1).

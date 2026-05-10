@@ -8,12 +8,14 @@
 **Phase**: Phase 2a "Current Prices" ✅ **COMPLETE** - Real market data fully integrated!
 
 ### Active Work
+
 - 🔄 **Quality Fixes** - In progress (PR #37, PR #38)
   - CI workflow trigger fix (quality-infra)
   - Test isolation fix (backend-swe)
 - 📋 **Phase 2b Planning** - Ready to start (historical data, background refresh)
 
 ### Recently Completed (Dec 28-29, 2025)
+
 - ✅ **Phase 2a Market Data Integration** - COMPLETE (Dec 29) - Real prices in production!
 - ✅ **PostgreSQL Price Repository** - Merged (PR #33, Dec 28) - Tier 2 caching with migrations
 - ✅ **Portfolio Use Cases Integration** - Merged (PR #34, Dec 28) - Real-time valuations
@@ -34,6 +36,7 @@
 **Status**: ✅ **COMPLETE** (December 29, 2025)
 
 ### Key Metrics
+
 - **Tests**: 55 frontend + 380 backend = **435 tests passing** (99.7% success rate - 1 flaky test being fixed)
 - **Security**: **0 vulnerabilities** (npm audit clean)
 - **Quality Score**: **9.3/10** average across 4 PRs (9.0-9.5 range)
@@ -41,6 +44,7 @@
 - **Phase Duration**: 4 days (Dec 26-29) - ahead of 7-day estimate!
 
 ### What We Built
+
 - **Tier 1 Caching**: Redis with 1-hour TTL, <100ms response time
 - **Tier 2 Caching**: PostgreSQL price_history table, 4-hour max age
 - **Tier 3 API**: Alpha Vantage integration with rate limiting (5/min, 500/day)
@@ -51,6 +55,7 @@
 - **Testing**: Test infrastructure improved (Vitest/Playwright separation)
 
 ### Architecture Quality
+
 - **Clean Architecture**: Maintained 10/10 compliance
 - **Dependency Injection**: MarketDataPort as singleton
 - **Error Handling**: Graceful degradation (serves stale data with warnings)
@@ -58,6 +63,7 @@
 - **Testability**: 34 new tests for price repository and portfolio integration
 
 ### Merged PRs (Dec 28-29)
+
 1. **PR #33**: PostgreSQL Price Repository (Score: 9/10)
    - Alembic migrations for price_history and ticker_watchlist tables
    - SQLModel models with OHLCV support
@@ -82,6 +88,7 @@
    - Added Playwright artifacts to .gitignore
 
 ### Known Issues (Being Fixed)
+
 - ⚠️ **CI Workflow**: Doesn't trigger on draft→ready transition (PR #37 fixing)
 - ⚠️ **Test Isolation**: 1 flaky test due to global singleton state (PR #38 fixing)
 
@@ -92,6 +99,7 @@
 **Status**: ✅ **COMPLETE** (December 28, 2025)
 
 ### Key Metrics
+
 - **Tests**: 42 frontend + 220 backend = **262 tests passing** (100% success rate)
 - **Security**: **0 vulnerabilities** (npm audit clean, all dependencies updated)
 - **Quality Score**: **9.5/10** overall (10/10 Clean Architecture compliance)
@@ -100,6 +108,7 @@
 - **Phase Duration**: ~6 days (Dec 23-28)
 
 ### What We Built
+
 - **Domain Layer**: Pure business logic, zero external dependencies
 - **Application Layer**: CQRS pattern, 5 commands, 4 queries
 - **Adapters Layer**: FastAPI + SQLModel, 10 RESTful endpoints
@@ -109,6 +118,7 @@
 - **Bug Fixes**: All critical integration bugs fixed (balance, trades, holdings)
 
 ### Architecture Quality
+
 - **Clean Architecture**: 10/10 (zero violations)
 - **Dependency Rule**: Fully enforced
 - **Domain Purity**: Zero external dependencies in domain
@@ -142,14 +152,17 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 ```
 
 **2. Tiered Caching** (ADR-001)
+
 - Redis (hot, <100ms) → PostgreSQL (warm, <500ms) → Alpha Vantage (cold, <2s)
 - Graceful degradation: never fail, serve stale data with warnings
 
 **3. Rate Limiting** (ADR-002)
+
 - Token bucket algorithm: 5 calls/min, 500/day (free tier)
 - Redis-backed persistence, configurable for premium tier
 
 **4. Configuration** (ADR-004)
+
 - TOML files with Pydantic (backend) + Zod (frontend) validation
 - Secrets in `.env` only
 
@@ -201,6 +214,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 **Solution**: Add `ready_for_review` event type to workflow triggers in `.github/workflows/ci.yml`
 
 **Success Criteria**:
+
 - CI runs automatically when PR marked ready
 - All existing triggers still work
 - Test with draft → ready transition
@@ -215,10 +229,13 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 
 **Problem**: `test_buy_and_sell_updates_holdings_correctly` fails in full suite, passes individually
 **Root Cause**: Global singletons in `dependencies.py` persist state across tests
+
 - `_redis_client`, `_http_client`, `_market_data_adapter` not reset between tests
+
 **Recommended Solution**: Add autouse pytest fixture to reset singletons
 
 **Success Criteria**:
+
 - Test passes consistently in full suite (381/381 passing)
 - No regressions in other tests
 - Solution is maintainable and documented
@@ -234,6 +251,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 **Score**: 9/10 - Excellent Tier 2 caching implementation
 
 **Delivered**:
+
 - 34 passing tests (16 PriceRepository + 18 WatchlistManager)
 - Alembic migrations for price_history and ticker_watchlist tables
 - SQLModel models with OHLCV support
@@ -241,6 +259,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 - Priority-based refresh scheduling
 
 **Components**:
+
 - `backend/migrations/versions/e46ccf3fcc35_add_price_history_table.py` - Price history schema
 - `backend/migrations/versions/7ca1e9126eba_add_ticker_watchlist_table.py` - Watchlist schema
 - `backend/src/zebu/adapters/outbound/models/price_history.py` - SQLModel with OHLCV
@@ -249,6 +268,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 - `backend/src/zebu/adapters/outbound/repositories/watchlist_manager.py` - Priority scheduling
 
 **Key Features**:
+
 - Batch upsert operations for efficiency
 - Last refresh time tracking for intelligent scheduling
 - Priority-based refresh (user portfolios > watchlist > cold storage)
@@ -261,6 +281,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 **Score**: 9/10 - Excellent real-time valuation integration
 
 **Delivered**:
+
 - 13 new unit tests for portfolio queries
 - HoldingDTO extended with market data fields
 - Real price calculations in GetPortfolioBalance
@@ -268,12 +289,14 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 - Singleton MarketDataPort dependency injection
 
 **Components**:
+
 - `backend/src/zebu/application/dtos/holding_dto.py` - Added current_price, price_change, percent_change
 - `backend/src/zebu/application/queries/get_portfolio_balance.py` - Real valuations
 - `backend/src/zebu/application/queries/get_portfolio_holdings.py` - Market data enrichment
 - `backend/src/zebu/adapters/inbound/api/dependencies.py` - Singleton setup
 
 **Key Features**:
+
 - Real-time portfolio valuations using current market prices
 - Fallback to cost basis when market data unavailable
 - Type-safe DTO extensions for API responses
@@ -286,11 +309,13 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 **Score**: 9.5/10 - Perfect bug fix
 
 **Delivered**:
+
 - Fixed PricePoint.is_stale() boundary condition
 - Added custom equality and hashing for PricePoint
 - Clean price comparison semantics
 
 **Changes**:
+
 - `backend/src/zebu/application/dtos/price_point.py`:
   - Fixed `is_stale()`: Changed `age > max_age` to `age >= max_age` (off-by-one fix)
   - Added custom `__eq__()` and `__hash__()` excluding OHLCV fields
@@ -305,12 +330,14 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 **Score**: 9.5/10 - Perfect test infrastructure fix
 
 **Delivered**:
+
 - Vitest/Playwright separation complete
 - Clean test scripts in package.json
 - Taskfile updated for explicit unit tests
 - Playwright artifacts properly ignored
 
 **Changes**:
+
 - `frontend/vitest.config.ts` - Excluded `**/tests/e2e/**` from Vitest
 - `frontend/package.json` - Added `test:unit`, `test:all` scripts
 - `Taskfile.yml` - Updated to use explicit `test:unit`
@@ -327,18 +354,21 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 **Score**: 9/10 - Excellent foundation
 
 **Delivered**:
+
 - 158 passing tests (0.09s execution time)
 - Zero external dependencies (pure Python)
 - 1,081 lines of production code
 - 1,921 lines of test code (1.8:1 ratio)
 
 **Components**:
+
 - **Value Objects**: Money, Ticker, Quantity (85 tests)
 - **Entities**: Portfolio, Transaction, Holding (46 tests)
 - **Domain Services**: PortfolioCalculator (21 tests)
 - **Exceptions**: Complete hierarchy (6 tests)
 
 **Key Features**:
+
 - Immutable ledger pattern
 - Proportional cost basis calculation
 - Currency-safe arithmetic
@@ -353,6 +383,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 **Score**: Excellent implementation
 
 **Delivered**:
+
 - Repository ports using Protocol (no concrete dependencies)
 - Complete DTOs for layer boundaries
 - 5 Commands: CreatePortfolio, DepositCash, WithdrawCash, BuyStock, SellStock
@@ -368,6 +399,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 **Merged**: December 28, 2025
 
 **Delivered**:
+
 - Fixed 15 linting warnings (line-too-long)
 - Updated Holding equality semantics
 - Improved Portfolio immutability documentation
@@ -382,6 +414,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 **Score**: 9.3/10 - Excellent architecture
 
 **Delivered**:
+
 - 36 files changed (+2,717 / -94 lines)
 - SQLModel repositories with async support
 - 10 FastAPI endpoints (portfolios + transactions)
@@ -390,6 +423,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 - 16 integration tests, 17 application tests
 
 **Components**:
+
 - **Inbound Adapters**: FastAPI routes, DTOs, error handlers
 - **Outbound Adapters**: SQLModel repositories (Portfolio, Transaction)
 - **Infrastructure**: Database config, dependency injection, async session management
@@ -405,6 +439,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 **Score**: 9.3/10 - Excellent work
 
 **Delivered**:
+
 - 21 files changed (+1,434 / -113 lines)
 - Complete API client (Axios with interceptors)
 - TanStack Query hooks for all operations
@@ -413,6 +448,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 - 20/23 tests passing (3 need MSW setup)
 
 **Components**:
+
 - **API Client**: Axios instance, type-safe endpoints, error handling
 - **Hooks**: usePortfolio, useHoldings, useTransactions with mutations
 - **Adapters**: adaptPortfolio, adaptHolding, adaptTransaction
@@ -430,6 +466,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 **Score**: 9.8/10 - Perfect implementation
 
 **Delivered**:
+
 - MSW v2.12.7 installed for network-level HTTP mocking
 - 9 API endpoint handlers (5 GET, 4 POST)
 - All 23 tests passing (was 20/23)
@@ -437,6 +474,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 - No backend dependency during tests
 
 **Key Features**:
+
 - Mock handlers match backend DTOs exactly (snake_case)
 - Proper lifecycle management (start, reset, close)
 - Error on unhandled requests for early detection
@@ -455,17 +493,20 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 **Score**: 9.5/10 - Excellent security fix
 
 **Delivered**:
+
 - Vitest upgraded from 2.1.8 to 4.0.16
 - @vitest/ui upgraded from 2.1.8 to 4.0.16
 - All 6 moderate security vulnerabilities resolved
 - Zero breaking changes (smooth major version upgrade)
 
 **Security**:
+
 - Fixed esbuild CVE GHSA-67mh-4wv8-2f99
 - Transitive updates: vite, esbuild, @vitest/mocker
 - npm audit: 0 vulnerabilities (was 6 moderate)
 
 **Quality**:
+
 - All 23 tests passing
 - Build, lint, typecheck all successful
 - Cleaner dependency tree (100 fewer packages)
@@ -482,6 +523,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 **Score**: 9.0/10 - Excellent quality
 
 **Delivered**:
+
 - 698-line comprehensive quality assessment report
 - Architecture compliance: 10/10 (zero violations)
 - Backend evaluation: 9.5/10 (minor duplication only)
@@ -491,6 +533,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 - Two follow-up tasks created (011, 012)
 
 **Key Findings**:
+
 - **Architecture**: Perfect Clean Architecture compliance
 - **Backend**: Minimal issues (4-line duplication in 5 handlers, no database indexes)
 - **Frontend**: 3/23 tests failing (need MSW), 6 moderate security vulnerabilities
@@ -498,6 +541,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 - **Test Organization**: 27 test files, excellent structure
 
 **Follow-Up Tasks**:
+
 - Task 011 (P1): Fix frontend tests with MSW
 - Task 012 (P2): Upgrade frontend dependencies
 
@@ -508,6 +552,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 **Estimated**: 2-3 hours
 
 **Scope**:
+
 - Install and configure Mock Service Worker (MSW)
 - Create API handlers matching backend DTOs
 - Update 3 failing App.test.tsx tests to use MSW
@@ -515,6 +560,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 - Add testing documentation
 
 **Success Criteria**:
+
 - All 23 frontend tests passing
 - MSW properly configured for all API endpoints
 - No regressions in existing tests
@@ -529,12 +575,14 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 **Estimated**: 1-2 hours
 
 **Scope**:
+
 - Upgrade Vitest from 2.x to 4.x
 - Resolve 6 moderate security vulnerabilities (dev dependencies only)
 - Verify all tests still pass after upgrade
 - Update documentation with breaking changes
 
 **Success Criteria**:
+
 - `npm audit` reports zero vulnerabilities
 - All tests passing with Vitest 4.x
 - No breaking changes in test execution
@@ -551,6 +599,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 **Goal**: Connect to real market data (Alpha Vantage API)
 
 **Scope**:
+
 - Define MarketDataPort interface
 - Implement Alpha Vantage adapter
 - Redis caching for rate limiting
@@ -561,10 +610,13 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 **Status**: Can defer to after Phase 2
 
 Based on quality assessment findings:
+
 - **P3**: Extract portfolio verification helper (~30 min)
 - **P3**: Add database indexes (~1 hour)
 - **P4**: Bundle size analysis (~30 min)
+
 **Scope**:
+
 - Comprehensive code quality analysis
 - MSW (Mock Service Worker) setup for frontend tests (fix 3 failing tests)
 - Test coverage analysis (target: >90% backend, >70% frontend)
@@ -574,28 +626,34 @@ Based on quality assessment findings:
 - Generate priority matrix for refactoring tasks
 
 **Success Criteria**:
+
 - All frontend tests passing (20/23 → 23/23)
 - Quality assessment report with priority matrix
 - [x] Quality assessment (Task 010)
 
 ### In Progress 🔄
+
 - [ ] Fix frontend tests with MSW (Task 011)
 - [ ] Upgrade frontend dependencies (Task 012)
 
 ### Upcoming 📋
+
 - [ ] Optional P3/P4 improvements (see BACKLOG
+
 ## Next Steps
 
 ### 📋 Refactoring Tasks (Tasks 011+)
 **Status**: Awaiting task 010 completion
 
 Based on quality assessment findings, will create specific refactoring tasks for:
+
 - Code smell elimination
 - Test coverage improvements
 - Performance optimizationstask 011 will fix)
 - **Overall**: 195 backend tests passing in 0.5s
 
 ### Code Quality (from Quality Assessment PR #17)
+
 - **Overall Score**: 9.0/10
 - **Architecture**: 10/10 (zero violations)
 - **Backend**: 9.5/10 (minor duplication only)
@@ -605,12 +663,14 @@ Based on quality assessment findings, will create specific refactoring tasks for
 - **Security**: 0 vulnerabilities (npm audit clean)
 
 ### Code Metrics
+
 - **Backend**: 3,967 lines of code across 50 files
 - **Frontend**: 1,264 lines of code across 35 files
 - **Test Files**: 27 total (backend + frontend)
 - **Test Execution**: Backend 0.5s, Frontend <1s
 
 ### Architecture Compliance
+
 - **Clean Architecture**: ✅ 10/10 score (zero violations)
 - **Dependency Rule**: ✅ Fully verified
 - **Domain Purity**: ✅ Zero external dependencies
@@ -624,6 +684,7 @@ Based on quality assessment findings, will create specific refactoring tasks for
 ## Phase 1 Roadmap
 
 ### Completed ✅
+
 - [x] Backend scaffolding (Task 001)
 - [x] Frontend scaffolding (Task 002)
 - [x] CI/CD setup (Task 003)
@@ -635,9 +696,11 @@ Based on quality assessment findings, will create specific refactoring tasks for
 - [x] Frontend-backend integration (Task 009)
 
 ### In Progress 🔄
+
 - [ ] Quality assessment (Task 010)
 
 ### Upcoming 📋
+
 - [ ] Refactoring tasks (Tasks 011+)
 - [ ] Phase 2: Market data integration
 
@@ -646,6 +709,7 @@ Based on quality assessment findings, will create specific refactoring tasks for
 ## Key Metrics
 
 ### Test Coverage
+
 - **Domain Layer**: 100% (pure business logic)
 - **Application Layer**: 90%+ (use cases)
 - **Adapters Layer**: 82% (integration tests)
@@ -653,12 +717,14 @@ Based on quality assessment findings, will create specific refactoring tasks for
 - **Overall**: 195 backend + 23 frontend tests = 218 total tests passing
 
 ### Code Quality
+
 - **Pyright**: 41 minor warnings (SQLAlchemy deprecations)
 - **Ruff**: 3 minor warnings (exception chaining, line length)
 - **TypeScript**: All type checks passing
 - **ESLint**: Clean
 
 ### Architecture
+
 - **Clean Architecture**: ✅ Fully compliant
 - **Dependency Rule**: ✅ Verified
 - **Domain Purity**: ✅ Zero external dependencies
@@ -669,6 +735,7 @@ Based on quality assessment findings, will create specific refactoring tasks for
 ## What We've Built
 
 **Working Features**:
+
 - ✅ Create portfolios with initial deposit
 - ✅ Deposit and withdraw cash
 - ✅ Buy and sell stocks (mock prices)
@@ -677,6 +744,7 @@ Based on quality assessment findings, will create specific refactoring tasks for
 - ✅ Full-stack integration (Database → API → Frontend)
 
 **Technical Achievements**:
+
 - **Backend**: 2,800+ lines of production code, 3,900+ lines of test code
 - **Frontend**: 1,400+ lines with React + TypeScript + TanStack Query
 - **API**: 10 RESTful endpoints with full CRUD operations
@@ -684,22 +752,26 @@ Based on quality assessment findings, will create specific refactoring tasks for
 - **Testing**: 195 passing tests with 82% coverage
 
 **What's Next**:
+
 - Complete quality assessment and refactoring
 - Integrate real market data (Alpha Vantage API)
 - Add historical backtesting capabilities
 - [x] Domain layer (Task 007)
 
 ### In Progress 🔄
+
 - [ ] Domain refinements (Task 008)
 - [ ] Application layer (Task 007b)
 
 ### Upcoming 📋
+
 - [ ] Adapters layer (Task 007c)
 - [ ] End-to-end testing (Task 009)
 - [ ] Database migrations (Task 010)
 - [ ] Frontend integration (Task 011)
 
 ### Future (Phase 1 completion)
+
 - [ ] Real market data integration
 - [ ] User authentication
 - [ ] Deployment to AWS
@@ -710,6 +782,7 @@ Based on quality assessment findings, will create specific refactoring tasks for
 ## Quality Metrics
 
 ### Domain Layer (Current)
+
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
 | Test Coverage | >90% | ~95% | ✅ |
@@ -719,6 +792,7 @@ Based on quality assessment findings, will create specific refactoring tasks for
 | Linting Issues | 0 | 15 E501 | ⚠️ |
 
 ### Project Overall (Current)
+
 - **Total PRs Merged**: 11 (including infrastructure setup)
 - **Lines of Code**: ~1,081 (domain production code)
 - **Lines of Tests**: ~1,921 (domain tests)
@@ -741,6 +815,7 @@ Based on quality assessment findings, will create specific refactoring tasks for
 See [BACKLOG.md](BACKLOG.md) for minor improvements and [docs/architecture/20251227_phase1-backend-mvp/design-decisions.md](docs/architecture/20251227_phase1-backend-mvp/design-decisions.md) for architectural decisions.
 
 **Key Decisions**:
+
 - Immutable ledger pattern for transaction history
 - Derived state (holdings calculated, not stored)
 - Repository pattern with Protocol interfaces
@@ -752,6 +827,7 @@ See [BACKLOG.md](BACKLOG.md) for minor improvements and [docs/architecture/20251
 ## Parallel Development Strategy
 
 We're successfully running multiple backend-swe agents in parallel:
+
 - **Task 008** (refinements) - Quick fixes, independent
 - **Task 007b** (application layer) - Major work, depends on domain
 - **Task 007c** (adapters layer) - Will start after 007b, depends on application ports

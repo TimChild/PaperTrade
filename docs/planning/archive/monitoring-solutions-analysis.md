@@ -4,6 +4,7 @@
 
 ### Sentry (Most Popular)
 **Pricing**:
+
 - **Free Developer Plan**: 5,000 errors/month, 1 user, 30-day retention
 - **Team Plan**: $26/month (pay-as-you-go from $20-60/month) - 50K errors, unlimited users, 90-day retention
 - **Business Plan**: $80/month - 100K errors, performance monitoring included
@@ -13,6 +14,7 @@
 
 ### Rollbar
 **Pricing**:
+
 - **Free Essentials**: 5,000 events/month
 - **Starter**: $19/month - 25K events
 - **Small**: $49/month - 62.5K events
@@ -29,6 +31,7 @@
 
 ### Grafana Cloud (Free tier available)
 **Pricing**:
+
 - **Free Forever**: 50GB logs, 10K metrics series, 3 users
 - **Pro**: $29/month - 100GB logs, 10K metrics series
 - **Advanced**: Custom pricing
@@ -38,6 +41,7 @@
 
 ### New Relic
 **Pricing**:
+
 - **Free Forever**: 100GB data/month, 1 user
 - **Standard**: $49/user/month (consumption-based)
 - **Pro**: $99/user/month
@@ -54,6 +58,7 @@
 
 ### Plausible (Privacy-focused)
 **Pricing**:
+
 - **Growth**: $9/month - 10K pageviews
 - **Business**: $19/month - 100K pageviews
 
@@ -62,6 +67,7 @@
 
 ### PostHog (Product analytics + feature flags)
 **Pricing**:
+
 - **Free**: 1M events/month
 - **Growth**: Pay-as-you-go (~$0.00031/event after free tier)
 - Typically **$10-50/month** for small apps
@@ -104,11 +110,13 @@ TOTAL: ~$26/month
 
 **Phase 1 (Now - Beta Testing)**:
 Use **Budget Stack** ($9/month):
+
 - Sentry Free for errors (5K/month is plenty for beta)
 - Grafana Cloud Free for infrastructure monitoring
 - Plausible for analytics ($9/month, simple setup)
 
 **Why**:
+
 - Minimal time investment (hours not days)
 - Professional tools with minimal cost
 - Easy to upgrade if you hit limits
@@ -116,11 +124,13 @@ Use **Budget Stack** ($9/month):
 
 **Phase 2 (Post-Launch)**:
 Evaluate based on actual usage:
+
 - If >5K errors/month → Consider self-hosted Glitchtip
 - If analytics matter → Keep Plausible or upgrade
 - If infrastructure monitoring critical → Add Prometheus
 
 **Setup Time Estimates**:
+
 - Sentry: 30 minutes (signup + SDK integration)
 - Grafana Cloud: 1-2 hours (setup + dashboards)
 - Plausible: 15 minutes (script tag + domain setup)

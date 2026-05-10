@@ -36,6 +36,7 @@ For active planning, see the parent directory:
 ## Why Archive?
 
 These documents are preserved for historical reference but have been replaced by more current information. Archiving:
+
 1. Keeps the planning directory focused on current/future work
 2. Preserves historical context for understanding decisions
 3. Provides a record of how plans evolved over time

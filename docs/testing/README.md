@@ -192,6 +192,7 @@ def test_deposit_increases_balance():
 ## CI Integration
 
 Every PR runs:
+
 1. Linting (Ruff, ESLint)
 2. Type checking (Pyright, TypeScript)
 3. Unit tests (Backend + Frontend)

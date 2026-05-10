@@ -52,6 +52,7 @@ touch frontend/src/pages/__prototypes__/DashboardVariantB.tsx
 ```
 
 **Benefits**:
+
 - Only visible in development mode
 - Full access to real data (portfolios, prices)
 - Hot reload for instant iteration
@@ -63,16 +64,19 @@ touch frontend/src/pages/__prototypes__/DashboardVariantB.tsx
 If you want quick visual mockups before coding:
 
 **Option 1: ChatGPT + DALL-E**
+
 - Describe desired design in words
 - Generate visual mockup
 - Use as inspiration for code prototype
 
 **Option 2: v0.dev (Vercel)**
+
 - AI generates React + Tailwind components
 - Copy/paste into prototype
 - Refine from there
 
 **Option 3: Excalidraw (Wireframes)**
+
 - Quick hand-drawn wireframes
 - Lo-fi sketches for layout exploration
 - Then implement in code
@@ -86,6 +90,7 @@ If you want quick visual mockups before coding:
 ### Which Screens to Design First?
 
 **Criteria**:
+
 1. **User visibility**: Which screens do users see most?
 2. **Complexity**: Which screens have most design challenges?
 3. **Representative**: Which screens showcase full design system?
@@ -95,18 +100,21 @@ If you want quick visual mockups before coding:
 #### Screen 1: **Dashboard** (Highest Priority)
 
 **Why Dashboard first?**
+
 - First screen users see (highest visibility)
 - Sets design direction for entire app
 - Contains key components: cards, buttons, layout
 - Relatively simple (good starting point)
 
 **What to explore**:
+
 - Portfolio card design (size, spacing, information density)
 - Page layout (header, grid, spacing)
 - Empty state design
 - Call-to-action prominence (Create Portfolio button)
 
 **Design variants**:
+
 - **Variant A**: Modern minimal (lots of whitespace, fewer cards per row)
 - **Variant B**: Data dense (more cards visible, compact spacing)
 
@@ -115,18 +123,21 @@ If you want quick visual mockups before coding:
 #### Screen 2: **Portfolio Detail** (Second Priority)
 
 **Why Portfolio Detail second?**
+
 - Core functionality (users spend most time here)
 - Contains most complex components (table, chart, form)
 - Representative of entire design system
 - High design challenge (lots of data to display)
 
 **What to explore**:
+
 - Holdings table design (columns, styling, responsiveness)
 - Chart integration (colors, theming, size)
 - Trade form design (form layout, validation, button prominence)
 - Transaction list design (table vs. list, density)
 
 **Design variants**:
+
 - Apply chosen direction from Dashboard
 - Focus on data visualization (table, charts)
 
@@ -147,6 +158,7 @@ If you want quick visual mockups before coding:
 ### Recommended: **2 Variants**
 
 **Why 2, not 3+?**
+
 - 2 variants force clear comparison (A vs. B)
 - 3+ variants create decision fatigue
 - Empirical research: 2 options yield faster, better decisions than 3+ (Paradox of Choice)
@@ -259,6 +271,7 @@ touch frontend/src/pages/__prototypes__/DashboardVariantB.tsx
 ```
 
 #### Step 2: Build Variant A - Modern Minimal (2 hours)
+
 - Copy existing Dashboard.tsx as starting point
 - Increase spacing (p-8 instead of p-4)
 - Larger cards (min-h-48)
@@ -279,6 +292,7 @@ touch frontend/src/pages/__prototypes__/DashboardVariantB.tsx
 ```
 
 #### Step 3: Build Variant B - Data Dense (2 hours)
+
 - Copy existing Dashboard.tsx
 - Reduce spacing (p-4 instead of p-6)
 - Smaller cards (min-h-32)
@@ -307,12 +321,14 @@ touch frontend/src/pages/__prototypes__/DashboardVariantB.tsx
 ```
 
 #### Step 4: Screenshot & Compare (30 minutes)
+
 - Take screenshots of both variants (full page)
 - Screenshot at different widths (375px, 768px, 1024px, 1440px)
 - Place side-by-side for comparison
 - Share with stakeholders (if applicable)
 
 #### Step 5: Evaluate & Choose (1 hour)
+
 - Fill out evaluation scorecard
 - Discuss with team (if applicable)
 - Choose winner (or hybrid approach)
@@ -325,17 +341,20 @@ touch frontend/src/pages/__prototypes__/DashboardVariantB.tsx
 ### Day 2: Portfolio Detail Prototyping
 
 #### Step 1: Apply Chosen Direction (3 hours)
+
 - Take winner from Dashboard (or hybrid)
 - Apply same spacing, typography, card style to Portfolio Detail
 - Focus on layout (table, chart, form placement)
 
 #### Step 2: Table Design (2 hours)
+
 - Experiment with column widths
 - Try different header styles (sticky, bold, background color)
 - Test zebra striping vs. row hover
 - Ensure mobile responsiveness (horizontal scroll or hide columns)
 
 #### Step 3: Chart Integration (1 hour)
+
 - Configure Recharts with design system colors
 - Experiment with chart height
 - Test tooltip styling
@@ -347,17 +366,20 @@ touch frontend/src/pages/__prototypes__/DashboardVariantB.tsx
 ### Day 3: Refinement & Documentation
 
 #### Step 1: Mobile Testing (1 hour)
+
 - Test both prototypes at 375px width
 - Ensure all info accessible (no horizontal scroll for critical content)
 - Test interactions (tapping cards, buttons)
 
 #### Step 2: Extract Design Tokens (2 hours)
+
 - Document colors (HSL values)
 - Document typography scale (font sizes, weights)
 - Document spacing scale (padding, margin)
 - Document shadows, borders, radii
 
 #### Step 3: Document Decision (1 hour)
+
 - Write `design-decisions.md`
 - Include screenshots
 - Explain rationale for chosen direction
@@ -372,27 +394,32 @@ touch frontend/src/pages/__prototypes__/DashboardVariantB.tsx
 ### When to Get Feedback?
 
 **Checkpoint 1**: After Day 1 (Dashboard variants ready)
+
 - Show both variants side-by-side
 - Get initial reactions
 - Don't commit to design yet (iterate if needed)
 
 **Checkpoint 2**: After Day 2 (Portfolio Detail ready)
+
 - Show full design direction applied to 2 screens
 - Get final approval before proceeding to implementation
 
 ### How to Present Designs?
 
 **Option 1: Live Demo** (Recommended)
+
 - Walk through prototypes in browser
 - Show interactivity (clicking, navigating)
 - Explain rationale for design choices
 
 **Option 2: Screenshots + Document**
+
 - Create slides with screenshots
 - Annotate with design rationale
 - Share via email/Slack for async feedback
 
 **Option 3: Loom Video**
+
 - Record screen walkthrough
 - Narrate design decisions
 - Share link for async review
@@ -441,6 +468,7 @@ touch frontend/src/pages/__prototypes__/DashboardVariantB.tsx
 ### Example A: Modern Minimal (Airbnb-inspired)
 
 **Characteristics**:
+
 - Lots of whitespace
 - Larger typography (text-2xl, text-3xl)
 - Subtle shadows (shadow-sm, shadow-md)
@@ -449,11 +477,13 @@ touch frontend/src/pages/__prototypes__/DashboardVariantB.tsx
 - Generous padding (p-8, p-10)
 
 **Best for**:
+
 - Users who value clarity over density
 - Portfolios with few holdings (< 10)
 - Desktop-first users
 
 **Trade-offs**:
+
 - Less data visible without scrolling
 - More scrolling required
 
@@ -462,6 +492,7 @@ touch frontend/src/pages/__prototypes__/DashboardVariantB.tsx
 ### Example B: Data Dense (Bloomberg Terminal-inspired)
 
 **Characteristics**:
+
 - Compact spacing (p-4, gap-3)
 - Smaller typography (text-base, text-lg)
 - Minimal whitespace
@@ -469,11 +500,13 @@ touch frontend/src/pages/__prototypes__/DashboardVariantB.tsx
 - Tables over cards (more data per square inch)
 
 **Best for**:
+
 - Power users who want all info visible
 - Portfolios with many holdings (10+)
 - Desktop users with large monitors
 
 **Trade-offs**:
+
 - Can feel cramped
 - Harder to scan quickly
 

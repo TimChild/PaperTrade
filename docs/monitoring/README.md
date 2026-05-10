@@ -14,18 +14,21 @@ Dashboards are stored as JSON models in [`dashboards/`](dashboards/).
 
 ### 1. [Application Overview](dashboards/application-overview.md)
 **Purpose**: Comprehensive view of Zebu application health and performance.
+
 - **Key Metrics**: Request rate, error rate, P95/P99 latency.
 - **Cache**: Redis hit/miss ratios.
 - **Errors**: Top error types and full error logs.
 
 ### 2. [Trading Activity](dashboards/trading-activity.md)
 **Purpose**: Monitor user trading behavior and portfolio operations.
+
 - **Volume**: Trades executed, buy vs sell ratios.
 - **Patterns**: Popular tickers, trade size distribution.
 - **Users**: Active portfolios and user activity.
 
 ### 3. [External Services](dashboards/external-services.md)
 **Purpose**: Monitor dependencies (Alpha Vantage, PostgreSQL, Redis).
+
 - **Alpha Vantage**: Rate limit consumption, API errors.
 - **Database**: Connection pool status, slow queries.
 - **System**: Network errors and connectivity checks.
@@ -49,6 +52,7 @@ graph LR
 The backend uses `structlog` to emit structured JSON logs.
 
 **Essential Fields**:
+
 - `event`: Human readable description
 - `level`: `info`, `warning`, `error`, `debug`
 - `timestamp`: ISO8601

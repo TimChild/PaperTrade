@@ -33,6 +33,7 @@ We build software like scientists run experiments:
 ### The Modular Monolith
 
 We start monolithic for simplicity but strictly modularized by domain contexts. This allows:
+
 - Simple deployment (single unit)
 - Clear boundaries for future extraction
 - Shared infrastructure without distributed systems complexity
@@ -81,11 +82,13 @@ We start monolithic for simplicity but strictly modularized by domain contexts. 
 ### Core Principle: Focus on Product Differentiation
 
 We **buy** (use third-party services) for:
+
 - ✅ Commodity infrastructure that doesn't differentiate our product
 - ✅ Features where managed services provide better security/reliability
 - ✅ Functionality that would take weeks to build but days to integrate
 
 We **build** (custom implementation) for:
+
 - ✅ Core domain logic (trading simulation, backtesting, portfolio management)
 - ✅ Features that define our unique value proposition
 - ✅ Business logic that differentiates us from competitors
@@ -95,6 +98,7 @@ We **build** (custom implementation) for:
 **Question**: Build custom JWT authentication or use Clerk?
 
 **Analysis**:
+
 | Factor | Custom Auth | Clerk |
 |--------|-------------|-------|
 | Development time | 3-4 weeks | 2-3 days |
@@ -104,6 +108,7 @@ We **build** (custom implementation) for:
 | Cost | $0 | Free tier → $25/month at scale |
 
 **Decision**: **Use Clerk** (Buy)
+
 - Auth doesn't differentiate our product (users care about trading features)
 - Saves 3-4 weeks to focus on backtesting and analytics
 - Better security through managed service
@@ -186,6 +191,7 @@ Ledger Entry Examples:
 ### Time-Series Data
 
 Stock prices require optimized storage for:
+
 - Fast range queries (charts)
 - Efficient point-in-time lookups (backtesting)
 - Historical data ingestion (batch)
@@ -318,12 +324,14 @@ tests/
 **Decision (January 2026)**: Use Clerk for authentication instead of custom implementation.
 
 **Rationale - Focus on Core Value**:
+
 - Authentication is commodity infrastructure, not product differentiation
 - Our core value is trading simulation and backtesting features
 - Custom auth would consume 3-4 weeks without adding user value
 - Clerk provides professional auth UI, security, and features out-of-the-box
 
 **Implementation**:
+
 - Clerk for user authentication (email/password, social login)
 - Clean Architecture preserved via `AuthPort` adapter pattern
 - 90% of tests use `InMemoryAuthAdapter` (no Clerk dependency)

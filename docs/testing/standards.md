@@ -95,6 +95,7 @@ npx playwright test tests/e2e/trading.spec.ts
 **Format**: `{component}-{element}-{variant?}`
 
 **Rules:**
+
 - Use kebab-case
 - Start with component/page name
 - Be specific but concise
@@ -180,10 +181,12 @@ Test all functionality without mouse:
 ```
 
 **Windows (NVDA):**
+
 - Download: https://www.nvaccess.org/
 - Navigate: Tab, Arrow Keys
 
 **Checklist:**
+
 - [ ] All interactive elements announced
 - [ ] Form labels read correctly
 - [ ] Images have alt text
@@ -192,22 +195,26 @@ Test all functionality without mouse:
 #### Color Contrast
 
 **Minimum Ratios:**
+
 - Normal text: 4.5:1
 - Large text (18pt+): 3:1
 - UI components: 3:1
 
 **Tools:**
+
 - Chrome DevTools → Elements → Styles → Contrast ratio
 - WebAIM Contrast Checker: https://webaim.org/resources/contrastchecker/
 
 ### Responsive Testing
 
 **Viewports:**
+
 1. Mobile: 375×667 (iPhone SE)
 2. Tablet: 768×1024 (iPad)
 3. Desktop: 1920×1080 (Full HD)
 
 **Checklist (each viewport):**
+
 - [ ] No horizontal scrolling
 - [ ] Text readable without zoom
 - [ ] Touch targets ≥ 44×44px
@@ -216,6 +223,7 @@ Test all functionality without mouse:
 ### Cross-Browser Testing
 
 **Browsers (via Playwright):**
+
 - Chromium (Chrome, Edge)
 - Firefox
 - WebKit (Safari)
@@ -231,6 +239,7 @@ npm run test:e2e -- --project=firefox
 ### Performance Targets
 
 **Lighthouse Scores:**
+
 - Performance: ≥90
 - Accessibility: ≥95
 - Best Practices: ≥90
@@ -246,6 +255,7 @@ npx lighthouse http://localhost:4173/ --view
 ### Pre-Release Checklist
 
 **Accessibility:**
+
 - [ ] WCAG 2.1 AA automated tests pass
 - [ ] Manual keyboard navigation tested
 - [ ] Screen reader tested
@@ -253,12 +263,14 @@ npx lighthouse http://localhost:4173/ --view
 - [ ] Form labels and ARIA correct
 
 **Quality:**
+
 - [ ] All tests passing (current count in PROGRESS.md)
 - [ ] Linting clean (0 errors)
 - [ ] TypeScript compiles
 - [ ] No console errors in production
 
 **Cross-Platform:**
+
 - [ ] Chrome/Chromium tested
 - [ ] Firefox tested
 - [ ] Safari/WebKit tested
@@ -270,11 +282,13 @@ npx lighthouse http://localhost:4173/ --view
 ## Resources
 
 ### Tools
+
 - [axe DevTools](https://www.deque.com/axe/devtools/) - Browser extension
 - [Lighthouse](https://developers.google.com/web/tools/lighthouse) - Auditing
 - [Playwright](https://playwright.dev/) - E2E testing
 
 ### Guidelines
+
 - [WCAG 2.1](https://www.w3.org/WAI/WCAG21/quickref/) - Accessibility standards
 - [Testing Library](https://testing-library.com/) - Component testing
 - [A11y Project](https://www.a11yproject.com/checklist/) - Accessibility checklist

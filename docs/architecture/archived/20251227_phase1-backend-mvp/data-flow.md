@@ -10,10 +10,12 @@ This document illustrates the detailed data flows through the system using seque
 All state changes are recorded as immutable transactions. Current state is **derived** by aggregating the transaction history.
 
 ### 2. Command-Query Separation
+
 - **Commands** modify state (create transactions)
 - **Queries** read state (aggregate transactions)
 
 ### 3. Dependency Inversion
+
 - Application layer defines repository interfaces (ports)
 - Adapters layer implements those interfaces
 - Domain layer knows nothing about persistence
@@ -72,6 +74,7 @@ sequenceDiagram
 ```
 
 ### Key Points
+
 1. **Atomic Operation**: Portfolio and initial transaction saved in same database transaction
 2. **Initial Deposit Required**: Cannot create portfolio without cash
 3. **UUID Generation**: IDs generated in use case, not database
@@ -138,6 +141,7 @@ sequenceDiagram
 ```
 
 ### Key Points
+
 1. **Balance Check**: Current balance calculated from all transactions
 2. **Validation Before Save**: Insufficient funds detected before database write
 3. **Negative Cash Change**: BUY reduces cash (negative value)
@@ -203,6 +207,7 @@ sequenceDiagram
 ```
 
 ### Key Points
+
 1. **Share Check**: Current holdings calculated from transactions
 2. **Cost Basis**: Holding includes average cost (for unrealized gain calculation)
 3. **Positive Cash Change**: SELL increases cash (positive value)
@@ -250,6 +255,7 @@ sequenceDiagram
 ```
 
 ### Key Points
+
 1. **Validation Prevents Invalid State**: No transaction created if insufficient funds
 2. **Balance Derived**: Real-time balance calculated from all transactions
 3. **Clear Error**: User gets descriptive error message
@@ -301,6 +307,7 @@ sequenceDiagram
 ```
 
 ### Key Points
+
 1. **Read-Only**: No database writes
 2. **Derived State**: Balance calculated from sum of cash_change
 3. **Always Current**: Reflects all transactions up to query time
@@ -364,6 +371,7 @@ sequenceDiagram
 ```
 
 ### Key Points
+
 1. **Aggregation Logic**: Holdings calculated by replaying all trades
 2. **Cost Basis Tracking**: Maintains average cost through buy/sell cycles
 3. **Proportional Reduction**: SELL reduces cost basis proportionally
@@ -427,6 +435,7 @@ sequenceDiagram
 ```
 
 ### Key Points
+
 1. **Composite Calculation**: Cash + Holdings value
 2. **Current Prices Required**: Must provide price for each held ticker
 3. **Unrealized Gain**: Difference between market value and cost basis
@@ -476,6 +485,7 @@ sequenceDiagram
 ```
 
 ### Key Points
+
 1. **Pagination**: Limits memory usage for large histories
 2. **Total Count**: Allows client to calculate total pages
 3. **Chronological Order**: Always oldest-first (timestamp ASC)
@@ -525,6 +535,7 @@ graph TD
 ```
 
 ### Legend
+
 - **Green**: DEPOSIT (adds cash)
 - **Pink**: BUY (reduces cash, adds shares)
 - **Blue**: SELL (adds cash, reduces shares)
@@ -577,6 +588,7 @@ sequenceDiagram
 ```
 
 ### Key Points
+
 1. **Early Validation**: Business rules checked before database write
 2. **No Side Effects**: Failed validation means no state change
 3. **Descriptive Errors**: User gets clear explanation
@@ -591,6 +603,7 @@ sequenceDiagram
 **Problem**: Calculating holdings requires processing all transactions
 
 **Solutions**:
+
 1. **Phase 1**: Acceptable for MVP (< 1000 transactions)
 2. **Phase 2**: Add caching layer (Redis) for frequently accessed portfolios
 3. **Phase 3**: Materialized views for holdings (updated on transaction save)
@@ -598,12 +611,14 @@ sequenceDiagram
 ### Pagination Strategy
 
 Large transaction histories use cursor-based pagination:
+
 - First page: `GET /transactions?limit=50`
 - Next page: `GET /transactions?limit=50&offset=50`
 
 ### Index Strategy
 
 Critical indexes for performance:
+
 - `transaction(portfolio_id, timestamp)` - chronological queries
 - `transaction(portfolio_id, transaction_type)` - filtered queries
 - `portfolio(user_id)` - user's portfolios
@@ -625,6 +640,7 @@ Critical indexes for performance:
 ✅ Error handling (insufficient funds/shares)
 
 ### Future Flows (Phase 2+)
+
 - Real-time price updates via WebSocket
 - Market data API integration
 - Cache invalidation on transaction save

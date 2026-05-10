@@ -7,6 +7,7 @@ This document outlines the strategy for migrating from the current barebones des
 **Approach**: Incremental, screen-by-screen migration with feature flags for instant rollback.
 
 **Guiding Principles**:
+
 1. **Zero downtime**: Users never see a broken app
 2. **Test continuity**: E2E tests run throughout migration
 3. **Instant rollback**: Toggle feature flag to revert any screen
@@ -19,6 +20,7 @@ This document outlines the strategy for migrating from the current barebones des
 ### Why Feature Flags?
 
 **Problem with Big-Bang Migration**:
+
 - All screens change simultaneously
 - One bug breaks entire app
 - No way to isolate failures
@@ -26,6 +28,7 @@ This document outlines the strategy for migrating from the current barebones des
 - All-or-nothing deployment (high risk)
 
 **Solution: Feature Flags**:
+
 - Migrate one screen at a time
 - Old and new versions coexist
 - Toggle between old/new per screen
@@ -118,6 +121,7 @@ export function Dashboard() {
 ### Migration Workflow (Per Screen)
 
 #### Step 1: Create New Version
+
 - Copy existing component to `{ComponentName}New.tsx`
 - Apply design system changes
 - Keep old component untouched (legacy fallback)
@@ -131,40 +135,47 @@ frontend/src/pages/
 ```
 
 #### Step 2: Add Feature Flag
+
 - Add flag to `feature-flags.ts`
 - Set to `false` in `.env.development` (start disabled)
 - Update routing/component to check flag
 
 #### Step 3: Test New Version
+
 - Set flag to `true` locally
 - Manual testing (all functionality works)
 - Run E2E tests (update test IDs if needed)
 - Accessibility audit (axe-core)
 
 #### Step 4: Update Test IDs (If Needed)
+
 - Keep test IDs stable (don't change if possible)
 - If DOM structure changes significantly, update test IDs
 - Update E2E tests to use new test IDs
 - Run full E2E suite to verify
 
 #### Step 5: Deploy with Flag Disabled
+
 - Merge PR with flag set to `false` in production
 - Deploy to production (new code deployed, but not active)
 - Zero user impact (they still see old design)
 
 #### Step 6: Enable Flag in Production
+
 - Update `.env.production` to set flag to `true`
 - Redeploy (or use runtime config if supported)
 - Monitor for errors (Sentry, logs)
 - User feedback (support tickets, analytics)
 
 #### Step 7: Rollback if Needed
+
 - If issues arise, set flag to `false`
 - Redeploy (instant rollback to old design)
 - Investigate and fix issues
 - Re-enable when ready
 
 #### Step 8: Clean Up (After Confidence)
+
 - Delete legacy component (`Dashboard.tsx`)
 - Remove feature flag (no longer needed)
 - Update imports to use new component directly
@@ -180,6 +191,7 @@ E2E tests depend on DOM structure and test IDs. Changing components can break te
 ### Solution: Maintain Test ID Stability
 
 **Strategy**:
+
 1. **Keep test IDs unchanged** when migrating components
 2. If DOM structure changes, update test IDs incrementally
 3. Run E2E tests on **both** old and new designs during migration
@@ -199,6 +211,7 @@ E2E tests depend on DOM structure and test IDs. Changing components can break te
 ```
 
 **If Test ID Must Change**:
+
 1. Update component test ID
 2. Update E2E test to use new test ID
 3. Run E2E suite to verify all tests pass
@@ -241,11 +254,13 @@ VITE_NEW_DASHBOARD_DESIGN=true npm run test:e2e
 ### Scenario 1: Visual Bug in New Design
 
 **Symptoms**:
+
 - UI looks broken (layout issue, missing styles)
 - Not a critical functional bug
 - Users can still use the app
 
 **Rollback**:
+
 1. Set feature flag to `false` in `.env.production`
 2. Redeploy (instant rollback)
 3. Fix bug in new design
@@ -259,11 +274,13 @@ VITE_NEW_DASHBOARD_DESIGN=true npm run test:e2e
 ### Scenario 2: Functional Bug in New Design
 
 **Symptoms**:
+
 - Feature doesn't work (e.g., can't execute trades)
 - Critical bug blocking users
 - Error logs in Sentry
 
 **Rollback**:
+
 1. **Immediate**: Set feature flag to `false`
 2. **Urgent**: Redeploy (hotfix priority)
 3. Investigate bug in new design
@@ -277,11 +294,13 @@ VITE_NEW_DASHBOARD_DESIGN=true npm run test:e2e
 ### Scenario 3: Performance Degradation
 
 **Symptoms**:
+
 - Slow page loads after migration
 - High bundle size increase
 - Lighthouse score drops
 
 **Rollback**:
+
 1. Set feature flag to `false` (if severe)
 2. Analyze bundle size (rollup-plugin-visualizer)
 3. Identify culprit (likely Radix UI component)
@@ -295,11 +314,13 @@ VITE_NEW_DASHBOARD_DESIGN=true npm run test:e2e
 ### Scenario 4: Accessibility Regression
 
 **Symptoms**:
+
 - Screen reader can't navigate
 - Keyboard navigation broken
 - WCAG compliance issues reported
 
 **Rollback**:
+
 1. If severe (blocks users): Set flag to `false`, rollback
 2. If minor: Fix in place, don't rollback
 3. Run accessibility audit (axe-core)
@@ -327,16 +348,19 @@ VITE_NEW_DASHBOARD_DESIGN=true npm run test:e2e
 ### Internal Team
 
 **Before Migration**:
+
 - Share migration plan with team
 - Document rollback procedures
 - Set up monitoring (Sentry, analytics)
 
 **During Migration**:
+
 - Daily standup: Report progress, any issues
 - Slack/email: Notify when flag enabled in production
 - Monitor error logs for 24 hours after enabling
 
 **After Migration**:
+
 - Retrospective: What went well, what didn't
 - Document lessons learned
 - Update this migration guide with insights
@@ -346,14 +370,17 @@ VITE_NEW_DASHBOARD_DESIGN=true npm run test:e2e
 ### External Users (If Applicable)
 
 **Before Migration**:
+
 - No communication needed (users won't notice if flag disabled)
 - If major redesign: Blog post, email to users (optional)
 
 **During Migration**:
+
 - If rollback needed: No communication (instant, transparent)
 - If gradual rollout: Email subset of users (beta testers)
 
 **After Migration**:
+
 - Announcement: New design is live (blog post, email)
 - Collect feedback (survey, support tickets)
 - Iterate based on user feedback
@@ -364,6 +391,7 @@ VITE_NEW_DASHBOARD_DESIGN=true npm run test:e2e
 
 ### Problem
 During migration, team may need to:
+
 - Fix bugs in old design (can't wait weeks)
 - Add new features
 - Make hotfixes
@@ -371,6 +399,7 @@ During migration, team may need to:
 ### Solution: Maintain Both Versions Temporarily
 
 **Bug Fix Workflow**:
+
 1. Identify which version has the bug (old, new, or both)
 2. Fix in affected version(s)
 3. If bug in both: Fix in legacy, then port to new design
@@ -389,6 +418,7 @@ const changeColorClass = portfolio.dailyChange >= 0
 ```
 
 **New Feature Workflow**:
+
 1. If feature flag disabled in prod: Build in old design only
 2. If feature flag enabled in prod: Build in new design only
 3. If transition period: Build in both (more work, but ensures consistency)
@@ -398,6 +428,7 @@ const changeColorClass = portfolio.dailyChange >= 0
 ## Migration Timeline
 
 ### Week 1: Design Exploration + Foundation
+
 - Days 1-3: Design exploration (Phase 1)
 - Days 4-5: Design system foundation (Phase 2)
 
@@ -406,10 +437,12 @@ const changeColorClass = portfolio.dailyChange >= 0
 ---
 
 ### Week 2: Component Primitives + Start Migration
+
 - Days 6-9: Build component primitives (Phase 3)
 - Day 10: Migrate Dashboard (Phase 4, Task 4.1)
 
 **Flags**:
+
 - `NEW_DASHBOARD_DESIGN` added, disabled by default
 - Deploy with flag disabled (no user impact)
 - Enable flag in staging for testing
@@ -417,17 +450,20 @@ const changeColorClass = portfolio.dailyChange >= 0
 ---
 
 ### Week 3: Continue Migration
+
 - Days 11-12: Migrate Portfolio Detail (Phase 4, Task 4.2)
 - Days 13-14: Migrate Portfolio Analytics (Phase 4, Task 4.3)
 - Day 14: Migrate Debug Page (Phase 4, Task 4.4)
 
 **Flags**:
+
 - `NEW_PORTFOLIO_DETAIL` added
 - `NEW_ANALYTICS_DESIGN` added
 - All flags disabled in production initially
 - Gradual rollout: Enable one flag per day in production
 
 **Rollout Schedule**:
+
 - Day 10 PM: Enable `NEW_DASHBOARD_DESIGN` in production
 - Day 12 PM: Enable `NEW_PORTFOLIO_DETAIL` in production
 - Day 14 PM: Enable `NEW_ANALYTICS_DESIGN` in production
@@ -437,10 +473,12 @@ const changeColorClass = portfolio.dailyChange >= 0
 ---
 
 ### Week 3-4: Polish, Validation, Cleanup
+
 - Days 15-16: Polish & validation (Phase 5)
 - Day 16: If all successful, remove feature flags (cleanup)
 
 **Flags**:
+
 - All enabled in production
 - Delete legacy components
 - Remove flags from codebase (no longer needed)
@@ -472,6 +510,7 @@ export const FEATURE_FLAGS = {
 ```
 
 **Benefits**:
+
 - Catch bugs with small % of users before full rollout
 - A/B testing (compare metrics between old/new)
 
@@ -494,6 +533,7 @@ export const FEATURE_FLAGS = {
 ```
 
 **Benefits**:
+
 - Dogfooding (team uses new design first)
 - Collect feedback before public release
 
@@ -508,15 +548,19 @@ export const FEATURE_FLAGS = {
 After migration complete, document lessons learned:
 
 ### What Went Well ✅
+
 - [To be filled after migration]
 
 ### What Didn't Go Well ❌
+
 - [To be filled after migration]
 
 ### Surprises 🤔
+
 - [To be filled after migration]
 
 ### Improvements for Next Migration 🚀
+
 - [To be filled after migration]
 
 ---
@@ -530,6 +574,7 @@ After migration complete, document lessons learned:
 **Timeline**: 3-4 weeks (design to cleanup)
 
 **Key Principles**:
+
 1. One screen at a time
 2. Feature flags for safety
 3. Test ID stability

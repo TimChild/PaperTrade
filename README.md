@@ -36,6 +36,7 @@ A stock market emulation platform for practicing trading strategies without risk
 ## Overview
 
 Zebu allows users to:
+
 - ✅ Start with virtual cash and practice investing
 - ✅ Create unlimited portfolios with different strategies
 - ✅ Execute BUY and SELL trades with real-time market data
@@ -48,6 +49,7 @@ Zebu allows users to:
 ## Philosophy
 
 ZebuTrader follows **Modern Software Engineering** principles (Dave Farley):
+
 - **Iterative & Incremental**: Build smallest valuable increments
 - **Experimental & Empirical**: Hypothesis → Test → Learn
 - **Manage Complexity**: High cohesion, loose coupling
@@ -80,6 +82,7 @@ Dependencies point INWARD only
 ## Technology Stack
 
 ### Backend
+
 | Component | Technology |
 |-----------|------------|
 | Language | Python 3.13+ |
@@ -92,6 +95,7 @@ Dependencies point INWARD only
 | Testing | Pytest |
 
 ### Frontend
+
 | Component | Technology |
 |-----------|------------|
 | Language | TypeScript |
@@ -101,6 +105,7 @@ Dependencies point INWARD only
 | Testing | Vitest, Playwright |
 
 ### Infrastructure
+
 | Component | Technology |
 |-----------|------------|
 | Deployment | Docker Compose on Proxmox VM (`scripts/proxmox-vm/`) |
@@ -113,11 +118,13 @@ Dependencies point INWARD only
 ### Prerequisites
 
 **Required:**
+
 - Python 3.12+
 - Node.js 20+
 - Docker & Docker Compose
 
 **Optional (but recommended):**
+
 - [Task](https://taskfile.dev/) - Task runner for development commands
 
 #### Installing Task (Optional)
@@ -218,6 +225,7 @@ task docker:down
 ```
 
 **Access the application:**
+
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:8000
 - API Docs: http://localhost:8000/docs
@@ -235,6 +243,7 @@ task docker:up:prod
 ```
 
 **Access the application:**
+
 - Frontend: http://localhost:80
 - Backend API: http://localhost:8000
 
@@ -254,15 +263,19 @@ cp .env.production.example .env
 ```
 
 **Required variables:**
+
 - `ALPHA_VANTAGE_API_KEY`: Get from https://www.alphavantage.co/support/#api-key (free tier available)
 
 **Optional variables** (defaults provided for development):
+
 - `POSTGRES_PASSWORD`: Database password (default: papertrade_dev_password)
 - `SECRET_KEY`: App secret key (default: dev-secret-key-change-in-production)
 
 **Production-only variables:**
+
 - `APP_LOG_LEVEL`: Logging level (default: INFO)
 - Generate secure secrets:
+
   ```bash
   # PostgreSQL password
   openssl rand -base64 32
@@ -359,6 +372,7 @@ Or modify the port mappings in `docker-compose.yml`.
 **Backend hot-reload not working:**
 
 If file changes don't trigger backend restarts:
+
 1. Ensure you're editing files in `./backend/src/` (mounted volume)
 2. Check backend logs: `docker compose logs backend --tail 50`
 3. Verify watchfiles is working: Look for "Watching for file changes" in logs
@@ -367,6 +381,7 @@ If file changes don't trigger backend restarts:
 **Frontend hot-reload not working:**
 
 If Vite HMR isn't working:
+
 1. Check browser console for HMR connection errors
 2. Verify frontend logs: `docker compose logs frontend --tail 50`
 3. Try a hard refresh: Ctrl+Shift+R (Windows/Linux) or Cmd+Shift+R (Mac)
@@ -590,6 +605,7 @@ See [docs/planning/roadmap.md](docs/planning/roadmap.md) for detailed developmen
 ## Contributing
 
 We welcome contributions! Please:
+
 1. Read [CLAUDE.md](CLAUDE.md) for coding standards and architecture
 2. Check the [project strategy](docs/planning/project_strategy.md) for architectural guidance
 3. Follow our PR template when submitting changes

@@ -150,18 +150,21 @@
 ## Implementation Priority
 
 ### High Priority (Next 6 Months - Phase 4)
+
 1. Advanced order types (limit, stop)
 2. Real-time WebSocket updates
 3. Multi-provider market data (resilience)
 4. Enhanced monitoring & observability
 
 ### Medium Priority (6-12 Months - Phase 5)
+
 1. Algorithmic trading strategies
 2. Advanced analytics (Sharpe ratio, volatility)
 3. Portfolio comparison tools
 4. Benchmark comparisons
 
 ### Low Priority (12+ Months)
+
 1. Multi-currency support
 2. Tax reporting
 3. Social features (portfolio sharing, leagues)
@@ -170,6 +173,7 @@
 ---
 
 **Notes**:
+
 - Rate limits are for Alpha Vantage free tier (5/min, 500/day)
 - For production use with many users, consider Alpha Vantage paid tier or additional providers
 - All "Full" features have been validated through automated tests

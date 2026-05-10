@@ -13,6 +13,7 @@ This guide covers deploying Zebu to a Proxmox VM using the [community Docker VM 
 **Why use the community script?**
 
 Key benefits:
+
 - Docker installed before first boot (no cloud-init wait)
 - Avoids dpkg lock issues during initial setup
 - Battle-tested by thousands of Proxmox users
@@ -75,6 +76,7 @@ Your application will be accessible at the VM's IP address (displayed after crea
 - **git** - For version control and tracking deployments
 
 Optional but recommended:
+
 - **sshpass** - For automated password changes (improves security)
 
 ### On Proxmox Host
@@ -90,6 +92,7 @@ Optional but recommended:
 ### On the VM (Installed Automatically)
 
 The community script and deployment process automatically handle:
+
 - **Docker Engine and Docker Compose** - Pre-installed by community script
 - **Git** - Installed during first deployment for code management
 - **QEMU Guest Agent** - Pre-installed for VM management
@@ -205,12 +208,14 @@ task proxmox-vm:create
 ```
 
 The script will:
+
 1. Display recommended configuration values from your environment
 2. Guide you to SSH into Proxmox
 3. Run the community Docker VM script interactively
 4. Verify the VM was created successfully
 
 **Interactive Prompts** (recommended values will be displayed):
+
 - **Use Default Settings?** → NO (select Advanced for custom configuration)
 - **VM ID** → 200 (or your configured value)
 - **Machine Type** → i440fx (default)
@@ -230,6 +235,7 @@ The script will:
 **Note**: The script may take 5-10 minutes to complete. The virt-resize step (expanding disk) can take a minute or two - **do not interrupt it**.
 
 **What the community script does**:
+
 1. Downloads Debian 12 cloud image (~500MB)
 2. Uses `virt-customize` to inject Docker, qemu-guest-agent into the image offline
 3. Configures hostname and enables Docker service
@@ -248,6 +254,7 @@ task proxmox-vm:deploy
 ```
 
 This will:
+
 - Transfer application code to VM
 - Build Docker images on VM
 - Start all services (PostgreSQL, Redis, Backend, Frontend)
@@ -267,6 +274,7 @@ task proxmox-vm:logs
 ```
 
 Access your application:
+
 - **Frontend**: `http://<vm-ip>`
 - **Backend API**: `http://<vm-ip>:8000`
 - **API Docs**: `http://<vm-ip>:8000/docs`
@@ -297,6 +305,7 @@ task proxmox-vm:restart
 ### Updating Deployments (Redeployment)
 
 The deployment script supports deploying specific versions using the `VERSION` environment variable. This allows you to deploy:
+
 - **Git tags** (e.g., `v1.0.0`)
 - **Branches** (e.g., `main`, `feature/new-feature`)
 - **Commit SHAs** (e.g., `abc123def`)
@@ -326,6 +335,7 @@ The deployment script automatically detects whether the VERSION is a tag, branch
 **What happens during deployment:**
 
 When `VERSION` is specified:
+
 1. Fetch all refs (tags and branches) from origin
 2. Detect ref type (tag, branch, or commit)
 3. Checkout the specified version
@@ -336,11 +346,13 @@ When `VERSION` is specified:
 8. **Preserve** existing secrets (`.env` file not overwritten)
 
 When `VERSION` is not specified (default behavior):
+
 1. Use the currently checked out branch locally
 2. Pull latest changes from that branch via git
 3. Rebuild and restart as above
 
 **What happens during redeployment:**
+
 - If repository exists on VM → fetch and checkout specified version
 - If repository doesn't exist → clone and checkout specified version (first deployment only)
 - Shows deployed git version after update
@@ -381,6 +393,7 @@ docker compose -f docker-compose.prod.yml up -d
 ```
 
 **Best Practices:**
+
 - **Use VERSION parameter for production**: `VERSION=v1.0.0 task proxmox-vm:deploy`
 - Use semantic versioning for tags (e.g., `v1.0.0`, `v1.1.0`)
 - Deploy from tagged releases in production (ensures reproducibility)
@@ -700,6 +713,7 @@ bash scripts/proxmox-vm/destroy.sh force
 ```
 
 **CI/CD Best Practices:**
+
 - Use `VERSION` parameter to deploy specific tags
 - Set `VERSION=${{ github.ref_name }}` in GitHub Actions when deploying from tags
 - Test deployments in a staging environment first
@@ -739,6 +753,7 @@ bash scripts/proxmox-vm/destroy.sh force
 ### Why VM over LXC?
 
 **VM Advantages**:
+
 - Full hardware virtualization = better security isolation
 - No AppArmor configuration needed for Docker
 - No privileged container requirements
@@ -748,6 +763,7 @@ bash scripts/proxmox-vm/destroy.sh force
 ### Community Script
 
 We leverage the [community Docker VM script](https://community-scripts.github.io/ProxmoxVE/scripts?id=docker-vm) which:
+
 - Creates Debian 12 VM
 - Pre-installs Docker Engine and Docker Compose
 - Configures QEMU guest agent
@@ -755,6 +771,7 @@ We leverage the [community Docker VM script](https://community-scripts.github.io
 - Battle-tested by thousands of deployments
 
 Our scripts wrap and enhance the community script with:
+
 - Zebu-specific configuration
 - Automated deployment workflow
 - Secrets management
@@ -791,6 +808,7 @@ Zebu/
 ## Support
 
 For issues or questions:
+
 1. Check [Troubleshooting](#troubleshooting) section above
 2. Review deployment logs: `task proxmox-vm:logs`
 3. Check service status: `task proxmox-vm:status`

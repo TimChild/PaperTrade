@@ -54,16 +54,19 @@ Non-blocking toast notifications replaced `window.alert()`.
 **Limits**: 5 API calls/minute, 500 calls/day (free tier)
 
 **Mitigation**:
+
 - Redis caches recent prices (configurable TTL)
 - APScheduler background job fetches popular stocks
 - Reduces real-time calls by ~70-80%
 
 **Solutions**:
+
 - Wait 60 seconds on limit hit
 - Upgrade to paid tier ($49.99/month for 75 calls/min)
 - Multi-provider fallback (future)
 
 **Relevant code**:
+
 - `backend/src/zebu/adapters/outbound/market_data/` — API adapter
 - `backend/src/zebu/infrastructure/cache/price_cache.py` — Redis caching
 - `backend/src/zebu/infrastructure/scheduler.py` — Background updates

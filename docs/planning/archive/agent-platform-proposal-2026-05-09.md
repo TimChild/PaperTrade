@@ -127,7 +127,9 @@ Today, only three hard-coded strategy types exist (`BUY_AND_HOLD`, `DOLLAR_COST_
    - "If drawdown > 5% over 3 days → wake me up to decide whether to keep holding or exit."
    - "If implied volatility spikes > 50% in 1 day on any holding → wake me up to investigate."
    - "If a holding's earnings are within 2 trading days → wake me up to decide BUY/SELL/HOLD."
+
    The strategy provides scaffolding (which tickers, which conditions, what context to pass); the *agent* handles the judgment at trigger time using the full breadth of tools (price history, news, web search, prior findings). This is the most interesting freedom lane — it gets us hybrid rule+judgment trading, which is closer to how a thoughtful human investor actually operates than either pure rules or pure agent-driven trading. **New domain concept needed: `StrategyConditionTrigger` (or similar) — a structured rule that fires an agent wake-up via MCP / scheduled remote agent.**
+
 3. **Agent-authored new strategy types as code** — when an agent wants to try a fundamentally new strategy *type* (not just new parameters), it drafts a PR that adds a new `StrategyType` enum value + handler. Goes through normal review (`backend-swe` + `architect` agents). **Naturally bounds agent capability** — they can iterate freely on parameters and on agent-in-loop conditions, but new strategy types still get human review.
 
 Phases E and F in the plan below ship these lanes progressively. Lane 1 (parameter sweeps) ships in Phase E using existing APIs. Lane 3 (new strategy types via PR) is an ongoing capability that opens up once Phase B's foundation refactors land. Lane 2 (agent-in-the-loop) ships in Phase F alongside the long-running agent harness — they're naturally coupled, since the harness IS the wake-up mechanism.
@@ -192,6 +194,7 @@ B5. **CI / infra hardening** — based on B1 audit findings. Fix any flakiness r
 B6. **Documentation pass** — `docs-refactorer` agent: kill stale docs, archive chronological artifacts, sync onboarding doc with actual setup, fix all internal cross-links.
 
 B7. **Claude-infra refresh + sync skill** (intentionally last in Phase B) — the `CLAUDE.md` / `.claude/agents/` / `.claude/skills/` content shipped in Phase A was a verbatim-ish migration from the Copilot originals. Now that B2–B6 have refactored the codebase substantially, the agent prompts should be re-tuned to the new state — **and the migration left them at "good enough" rather than "great"**. This is the chance to make them really sharp.
+
 - **Re-tune each agent definition** against fresh examples from the post-refactor code. Drop instructions that no longer apply; add ones capturing newly-codified patterns; tighten language.
 - **Identify recurring patterns** across agent definitions that should be promoted to new shared skills.
 - **Look for gap skills** — workflows that recurred during B2–B6 audit / refactor work and should be codified for future reuse.
@@ -215,9 +218,11 @@ B7. **Claude-infra refresh + sync skill** (intentionally last in Phase B) — th
 **Tasks**:
 
 C1. **Implement Task #210 as currently scoped** — domain entity, repo, scheduler job, API endpoints, frontend UI.
+
 - Per the existing task file, this is 4 phases inside #210. Backend SWE first, then frontend.
 
 C2. **Add API-key auth path** alongside Clerk:
+
 - New `AuthPort` implementation `ApiKeyAuthAdapter` that maps a hashed key → `AuthenticatedUser`
 - Stored in a new `api_keys` table (Alembic migration)
 - The middleware tries `Authorization: Bearer <jwt>` (Clerk) first, falls back to `Authorization: ApiKey <key>` or `X-API-Key: <key>`
@@ -227,6 +232,7 @@ C2. **Add API-key auth path** alongside Clerk:
 C3. **Manual `run-now` endpoint surfaces an "agent-triggered" path** — Task #210 already includes `POST /activations/{id}/run-now`; ensure it's invokable with API-key auth (not just Clerk).
 
 C4. **`ExplorationTask` entity & queue** (the new thing this proposal adds beyond #210):
+
 - A new domain entity representing "human-queued exploration request" — fields: `id`, `created_by`, `target_portfolio_id`, `tickers` (optional — could be empty for free-form), `prompt` (free-form user request — primary input), `constraints` (optional structured limits), `status` (`open|in_progress|done|abandoned`), `claimed_by` (agent identifier), timestamps.
 - **Per resolved Q7**: prompt is **free-form from day one**, accepting initial limitations on what agents can act on. Constraints are optional structured guardrails (e.g., "don't activate live trading on this exploration"), not the primary input.
 - Endpoints: `POST/GET/DELETE /exploration-tasks`, `POST /exploration-tasks/{id}/claim`, `POST /exploration-tasks/{id}/findings`.
@@ -329,6 +335,7 @@ F1. **Pick a runtime model**. Options:
 F2. **First scheduled agent**: `zebu-strategy-explorer` — runs daily after market close, pulls open `ExplorationTask`s from the MCP, claims one, executes parameter sweep (Phase E1), submits findings.
 
 F3. **`StrategyConditionTrigger` domain concept** — the new entity that makes Lane 2 work:
+
 - Fields: `id`, `activation_id` (FK to `StrategyActivation`), `condition_type` (e.g., `DRAWDOWN_THRESHOLD`, `VOLATILITY_SPIKE`, `EARNINGS_PROXIMITY`, `CUSTOM_RULE`), `condition_params` (dict), `agent_prompt` (free-form: what should the woken agent investigate / decide?), `cooldown` (don't re-fire within N hours), `last_fired_at`, `status`.
 - Evaluated by the scheduler each tick alongside the `StrategyExecutionService`.
 - When fired, **invokes a remote agent via the Anthropic Agent API** (or queues an `ExplorationTask` flagged `urgent` for the next harness wake-up) with the strategy context, the trigger context, and the configured `agent_prompt`.

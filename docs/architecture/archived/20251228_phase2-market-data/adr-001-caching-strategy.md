@@ -8,10 +8,12 @@
 ## Context
 
 Alpha Vantage API has strict rate limits on the free tier:
+
 - **5 API calls per minute**
 - **500 API calls per day**
 
 With multiple users viewing portfolios and potential for repeated queries, we need a caching strategy that:
+
 1. Minimizes API calls to stay within quotas
 2. Provides fast response times for users
 3. Supports historical data storage for Phase 3 backtesting
@@ -20,14 +22,17 @@ With multiple users viewing portfolios and potential for repeated queries, we ne
 ### User Scenarios
 
 **Scenario A**: User views portfolio with 5 stocks
+
 - Without cache: 5 API calls (uses entire per-minute quota)
 - With cache: 0-5 API calls depending on staleness
 
 **Scenario B**: 20 users view portfolios during market hours
+
 - Without cache: 100+ API calls (exceeds daily quota in hours)
 - With cache: 10-20 API calls (only for cache misses)
 
 **Scenario C**: User backtests strategy over 1 year
+
 - Without cache: Thousands of API calls (impossible with free tier)
 - With cache: 0 API calls (serve from historical database)
 
@@ -72,6 +77,7 @@ Check Rate Limiter
 | **Serialization** | JSON | Human-readable, debuggable |
 
 **When to use Redis**:
+
 - Portfolio value calculations (frequent reads)
 - Real-time price display in UI
 - Quick validation (is price available?)
@@ -88,6 +94,7 @@ Check Rate Limiter
 | **Updates** | Upsert (insert or update by ticker+timestamp+interval) | Handle duplicate data gracefully |
 
 **When to use PostgreSQL**:
+
 - Historical price queries (backtesting)
 - Cache miss fallback (serve stale data)
 - Price charts (date range queries)
@@ -105,6 +112,7 @@ Check Rate Limiter
 | **Fallback** | Return stale data if available | Graceful degradation |
 
 **When to call API**:
+
 - Cache miss in both Redis and PostgreSQL
 - Explicit refresh request (user action)
 - Background refresh job (scheduled)
@@ -114,11 +122,13 @@ Check Rate Limiter
 ### Alternative 1: Redis Only
 
 **Pros**:
+
 - Simplest implementation
 - Very fast (<10ms response time)
 - No database queries
 
 **Cons**:
+
 - ❌ Data lost on Redis restart
 - ❌ No historical data storage (Phase 3 blocker)
 - ❌ Higher memory usage for large datasets
@@ -129,11 +139,13 @@ Check Rate Limiter
 ### Alternative 2: PostgreSQL Only
 
 **Pros**:
+
 - Simpler (one storage system)
 - Persistent across restarts
 - Supports historical queries
 
 **Cons**:
+
 - ❌ Slower for current price lookups (100-200ms)
 - ❌ Higher database load (every portfolio view = 5+ queries)
 - ❌ Scales poorly with high read traffic
@@ -143,10 +155,12 @@ Check Rate Limiter
 ### Alternative 3: Application Memory Cache (LRU Dict)
 
 **Pros**:
+
 - Zero external dependencies
 - Very fast (in-process)
 
 **Cons**:
+
 - ❌ Not shared across processes/servers
 - ❌ Lost on application restart
 - ❌ Memory pressure on app server
@@ -157,10 +171,12 @@ Check Rate Limiter
 ### Alternative 4: CDN Caching (Cloudflare/CloudFront)
 
 **Pros**:
+
 - Extremely fast (edge caching)
 - Handles high traffic well
 
 **Cons**:
+
 - ❌ Not suitable for dynamic data (per-user portfolios)
 - ❌ Cache invalidation complexity
 - ❌ Adds external dependency
@@ -210,10 +226,12 @@ Check Rate Limiter
 ### Cache Invalidation
 
 **Automatic Invalidation**:
+
 - Redis TTL expires → Next read triggers PostgreSQL query
 - PostgreSQL has no TTL → Data is immutable (historical prices never change)
 
 **Manual Invalidation**:
+
 - User requests "Refresh Prices" → Clear Redis, force API call
 - Admin updates stock split → Adjust historical prices in PostgreSQL
 
@@ -226,12 +244,14 @@ Check Rate Limiter
 ## Implementation Phases
 
 ### Phase 2a (Week 1)
+
 - Implement PriceCache (Redis wrapper)
 - Implement PriceRepository (PostgreSQL adapter)
 - AlphaVantageAdapter uses both for `get_current_price()`
 - Tests verify cache hit/miss behavior
 
 ### Phase 2b (Week 2)
+
 - Background job to pre-populate PostgreSQL (common stocks)
 - Historical query optimization (indexes)
 - Cache warming on application startup
@@ -284,6 +304,7 @@ Check Rate Limiter
 ### Upgrading to Premium API Tier
 
 When we outgrow free tier (500/day):
+
 1. Update rate limiter configuration (75/min, 100K/day)
 2. Reduce Redis TTL (fresher data)
 3. No code changes required (just config)
@@ -291,6 +312,7 @@ When we outgrow free tier (500/day):
 ### Switching Data Providers
 
 If we switch from Alpha Vantage to another provider (e.g., Finnhub, Polygon):
+
 1. Implement new adapter (same MarketDataPort interface)
 2. Keep cache and repository unchanged
 3. Test with VCR cassettes for new provider

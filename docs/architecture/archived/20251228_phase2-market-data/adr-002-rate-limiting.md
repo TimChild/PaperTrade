@@ -8,12 +8,14 @@
 ## Context
 
 Alpha Vantage API enforces strict rate limits:
+
 - **Free Tier**: 5 API calls per minute, 500 calls per day
 - **Premium Tier**: 75 calls per minute, 100,000 calls per day (when we upgrade)
 
 ### Problem Statement
 
 Without rate limiting, our application could:
+
 1. **Exhaust daily quota quickly** (500 calls = 100 users each viewing a 5-stock portfolio)
 2. **Get throttled by API** (429 Too Many Requests errors)
 3. **Degrade user experience** (failed requests, error messages)
@@ -57,6 +59,7 @@ Implement a **Token Bucket Algorithm** with **dual time windows** (minute + day)
 **RateLimiter Interface**:
 
 Provides methods:
+
 - `can_make_request()` → Boolean (check if tokens available in BOTH buckets)
 - `consume_token()` → None (decrement both buckets)
 - `wait_time()` → timedelta (how long until next token available)
@@ -65,10 +68,12 @@ Provides methods:
 **Storage**: Redis
 
 Keys:
+
 - `papertrade:ratelimit:minute:{YYYY-MM-DD-HH-MM}` → Integer (tokens remaining this minute)
 - `papertrade:ratelimit:day:{YYYY-MM-DD}` → Integer (tokens remaining today)
 
 TTL:
+
 - Minute keys: 120 seconds (2 minutes, buffer for clock skew)
 - Day keys: 48 hours (2 days, buffer for timezone edge cases)
 
@@ -122,10 +127,12 @@ rate_limiter.consume_token()
 **Implementation**: Python dict with threading.Lock
 
 **Pros**:
+
 - Simple, no external dependencies
 - Fast (in-process)
 
 **Cons**:
+
 - ❌ Not shared across processes/servers (multi-instance deployment fails)
 - ❌ Lost on application restart (could accidentally exhaust quota)
 - ❌ No observability (can't inspect token counts externally)
@@ -137,10 +144,12 @@ rate_limiter.consume_token()
 **Implementation**: PostgreSQL table with token counts
 
 **Pros**:
+
 - Persistent across restarts
 - Shared across instances
 
 **Cons**:
+
 - ❌ Slower than Redis (50-100ms per check)
 - ❌ Higher database load (every API call = 2 queries)
 - ❌ Row locking contention under high concurrency
@@ -152,10 +161,12 @@ rate_limiter.consume_token()
 **Implementation**: Use AWS API Gateway in front of Alpha Vantage
 
 **Pros**:
+
 - Offloads rate limiting to infrastructure
 - Highly scalable
 
 **Cons**:
+
 - ❌ Alpha Vantage is external API (can't put behind our gateway)
 - ❌ Adds cost and complexity
 - ❌ Less control over fallback behavior
@@ -167,10 +178,12 @@ rate_limiter.consume_token()
 **Implementation**: Track timestamps of last N requests
 
 **Pros**:
+
 - More accurate than fixed windows
 - Prevents burst at window boundaries
 
 **Cons**:
+
 - ❌ More complex implementation
 - ❌ Higher memory usage (store all timestamps)
 - ❌ Token bucket is sufficient for our use case
@@ -182,10 +195,12 @@ rate_limiter.consume_token()
 **Implementation**: Fixed processing rate, queue excess requests
 
 **Pros**:
+
 - Smooths out traffic spikes
 - Predictable throughput
 
 **Cons**:
+
 - ❌ Requires request queue management
 - ❌ Adds latency (queued requests wait)
 - ❌ Token bucket refill matches API's reset behavior better
@@ -213,6 +228,7 @@ rate_limiter.consume_token()
 ### Why Dual Time Windows?
 
 Alpha Vantage enforces BOTH limits simultaneously:
+
 - Can't make 6th request in a minute (even if daily quota available)
 - Can't make 501st request in a day (even if minute quota available)
 
@@ -233,11 +249,13 @@ We must check both buckets before making request.
 **Problem**: Can't check token counts
 
 **Options**:
+
 1. **Fail Open**: Allow request (risk quota exhaustion)
 2. **Fail Closed**: Block all requests (no API calls)
 3. **Best Effort**: Use in-memory fallback with warning
 
 **Decision**: **Fail Closed with Cache Fallback**
+
 - Don't make API call if Redis down
 - Serve cached/stale data if available
 - Raise MarketDataUnavailableError if no cache
@@ -285,6 +303,7 @@ end
 **Problem**: "Daily" limit - midnight in which timezone?
 
 **Decision**: Always use **UTC**
+
 - Day key: `papertrade:ratelimit:day:2025-12-28` (UTC date)
 - Resets at 00:00:00 UTC (consistent, unambiguous)
 
@@ -323,6 +342,7 @@ day_reserve = 50    # Keep 50 tokens buffer
 ### Upgrading Tiers
 
 To upgrade to premium:
+
 1. Change `tier = "premium"` in config.toml
 2. Restart application
 3. RateLimiter reads new limits
@@ -344,21 +364,25 @@ No code changes required.
 ### Logs to Emit
 
 **INFO Level**:
+
 - Token consumed (DEBUG level for detailed tracking)
 - Daily reset occurred (informational)
 
 **WARNING Level**:
+
 - Tokens running low (minute < 2, day < 100)
 - Request blocked due to rate limit
 - Redis unavailable (failing closed)
 
 **ERROR Level**:
+
 - Rate limiter malfunction (negative tokens, missing keys)
 - Redis connection failures (persistent)
 
 ### Dashboard Metrics
 
 Create Grafana dashboard showing:
+
 - Token count over time (minute + day buckets)
 - API calls per hour
 - Cache hit rate (correlated with rate limiting)
@@ -369,6 +393,7 @@ Create Grafana dashboard showing:
 ### Unit Tests
 
 Test RateLimiter class with:
+
 - Token consumption (decrement counters)
 - Refill logic (new minute/day resets)
 - Dual-bucket enforcement (both must have tokens)
@@ -379,6 +404,7 @@ Use **fakeredis** for tests (in-memory Redis mock).
 ### Integration Tests
 
 Test with real Redis (test container):
+
 - Tokens persist across app restarts
 - TTL expires old keys
 - Lua script atomicity
@@ -386,6 +412,7 @@ Test with real Redis (test container):
 ### Load Tests
 
 Simulate high traffic:
+
 - 100 concurrent requests (verify no race conditions)
 - Burst traffic (verify tokens consumed correctly)
 - Sustained load (verify refill works)
@@ -393,6 +420,7 @@ Simulate high traffic:
 ### Chaos Tests
 
 Test failure modes:
+
 - Redis down (verify fail-closed behavior)
 - Clock skew (verify tolerance)
 - Config change (verify smooth transition)
@@ -431,6 +459,7 @@ Test failure modes:
 ### Rollback Plan
 
 If RateLimiter causes issues:
+
 1. Disable rate checking (allow all requests)
 2. Rely on Alpha Vantage's server-side rate limiting (429 errors)
 3. Serve cached data on 429 errors

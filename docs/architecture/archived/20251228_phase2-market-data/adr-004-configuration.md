@@ -8,6 +8,7 @@
 ## Context
 
 Phase 2 introduces new configuration needs:
+
 - **Alpha Vantage API**: API key, base URL, timeout settings
 - **Rate Limiting**: Calls per minute/day, tier selection
 - **Caching**: Redis URL, TTL values
@@ -17,11 +18,13 @@ Phase 2 introduces new configuration needs:
 ### Current State (Phase 1)
 
 **Backend**:
+
 - `.env` file for secrets (DATABASE_URL, SECRET_KEY)
 - Hard-coded defaults in code
 - No centralized configuration
 
 **Frontend**:
+
 - `.env` file for Vite variables (VITE_API_URL)
 - Hard-coded feature flags
 
@@ -168,6 +171,7 @@ cors_origins = ["http://localhost:5173", "http://localhost:3000"]
 **Implementation Location**: `backend/src/papertrade/infrastructure/config.py`
 
 **Key Features**:
+
 - Type-safe configuration (validated at startup)
 - Environment variable interpolation (`${VAR_NAME}`)
 - Nested configuration (sections map to nested classes)
@@ -185,6 +189,7 @@ redis_url = settings.cache.redis_url
 ```
 
 **Validation**:
+
 - API key format (not empty, alphanumeric)
 - Rate limits (positive integers)
 - URLs (valid format)
@@ -209,6 +214,7 @@ PAPERTRADE_ENV=development  # development, staging, production
 ```
 
 **Loading Priority**:
+
 1. Command-line args (for testing)
 2. Environment variables (.env file)
 3. config.{env}.toml (if exists)
@@ -219,6 +225,7 @@ PAPERTRADE_ENV=development  # development, staging, production
 **Startup Checks**:
 
 When application starts, validate:
+
 - ✅ All required environment variables set
 - ✅ API key not empty or placeholder
 - ✅ Database URL format valid
@@ -287,12 +294,14 @@ theme = "light"  # "light", "dark", "auto"
 **Implementation Location**: `frontend/src/config/index.ts`
 
 **Dependencies**:
+
 - `smol-toml` - TOML parser (lightweight)
 - `zod` - Schema validation
 
 **Schema Definition** (structured specification):
 
 Define Zod schema:
+
 - Schema mirrors TOML structure
 - Types inferred from schema (type-safe access)
 - Runtime validation on config load
@@ -345,10 +354,12 @@ enable_price_charts = false  # Controlled rollout
 ### Alternative 1: JSON Configuration
 
 **Pros**:
+
 - Native JavaScript support
 - No parsing library needed
 
 **Cons**:
+
 - ❌ No comments (less readable)
 - ❌ Awkward for nested config
 - ❌ Trailing commas cause errors
@@ -358,10 +369,12 @@ enable_price_charts = false  # Controlled rollout
 ### Alternative 2: YAML Configuration
 
 **Pros**:
+
 - Human-readable
 - Supports complex structures
 
 **Cons**:
+
 - ❌ Indentation-sensitive (error-prone)
 - ❌ Spec too complex (multiple ways to do same thing)
 - ❌ Security issues (arbitrary code execution)
@@ -371,10 +384,12 @@ enable_price_charts = false  # Controlled rollout
 ### Alternative 3: Python File (settings.py)
 
 **Pros**:
+
 - No parsing needed (just import)
 - Can use Python logic
 
 **Cons**:
+
 - ❌ Not data (code execution risk)
 - ❌ Hard to override in deployment
 - ❌ No frontend equivalent
@@ -384,11 +399,13 @@ enable_price_charts = false  # Controlled rollout
 ### Alternative 4: Environment Variables Only
 
 **Pros**:
+
 - 12-factor app pattern
 - No files needed
 - Works everywhere
 
 **Cons**:
+
 - ❌ Poor discoverability (what vars exist?)
 - ❌ No structure (flat namespace)
 - ❌ No type safety (all strings)
@@ -399,10 +416,12 @@ enable_price_charts = false  # Controlled rollout
 ### Alternative 5: Database Configuration
 
 **Pros**:
+
 - Centralized (multiple instances share config)
 - Can update without redeploy
 
 **Cons**:
+
 - ❌ Chicken-and-egg (how to connect to database?)
 - ❌ Slower to load
 - ❌ Harder to version control
@@ -436,6 +455,7 @@ enable_price_charts = false  # Controlled rollout
 | **config.{env}.toml** | Environment-specific | ❌ No | Per-environment tweaks |
 
 **Rationale**:
+
 - Secrets never committed
 - Defaults always available (onboarding friendly)
 - Environment overrides are optional (production only)
@@ -508,6 +528,7 @@ const apiClient = axios.create({
 ### Unit Tests
 
 Test configuration loading:
+
 - Valid config file loads successfully
 - Invalid config raises validation error
 - Environment variable override works
@@ -516,6 +537,7 @@ Test configuration loading:
 ### Integration Tests
 
 Test with different configs:
+
 - Development config (local database, debug on)
 - Production config (cloud database, debug off)
 - Minimal config (only required fields)
@@ -523,6 +545,7 @@ Test with different configs:
 ### CI/CD Tests
 
 Verify:
+
 - `.env.example` has all required variables
 - `config.example.toml` matches actual config structure
 - No secrets in committed files (git-secrets scan)
@@ -556,6 +579,7 @@ Verify:
 ### For Operations
 
 **docs/configuration.md**:
+
 - Full reference of all config options
 - Validation rules and constraints
 - Environment-specific examples

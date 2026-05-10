@@ -21,6 +21,7 @@
 ## Context
 
 PaperTrade has completed Phase 3c (Analytics) with all core functionality working:
+
 - ✅ 489+ tests passing, 85% coverage
 - ✅ All features: portfolios, trading, real-time prices, charts, analytics
 - ✅ Clean Architecture maintained
@@ -32,6 +33,7 @@ However, visual design is barebones - default Tailwind styling with minimal cust
 ## Objective
 
 Create a comprehensive strategic plan for implementing visual design and skinning across PaperTrade that is:
+
 - **Maintainable**: Easy to update/tweak in the future
 - **Idiomatic**: Follow React/Tailwind best practices
 - **Scalable**: Support future features without refactoring
@@ -45,6 +47,7 @@ Create a comprehensive strategic plan for implementing visual design and skinnin
 **Adopt a hybrid component system using shadcn/ui primitives with custom extensions**, implemented through an incremental, screen-by-screen migration strategy with feature flags.
 
 **Key Decisions**:
+
 1. **Component System**: shadcn/ui (copy-paste model, zero dependencies)
 2. **Variant Management**: CVA (class-variance-authority)
 3. **Design Tokens**: Tailwind Config (static) + CSS Variables (dynamic)
@@ -65,6 +68,7 @@ Create a comprehensive strategic plan for implementing visual design and skinnin
 High-level overview of recommended approach, key decisions, timeline estimate, and success metrics.
 
 **Key Points**:
+
 - Recommended component system (shadcn/ui)
 - Design token strategy (Tailwind + CSS vars)
 - Migration approach (feature flags)
@@ -79,6 +83,7 @@ High-level overview of recommended approach, key decisions, timeline estimate, a
 Thorough evaluation of the initial 5-step plan, identifying strengths, weaknesses, risks, and gaps.
 
 **Key Points**:
+
 - Initial plan strengths (logical sequencing, appropriate tooling)
 - Identified weaknesses (vague design exploration, missing migration strategy)
 - Risk analysis (design takes too long, E2E test breakage, bundle bloat)
@@ -92,6 +97,7 @@ Thorough evaluation of the initial 5-step plan, identifying strengths, weaknesse
 Deep research into design system approaches, tooling, accessibility, performance, and financial UI best practices.
 
 **Topics Covered**:
+
 - Component system comparison (shadcn/ui vs. Headless UI vs. Radix UI)
 - Variant management (CVA vs. tailwind-variants)
 - Dark mode strategies (CSS vars vs. Tailwind dark:)
@@ -109,6 +115,7 @@ Deep research into design system approaches, tooling, accessibility, performance
 Detailed, step-by-step plan breaking work into 5 phases with 18 specific tasks, agent assignments, and quality gates.
 
 **Phases**:
+
 1. **Design Exploration** (3 days): Prototype 2 design variants, choose direction
 2. **Design System Foundation** (2 days): Implement design tokens in Tailwind config
 3. **Component Primitives** (4 days): Build 16 reusable components in 4 tiers
@@ -125,6 +132,7 @@ Detailed, step-by-step plan breaking work into 5 phases with 18 specific tasks, 
 Incremental rollout strategy using feature flags to enable safe, zero-downtime migration with instant rollback capability.
 
 **Key Points**:
+
 - Feature flag implementation (per-screen toggles)
 - Screen-by-screen migration workflow
 - E2E test continuity (maintain test ID stability)
@@ -140,6 +148,7 @@ Incremental rollout strategy using feature flags to enable safe, zero-downtime m
 Specific methodology for Phase 1, including tools, screen prioritization, evaluation criteria, and step-by-step prototyping process.
 
 **Key Points**:
+
 - Code-first prototyping (not Figma)
 - Screen prioritization (Dashboard + Portfolio Detail)
 - 2 design variants (Modern Minimal vs. Data Dense)
@@ -213,6 +222,7 @@ Specific methodology for Phase 1, including tools, screen prioritization, evalua
 ## Questions & Feedback
 
 For questions or suggestions about this architecture plan, please:
+
 - Open a GitHub issue
 - Comment on the PR
 - Reach out to the architect agent
@@ -226,4 +236,5 @@ For questions or suggestions about this architecture plan, please:
 **Ownership**: Architect + Frontend SWE team
 
 **Change Log**:
+
 - 2026-01-09: Initial architecture plan created

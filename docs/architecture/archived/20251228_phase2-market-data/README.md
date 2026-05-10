@@ -27,11 +27,13 @@ Phase 1 works with **mock prices** ($100 for everything). Phase 2 connects to **
 ### The Solution
 
 **Phase 2a** (Week 1): Current prices only
+
 - Real stock prices in portfolios
 - Cached pricing (Redis + PostgreSQL)
 - Rate limiting (5 calls/min free tier)
 
 **Phase 2b** (Week 2): Historical data
+
 - Price charts
 - Historical queries (for Phase 3 backtesting)
 - Background refresh (daily)
@@ -164,6 +166,7 @@ DATABASE_URL=postgresql+asyncpg://...
 ## Testing Approach
 
 ### Test Distribution
+
 - **70% Unit Tests**: Domain, application, infrastructure logic
 - **25% Integration Tests**: Database, Redis, Alpha Vantage (VCR)
 - **5% E2E Tests**: Manual testing scenarios
@@ -181,6 +184,7 @@ async def test_get_current_price_aapl():
 ```
 
 ### Performance Targets
+
 - Cache hit: <100ms
 - Database query: <500ms
 - API call: <2s
@@ -189,6 +193,7 @@ async def test_get_current_price_aapl():
 ## Success Criteria
 
 ### Phase 2a Complete When:
+
 - [ ] Portfolio displays real stock prices from Alpha Vantage
 - [ ] Prices cached in Redis (verified by logs)
 - [ ] Prices stored in PostgreSQL (verified by queries)
@@ -198,6 +203,7 @@ async def test_get_current_price_aapl():
 - [ ] Frontend updates when prices change
 
 ### Phase 2b Complete When:
+
 - [ ] Historical price queries working
 - [ ] Price history charts displayed
 - [ ] Background refresh scheduler running
@@ -226,11 +232,13 @@ async def test_get_current_price_aapl():
 ## Questions?
 
 ### Before Asking
+
 1. Check [implementation-guide.md](./implementation-guide.md) for your specific task
 2. Review relevant ADR for design rationale
 3. Look at Phase 1 code for similar patterns
 
 ### Where to Ask
+
 - PR comments (for task-specific questions)
 - Architecture plan issue (for design questions)
 - Slack/Discord (for urgent blockers)
@@ -238,11 +246,13 @@ async def test_get_current_price_aapl():
 ## Rollout Plan
 
 ### Week 1: Phase 2a (Current Prices)
+
 - **Day 1-2**: Domain models, interfaces, adapters
 - **Day 3-4**: Database, caching, rate limiting
 - **Day 5**: Frontend integration
 
 ### Week 2: Phase 2b (Historical Data)
+
 - **Day 6-7**: Historical queries, batch import
 - **Day 8-9**: Scheduler, price charts
 - **Day 10**: Testing, documentation, demo

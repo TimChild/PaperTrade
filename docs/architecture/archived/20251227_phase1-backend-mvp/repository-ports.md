@@ -49,6 +49,7 @@ Manages persistence of Portfolio aggregate roots. Handles creating, retrieving, 
 | **Performance** | O(1) lookup by primary key |
 
 **Semantics**:
+
 - Returns fully populated Portfolio entity
 - Returns None if portfolio_id doesn't exist
 - Does NOT raise exception for missing portfolio (returns None)
@@ -69,6 +70,7 @@ Manages persistence of Portfolio aggregate roots. Handles creating, retrieving, 
 | **Performance** | O(n) where n = number of portfolios for user |
 
 **Semantics**:
+
 - Returns empty list if user has no portfolios
 - Portfolios returned in creation order (oldest first)
 - Does NOT validate that user_id exists (returns empty list for invalid user)
@@ -89,6 +91,7 @@ Manages persistence of Portfolio aggregate roots. Handles creating, retrieving, 
 | **Performance** | O(1) single record write |
 
 **Semantics**:
+
 - **Idempotent**: Calling save multiple times with same portfolio has same effect as calling once
 - **Upsert Behavior**: Creates new record if portfolio.id doesn't exist, updates if it does
 - If portfolio already exists, only mutable fields are updated (name)
@@ -110,6 +113,7 @@ Manages persistence of Portfolio aggregate roots. Handles creating, retrieving, 
 | **Performance** | O(1) optimized existence check (faster than get()) |
 
 **Semantics**:
+
 - More efficient than `get(id) is not None` for existence checks
 - Used by use cases that only need to verify existence
 
@@ -118,21 +122,25 @@ Manages persistence of Portfolio aggregate roots. Handles creating, retrieving, 
 ### Implementation Requirements
 
 #### Transaction Handling
+
 - **save()** MUST participate in active transaction if one exists
 - **save()** MAY auto-commit if no active transaction (implementation choice)
 - Queries (get, get_by_user, exists) do NOT require transactions
 
 #### Caching Strategy
+
 - Implementations SHOULD cache frequently accessed portfolios
 - Cache invalidation MUST occur on save()
 - Cache key: portfolio_id
 
 #### Error Handling
+
 - Database connection failures MUST raise RepositoryError
 - Constraint violations (e.g., duplicate ID) MUST raise RepositoryError with descriptive message
 - Implementations SHOULD log errors before raising
 
 #### Concurrency
+
 - **Optimistic Locking**: Implementations SHOULD use version column to detect concurrent modifications
 - On version conflict, MUST raise RepositoryError with conflict details
 - Implementations MAY retry on conflict (with exponential backoff)
@@ -160,6 +168,7 @@ Manages persistence of Transaction entities. Transactions are **immutable and ap
 | **Performance** | O(1) lookup by primary key |
 
 **Semantics**:
+
 - Returns fully populated Transaction entity with all fields
 - Returns None if transaction_id doesn't exist
 - Transaction entities are immutable - returned object cannot be modified
@@ -180,6 +189,7 @@ Manages persistence of Transaction entities. Transactions are **immutable and ap
 | **Performance** | O(n) where n = matching transactions |
 
 **Semantics**:
+
 - Returns empty list if portfolio has no transactions
 - Transactions returned in chronological order (timestamp ascending)
 - If limit is None, returns ALL transactions (use with caution)
@@ -187,6 +197,7 @@ Manages persistence of Transaction entities. Transactions are **immutable and ap
 - Pagination: skip first `offset` transactions, return at most `limit` transactions
 
 **Pagination Example**:
+
 - Total transactions: 150
 - Request: limit=50, offset=0 → Returns transactions 1-50
 - Request: limit=50, offset=50 → Returns transactions 51-100
@@ -208,6 +219,7 @@ Manages persistence of Transaction entities. Transactions are **immutable and ap
 | **Performance** | O(1) optimized count (database aggregate) |
 
 **Semantics**:
+
 - Returns 0 if portfolio has no transactions
 - If transaction_type is provided, counts only that type
 - Used for pagination (to calculate total pages)
@@ -228,6 +240,7 @@ Manages persistence of Transaction entities. Transactions are **immutable and ap
 | **Performance** | O(1) single record insert |
 
 **Semantics**:
+
 - **Append-Only**: Only creates new records, NEVER updates existing transactions
 - **Idempotency**: If transaction.id already exists, MUST raise RepositoryError (not silent success)
 - Transaction is immutable after save
@@ -238,28 +251,33 @@ Manages persistence of Transaction entities. Transactions are **immutable and ap
 ### Implementation Requirements
 
 #### Immutability Enforcement
+
 - Implementations MUST NOT provide update or delete operations
 - Attempting to save existing transaction_id MUST raise error
 - Physical deletion MAY be allowed for administrative purposes (data retention policies)
 
 #### Transaction Handling
+
 - **save()** MUST participate in active database transaction
 - **save()** MUST NOT auto-commit (always requires explicit transaction)
 - Queries do NOT require transactions
 
 #### Indexing Strategy
 Implementations SHOULD create these indexes for performance:
+
 - Primary key: transaction_id
 - Foreign key: portfolio_id (for get_by_portfolio queries)
 - Composite: (portfolio_id, timestamp) for chronological ordering
 - Optional: (portfolio_id, transaction_type) for filtered queries
 
 #### Caching Strategy
+
 - Implementations MAY cache recent transactions per portfolio
 - Cache invalidation on save() for that portfolio_id
 - Cache key: `transactions:{portfolio_id}` (list of transaction IDs)
 
 #### Error Handling
+
 - Duplicate transaction_id MUST raise RepositoryError with "Transaction already exists" message
 - Foreign key violations (invalid portfolio_id) MUST raise RepositoryError
 - Constraint violations MUST provide descriptive error messages
@@ -278,6 +296,7 @@ Implementations SHOULD create these indexes for performance:
 | **Attributes** | message: str, cause: Optional[Exception] |
 
 **When Raised**:
+
 - Database connection failures
 - Constraint violations
 - Concurrency conflicts
@@ -307,6 +326,7 @@ Implementations SHOULD create these indexes for performance:
 **Purpose**: Fast in-memory storage for unit testing
 
 **Characteristics**:
+
 - Uses Python dictionaries: `Dict[UUID, Entity]`
 - No persistence between test runs
 - No transaction support (operations are immediate)
@@ -314,6 +334,7 @@ Implementations SHOULD create these indexes for performance:
 - Fast: O(1) for all operations
 
 **Use Cases**:
+
 - Unit testing use cases
 - Integration testing without database setup
 - Local development without database
@@ -325,6 +346,7 @@ Implementations SHOULD create these indexes for performance:
 **Purpose**: PostgreSQL/SQLite persistence using SQLModel ORM
 
 **Characteristics**:
+
 - Uses SQLModel/SQLAlchemy for ORM
 - Supports transactions via session management
 - Optimistic locking with version columns
@@ -332,6 +354,7 @@ Implementations SHOULD create these indexes for performance:
 - Migrations managed by Alembic
 
 **Use Cases**:
+
 - Production deployment
 - Staging environment
 - Integration tests with real database
@@ -345,6 +368,7 @@ Implementations SHOULD create these indexes for performance:
 Create abstract test suite that both InMemory and SQLModel implementations must pass:
 
 **Test Categories**:
+
 1. **CRUD Operations**: Create, read, update (portfolio only)
 2. **Querying**: Filter, pagination, sorting
 3. **Error Handling**: Constraint violations, not found cases
@@ -352,6 +376,7 @@ Create abstract test suite that both InMemory and SQLModel implementations must 
 5. **Transactions**: Rollback on error, commit on success
 
 **Example Tests**:
+
 - ✅ Save new portfolio and retrieve it
 - ✅ Save existing portfolio updates it (idempotent)
 - ✅ get() returns None for non-existent ID
@@ -363,6 +388,7 @@ Create abstract test suite that both InMemory and SQLModel implementations must 
 ### Performance Tests
 
 For SQLModel implementation:
+
 - Query time for 10K transactions < 100ms
 - Insertion time for 1K transactions < 1s
 - Concurrent saves without data corruption
@@ -392,16 +418,19 @@ For SQLModel implementation:
 ### Concurrency Scenarios
 
 **Scenario 1: Two users deposit to same portfolio**
+
 - Both read current balance (separate transactions)
 - Both create DEPOSIT transaction (no conflict)
 - Ledger maintains both deposits correctly ✅
 
 **Scenario 2: User withdraws while balance query runs**
+
 - Query reads transactions up to point in time
 - Concurrent withdrawal doesn't affect query (snapshot isolation)
 - Next query will include the withdrawal ✅
 
 **Scenario 3: Two trades exceed balance**
+
 - First trade: Check balance → 100, Execute → 80 remaining
 - Second trade: Check balance → 100 (stale read), Execute → should fail
 - Solution: Atomic balance check + trade in single transaction ✅
@@ -439,6 +468,7 @@ While ports are technology-agnostic, here are suggested database schema elements
 | notes | VARCHAR(500) | Nullable |
 
 **Indexes**:
+
 - Primary: `id`
 - Foreign: `portfolio_id`
 - Composite: `(portfolio_id, timestamp)` for chronological queries
@@ -459,6 +489,7 @@ While ports are technology-agnostic, here are suggested database schema elements
 ✅ SQLModelTransactionRepository (production)
 
 ### Future Repositories (Phase 2+)
+
 - UserRepository (authentication)
 - MarketDataRepository (cached price data)
 - BacktestRepository (backtest results)

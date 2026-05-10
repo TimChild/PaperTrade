@@ -7,6 +7,7 @@
 ## Overview
 
 Two-stage deployment strategy for Zebu:
+
 1. **Stage 1**: Local Proxmox deployment (immediate, low-cost validation)
 2. **Stage 2**: AWS production deployment (scalable, public-facing)
 
@@ -22,6 +23,7 @@ This approach allows us to validate the application in a real production environ
 ### Infrastructure Requirements
 
 **Proxmox Server Setup**:
+
 - Docker host VM (Ubuntu 22.04 LTS recommended)
 - Minimum resources:
   - 2 vCPU
@@ -31,6 +33,7 @@ This approach allows us to validate the application in a real production environ
 - Static IP assignment
 
 **Services to Deploy**:
+
 - PostgreSQL database (persistent volume)
 - Redis cache (persistent volume)
 - Backend API (FastAPI)
@@ -67,18 +70,21 @@ This approach allows us to validate the application in a real production environ
 ### Implementation Steps
 
 **1. Pre-Deployment Polish** (1-2 days)
+
 - Fix TradeForm intermittent crash bug
 - Implement Daily Change calculation
 - Add high-value UX improvements (Task 085-087)
 - Comprehensive testing with real Alpha Vantage data
 
 **2. Proxmox VM Setup** (2-3 hours)
+
 - Create Ubuntu VM on Proxmox
 - Install Docker and Docker Compose
 - Configure static IP and hostname
 - Set up persistent volumes for data
 
 **3. Production Configuration** (2-3 hours)
+
 - Create production environment files
 - Configure Clerk production instance (or keep development for local)
 - Set up Alpha Vantage API key (production key if available)
@@ -86,6 +92,7 @@ This approach allows us to validate the application in a real production environ
 - Secrets management (environment variables)
 
 **4. Docker Compose Deployment** (1-2 hours)
+
 - Use `docker-compose.prod.yml` (already exists in repo)
 - Configure volumes for persistence:
   - PostgreSQL data: `/var/lib/postgresql/data`
@@ -94,6 +101,7 @@ This approach allows us to validate the application in a real production environ
 - Configure logging (JSON file driver with rotation)
 
 **5. Initial Deployment & Testing** (2-3 hours)
+
 - Deploy containers via Docker Compose
 - Run database migrations (Alembic)
 - Smoke test all critical paths
@@ -101,6 +109,7 @@ This approach allows us to validate the application in a real production environ
 - Monitor logs and resource usage
 
 **6. Monitoring & Maintenance** (ongoing)
+
 - Set up simple health checks
 - Daily database backups via cron
 - Log rotation configuration
@@ -219,6 +228,7 @@ These limitations are acceptable for Stage 1 validation phase.
 ### Infrastructure Architecture
 
 **AWS Services**:
+
 - **Compute**: ECS Fargate (containerized, serverless)
 - **Database**: RDS PostgreSQL (Multi-AZ for HA)
 - **Cache**: ElastiCache Redis
@@ -280,6 +290,7 @@ Internet
 ### Implementation Steps
 
 **1. AWS CDK Infrastructure** (2-3 days)
+
 - Define VPC, subnets, security groups
 - RDS PostgreSQL instance (db.t3.micro for MVP)
 - ElastiCache Redis cluster
@@ -293,6 +304,7 @@ Internet
 - CloudWatch dashboards and alarms
 
 **2. CI/CD Pipeline** (1 day)
+
 - GitHub Actions workflow for production deployment
 - Build Docker images and push to ECR
 - Update ECS task definitions
@@ -301,6 +313,7 @@ Internet
 - Rollback capability
 
 **3. Monitoring & Observability** (1 day)
+
 - CloudWatch Logs aggregation
 - CloudWatch Metrics and Alarms
 - Error tracking (Sentry integration)
@@ -308,6 +321,7 @@ Internet
 - Uptime monitoring (external service)
 
 **4. Security Hardening** (1 day)
+
 - WAF rules for common attacks
 - Rate limiting on ALB
 - DDoS protection via Shield
@@ -317,6 +331,7 @@ Internet
 - Secrets rotation policy
 
 **5. Production Deployment** (1 day)
+
 - Deploy infrastructure via CDK
 - Run production database migrations
 - Deploy application containers
@@ -356,12 +371,14 @@ Internet
 ## Migration Path: Proxmox → AWS
 
 **Data Migration**:
+
 1. Export PostgreSQL database from Proxmox: `pg_dump`
 2. Import to AWS RDS: `psql` or AWS DMS
 3. Verify data integrity with test queries
 4. Run application tests against new database
 
 **DNS Cutover**:
+
 1. Test AWS deployment with temporary URL
 2. Lower TTL on existing DNS records (24 hours before)
 3. Update DNS to point to CloudFront/ALB
@@ -369,6 +386,7 @@ Internet
 5. Decommission Proxmox deployment
 
 **Rollback Plan**:
+
 - Keep Proxmox deployment active for 1 week after AWS cutover
 - Can quickly revert DNS if issues arise
 - Database backup available for restoration
@@ -378,6 +396,7 @@ Internet
 ## Pre-Deployment Checklist
 
 **Code Quality** (Must Complete Before Stage 1):
+
 - [ ] Fix TradeForm intermittent crash (Task 085)
 - [ ] Implement Daily Change calculation (Task 086)
 - [ ] High-priority UX improvements (Task 087)
@@ -386,6 +405,7 @@ Internet
 - [ ] Security review of authentication flow
 
 **Infrastructure**:
+
 - [ ] Production environment variables documented
 - [ ] Database migration scripts tested
 - [ ] Backup and restore procedures documented
@@ -393,6 +413,7 @@ Internet
 - [ ] Incident response plan created
 
 **Documentation**:
+
 - [ ] User guide created
 - [ ] API documentation updated
 - [ ] Deployment runbook created

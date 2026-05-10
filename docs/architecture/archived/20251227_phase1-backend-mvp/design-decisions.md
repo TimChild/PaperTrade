@@ -7,6 +7,7 @@ This document records the key architectural and design decisions made for Phase 
 ## ADR Format
 
 Each decision follows the Architecture Decision Record (ADR) format:
+
 - **Status**: Proposed, Accepted, Deprecated, Superseded
 - **Context**: What issue prompted this decision?
 - **Decision**: What change are we making?
@@ -24,16 +25,19 @@ Each decision follows the Architecture Decision Record (ADR) format:
 We need to track all portfolio state changes (deposits, withdrawals, trades). There are several approaches:
 
 **Option 1: Direct State Storage**
+
 - Store current cash balance as a field in portfolio table
 - Store current holdings as records in holdings table
 - Update these on each transaction
 
 **Option 2: Immutable Ledger (Event Sourcing Lite)**
+
 - Store all state changes as immutable transaction records
 - Derive current state by aggregating transaction history
 - Never update or delete transactions
 
 **Option 3: Hybrid Approach**
+
 - Store both transactions AND current state
 - Synchronize them on each change
 - Use transactions for audit, current state for queries
@@ -57,6 +61,7 @@ All portfolio state changes are recorded as immutable Transaction entities. Curr
 ### Consequences
 
 #### What Becomes Easier
+
 - ✅ Audit trail (automatically maintained)
 - ✅ Historical queries (replay to any point in time)
 - ✅ Debugging (can inspect exact sequence of events)
@@ -64,11 +69,13 @@ All portfolio state changes are recorded as immutable Transaction entities. Curr
 - ✅ Future features (event-driven architecture, CQRS)
 
 #### What Becomes Harder
+
 - ❌ Query performance (must aggregate transactions on each query)
 - ❌ Cannot directly "fix" a transaction (must create compensating entry)
 - ❌ Database size grows over time (all history retained)
 
 #### Mitigation Strategies
+
 - **Performance**: Add caching layer in Phase 2+ (Redis)
 - **Storage**: Acceptable for MVP; archival strategy in future phases
 - **Corrections**: Use WITHDRAWAL + DEPOSIT for cash corrections
@@ -85,16 +92,19 @@ All portfolio state changes are recorded as immutable Transaction entities. Curr
 Holdings represent current stock positions. We need to decide whether to:
 
 **Option 1: Persist Holdings Table**
+
 - Create holdings table with (portfolio_id, ticker, quantity, cost_basis)
 - Update holdings on each buy/sell trade
 - Query directly from holdings table
 
 **Option 2: Derive Holdings On-Demand**
+
 - No holdings table
 - Calculate holdings by aggregating BUY/SELL transactions
 - Holdings are ephemeral (exist only in memory during query)
 
 **Option 3: Materialized View**
+
 - Use database materialized view
 - Automatically refreshed on transaction insert
 - Best of both worlds?
@@ -116,6 +126,7 @@ Holdings are calculated by processing all BUY and SELL transactions for a portfo
 ### Consequences
 
 #### What Becomes Easier
+
 - ✅ Data consistency (one source of truth)
 - ✅ Schema simplicity (fewer tables)
 - ✅ Testing (pure function testing)
@@ -123,15 +134,18 @@ Holdings are calculated by processing all BUY and SELL transactions for a portfo
 - ✅ Debugging (inspect transactions, recalculate holdings)
 
 #### What Becomes Harder
+
 - ❌ Query performance (recalculate on every request)
 - ❌ Complex queries (can't JOIN on holdings)
 
 #### Mitigation Strategies
+
 - **Performance**: For Phase 1 MVP, acceptable (<1000 transactions)
 - **Future Optimization**: Add caching in Phase 2 (cache holdings calculation result)
 - **Complex Queries**: Use application-layer joins if needed
 
 #### Why Not Materialized View?
+
 - Adds database-specific complexity
 - Refresh timing issues (immediate vs scheduled)
 - Harder to test (requires real database)
@@ -149,16 +163,19 @@ Holdings are calculated by processing all BUY and SELL transactions for a portfo
 We need to structure the codebase to maximize testability, maintainability, and flexibility. Options:
 
 **Option 1: Traditional Layered Architecture**
+
 - Controllers → Services → Repositories → Database
 - Each layer depends on the next
 - Database schema drives domain model
 
 **Option 2: Clean Architecture**
+
 - Domain (center) ← Application ← Adapters ← Infrastructure
 - Dependencies point inward only
 - Domain defines interfaces, adapters implement them
 
 **Option 3: Hexagonal Architecture (Ports & Adapters)**
+
 - Similar to Clean Architecture
 - Explicit "ports" (interfaces) and "adapters" (implementations)
 
@@ -167,6 +184,7 @@ We need to structure the codebase to maximize testability, maintainability, and 
 We chose **Clean Architecture** (which incorporates Ports & Adapters).
 
 The system is organized in concentric layers:
+
 - **Domain**: Pure business logic (entities, value objects, services)
 - **Application**: Use cases orchestrating domain logic, defines repository ports
 - **Adapters**: Implementations of ports (FastAPI, SQLModel repositories)
@@ -185,6 +203,7 @@ Dependencies point **inward only**. The domain layer has zero external dependenc
 ### Consequences
 
 #### What Becomes Easier
+
 - ✅ Unit testing (fast, no I/O)
 - ✅ Technology changes (swap FastAPI, database, etc.)
 - ✅ Understanding (clear layer responsibilities)
@@ -192,11 +211,13 @@ Dependencies point **inward only**. The domain layer has zero external dependenc
 - ✅ Onboarding (standard architecture pattern)
 
 #### What Becomes Harder
+
 - ❌ Initial setup (more files, more abstractions)
 - ❌ Learning curve (need to understand dependency rule)
 - ❌ Ceremony (more interfaces, more indirection)
 
 #### Implementation Guidelines
+
 - Domain layer: No imports from outer layers (enforced by tests)
 - Application layer: Defines interfaces, uses dependency injection
 - Adapters layer: Implements interfaces, converts between domain and external formats
@@ -214,16 +235,19 @@ Dependencies point **inward only**. The domain layer has zero external dependenc
 We need to persist portfolios and transactions. Options:
 
 **Option 1: Direct ORM Usage in Use Cases**
+
 - Use cases directly use SQLModel queries
 - Simple, straightforward
 - Couples use cases to database
 
 **Option 2: Repository Pattern**
+
 - Application defines repository interfaces (ports)
 - Adapters implement repositories (SQLModel, InMemory)
 - Use cases depend on interfaces, not implementations
 
 **Option 3: Active Record Pattern**
+
 - Entities have save(), delete() methods
 - Business logic and persistence mixed
 - Simple for CRUD apps
@@ -245,16 +269,19 @@ Application layer defines repository interfaces (PortfolioRepository, Transactio
 ### Consequences
 
 #### What Becomes Easier
+
 - ✅ Unit testing (use InMemory repositories)
 - ✅ Integration testing (easy to setup with test database)
 - ✅ Swapping databases (PostgreSQL → MySQL → MongoDB)
 - ✅ Mocking (can mock entire repository)
 
 #### What Becomes Harder
+
 - ❌ More code (interfaces + implementations)
 - ❌ Indirection (can't directly see SQL queries)
 
 #### Repository Responsibilities
+
 - **PortfolioRepository**: Manage portfolio persistence (CRUD)
 - **TransactionRepository**: Manage transaction persistence (append-only)
 - Repositories return domain entities, not database models
@@ -272,12 +299,14 @@ Application layer defines repository interfaces (PortfolioRepository, Transactio
 We need to represent money, stock tickers, and share quantities. Options:
 
 **Option 1: Primitive Types**
+
 - Use Decimal for money amounts
 - Use str for tickers
 - Use Decimal for quantities
 - Simple, direct
 
 **Option 2: Value Objects**
+
 - Create Money, Ticker, Quantity classes
 - Encapsulate validation and behavior
 - Type-safe
@@ -300,6 +329,7 @@ All financial and business concepts are represented by strongly-typed value obje
 ### Consequences
 
 #### What Becomes Easier
+
 - ✅ Compile-time error detection (type checking)
 - ✅ Validation (automatically enforced in constructor)
 - ✅ Readability (clear intent)
@@ -307,16 +337,19 @@ All financial and business concepts are represented by strongly-typed value obje
 - ✅ Operations (Money.add instead of manual decimal math)
 
 #### What Becomes Harder
+
 - ❌ More classes to maintain
 - ❌ Conversion (must create value objects from primitives)
 
 #### Value Object Rules
+
 - **Immutable**: Cannot modify after creation
 - **Equality by Value**: Two Money(100, "USD") are equal
 - **Self-Validating**: Invalid state impossible to construct
 - **No Identity**: Value objects don't have IDs
 
 ### Examples
+
 - `Money(Decimal("100.00"), "USD")` - amount with currency
 - `Ticker("AAPL")` - validated stock symbol
 - `Quantity(Decimal("10.5"))` - non-negative share count
@@ -333,15 +366,18 @@ All financial and business concepts are represented by strongly-typed value obje
 We need to organize application layer use cases. Options:
 
 **Option 1: Mixed Use Cases**
+
 - All use cases in one directory
 - No distinction between reads and writes
 
 **Option 2: CQRS-Light**
+
 - Separate Commands (writes) from Queries (reads)
 - Same database for both (not full CQRS)
 - Clear intent separation
 
 **Option 3: Full CQRS**
+
 - Separate read and write databases
 - Event-driven synchronization
 - Complex infrastructure
@@ -351,6 +387,7 @@ We need to organize application layer use cases. Options:
 We chose **CQRS-Light** (Command-Query Separation).
 
 Application layer use cases are organized into:
+
 - **Commands** (`application/commands/`): Modify state (CreatePortfolio, ExecuteTrade)
 - **Queries** (`application/queries/`): Read state (GetPortfolioBalance, GetPortfolioHoldings)
 
@@ -367,6 +404,7 @@ Both use the same database and repository implementations.
 ### Consequences
 
 #### What Becomes Easier
+
 - ✅ Understanding code (clear read vs write)
 - ✅ Optimization (different strategies for each)
 - ✅ Caching (queries can be cached, commands cannot)
@@ -374,10 +412,12 @@ Both use the same database and repository implementations.
 - ✅ Evolution (can add separate read model later)
 
 #### What Becomes Harder
+
 - ❌ Directory structure (more directories)
 - ❌ Finding code (is it a command or query?)
 
 #### Guidelines
+
 - **Commands**: Return minimal data (ID, success flag), modify state
 - **Queries**: Return rich data, have no side effects
 - **Naming**: `CreateX`, `ExecuteX` for commands; `GetX`, `CalculateX` for queries
@@ -394,15 +434,18 @@ Both use the same database and repository implementations.
 We need stock prices for trade execution and portfolio valuation. Options:
 
 **Option 1: Real Market Data API from Day 1**
+
 - Integrate Alpha Vantage or Finnhub immediately
 - Production-ready but complex
 
 **Option 2: Mock Prices (Provided by Client)**
+
 - Client provides price in trade execution request
 - Simple, no external dependencies
 - Not realistic
 
 **Option 3: Hardcoded Price Map**
+
 - Application has map of ticker → fixed price
 - Simple but inflexible
 
@@ -425,17 +468,20 @@ This is a **temporary decision** to be superseded in Phase 2.
 ### Consequences
 
 #### What Becomes Easier (Phase 1)
+
 - ✅ No API keys needed
 - ✅ No rate limit handling
 - ✅ Deterministic testing
 - ✅ Faster development
 
 #### What Becomes Harder
+
 - ❌ Not realistic for actual trading simulation
 - ❌ Client must provide prices
 - ❌ Cannot calculate real portfolio value
 
 #### Migration to Real Prices (Phase 2)
+
 - Add `MarketDataPort` interface
 - Implement `AlphaVantageAdapter`
 - Change use cases to fetch prices instead of accepting them
@@ -453,16 +499,19 @@ This is a **temporary decision** to be superseded in Phase 2.
 We need to choose a database. Options:
 
 **Option 1: PostgreSQL Everywhere**
+
 - Production: PostgreSQL
 - Development: PostgreSQL (via Docker)
 - Consistent but requires Docker setup
 
 **Option 2: SQLite for Dev, PostgreSQL for Prod**
+
 - Production: PostgreSQL
 - Development: SQLite (file-based)
 - Easy setup but potential inconsistencies
 
 **Option 3: In-Memory Only (No Persistence)**
+
 - Development: In-memory
 - Not viable for production
 
@@ -483,15 +532,18 @@ Production deployments use PostgreSQL. Local development defaults to SQLite (fil
 ### Consequences
 
 #### What Becomes Easier
+
 - ✅ Local setup (no Docker required)
 - ✅ Fast tests (in-memory SQLite)
 - ✅ CI pipeline (simpler, faster)
 
 #### What Becomes Harder
+
 - ❌ Potential SQL dialect differences
 - ❌ Must test with real PostgreSQL before production
 
 #### Mitigation
+
 - Integration tests run with PostgreSQL (via Docker or CI)
 - Use common SQL subset (avoid PostgreSQL-specific features)
 - Explicitly test migrations against both databases
@@ -508,11 +560,13 @@ Production deployments use PostgreSQL. Local development defaults to SQLite (fil
 We need to choose ID types for entities. Options:
 
 **Option 1: Auto-Increment Integers**
+
 - 1, 2, 3, 4...
 - Simple, sequential
 - Database-generated
 
 **Option 2: UUIDs**
+
 - Globally unique identifiers
 - Generated in application code
 - 128-bit random values
@@ -535,17 +589,20 @@ Portfolios and Transactions use UUID as their primary identifier. IDs are genera
 ### Consequences
 
 #### What Becomes Easier
+
 - ✅ Testing (predictable IDs)
 - ✅ Distributed systems (no coordination needed)
 - ✅ Security (non-sequential)
 - ✅ Application control (domain generates IDs)
 
 #### What Becomes Harder
+
 - ❌ Larger storage (128 bits vs 64 bits)
 - ❌ Less human-readable
 - ❌ Slightly slower indexing
 
 #### Implementation Details
+
 - Use `uuid.uuid4()` for random UUIDs
 - Store as native UUID type in PostgreSQL
 - Store as TEXT in SQLite (compatible)
@@ -563,16 +620,19 @@ Portfolios and Transactions use UUID as their primary identifier. IDs are genera
 We need to handle concurrent modifications to portfolios. Options:
 
 **Option 1: Pessimistic Locking**
+
 - Lock row during read (SELECT FOR UPDATE)
 - Other transactions wait
 - Guaranteed no conflicts but slow
 
 **Option 2: Optimistic Locking**
+
 - Use version column
 - Detect conflicts on save
 - Retry on conflict
 
 **Option 3: No Concurrency Control**
+
 - Last write wins
 - Risk of lost updates
 
@@ -592,15 +652,18 @@ Portfolio table includes a `version` integer column. On update, check that versi
 ### Consequences
 
 #### What Becomes Easier
+
 - ✅ Performance (no locks)
 - ✅ Scalability (no lock contention)
 - ✅ Clear errors (conflict is explicit)
 
 #### What Becomes Harder
+
 - ❌ Retry logic needed in adapters
 - ❌ Potential for retry storms under high load
 
 #### Implementation
+
 - Portfolio has `version` column (starts at 1)
 - On save, WHERE clause includes current version
 - If no rows updated, raise ConcurrencyError
@@ -620,11 +683,13 @@ Portfolio table includes a `version` integer column. On update, check that versi
 We need to decide if API uses domain entities directly or separate DTOs. Options:
 
 **Option 1: Expose Domain Entities**
+
 - API returns Portfolio, Transaction entities directly
 - Simple, no conversion needed
 - Couples API to domain model
 
 **Option 2: Separate DTOs**
+
 - API has own Pydantic models
 - Convert between domain and API representations
 - Decoupled but more code
@@ -646,16 +711,19 @@ FastAPI routes use Pydantic models for requests and responses. Use cases return 
 ### Consequences
 
 #### What Becomes Easier
+
 - ✅ API evolution (change response format without changing domain)
 - ✅ Security (control what's exposed)
 - ✅ Validation (Pydantic integration)
 - ✅ Documentation (clear API contracts)
 
 #### What Becomes Harder
+
 - ❌ Conversion code (map domain to DTO)
 - ❌ Duplicate-looking models
 
 #### Naming Convention
+
 - **Request DTOs**: `CreatePortfolioRequest`, `ExecuteTradeRequest`
 - **Response DTOs**: `PortfolioResponse`, `TradeResponse`
 - **Use Case DTOs**: `CreatePortfolioCommand`, `CreatePortfolioResult`
@@ -672,16 +740,19 @@ FastAPI routes use Pydantic models for requests and responses. Use cases return 
 We need to determine where business rule validation happens (e.g., "cannot sell shares you don't own"). Options:
 
 **Option 1: Validation in Domain Services**
+
 - Domain services (e.g., PortfolioCalculator) validate business rules
 - Raises exceptions for invalid operations
 - Domain layer enforces all business logic
 
 **Option 2: Validation in Application Layer**
+
 - Domain services are pure calculators (no validation)
 - Application layer Use Cases validate before calling domain
 - Separation of calculation from validation
 
 **Option 3: Mixed Validation**
+
 - Some validation in domain, some in application
 - No clear separation of concerns
 
@@ -702,12 +773,14 @@ Portfolio state calculations (PortfolioCalculator) do NOT validate business rule
 ### Consequences
 
 #### What Becomes Easier
+
 - ✅ Testing domain services (pure functions, deterministic)
 - ✅ Auditing and analysis (can calculate state from any transaction history)
 - ✅ Understanding responsibilities (calculation vs validation)
 - ✅ Changing business rules (no need to modify domain services)
 
 #### What Becomes Harder
+
 - ❌ Must remember to validate in Use Cases (not automatic)
 - ❌ Potential for duplicate validation code across Use Cases
 
@@ -773,6 +846,7 @@ class PortfolioCalculator:
 ```
 
 ### Related Decisions
+
 - ADR-001: Immutable Transaction Ledger (domain services calculate from ledger)
 - ADR-006: CQRS-Light (commands handle validation)
 
@@ -800,20 +874,24 @@ class PortfolioCalculator:
 Decisions deferred to future phases:
 
 ### Phase 2 Decisions
+
 - Which market data provider? (Alpha Vantage, Finnhub, IEX Cloud)
 - Caching strategy? (Redis, in-memory, database materialized views)
 - WebSocket for real-time updates? (Yes/No, which library)
 
 ### Phase 3 Decisions
+
 - Historical data storage? (TimescaleDB, separate time-series DB)
 - Backtest result persistence? (Own table, separate service)
 - Batch vs streaming for historical replay?
 
 ### Phase 4 Decisions
+
 - Fee strategy pluggability? (Strategy pattern, configuration-driven)
 - Slippage modeling approach? (Simple percentage, order book simulation)
 
 ### Phase 5 Decisions
+
 - Rule engine architecture? (Drools, custom DSL, Python eval)
 - Strategy serialization format? (JSON, YAML, Python code)
 
@@ -822,6 +900,7 @@ Decisions deferred to future phases:
 ## Deviations from Standards
 
 None. All decisions align with:
+
 - Modern Software Engineering principles (Dave Farley)
 - Clean Architecture (Robert C. Martin)
 - Domain-Driven Design (Eric Evans)
@@ -832,6 +911,7 @@ None. All decisions align with:
 ## Decision Review Process
 
 These decisions should be reviewed:
+
 - **After Phase 1 MVP**: Validate assumptions, measure performance
 - **Before Phase 2**: Decide on caching strategy based on Phase 1 metrics
 - **Before Phase 3**: Review time-series storage needs

@@ -11,6 +11,7 @@ Phase 3 transforms PaperTrade from a development prototype into a production-rea
 ### Key Insight from Phase 1-2
 
 **What Worked Well**:
+
 - Clean Architecture enabled rapid feature development (499 tests, 2 phases in 2 weeks)
 - Domain-driven design made complex logic testable and maintainable
 - Alpha Vantage integration with caching worked smoothly
@@ -18,12 +19,14 @@ Phase 3 transforms PaperTrade from a development prototype into a production-rea
 - E2E tests caught critical bugs before production
 
 **What Was Harder Than Expected**:
+
 - E2E test setup complexity (Docker services, API integration)
 - Frontend state management required careful cache invalidation
 - Rate limiting required sophisticated retry logic
 - Type safety enforcement needed iteration
 
 **Critical User Needs** (from documentation analysis):
+
 1. **SELL orders** - Users can't exit positions (HIGH impact)
 2. **User authentication** - Blocks production deployment (CRITICAL)
 3. **Portfolio analytics** - Users want to see performance (MEDIUM)
@@ -37,6 +40,7 @@ After analyzing user needs, implementation velocity, and technical dependencies,
 **Goal**: Users can buy AND sell stocks - complete basic trading functionality
 
 **Features**:
+
 - SELL order implementation
 - Sufficient holdings validation
 - Updated holdings calculation
@@ -48,6 +52,7 @@ After analyzing user needs, implementation velocity, and technical dependencies,
 **Goal**: Platform ready for multi-user production deployment
 
 **Features**:
+
 - User authentication (Clerk-based, third-party)
 - Pre-built login/signup UI components
 - Portfolio ownership model
@@ -60,6 +65,7 @@ After analyzing user needs, implementation velocity, and technical dependencies,
 **Goal**: Users can visualize performance and make data-driven decisions
 
 **Features**:
+
 - Portfolio performance charts (line charts, candlesticks)
 - Gain/loss calculations with percentages
 - Holdings composition (pie charts)
@@ -111,11 +117,13 @@ graph TD
 ### Alternative Considered: Auth First
 
 **Pros**:
+
 - Establishes foundation for everything
 - Production-ready sooner
 - Multi-user testing available
 
 **Cons**:
+
 - Delays user value (still can't SELL)
 - Auth complexity could block other work
 - Users want trading features over accounts
@@ -125,6 +133,7 @@ graph TD
 ## Success Metrics
 
 ### Phase 3a Completion Criteria
+
 - [ ] Users can execute SELL orders for owned stocks
 - [ ] Insufficient holdings validation prevents invalid sells
 - [ ] Holdings update correctly after sells
@@ -134,6 +143,7 @@ graph TD
 - [ ] E2E tests verify sell workflow
 
 ### Phase 3b Completion Criteria
+
 - [ ] Users can register with email/password
 - [ ] Users can login via Clerk UI
 - [ ] API endpoints validate Clerk tokens
@@ -144,6 +154,7 @@ graph TD
 - [ ] Migration path for existing portfolios
 
 ### Phase 3c Completion Criteria
+
 - [ ] Portfolio value chart (line chart over time)
 - [ ] Holdings composition chart (pie chart)
 - [ ] Gain/loss calculations (absolute + percentage)
@@ -168,12 +179,14 @@ Based on Phase 1-2 velocity (2 phases in ~2 weeks with parallel agents):
 **Note**: Phase 3b timeline reduced from 2-3 weeks to 2-3 days by using Clerk instead of custom JWT authentication.
 
 **Assumptions**:
+
 - Single agent working sequentially
 - No major architectural surprises
 - Existing clean architecture accelerates work
 - E2E test infrastructure already robust
 
 **Risks**:
+
 - Auth complexity may extend Phase 3b
 - Chart library integration may be tricky
 - Backtesting may reveal performance issues
@@ -192,6 +205,7 @@ The following are explicitly deferred to Phase 4 or later:
 ❌ **Social Features** (portfolio sharing, leagues) - Future
 
 **Rationale**: These features are either:
+
 - Complex and distract from core value
 - Low user priority based on documentation
 - Can be added incrementally after Phase 3

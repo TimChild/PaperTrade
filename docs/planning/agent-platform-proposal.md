@@ -89,6 +89,7 @@ The split between those two channels matters. ExplorationTasks are durable, dash
 **Tasks**:
 
 H1. **`ExplorationTask` dashboard page**. List, filter (`open` / `claimed` / `done` / `abandoned`), create form, detail view showing prompt + claimed-by + findings. Both human and agent file tasks here. The agent claims and submits findings.
+
 - Backend already exists; this is purely frontend.
 - File a task → assign to a target portfolio / tickers / free-form prompt → save.
 - Detail view shows the full lifecycle including the agent-submitted finding markdown when status transitions to DONE.
@@ -96,6 +97,7 @@ H1. **`ExplorationTask` dashboard page**. List, filter (`open` / `claimed` / `do
 - **Effort**: ~1 day.
 
 H2. **Recent activity feed on dashboard home** (or a dedicated `/activity` page). Read-only aggregation of the last N events across:
+
 - Trades executed (with the API-key label or "human" if Clerk-authenticated)
 - Backtest runs created
 - Strategies created / activated / deactivated
@@ -108,6 +110,7 @@ H2. **Recent activity feed on dashboard home** (or a dedicated `/activity` page)
 - **Effort**: ~1 day.
 
 H3. **API-key management page** in dashboard settings. Mint, list, revoke. Replaces the JWT-from-console dance.
+
 - `GET /api-keys` (already exists for listing — verify it's wired up)
 - `POST /api-keys` from a settings page form (label + scope checkboxes)
 - `DELETE /api-keys/{id}`
@@ -116,6 +119,7 @@ H3. **API-key management page** in dashboard settings. Mint, list, revoke. Repla
 - **Effort**: ~half a day.
 
 H4. **Agent operating manual** at `docs/agents/operating-manual.md`. The canonical prompt the agent reads at session start. Covers:
+
 - **Identity**: who the agent is, what API key label it should use
 - **Tools available**: link to MCP tool reference, mention the third-party MCPs we're attaching
 - **Guardrails**: paper-trading-only, daily churn limits per portfolio, when to ask Tim vs proceed, what scopes are required for write operations
@@ -126,6 +130,7 @@ H4. **Agent operating manual** at `docs/agents/operating-manual.md`. The canonic
 - **Effort**: ~half a day.
 
 H5. **Multi-agent identity prep** (no behavior change yet — just designing for it). Audit places we hardcode "the API key" vs read the key's `label` from the request context:
+
 - Verify `AuthenticatedUser` carries the API-key label all the way from auth → handler
 - Verify the activity feed (H2) groups by label, not just user
 - Verify the audit / log lines on each write endpoint include the label
@@ -159,6 +164,7 @@ I1. **Display font legibility fix**. Fraunces at `opsz: 144` is high-stroke-cont
 - **Effort**: 30 min – 3 hrs depending on path.
 
 I2. **Sanity-check pass on the editorial revamp**. Tim has been using the dark theme for ~24 hrs as of Phase I scoping. Surface anything else that's annoyed him in real use, batch-fix.
+
 - **Owner**: collect feedback, dispatch small fixes.
 
 **Total Phase I**: ~half a day.
@@ -174,9 +180,11 @@ I2. **Sanity-check pass on the editorial revamp**. Tim has been using the dark t
 **Tasks**:
 
 E1. **Parameter sweep workflow**. Agent reads an `ExplorationTask`, generates N parameter combinations (`fast_window` × `slow_window` × `invest_fraction` for MA-crossover; `frequency_days` × `amount_per_period` for DCA), runs backtests in parallel via `mcp__zebu__run_backtest`, ranks by metric, recommends.
+
 - **Pure agent behavior — no new Zebu code.** Just clear documentation in the agent operating manual (Phase H4) of how to do this efficiently (parallel `run_backtest` calls; what metrics matter; how to format the finding).
 
 E2. **Structured `submit_exploration_finding` payload**. Today the finding is a free-form text body. Agents would benefit from a structured schema for:
+
 - chosen `parameters` (typed dict matching the strategy type)
 - key `metrics` (return, sharpe, max_drawdown, n_trades)
 - `comparison_to_baseline` (vs the buy-and-hold equivalent)
@@ -203,14 +211,17 @@ E3. **"New strategy type via PR" workflow** (already implicitly available — ag
 **Tasks**:
 
 F1. **Pick a runtime model**. Tim's current preference: manual today, loop soon. Recommendation:
+
 - **Local `/loop dynamic`** for ad-hoc exploration during waking hours (e.g. `/loop /explore-tasks`) — model paces itself between checks, checks back when something changes
 - **Anthropic-hosted scheduled remote agent** for daily after-market-close runs — runs without Tim's machine being on
 - Both use the same `ZEBU_API_KEY` (or a separate role-keyed one per H5)
 
 F2. **First scheduled agent**: `zebu-strategy-explorer`. Daily after US market close (e.g. 22:00 UTC). Calls `mcp__zebu__list_exploration_tasks(status='open')`, claims one, executes Phase E1 sweep, submits findings.
+
 - **Effort**: ~1 day to wire up the schedule + the agent's prompt.
 
 F3. **`StrategyConditionTrigger` domain concept** (the most interesting Phase F deliverable). New entity + scheduler integration:
+
 - Entity fields: `id`, `activation_id` FK, `condition_type` (`DRAWDOWN_THRESHOLD` / `VOLATILITY_SPIKE` / `EARNINGS_PROXIMITY` / `CUSTOM_RULE`), `condition_params` dict, `agent_prompt` free-form, `cooldown` (don't re-fire within N hours), `last_fired_at`, `status`
 - Evaluated by the scheduler each tick alongside `StrategyExecutionService`
 - When a condition fires, **invokes a remote agent via the Anthropic Messages API** (or queues an urgent ExplorationTask) with the strategy + trigger context + `agent_prompt`
@@ -219,6 +230,7 @@ F3. **`StrategyConditionTrigger` domain concept** (the most interesting Phase F 
 - **Effort**: ~1 week.
 
 F4. **Concurrency / safety guardrails**:
+
 - Atomic `claim_exploration_task` (already implemented)
 - Per-API-key rate limit on `run_backtest` (so a runaway agent doesn't fill the DB)
 - Per-portfolio per-day cap on agent-initiated trade volume

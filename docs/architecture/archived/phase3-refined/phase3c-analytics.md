@@ -11,6 +11,7 @@ Provide users with visual insights into portfolio performance and enable basic b
 ## Current State
 
 **What Exists**:
+
 - ✅ Historical price data in database (Phase 2b)
 - ✅ Price history API endpoints
 - ✅ Background scheduler for price updates
@@ -18,6 +19,7 @@ Provide users with visual insights into portfolio performance and enable basic b
 - ✅ Holdings and balance calculations
 
 **What's Missing**:
+
 - ❌ Portfolio performance charts
 - ❌ Gain/loss visualizations
 - ❌ Asset allocation displays
@@ -38,6 +40,7 @@ Provide users with visual insights into portfolio performance and enable basic b
 | Victory | Fully featured, modular | Steeper learning curve | ❌ |
 
 **Reasoning**:
+
 - Recharts is React-first (easy integration)
 - Already used in Phase 2b price history (consistency)
 - Composable components match our architecture
@@ -49,18 +52,21 @@ Provide users with visual insights into portfolio performance and enable basic b
 **Approach**: **Pre-computed Daily Snapshots**
 
 **Why NOT Real-Time Calculation**:
+
 - Calculating portfolio value requires fetching prices for ALL holdings
 - N+1 query problem for portfolios with many stocks
 - Slow page loads for historical charts
 - API rate limit concerns
 
 **Why Pre-Computed Snapshots**:
+
 - Calculate once per day (background job)
 - Store in `portfolio_snapshots` table
 - Fast chart rendering (single query)
 - No API calls during chart display
 
 **Trade-offs**:
+
 - Additional storage (~1KB per portfolio per day = 365KB/year)
 - Snapshot calculation complexity
 - Delayed updates (next snapshot run)
@@ -83,11 +89,13 @@ Provide users with visual insights into portfolio performance and enable basic b
 | created_at | datetime | When snapshot was calculated | Auto-set |
 
 **Invariants**:
+
 - total_value = cash_balance + holdings_value
 - One snapshot per portfolio per day (unique constraint)
 - snapshot_date <= today (cannot snapshot future)
 
 **Indexes**:
+
 - (portfolio_id, snapshot_date) - Fast range queries for charts
 - snapshot_date - Batch processing by date
 
@@ -105,6 +113,7 @@ Provide users with visual insights into portfolio performance and enable basic b
 | lowest_value | Money | Trough value in period | min(snapshots) |
 
 **Example**:
+
 - Start: $10,000 (Jan 1)
 - End: $12,500 (Jan 31)
 - Absolute gain: $2,500
@@ -119,6 +128,7 @@ Provide users with visual insights into portfolio performance and enable basic b
 **Data Source**: `portfolio_snapshots` table
 
 **Time Ranges**:
+
 - 1 Week (7 days)
 - 1 Month (30 days)
 - 3 Months (90 days)
@@ -126,6 +136,7 @@ Provide users with visual insights into portfolio performance and enable basic b
 - All Time (since portfolio creation)
 
 **Chart Components**:
+
 - X-axis: Date
 - Y-axis: Portfolio value (USD)
 - Tooltip: Hover shows exact value and date
@@ -169,6 +180,7 @@ Provide users with visual insights into portfolio performance and enable basic b
 **Visualization**: Card/stat display showing key metrics
 
 **Metrics Displayed**:
+
 - Total Gain/Loss (absolute $)
 - Total Gain/Loss (percentage %)
 - Today's Change ($ and %)
@@ -176,6 +188,7 @@ Provide users with visual insights into portfolio performance and enable basic b
 - Worst Day (largest loss)
 
 **Color Coding**:
+
 - Green: Positive gains
 - Red: Losses
 - Gray: No change
@@ -187,6 +200,7 @@ Provide users with visual insights into portfolio performance and enable basic b
 **Visualization**: Pie chart showing asset allocation
 
 **Data**:
+
 - Each holding is a slice
 - Size proportional to value
 - Shows ticker symbol and percentage
@@ -231,6 +245,7 @@ Provide users with visual insights into portfolio performance and enable basic b
 **Visualization**: Table showing best/worst performing holdings
 
 **Columns**:
+
 - Ticker
 - Quantity
 - Current Value
@@ -280,6 +295,7 @@ async def execute_trade(
 ```
 
 **Benefits**:
+
 - Minimal code changes (add optional parameter)
 - Same validation logic for live vs backtest
 - Historical prices already available (Phase 2b)
@@ -288,6 +304,7 @@ async def execute_trade(
 ### Backtesting Workflow
 
 **User Flow**:
+
 1. Create special "backtest portfolio"
 2. Select start date (e.g., Jan 1, 2024)
 3. Execute trades with `as_of` parameter
@@ -295,6 +312,7 @@ async def execute_trade(
 5. Compare strategy outcomes
 
 **Example Backtest**:
+
 - Strategy: Buy 10 IBM on Jan 1, sell on Feb 1
 - Execution:
   - Create portfolio with $10,000
@@ -303,12 +321,14 @@ async def execute_trade(
   - Result: $150 profit (8.3% gain)
 
 **Limitations** (MVP):
+
 - Manual trade execution (no automated replay)
 - No slippage simulation
 - No transaction fees (Phase 4 feature)
 - Uses end-of-day prices (not intraday)
 
 **Future Enhancements**:
+
 - Strategy scripts (automated execution)
 - Monte Carlo simulations
 - Risk metrics (Sharpe ratio, volatility)
@@ -342,6 +362,7 @@ async def execute_trade(
 ```
 
 **Validation**:
+
 - `as_of` must not be in future
 - `as_of` must have historical price data available
 - Normal trade validation still applies
@@ -351,6 +372,7 @@ async def execute_trade(
 ### New Components
 
 **PortfolioPerformanceChart**:
+
 - Recharts LineChart
 - Time range selector (buttons: 1W, 1M, 3M, 1Y, ALL)
 - Tooltip with date and value
@@ -358,23 +380,27 @@ async def execute_trade(
 - Error handling (no data, API error)
 
 **PortfolioCompositionPieChart**:
+
 - Recharts PieChart
 - Legend with ticker symbols
 - Tooltip with value and percentage
 - Responsive sizing
 
 **PerformanceMetricsCard**:
+
 - Grid layout
 - Stat displays (value, label, trend indicator)
 - Green/red color coding
 - Animated counters (optional enhancement)
 
 **GainersLosersTable**:
+
 - Sortable table (by gain/loss %)
 - Color-coded rows
 - Click ticker to view stock details
 
 **BacktestPortfolioForm**:
+
 - Date picker for start date
 - Button to create backtest portfolio
 - Warning: "Backtest mode active" indicator
@@ -383,6 +409,7 @@ async def execute_trade(
 ### Page Layout Updates
 
 **Portfolio Detail Page**:
+
 - Add "Analytics" tab (alongside "Holdings", "Transactions")
 - Analytics tab contains:
   - Performance chart (top)
@@ -391,6 +418,7 @@ async def execute_trade(
   - Gainers/losers table (bottom)
 
 **Trade Form**:
+
 - Add "Backtest Mode" toggle
 - If enabled: Show date picker
 - If disabled: Use current time
@@ -414,12 +442,14 @@ For each active portfolio:
 ```
 
 **Error Handling**:
+
 - Skip portfolio if no transactions today
 - Retry price fetch failures (3 attempts)
 - Log errors but continue with other portfolios
 - Alert if >10% of snapshots fail
 
 **Performance**:
+
 - Process in batches (10 portfolios at a time)
 - Respect API rate limits (5 calls/min)
 - Complete within 1 hour for 1000 portfolios
@@ -441,11 +471,13 @@ For each portfolio:
 ```
 
 **Challenges**:
+
 - Many API calls (rate limit concern)
 - Long processing time (batch overnight)
 - Historical prices may not exist for all dates
 
 **Mitigation**:
+
 - Run once, cache forever
 - Use background job queue (Celery, future)
 - Start with recent dates, backfill older gradually
@@ -474,6 +506,7 @@ CREATE INDEX idx_snapshots_date ON portfolio_snapshots(snapshot_date);
 ```
 
 **Indexes Rationale**:
+
 - (portfolio_id, snapshot_date): Fast range queries for charts
 - snapshot_date: Batch processing by date
 
@@ -482,6 +515,7 @@ CREATE INDEX idx_snapshots_date ON portfolio_snapshots(snapshot_date);
 ### Unit Tests (Domain Layer)
 
 **Snapshot Calculation**:
+
 - `test_calculate_snapshot_only_cash` - Cash-only portfolio
 - `test_calculate_snapshot_with_holdings` - Multiple stocks
 - `test_calculate_snapshot_zero_holdings` - All sold
@@ -490,12 +524,14 @@ CREATE INDEX idx_snapshots_date ON portfolio_snapshots(snapshot_date);
 ### Integration Tests (Use Cases)
 
 **Analytics Tests**:
+
 - `test_get_performance_data_1_month` - Returns correct snapshots
 - `test_get_performance_data_no_data` - Handles missing snapshots
 - `test_calculate_daily_snapshot` - Snapshot logic correct
 - `test_backfill_snapshots_range` - Historical backfill
 
 **Backtesting Tests**:
+
 - `test_execute_trade_with_as_of` - Trade at past date
 - `test_execute_trade_future_as_of` - Rejects future date
 - `test_backtest_buy_sell_strategy` - Complete backtest flow
@@ -503,6 +539,7 @@ CREATE INDEX idx_snapshots_date ON portfolio_snapshots(snapshot_date);
 ### API Tests
 
 **Analytics Endpoint Tests**:
+
 - `test_get_performance_success` - 200 OK with data
 - `test_get_performance_invalid_range` - 400 Bad Request
 - `test_get_composition_success` - 200 OK with pie data
@@ -511,6 +548,7 @@ CREATE INDEX idx_snapshots_date ON portfolio_snapshots(snapshot_date);
 ### E2E Tests
 
 **Analytics Flow**:
+
 1. Create portfolio
 2. Execute trades
 3. Trigger snapshot
@@ -518,6 +556,7 @@ CREATE INDEX idx_snapshots_date ON portfolio_snapshots(snapshot_date);
 5. Verify data displays correctly
 
 **Backtesting Flow**:
+
 1. Create backtest portfolio
 2. Select past date
 3. Execute trades with `as_of`
@@ -600,31 +639,37 @@ CREATE INDEX idx_snapshots_date ON portfolio_snapshots(snapshot_date);
 ## Dependencies
 
 **Requires**:
+
 - Phase 2b (historical prices) - complete ✅
 - Phase 3a (SELL orders) - recommended for complete P&L
 
 **Blocks**:
+
 - Advanced analytics (Phase 4+)
 - Strategy builder (Phase 5)
 
 **Parallel Work Opportunities**:
+
 - Can start while Phase 3b (auth) is in progress
 
 ## Notes
 
 **Design Decisions**:
+
 - Pre-computed snapshots over real-time calculation (performance)
 - Recharts over TradingView (simplicity, cost)
 - End-of-day snapshots over intraday (MVP simplicity)
 - Time-travel use cases over separate backtest logic (DRY principle)
 
 **Alternatives Considered**:
+
 - Real-time calculation → Rejected (too slow, N+1 queries)
 - WebSocket live updates → Deferred to Phase 4
 - Advanced risk metrics → Deferred to future
 - Strategy automation → Deferred to Phase 5
 
 **Future Enhancements**:
+
 - Real-time WebSocket chart updates
 - Sharpe ratio, beta, volatility calculations
 - Benchmark comparison (S&P 500, Dow Jones)

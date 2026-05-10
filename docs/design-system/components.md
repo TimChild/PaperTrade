@@ -7,6 +7,7 @@ This document describes the primitive UI components built with shadcn/ui and cus
 ## Installation
 
 Components use the following dependencies:
+
 - `@radix-ui/*` - Accessible component primitives
 - `class-variance-authority` - Type-safe variant handling
 - `tailwind-merge` - Intelligent CSS class merging
@@ -38,6 +39,7 @@ cn('text-base', isError && 'text-red-600')
 Primary interactive element for user actions.
 
 **Variants**:
+
 - `default` - Primary actions (uses `bg-primary` token)
 - `secondary` - Secondary actions (gray background)
 - `outline` - Tertiary actions (border only)
@@ -45,6 +47,7 @@ Primary interactive element for user actions.
 - `destructive` - Destructive actions (uses `bg-negative` token)
 
 **Sizes**:
+
 - `default` - Standard button (h-10)
 - `sm` - Small button (h-9)
 - `lg` - Large button (h-11)
@@ -81,10 +84,12 @@ import { Button } from '@/components/ui/button'
 Container component for grouped content with elevation.
 
 **Variants**:
+
 - `default` - Static content container
 - `interactive` - Clickable card with hover effects
 
 **Sub-components**:
+
 - `Card` - Main container
 - `CardHeader` - Header section
 - `CardTitle` - Title (uses `text-heading-lg` token)
@@ -177,6 +182,7 @@ import { Input } from '@/components/ui/input'
 Modal dialog for focused interactions.
 
 **Sub-components**:
+
 - `Dialog` - Root component
 - `DialogTrigger` - Opens dialog
 - `DialogContent` - Main content container
@@ -227,6 +233,7 @@ import { Button } from '@/components/ui/button'
 Small status indicator or tag.
 
 **Variants**:
+
 - `default` - Primary badge (uses `bg-primary`)
 - `secondary` - Gray badge
 - `destructive` - Error/warning badge (uses `bg-negative`)
@@ -249,6 +256,7 @@ import { Badge } from '@/components/ui/badge'
 Visual divider between content sections.
 
 **Orientations**:
+
 - `horizontal` (default) - Horizontal line
 - `vertical` - Vertical line
 
@@ -299,25 +307,30 @@ import { Skeleton } from '@/components/ui/skeleton'
 All components use our centralized design tokens from `tailwind.config.ts`:
 
 **Colors**:
+
 - `bg-primary`, `bg-primary-hover` - Brand colors
 - `bg-positive`, `bg-negative` - Semantic colors
 - `bg-background-primary`, `bg-background-secondary` - Backgrounds (dark mode aware)
 - `text-foreground-primary`, `text-foreground-secondary` - Text (dark mode aware)
 
 **Typography**:
+
 - `text-heading-xl`, `text-heading-lg`, `text-heading-md` - Headings
 - `text-value-primary`, `text-value-secondary` - Financial values
 
 **Spacing**:
+
 - `p-card-padding` (2rem/32px) - Card padding
 - `gap-card-gap` (2rem/32px) - Card spacing
 
 **Borders**:
+
 - `rounded-card` (1rem/16px) - Cards
 - `rounded-button` (0.75rem/12px) - Buttons, badges
 - `rounded-input` (0.5rem/8px) - Inputs
 
 **Shadows**:
+
 - `shadow-card` - Default card elevation
 - `shadow-card-hover` - Elevated card on hover
 

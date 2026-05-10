@@ -8,6 +8,7 @@
 Following the successful project rename (PaperTrade → Zebu, PR #132), we're at a strategic decision point with a production-ready application:
 
 **Current State**:
+
 - ✅ All core features complete (Phases 1-3c)
 - ✅ 545 backend + 197 frontend tests passing
 - ✅ 81% test coverage
@@ -19,6 +20,7 @@ Following the successful project rename (PaperTrade → Zebu, PR #132), we're at
 
 ### Path 1: Production Deployment
 **Status**: Partially blocked
+
 - ✅ Deployed to Proxmox VM
 - ❌ Domain/SSL setup requires local network access (blocked)
 - 📊 Monitoring infrastructure (~$9/month, 2-3 hours setup)
@@ -27,6 +29,7 @@ Following the successful project rename (PaperTrade → Zebu, PR #132), we're at
 
 ### Path 2: Quality Polish
 **Status**: Mostly complete, some items remaining
+
 - ✅ E2E tests migrated to test IDs (PR #60)
 - ✅ E2E suite refactored 60→21 tests (PR #120)
 - ⚠️ E2E in agent environment (diagnostics needed)
@@ -36,6 +39,7 @@ Following the successful project rename (PaperTrade → Zebu, PR #132), we're at
 
 ### Path 3: Advanced Features
 **Status**: Deferred
+
 - Limit/stop orders, WebSockets, etc.
 - Agree to defer until more user feedback
 
@@ -60,6 +64,7 @@ Following the successful project rename (PaperTrade → Zebu, PR #132), we're at
 ### Monitoring Infrastructure Research
 
 **Budget Stack Recommendation** ($9/month):
+
 - Sentry Free: Error tracking (5K errors/month) - $0
 - Grafana Cloud Free: Infrastructure monitoring - $0
 - Plausible: Privacy-focused analytics (10K pageviews) - $9/month
@@ -73,6 +78,7 @@ See `.tmp_monitoring_research.md` for full cost analysis and alternatives.
 ## Next Steps
 
 ### Immediate (This Session)
+
 - ✅ Created Task 133 (E2E agent environment verification)
 - ✅ Created Task 134 (React patterns audit evaluation)
 - ✅ Started both agent tasks
@@ -81,6 +87,7 @@ See `.tmp_monitoring_research.md` for full cost analysis and alternatives.
 ### Agent Findings Summary
 
 **Task 133 - E2E Tests in Agent Environment** (PR #133):
+
 - **Result**: ❌ E2E tests cannot run in agent environment
 - **Root Cause**: Playwright browsers not installed (~250MB download)
 - **Impact**: Agent timeout (30min) + slow Docker builds (9min) make browser installation impractical
@@ -88,23 +95,27 @@ See `.tmp_monitoring_research.md` for full cost analysis and alternatives.
 - **Action**: Update copilot-setup-steps.yml to install Playwright browsers (✅ DONE)
 
 **Task 134 - React Patterns Audit** (PR #134):
+
 - **Result**: ✅ Codebase quality is **exceptional**
 - **Findings**: Only 1 ESLint suppression across 98 files (TradeForm.tsx setState-in-useEffect)
 - **Recommendation**: Optional low-priority refactor (~2 hours, medium ROI)
 - **Action**: Defer - current implementation is functional and well-tested
 
 ### Completed Actions
+
 - ✅ Moved monitoring research to permanent location (docs/planning/research/)
 - ✅ Updated BACKLOG.md with agent findings and monitoring reference
 - ✅ Fixed copilot-setup-steps.yml to install Playwright browsers
 - ✅ Updated orchestration documentation
 
 ### Short-term (Next Actions)
+
 1. **Merge agent PRs** (#133, #134) - Close diagnostic tasks
 2. **Optional**: TradeForm refactor (~2 hours, low priority)
 3. **Update orchestration docs** with E2E testing limitations
 
 ### Medium-term (When Local Network Access Available)
+
 1. Configure custom domain + SSL (~1 hour)
 2. Set up monitoring infrastructure ($9/month stack, 2-3 hours) - see [research doc](research/monitoring-solutions-analysis.md)
 3. Structured beta user testing (5-10 users)
@@ -113,11 +124,13 @@ See `.tmp_monitoring_research.md` for full cost analysis and alternatives.
 ## Success Metrics
 
 **Quality Metrics**:
+
 - E2E test status in agent environment: Known and documented
 - React code quality: Evaluated with actionable recommendations
 - Technical debt: Prioritized and scheduled
 
 **Product Metrics** (Future):
+
 - Beta users: 5-10 active users
 - Error rate: <1% of requests (via Sentry)
 - Retention: Users return after first session

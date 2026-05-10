@@ -10,6 +10,7 @@
 **Decision**: Use shadcn/ui as the foundation, not a complete replacement.
 
 **Rationale**:
+
 - **Copy-paste model** = Zero runtime dependencies, full code ownership
 - **Tailwind-native** = Consistent with existing codebase patterns
 - **Radix UI primitives** = Accessibility built-in (WCAG 2.1 AA compliant)
@@ -22,6 +23,7 @@
 **Decision**: Extend Tailwind config for static tokens, CSS variables for runtime theming.
 
 **Rationale**:
+
 - **Static tokens** (spacing, typography, breakpoints) → Tailwind config (build-time optimization)
 - **Dynamic tokens** (colors, theme switching) → CSS variables (runtime flexibility)
 - **Performance**: Tailwind purges unused classes at build time
@@ -31,6 +33,7 @@
 **Decision**: Migrate screen-by-screen with feature flag toggles, not big-bang.
 
 **Rationale**:
+
 - **Risk mitigation**: Rollback any screen independently if issues arise
 - **Parallel work**: Design exploration can happen alongside component building
 - **Testing continuity**: E2E tests continue running throughout migration
@@ -40,6 +43,7 @@
 **Decision**: Use CVA for component variants, not custom abstractions.
 
 **Rationale**:
+
 - **Industry standard** for Tailwind variant management
 - **Type-safe variants** with excellent TypeScript inference
 - **Composable**: Easy to extend variants without breaking existing usage
@@ -49,6 +53,7 @@
 **Decision**: Build interactive prototypes in code, not static mockups.
 
 **Rationale**:
+
 - **Faster iteration**: Changes are immediate, no design → code translation lag
 - **Real constraints**: Discover technical limitations early
 - **Component reuse**: Exploration work becomes production code

@@ -338,6 +338,7 @@ Tailwind's opacity modifiers (`bg-primary/50`) require RGB values. By using `rgb
 ### Why Not Use Tailwind's Built-in Colors?
 
 We extend built-in colors (gray-50, blue-600) with semantic names (background-primary, primary) for:
+
 - Better developer experience
 - Design system governance
 - Clear intent in code

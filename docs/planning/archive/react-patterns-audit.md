@@ -33,6 +33,7 @@ grep -r "exhaustive-deps" frontend/src/
 ```
 
 For each suppression:
+
 - Document why it exists
 - Determine if it's necessary
 - Identify refactoring opportunities
@@ -62,6 +63,7 @@ useEffect(() => {
 **3. Review Component State Patterns**
 
 Audit for:
+
 - Components with complex state logic that should use `useReducer`
 - Props that could be derived instead of stored in state
 - Parent-child state synchronization issues
@@ -70,6 +72,7 @@ Audit for:
 ### Deliverable
 
 Create `docs/technical/react-patterns-audit-findings.md` with:
+
 - List of all ESLint suppressions with justification status
 - Categorized list of anti-patterns found
 - Priority ranking for refactoring

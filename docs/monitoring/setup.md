@@ -5,11 +5,13 @@ This guide walks through setting up Grafana Cloud monitoring for Zebu production
 ## Overview
 
 Zebu uses **Grafana Cloud Free Tier** for:
+
 - **Loki**: Log aggregation from Docker containers
 - **Grafana**: Dashboards and visualization
 - **Alerts**: Critical issue notifications
 
 **Free Tier Limits**:
+
 - 50GB logs/month
 - 10,000 metric series
 - 14-day retention
@@ -82,6 +84,7 @@ sudo -E bash install-promtail.sh
 **Note**: The script uses `curl` instead of `wget` and static file paths instead of Docker API for better compatibility.
 
 The script will:
+
 - Download Promtail v2.9.3
 - Install to `/usr/local/bin/promtail`
 - Create configuration in `/etc/promtail/config.yml`
@@ -139,6 +142,7 @@ Should show parsed JSON fields in the log viewer.
 4. Click **Import**
 
 Repeat for:
+
 - `trading-activity.json`
 - `external-services.json`
 
@@ -158,9 +162,11 @@ If you prefer to build manually:
 2. Configure:
    - **Name**: High Error Rate - Backend
    - **Query**:
+
      ```logql
      rate({container="zebu-backend-prod"} | json | level="error" [5m])
      ```
+
    - **Condition**: `> 0.1` (more than 0.1 errors/second)
    - **For**: 5 minutes
    - **Summary**: Backend error rate is above threshold
@@ -172,9 +178,11 @@ If you prefer to build manually:
 2. Configure:
    - **Name**: Alpha Vantage Rate Limit Warning
    - **Query**:
+
      ```logql
      count_over_time({container="zebu-backend-prod"} |= "rate limit" [5m])
      ```
+
    - **Condition**: `> 0`
    - **For**: 1 minute
    - **Summary**: Alpha Vantage rate limit exceeded
@@ -186,9 +194,11 @@ If you prefer to build manually:
 2. Configure:
    - **Name**: Backend Service Health Check
    - **Query**:
+
      ```logql
      count_over_time({container="zebu-backend-prod"} [5m])
      ```
+
    - **Condition**: `< 10` (fewer than 10 log entries in 5 minutes)
    - **For**: 5 minutes
    - **Summary**: Backend service may be down
@@ -241,11 +251,13 @@ You should receive an alert notification within 5-6 minutes (5 min for condition
 ### No Logs Appearing in Grafana
 
 1. **Check Promtail is running**:
+
    ```bash
    sudo systemctl status promtail
    ```
 
 2. **Check Promtail logs for errors**:
+
    ```bash
    sudo journalctl -u promtail -n 100
    ```
@@ -253,6 +265,7 @@ You should receive an alert notification within 5-6 minutes (5 min for condition
    Look for authentication errors, network issues, or permission problems.
 
 3. **Verify Docker socket access**:
+
    ```bash
    ls -l /var/run/docker.sock
    ```
@@ -260,6 +273,7 @@ You should receive an alert notification within 5-6 minutes (5 min for condition
    Promtail needs read access to the Docker socket.
 
 4. **Check container names match**:
+
    ```bash
    docker ps --format "{{.Names}}"
    ```
@@ -269,6 +283,7 @@ You should receive an alert notification within 5-6 minutes (5 min for condition
 ### Logs Appearing But Not Parsed
 
 1. **Check JSON format**:
+
    ```bash
    docker logs zebu-backend-prod --tail 10
    ```
@@ -281,6 +296,7 @@ You should receive an alert notification within 5-6 minutes (5 min for condition
 2. **Update pipeline stages** in `/etc/promtail/config.yml` if log format changed
 
 3. **Restart Promtail** after config changes:
+
    ```bash
    sudo systemctl restart promtail
    ```

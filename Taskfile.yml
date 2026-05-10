@@ -749,3 +749,13 @@ tasks:
     desc: "Serve MkDocs documentation locally"
     cmds:
       - uvx --with pymdown-extensions --with mkdocs-material mkdocs serve
+
+  docs:fix:
+    desc: "Fix missing blank lines around Markdown lists/tables in docs/ + CLAUDE.md + README.md"
+    cmds:
+      - uv run --python 3.13 scripts/fix_md_blank_lines.py docs/ CLAUDE.md README.md
+
+  docs:check:
+    desc: "Check Markdown files for missing blank lines around lists/tables (CI-friendly; non-zero exit if changes needed)"
+    cmds:
+      - uv run --python 3.13 scripts/fix_md_blank_lines.py --check docs/ CLAUDE.md README.md
