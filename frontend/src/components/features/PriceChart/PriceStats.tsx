@@ -1,6 +1,9 @@
 /**
  * Price statistics display component
  * Shows current price, absolute change, and percentage change
+ *
+ * Uses editorial dark theme: tabular mono numerics, muted gain/loss tones,
+ * display-serif current price.
  */
 
 interface PriceStatsProps {
@@ -28,10 +31,10 @@ export function PriceStats({
   if (!hasValidData) {
     return (
       <div className="mb-4">
-        <div className="text-3xl font-bold text-gray-900 dark:text-white">
-          ---
+        <div className="font-display text-display-sm tabular-nums text-ink">
+          —
         </div>
-        <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <div className="mt-1 text-body-sm text-ink-subtle">
           Price data unavailable
         </div>
       </div>
@@ -39,9 +42,7 @@ export function PriceStats({
   }
 
   const isPositive = change >= 0
-  const colorClass = isPositive
-    ? 'text-green-600 dark:text-green-400'
-    : 'text-red-600 dark:text-red-400'
+  const colorClass = isPositive ? 'text-gain' : 'text-loss'
 
   const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('en-US', {
@@ -62,15 +63,15 @@ export function PriceStats({
   }
 
   return (
-    <div className="mb-4 flex items-baseline gap-4">
-      <div className="text-3xl font-bold text-gray-900 dark:text-white">
+    <div className="mb-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+      <div className="font-display tabular-nums text-display-sm text-ink">
         {formatCurrency(currentPrice)}
       </div>
-      <div className={`text-lg font-semibold ${colorClass}`}>
+      <div className={`font-tabular text-body-md ${colorClass}`}>
         {isPositive ? '+' : ''}
         {formatCurrency(change)}
       </div>
-      <div className={`text-lg font-semibold ${colorClass}`}>
+      <div className={`font-tabular text-body-md ${colorClass}`}>
         {formatPercent(changePercent)}
       </div>
     </div>

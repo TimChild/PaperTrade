@@ -4,6 +4,7 @@ import {
   formatPercent,
   formatNumber,
   formatDate,
+  formatClockTime,
 } from '@/utils/formatters'
 
 describe('formatters', () => {
@@ -126,6 +127,26 @@ describe('formatters', () => {
       expect(result).toContain('January') // Full month name
       expect(result).toContain('15')
       expect(result).toContain('2024')
+    })
+  })
+
+  describe('formatClockTime', () => {
+    it('formats epoch ms as HH:MM:SS in 24h', () => {
+      // 2024-01-15T14:23:08Z — exact UTC; assertion uses regex so the
+      // local timezone offset of the runner doesn't break the test.
+      const result = formatClockTime(Date.UTC(2024, 0, 15, 14, 23, 8))
+      expect(result).toMatch(/^\d{2}:\d{2}:\d{2}$/)
+    })
+
+    it('returns the placeholder for undefined / null / 0', () => {
+      expect(formatClockTime(undefined)).toBe('--:--:--')
+      expect(formatClockTime(null)).toBe('--:--:--')
+      expect(formatClockTime(0)).toBe('--:--:--')
+    })
+
+    it('returns the placeholder for non-finite values', () => {
+      expect(formatClockTime(NaN)).toBe('--:--:--')
+      expect(formatClockTime(Infinity)).toBe('--:--:--')
     })
   })
 })

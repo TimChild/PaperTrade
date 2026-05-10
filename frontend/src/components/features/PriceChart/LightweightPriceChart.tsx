@@ -34,10 +34,32 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { isApiError } from '@/utils/priceErrors'
 import { usePriceChartStore } from '@/stores/priceChartStore'
 
-// Trade marker colors
+/**
+ * Editorial chart palette (Wave 1).
+ *
+ * Cool slate/teal lines distinguish charts from the warm amber accent.
+ * Trade markers use muted gain/loss tones — paper-leaning, not neon.
+ */
+const CHART_COLORS = {
+  // Single-series line — slate teal (tracks --chart-line-1 in theme.css)
+  LINE_NEUTRAL: '#6da7b8',
+  // Subtle gain/loss line variants — only used when the series itself
+  // represents a delta. Match --gain / --loss tokens.
+  LINE_GAIN: '#6ba283',
+  LINE_LOSS: '#c46a64',
+  // Grid + axis tones — derived from --chart-grid / --chart-axis.
+  GRID_DARK: 'rgba(236, 231, 223, 0.06)',
+  GRID_LIGHT: 'rgba(12, 17, 22, 0.08)',
+  AXIS_DARK: 'rgba(236, 231, 223, 0.18)',
+  AXIS_LIGHT: 'rgba(12, 17, 22, 0.18)',
+  TEXT_DARK: '#82786f',
+  TEXT_LIGHT: '#666666',
+} as const
+
+// Trade marker colors — muted, paper-leaning gain/loss
 const TRADE_COLORS = {
-  BUY: '#10b981', // green-500
-  SELL: '#ef4444', // red-500
+  BUY: CHART_COLORS.LINE_GAIN,
+  SELL: CHART_COLORS.LINE_LOSS,
 } as const
 
 interface LightweightPriceChartProps {
@@ -175,51 +197,63 @@ export function LightweightPriceChart({
 
     const chart = createChart(chartContainerRef.current, {
       width: chartContainerRef.current.clientWidth,
-      height: 250,
+      height: 260,
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: isDark ? '#999999' : '#666666',
+        textColor: isDark ? CHART_COLORS.TEXT_DARK : CHART_COLORS.TEXT_LIGHT,
         attributionLogo: true, // TradingView attribution requirement
+        fontFamily:
+          'IBM Plex Mono, ui-monospace, SFMono-Regular, Menlo, monospace',
+        fontSize: 11,
       },
       grid: {
         vertLines: {
-          color: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-          style: LineStyle.Dashed,
+          color: isDark ? CHART_COLORS.GRID_DARK : CHART_COLORS.GRID_LIGHT,
+          style: LineStyle.Dotted,
         },
         horzLines: {
-          color: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-          style: LineStyle.Dashed,
+          color: isDark ? CHART_COLORS.GRID_DARK : CHART_COLORS.GRID_LIGHT,
+          style: LineStyle.Dotted,
         },
       },
       timeScale: {
         timeVisible: true,
-        borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+        borderColor: isDark ? CHART_COLORS.AXIS_DARK : CHART_COLORS.AXIS_LIGHT,
       },
       rightPriceScale: {
-        borderColor: isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+        borderColor: isDark ? CHART_COLORS.AXIS_DARK : CHART_COLORS.AXIS_LIGHT,
       },
       crosshair: {
         mode: 1, // Normal mode
+        vertLine: {
+          color: isDark ? 'rgba(212, 163, 65, 0.4)' : 'rgba(159, 116, 35, 0.4)',
+          width: 1,
+          style: LineStyle.Dashed,
+          labelBackgroundColor: isDark ? '#0c1116' : '#ece7df',
+        },
+        horzLine: {
+          color: isDark ? 'rgba(212, 163, 65, 0.4)' : 'rgba(159, 116, 35, 0.4)',
+          width: 1,
+          style: LineStyle.Dashed,
+          labelBackgroundColor: isDark ? '#0c1116' : '#ece7df',
+        },
       },
     })
 
     chartRef.current = chart
 
-    // Add line series
+    // Add line series — single neutral slate-teal tone. Direction is
+    // signaled by the PriceStats panel (gain/loss color), not the line.
     const lineSeries = chart.addSeries(LineSeries, {
-      color: priceStats?.isPositive
-        ? isDark
-          ? '#10b981'
-          : '#059669' // green
-        : isDark
-          ? '#ef4444'
-          : '#dc2626', // red
+      color: CHART_COLORS.LINE_NEUTRAL,
       lineWidth: 2,
       priceFormat: {
         type: 'price',
         precision: 2,
         minMove: 0.01,
       },
+      priceLineVisible: false,
+      lastValueVisible: true,
     })
 
     seriesRef.current = lineSeries
@@ -248,7 +282,11 @@ export function LightweightPriceChart({
       seriesRef.current = null
       markersRef.current = null
     }
-  }, [effectiveTheme, priceStats?.isPositive])
+    // We re-init on theme change. We also re-run when priceStats first
+    // appears so that the chart container ref (which is only mounted in
+    // the data render branch) gets picked up after the initial fetch
+    // settles. Boolean coercion keeps the dep stable across direction flips.
+  }, [effectiveTheme, Boolean(priceStats)])
 
   // Update chart data when it changes
   useEffect(() => {

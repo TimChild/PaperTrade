@@ -56,7 +56,8 @@ describe('TradeForm', () => {
       renderWithProviders(<TradeForm onSubmit={mockOnSubmit} />)
 
       const buyButton = screen.getByTestId('trade-form-action-buy')
-      expect(buyButton).toHaveClass('bg-primary')
+      // Editorial primary action = amber. Was `bg-primary` pre-revamp.
+      expect(buyButton).toHaveClass('bg-amber')
     })
 
     it('should submit BUY order with correct data', async () => {
@@ -102,7 +103,8 @@ describe('TradeForm', () => {
       const sellButton = screen.getByTestId('trade-form-action-sell')
       await user.click(sellButton)
 
-      expect(sellButton).toHaveClass('bg-negative')
+      // Editorial loss tone = `bg-loss`. Was `bg-negative` pre-revamp.
+      expect(sellButton).toHaveClass('bg-loss')
     })
 
     it('should display owned quantity when SELL action and ticker selected', async () => {
@@ -225,7 +227,7 @@ describe('TradeForm', () => {
 
       // Should be in SELL mode
       const sellButton = screen.getByTestId('trade-form-action-sell')
-      expect(sellButton).toHaveClass('bg-negative')
+      expect(sellButton).toHaveClass('bg-loss')
 
       // Should pre-fill ticker and quantity
       const tickerInput = screen.getByTestId(
@@ -256,7 +258,7 @@ describe('TradeForm', () => {
 
       // Initially should be BUY mode
       expect(screen.getByTestId('trade-form-action-buy')).toHaveClass(
-        'bg-primary'
+        'bg-amber'
       )
 
       // Remount with new key and quick sell initial values
@@ -284,7 +286,7 @@ describe('TradeForm', () => {
       expect(tickerInput.value).toBe('MSFT')
       expect(quantityInput.value).toBe('50')
       expect(screen.getByTestId('trade-form-action-sell')).toHaveClass(
-        'bg-negative'
+        'bg-loss'
       )
     })
   })

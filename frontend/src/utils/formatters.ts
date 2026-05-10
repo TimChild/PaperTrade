@@ -120,3 +120,26 @@ export function formatDate(
     year: 'numeric',
   }).format(date)
 }
+
+/**
+ * Format an epoch milliseconds timestamp as `HH:MM:SS` for use in
+ * "last updated" captions. Returns `--` when the timestamp is invalid
+ * or zero (e.g. before the first fetch settles).
+ */
+export function formatClockTime(epochMs: number | undefined | null): string {
+  if (
+    epochMs === null ||
+    epochMs === undefined ||
+    !Number.isFinite(epochMs) ||
+    epochMs === 0
+  ) {
+    return '--:--:--'
+  }
+  const date = new Date(epochMs)
+  return new Intl.DateTimeFormat('en-US', {
+    hour12: false,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(date)
+}

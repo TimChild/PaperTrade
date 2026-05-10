@@ -1,5 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { useRef, useState } from 'react'
+import { ArrowLeft, ArrowUpRight } from 'lucide-react'
 import {
   usePortfolio,
   usePortfolioBalance,
@@ -7,13 +8,15 @@ import {
 } from '@/hooks/usePortfolio'
 import { useHoldings } from '@/hooks/useHoldings'
 import { useTransactions } from '@/hooks/useTransactions'
-import { PortfolioSummaryCard } from '@/components/features/portfolio/PortfolioSummaryCard'
 import { HoldingsTable } from '@/components/features/portfolio/HoldingsTable'
 import { TransactionList } from '@/components/features/portfolio/TransactionList'
 import { TradeForm } from '@/components/features/portfolio/TradeForm'
 import { LightweightPriceChart } from '@/components/features/PriceChart'
+import { PortfolioHero } from '@/components/features/portfolio/PortfolioHero'
 import { PortfolioDetailSkeleton } from '@/components/features/portfolio/PortfolioDetailSkeleton'
 import { ErrorDisplay } from '@/components/ui/ErrorDisplay'
+import { Eyebrow } from '@/components/ui/Eyebrow'
+import { SectionHeader } from '@/components/ui/SectionHeader'
 import {
   adaptPortfolio,
   adaptHolding,
@@ -23,6 +26,21 @@ import { formatTradeError } from '@/utils/errorFormatters'
 import { toasts } from '@/utils/toast'
 import type { TradeRequest } from '@/services/api/types'
 
+/**
+ * PortfolioDetail — Wave 1 lighthouse for the editorial dark theme.
+ *
+ * Layout philosophy:
+ *   - The page is composed as an editorial document, not a dashboard. The
+ *     hero (total value) is the strongest moment and gets the largest
+ *     display-serif number on the page.
+ *   - Sections are separated by generous whitespace and hairline rules,
+ *     not card chrome. Holdings live in a hairline-bordered table; the
+ *     trade form sits in a flush panel; transactions in another.
+ *   - A single staggered page-load reveal cascades from the eyebrow → hero
+ *     number → secondary stats → main content. We do NOT animate hover
+ *     states or per-cell transitions; the editorial mood is "considered",
+ *     not "kinetic".
+ */
 export function PortfolioDetail(): React.JSX.Element {
   const { id } = useParams<{ id: string }>()
   const portfolioId = id || ''
@@ -40,8 +58,11 @@ export function PortfolioDetail(): React.JSX.Element {
     isError,
     error,
   } = usePortfolio(portfolioId)
-  const { data: balanceData, isLoading: balanceLoading } =
-    usePortfolioBalance(portfolioId)
+  const {
+    data: balanceData,
+    isLoading: balanceLoading,
+    dataUpdatedAt: balanceUpdatedAt,
+  } = usePortfolioBalance(portfolioId)
   const { data: holdingsData, isLoading: holdingsLoading } =
     useHoldings(portfolioId)
   const { data: transactionsData, isLoading: transactionsLoading } =
@@ -80,15 +101,12 @@ export function PortfolioDetail(): React.JSX.Element {
   }
 
   const handleQuickSell = (ticker: string, quantity: number) => {
-    // Set quick sell state
     setQuickSellState({
       action: 'SELL',
       ticker,
       quantity: quantity.toString(),
       date: '',
     })
-
-    // Scroll to trade form with smooth behavior
     setTimeout(() => {
       tradeFormRef.current?.scrollIntoView({
         behavior: 'smooth',
@@ -103,7 +121,6 @@ export function PortfolioDetail(): React.JSX.Element {
     price?: number
   }) => {
     const today = new Date().toISOString().split('T')[0]
-    // Only use backtest mode for historical dates, not today
     const isHistorical = data.date !== today
 
     setQuickSellState({
@@ -113,7 +130,6 @@ export function PortfolioDetail(): React.JSX.Element {
       date: isHistorical ? data.date : '',
     })
 
-    // Scroll to trade form so user can enter quantity and submit
     setTimeout(() => {
       tradeFormRef.current?.scrollIntoView({
         behavior: 'smooth',
@@ -124,145 +140,194 @@ export function PortfolioDetail(): React.JSX.Element {
 
   if (isError) {
     return (
-      <div className="min-h-screen bg-background-primary px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
-        <div className="max-w-screen-2xl mx-auto">
-          <ErrorDisplay error={error} />
-          <Link
-            to="/dashboard"
-            className="mt-4 inline-block text-primary hover:underline text-sm sm:text-base"
-          >
-            ← Back to Dashboard
-          </Link>
-        </div>
-      </div>
+      <PageFrame>
+        <ErrorDisplay error={error} />
+        <Link
+          to="/dashboard"
+          className="mt-4 inline-flex items-center gap-1.5 text-amber hover:text-amber-hover text-body-sm"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to Dashboard
+        </Link>
+      </PageFrame>
     )
   }
 
   if (portfolioLoading) {
     return (
-      <div className="min-h-screen bg-background-primary px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
-        <div className="max-w-screen-2xl mx-auto">
-          <PortfolioDetailSkeleton />
-        </div>
-      </div>
+      <PageFrame>
+        <PortfolioDetailSkeleton />
+      </PageFrame>
     )
   }
 
   return (
-    <div className="min-h-screen bg-background-primary px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
-      <div className="max-w-screen-2xl mx-auto">
-        {/* Header with navigation */}
-        <div className="mb-6 sm:mb-8">
-          <Link
-            to="/dashboard"
-            data-testid="portfolio-detail-back-link"
-            className="mb-3 sm:mb-4 inline-flex items-center text-primary hover:underline text-sm sm:text-base"
+    <PageFrame>
+      {/* ─── Top nav row ─── */}
+      <div
+        className="flex flex-wrap items-center justify-between gap-3 reveal"
+        style={{ ['--reveal-delay' as string]: '0ms' }}
+      >
+        <Link
+          to="/dashboard"
+          data-testid="portfolio-detail-back-link"
+          className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink text-body-sm transition-colors"
+          style={{ minHeight: 'auto' }}
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Dashboard
+        </Link>
+        <Link
+          to={`/portfolio/${portfolioId}/analytics`}
+          data-testid="analytics-tab"
+          className="inline-flex items-center gap-1.5 border border-hairline-strong rounded-editorial px-3 py-2 text-body-sm text-ink hover:border-amber hover:text-amber transition-colors"
+          style={{ minHeight: 'auto' }}
+        >
+          Analytics
+          <ArrowUpRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
+
+      {/* ─── Editorial header (eyebrow + name) ─── */}
+      <header
+        className="mt-8 sm:mt-10 reveal"
+        style={{ ['--reveal-delay' as string]: '60ms' }}
+      >
+        <Eyebrow>Portfolio</Eyebrow>
+        <h1
+          className="font-display text-display-md sm:text-display-lg tracking-tight text-ink mt-1"
+          data-testid="portfolio-detail-name"
+        >
+          {portfolio?.name || 'Portfolio Details'}
+        </h1>
+      </header>
+
+      {/* ─── Hairline rule under the header — separates header from data ─── */}
+      <div
+        className="mt-6 sm:mt-8 border-t border-hairline reveal"
+        style={{ ['--reveal-delay' as string]: '90ms' }}
+      />
+
+      {/* ─── Hero band: total value + daily change + cash + holdings ─── */}
+      <div className="mt-6 sm:mt-8">
+        <PortfolioHero
+          portfolio={portfolio}
+          lastUpdatedAt={balanceUpdatedAt}
+          isLoading={balanceLoading || !portfolio}
+        />
+      </div>
+
+      {/* ─── Hairline divider before the main grid ─── */}
+      <div
+        className="mt-10 sm:mt-12 border-t border-hairline reveal"
+        style={{ ['--reveal-delay' as string]: '300ms' }}
+      />
+
+      {/* ─── Two-column grid: data on the left, trade rail on the right ─── */}
+      <div className="mt-6 sm:mt-10 grid gap-10 lg:gap-14 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="space-y-12 sm:space-y-16 min-w-0">
+          {/* Holdings */}
+          <section
+            className="reveal"
+            style={{ ['--reveal-delay' as string]: '360ms' }}
           >
-            ← Back to Dashboard
-          </Link>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-            <h1
-              className="text-2xl sm:text-3xl lg:text-heading-xl text-foreground-primary"
-              data-testid="portfolio-detail-name"
+            <SectionHeader
+              eyebrow="Positions"
+              title="Holdings"
+              size="sm"
+              description={
+                holdings.length > 0
+                  ? `${holdings.length} active position${holdings.length === 1 ? '' : 's'}.`
+                  : undefined
+              }
+            />
+            <HoldingsTable
+              holdings={holdings}
+              holdingsDTO={holdingsData?.holdings}
+              isLoading={holdingsLoading}
+              onQuickSell={handleQuickSell}
+            />
+          </section>
+
+          {/* Performance — chart for each holding */}
+          {holdings.length > 0 && (
+            <section
+              className="reveal"
+              style={{ ['--reveal-delay' as string]: '420ms' }}
             >
-              {portfolio?.name || 'Portfolio Details'}
-            </h1>
-            <Link
-              to={`/portfolio/${portfolioId}/analytics`}
-              data-testid="analytics-tab"
-              className="inline-flex items-center justify-center rounded-button bg-primary text-white px-4 py-2.5 hover:bg-primary-hover shadow-card transition-colors text-sm sm:text-base w-full sm:w-auto"
-            >
-              View Analytics
-            </Link>
-          </div>
+              <SectionHeader
+                eyebrow="Trajectory"
+                title="Performance"
+                size="sm"
+                description="Trade markers overlay each chart. Click any point to seed a new trade."
+              />
+              <div className="space-y-8">
+                {holdings.map((holding) => (
+                  <LightweightPriceChart
+                    key={holding.ticker}
+                    ticker={holding.ticker}
+                    portfolioId={portfolioId}
+                    onChartClick={handleChartClick}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Transactions */}
+          <section
+            className="reveal"
+            style={{ ['--reveal-delay' as string]: '480ms' }}
+          >
+            <SectionHeader
+              eyebrow="Ledger"
+              title="Transaction history"
+              size="sm"
+            />
+            <TransactionList
+              transactions={transactions}
+              isLoading={transactionsLoading}
+              showSearch={true}
+            />
+          </section>
         </div>
 
-        <div className="grid gap-4 sm:gap-6 lg:gap-card-gap grid-cols-1 lg:grid-cols-3">
-          {/* Main Content */}
-          <div className="space-y-4 sm:space-y-6 lg:space-y-card-gap lg:col-span-2">
-            {/* Portfolio Summary */}
-            <section>
-              {balanceLoading || !portfolio ? (
-                <PortfolioSummaryCard
-                  portfolio={{
-                    id: '',
-                    name: 'Loading...',
-                    userId: '',
-                    cashBalance: 0,
-                    totalValue: 0,
-                    dailyChange: 0,
-                    dailyChangePercent: 0,
-                    createdAt: '',
-                  }}
-                  isLoading={true}
-                />
-              ) : (
-                <PortfolioSummaryCard portfolio={portfolio} />
-              )}
-            </section>
+        {/* Trade rail */}
+        <aside
+          className="reveal"
+          style={{ ['--reveal-delay' as string]: '420ms' }}
+        >
+          <section ref={tradeFormRef} className="lg:sticky lg:top-6">
+            <SectionHeader eyebrow="New trade" title="Place order" size="sm" />
+            <TradeForm
+              key={`${quickSellState.action}-${quickSellState.ticker}-${quickSellState.quantity}-${quickSellState.date}`}
+              onSubmit={handleTradeSubmit}
+              isSubmitting={executeTrade.isPending}
+              holdings={holdings}
+              initialAction={quickSellState.action}
+              initialTicker={quickSellState.ticker}
+              initialQuantity={quickSellState.quantity}
+              initialDate={quickSellState.date}
+            />
+          </section>
+        </aside>
+      </div>
+    </PageFrame>
+  )
+}
 
-            {/* Performance Chart - Show charts for each holding */}
-            {holdings.length > 0 && (
-              <section>
-                <h2 className="mb-3 sm:mb-4 text-lg sm:text-xl lg:text-heading-lg text-foreground-primary">
-                  Performance
-                </h2>
-                <div className="space-y-4 sm:space-y-6 lg:space-y-card-gap">
-                  {holdings.map((holding) => (
-                    <LightweightPriceChart
-                      key={holding.ticker}
-                      ticker={holding.ticker}
-                      portfolioId={portfolioId}
-                      onChartClick={handleChartClick}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* Holdings */}
-            <section>
-              <h2 className="mb-3 sm:mb-4 text-lg sm:text-xl lg:text-heading-lg text-foreground-primary">
-                Holdings
-              </h2>
-              <HoldingsTable
-                holdings={holdings}
-                holdingsDTO={holdingsData?.holdings}
-                isLoading={holdingsLoading}
-                onQuickSell={handleQuickSell}
-              />
-            </section>
-
-            {/* Transaction History */}
-            <section>
-              <h2 className="mb-3 sm:mb-4 text-lg sm:text-xl lg:text-heading-lg text-foreground-primary">
-                Transaction History
-              </h2>
-              <TransactionList
-                transactions={transactions}
-                isLoading={transactionsLoading}
-                showSearch={true}
-              />
-            </section>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-4 sm:space-y-6 lg:space-y-card-gap lg:col-span-1">
-            {/* Trade Form */}
-            <section ref={tradeFormRef}>
-              <TradeForm
-                key={`${quickSellState.action}-${quickSellState.ticker}-${quickSellState.quantity}-${quickSellState.date}`}
-                onSubmit={handleTradeSubmit}
-                isSubmitting={executeTrade.isPending}
-                holdings={holdings}
-                initialAction={quickSellState.action}
-                initialTicker={quickSellState.ticker}
-                initialQuantity={quickSellState.quantity}
-                initialDate={quickSellState.date}
-              />
-            </section>
-          </div>
-        </div>
+/**
+ * PageFrame — the editorial outer wrapper. Generous side gutters, max
+ * width that prevents lines of body text from getting too long but lets
+ * the holdings table stretch when there are many columns.
+ */
+function PageFrame({
+  children,
+}: {
+  children: React.ReactNode
+}): React.JSX.Element {
+  return (
+    <div className="min-h-screen bg-canvas">
+      <div className="mx-auto max-w-[1240px] px-5 sm:px-8 lg:px-12 py-8 sm:py-12 lg:py-16">
+        {children}
       </div>
     </div>
   )

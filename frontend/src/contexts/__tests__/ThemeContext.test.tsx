@@ -48,13 +48,14 @@ describe('ThemeContext', () => {
     })
   })
 
-  it('defaults to system theme when no stored preference exists', () => {
+  it('defaults to dark theme when no stored preference exists', () => {
+    // Zebu is dark-only by design (Tim, 2026-05-09). Was `system` pre-revamp.
     render(
       <ThemeProvider>
         <TestComponent />
       </ThemeProvider>
     )
-    expect(screen.getByTestId('theme')).toHaveTextContent('system')
+    expect(screen.getByTestId('theme')).toHaveTextContent('dark')
   })
 
   it('loads stored theme preference from localStorage', () => {
@@ -107,22 +108,22 @@ describe('ThemeContext', () => {
       </ThemeProvider>
     )
 
-    // Start with system
-    expect(screen.getByTestId('theme')).toHaveTextContent('system')
-
-    // Switch to dark
-    fireEvent.click(screen.getByTestId('set-dark'))
+    // Start with dark (new default — Zebu is dark-only)
     expect(screen.getByTestId('theme')).toHaveTextContent('dark')
-    expect(screen.getByTestId('effective-theme')).toHaveTextContent('dark')
 
     // Switch to light
     fireEvent.click(screen.getByTestId('set-light'))
     expect(screen.getByTestId('theme')).toHaveTextContent('light')
     expect(screen.getByTestId('effective-theme')).toHaveTextContent('light')
 
-    // Switch back to system
+    // Switch to system
     fireEvent.click(screen.getByTestId('set-system'))
     expect(screen.getByTestId('theme')).toHaveTextContent('system')
+
+    // Switch back to dark
+    fireEvent.click(screen.getByTestId('set-dark'))
+    expect(screen.getByTestId('theme')).toHaveTextContent('dark')
+    expect(screen.getByTestId('effective-theme')).toHaveTextContent('dark')
   })
 
   it('resolves system theme based on media query', () => {
@@ -138,13 +139,15 @@ describe('ThemeContext', () => {
       })),
     })
 
+    // Explicitly set 'system' first since the new default is 'dark'.
+    localStorage.setItem('theme', 'system')
+
     render(
       <ThemeProvider>
         <TestComponent />
       </ThemeProvider>
     )
 
-    // Should default to system
     expect(screen.getByTestId('theme')).toHaveTextContent('system')
     // Should resolve to dark based on media query
     expect(screen.getByTestId('effective-theme')).toHaveTextContent('dark')
@@ -175,6 +178,10 @@ describe('ThemeContext', () => {
         dispatchEvent: vi.fn(),
       })),
     })
+
+    // Explicitly set 'system' first — the new default is 'dark', and
+    // listener registration only happens for 'system'.
+    localStorage.setItem('theme', 'system')
 
     render(
       <ThemeProvider>

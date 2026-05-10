@@ -1,96 +1,158 @@
+/*
+ * Zebu — Editorial Dark Theme tokens (Wave 1).
+ *
+ * Single source of truth for the editorial dark aesthetic. Tone:
+ * Bloomberg Businessweek meets Stripe documentation — "considered analysis"
+ * rather than frenetic day-trading.
+ *
+ * Conventions:
+ *   - Editorial tokens are exposed under `--canvas`, `--ink`, `--accent-*`,
+ *     etc. Legacy shadcn `--background`, `--foreground`, `--primary` etc.
+ *     map onto the editorial palette so existing components don't need
+ *     migration during Wave 1.
+ *   - Chart palette is intentionally cool (slate / teal) to distinguish from
+ *     the warm accent.
+ *   - Dark theme is the default. A light override exists ONLY because
+ *     ThemeContext expects both class hooks; values are deliberately less
+ *     polished to nudge people toward dark mode.
+ *
+ * If you change a token here, also update tailwind.config.ts (which
+ * references these custom properties via the same names).
+ */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    color-scheme: light dark;
+    /* ---- Editorial dark theme (default) ---- */
 
-    /* Light mode (default) - HSL values for shadcn/ui compatibility */
-    --background: 0 0% 100%; /* white */
-    --foreground: 222 47% 11%; /* gray-900 */
+    /* Canvas — deep blue-black, NOT pure black. Warm-leaning ink. */
+    --canvas: 215 23% 6.5%;
+    --canvas-raised: 215 18% 9%;
+    --canvas-sunken: 215 26% 4.5%;
 
-    --primary: 221 83% 53%; /* blue-600 */
-    --primary-foreground: 0 0% 100%;
+    /* Ink — paper-warm off-white for body text */
+    --ink: 36 18% 92%;
+    --ink-muted: 32 9% 70%;
+    --ink-subtle: 30 6% 50%;
+    --ink-faint: 220 8% 28%;
 
-    --positive: 142 71% 45%; /* green-600 */
-    --negative: 0 84% 60%; /* red-600 */
+    /* Accent — warm amber/gold, used SPARINGLY for key data */
+    --accent-amber: 39 58% 54%;
+    --accent-amber-hover: 39 65% 60%;
+    --accent-amber-soft: 39 50% 18%;
 
-    --muted: 210 40% 96%; /* gray-50 */
-    --muted-foreground: 215 16% 47%; /* gray-600 */
+    /* Semantic — muted, paper-leaning. Not screaming neon. */
+    --gain: 145 27% 50%;
+    --gain-soft: 145 25% 16%;
+    --loss: 4 56% 56%;
+    --loss-soft: 4 35% 16%;
 
-    --accent: 210 40% 96%; /* gray-50 */
-    --accent-foreground: 222 47% 11%;
+    /* Charts — cool slate / teal palette */
+    --chart-line-1: 195 35% 52%;
+    --chart-line-2: 215 28% 55%;
+    --chart-line-3: 175 30% 48%;
+    --chart-line-4: 230 22% 60%;
+    --chart-grid: 215 15% 14%;
+    --chart-axis: 215 12% 38%;
+    --chart-crosshair: 36 18% 92%;
 
-    --border: 214 32% 91%; /* gray-200 */
-    --input: 214 32% 91%;
+    /* Hairline borders */
+    --hairline: 215 12% 17%;
+    --hairline-strong: 215 14% 22%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    /* Type — variable font sources */
+    --font-display:
+      'Fraunces Variable', 'EB Garamond', 'PT Serif', Georgia, serif;
+    --font-sans:
+      'IBM Plex Sans Variable', 'IBM Plex Sans', system-ui, sans-serif;
+    --font-mono:
+      'IBM Plex Mono', ui-monospace, SFMono-Regular, 'Menlo', monospace;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+    /* Motion */
+    --ease-editorial: cubic-bezier(0.22, 1, 0.36, 1);
+    --duration-instant: 80ms;
+    --duration-quick: 180ms;
+    --duration-considered: 420ms;
+    --duration-page-reveal: 640ms;
 
-    --ring: 221 83% 53%;
+    /* Legacy shadcn HSL variables — map onto editorial palette */
+    --background: var(--canvas);
+    --foreground: var(--ink);
+    --primary: var(--accent-amber);
+    --primary-foreground: 215 23% 6.5%;
+    --positive: var(--gain);
+    --negative: var(--loss);
+    --muted: var(--canvas-raised);
+    --muted-foreground: var(--ink-muted);
+    --accent: var(--canvas-raised);
+    --accent-foreground: var(--ink);
+    --border: var(--hairline);
+    --input: var(--canvas-raised);
+    --card: var(--canvas-raised);
+    --card-foreground: var(--ink);
+    --destructive: var(--loss);
+    --destructive-foreground: var(--ink);
+    --ring: var(--accent-amber);
 
-    /* Legacy RGB values for backward compatibility */
-    --color-background-primary: 249 250 251; /* gray-50 */
-    --color-background-secondary: 255 255 255; /* white */
-    --color-text-primary: 17 24 39; /* gray-900 */
-    --color-text-secondary: 107 114 128; /* gray-600 */
-    --color-text-tertiary: 156 163 175; /* gray-500 */
+    /* Legacy RGB (still referenced in places) */
+    --color-background-primary: 12 17 22;
+    --color-background-secondary: 19 24 31;
+    --color-text-primary: 236 231 223;
+    --color-text-secondary: 178 169 158;
+    --color-text-tertiary: 130 124 116;
+
+    color-scheme: dark;
   }
 
+  /* `.dark` is what ThemeContext applies — no-op since defaults are dark. */
   .dark {
-    /* Background hierarchy - Data Dense inspired */
-    --background: 222 16% 8%; /* Deep charcoal #13151a */
-    --foreground: 210 20% 98%; /* Off-white text */
+    color-scheme: dark;
+  }
 
-    --primary: 212 100% 48%; /* Bright blue #0078f2 */
-    --primary-foreground: 0 0% 100%;
+  /*
+   * Light fallback — kept only so `theme === 'light'` from ThemeContext
+   * doesn't render unstyled. Zebu is dark-only by design.
+   */
+  .light {
+    --canvas: 36 24% 95%;
+    --canvas-raised: 36 30% 92%;
+    --canvas-sunken: 36 22% 97%;
+    --ink: 215 30% 12%;
+    --ink-muted: 215 16% 32%;
+    --ink-subtle: 215 12% 50%;
+    --ink-faint: 215 10% 80%;
+    --hairline: 215 12% 86%;
+    --hairline-strong: 215 14% 76%;
+    --chart-grid: 215 15% 88%;
+    --chart-axis: 215 12% 50%;
+    --chart-crosshair: 215 30% 12%;
 
-    --positive: 142 71% 45%; /* Green for gains */
-    --negative: 0 84% 60%; /* Red for losses */
-
-    --muted: 222 16% 12%; /* Slightly lighter bg */
-    --muted-foreground: 215 16% 65%; /* Muted text */
-
-    --accent: 222 16% 16%; /* Hover backgrounds */
-    --accent-foreground: 210 20% 98%;
-
-    --border: 222 16% 20%; /* Subtle borders */
-    --input: 222 16% 16%;
-
-    --card: 222 16% 10%; /* Card backgrounds */
-    --card-foreground: 210 20% 98%;
-
-    --destructive: 0 84% 60%; /* Error/destructive actions */
-    --destructive-foreground: 0 0% 100%;
-
-    --ring: 212 100% 48%;
-
-    /* Legacy RGB values */
-    --color-background-primary: 19 21 26; /* Deep charcoal */
-    --color-background-secondary: 25 27 33; /* Card bg */
-    --color-text-primary: 243 244 246; /* gray-100 */
-    --color-text-secondary: 156 163 175; /* gray-400 */
-    --color-text-tertiary: 107 114 128; /* gray-500 */
+    color-scheme: light;
   }
 
   /* Responsive base font size */
   html {
-    font-size: 14px; /* Base for mobile */
+    font-size: 14px;
   }
 
   @media (min-width: 640px) {
     html {
-      font-size: 16px; /* Standard for desktop */
+      font-size: 16px;
     }
   }
 
   body {
-    @apply bg-background text-foreground;
-    @apply min-h-screen font-sans antialiased;
+    font-family: var(--font-sans);
+    font-feature-settings: 'ss01', 'ss02', 'cv11', 'kern';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: hsl(var(--canvas));
+    color: hsl(var(--ink));
+    text-rendering: optimizeLegibility;
+    @apply min-h-screen;
   }
 
   /* Ensure minimum touch target size (44x44px) for accessibility */
@@ -102,20 +164,125 @@
     min-height: 44px;
   }
 
-  /* Smooth theme transitions */
-  * {
-    transition-property: background-color, border-color, color, fill, stroke;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 150ms;
+  /* Subtle theme transitions — color-only, no transforms */
+  body * {
+    transition-property:
+      background-color, border-color, color, fill, stroke, opacity;
+    transition-timing-function: var(--ease-editorial);
+    transition-duration: var(--duration-quick);
   }
 
-  /* Disable transitions for theme toggle to prevent flash */
   .theme-transition-disable * {
     transition: none !important;
+  }
+
+  /*
+   * Display headings — apply via .font-display utility. The Fraunces
+   * optical-size axis lets large display sizes get the sharper "display"
+   * cut without swapping fonts.
+   */
+  .font-display {
+    font-family: var(--font-display);
+    font-variation-settings:
+      'opsz' 144,
+      'SOFT' 0,
+      'WONK' 0;
+    letter-spacing: -0.02em;
+    font-feature-settings: 'ss01';
+  }
+
+  /*
+   * Editorial eyebrow — small caps + tracking + low saturation. Pair above
+   * a display-font heading.
+   */
+  .font-eyebrow {
+    font-family: var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: hsl(var(--ink-muted));
+  }
+
+  /* Tabular mono — for any numeric financial data */
+  .font-tabular {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+    letter-spacing: -0.01em;
+  }
+
+  /* Fine-print caption (e.g. "Last updated: 14:23:08") */
+  .font-caption {
+    font-family: var(--font-sans);
+    font-size: 0.6875rem;
+    line-height: 1rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: hsl(var(--ink-subtle));
+  }
+
+  /* Subtle hover transitions on interactive elements */
+  a,
+  button {
+    transition:
+      color var(--duration-quick) var(--ease-editorial),
+      background-color var(--duration-quick) var(--ease-editorial),
+      border-color var(--duration-quick) var(--ease-editorial),
+      opacity var(--duration-quick) var(--ease-editorial);
+  }
+
+  /* Selection — paper warm on dark canvas */
+  ::selection {
+    background-color: hsl(var(--accent-amber) / 0.35);
+    color: hsl(var(--ink));
+  }
+
+  /*
+   * Page-load reveal: single staggered cascade. Children set their stagger
+   * via `--reveal-delay` (in ms). Used by PortfolioDetail to orchestrate
+   * the page-load reveal — header → hero number → holdings → chart.
+   */
+  @keyframes editorial-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .reveal {
+    animation: editorial-reveal var(--duration-considered) var(--ease-editorial)
+      both;
+    animation-delay: var(--reveal-delay, 0ms);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal {
+      animation: none;
+    }
   }
 }
 
 @layer utilities {
+  /* Hairline border colors */
+  .border-hairline {
+    border-color: hsl(var(--hairline));
+  }
+
+  .border-hairline-strong {
+    border-color: hsl(var(--hairline-strong));
+  }
+
+  /* Tabular numbers utility */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+
   /* Pulse animation for newly added transactions */
   @keyframes pulse-highlight {
     0%,
@@ -123,7 +290,7 @@
       background-color: transparent;
     }
     50% {
-      background-color: hsl(var(--primary) / 0.1);
+      background-color: hsl(var(--accent-amber) / 0.1);
     }
   }
 

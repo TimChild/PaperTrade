@@ -37,7 +37,13 @@ vi.mock('lightweight-charts', () => ({
     setMarkers: vi.fn(),
   })),
   ColorType: { Solid: 0 },
-  LineStyle: { Dashed: 0 },
+  LineStyle: {
+    Solid: 0,
+    Dotted: 1,
+    Dashed: 2,
+    LargeDashed: 3,
+    SparseDotted: 4,
+  },
   LineSeries: 'LineSeries',
 }))
 
