@@ -22,6 +22,12 @@ from zebu.adapters.inbound.api.portfolios import router as portfolios_router
 from zebu.adapters.inbound.api.prices import router as prices_router
 from zebu.adapters.inbound.api.schemas import ErrorResponse
 from zebu.adapters.inbound.api.strategies import router as strategies_router
+from zebu.adapters.inbound.api.strategy_activations import (
+    activations_router as strategy_activations_router,
+)
+from zebu.adapters.inbound.api.strategy_activations import (
+    strategies_router as strategy_activation_strategies_router,
+)
 from zebu.adapters.inbound.api.transactions import router as transactions_router
 from zebu.infrastructure.database import init_db
 from zebu.infrastructure.logging import setup_structlog
@@ -152,6 +158,11 @@ app.include_router(analytics_router, prefix="/api/v1")
 app.include_router(analytics_admin_router, prefix="/api/v1")
 app.include_router(debug_router, prefix="/api/v1")
 app.include_router(strategies_router, prefix="/api/v1")
+# Phase C1.3 — strategy activation routes split across two prefixes:
+# ``/strategies/{id}/activate``, ``/strategies/{id}/activation``, and the
+# /activations/* family. Both share the same module + tag.
+app.include_router(strategy_activation_strategies_router, prefix="/api/v1")
+app.include_router(strategy_activations_router, prefix="/api/v1")
 app.include_router(backtests_router, prefix="/api/v1")
 app.include_router(exploration_tasks_router, prefix="/api/v1")
 app.include_router(api_keys_router, prefix="/api/v1")

@@ -22,6 +22,12 @@ from zebu.adapters.outbound.database.portfolio_repository import (
 from zebu.adapters.outbound.database.snapshot_repository import (
     SQLModelSnapshotRepository,
 )
+from zebu.adapters.outbound.database.strategy_activation_repository import (
+    SQLModelStrategyActivationRepository,
+)
+from zebu.adapters.outbound.database.strategy_repository import (
+    SQLModelStrategyRepository,
+)
 from zebu.adapters.outbound.database.transaction_repository import (
     SQLModelTransactionRepository,
 )
@@ -33,6 +39,9 @@ from zebu.application.queries.get_active_tickers import (
     GetActiveTickersQuery,
 )
 from zebu.application.services.snapshot_job import SnapshotJobService
+from zebu.application.services.strategy_execution_service import (
+    StrategyExecutionService,
+)
 from zebu.infrastructure.database import async_session_maker
 
 logger = logging.getLogger("uvicorn.error")  # Use uvicorn's configured logger
@@ -58,6 +67,8 @@ class SchedulerConfig:
         batch_delay_seconds: int = 60,
         max_age_hours: int = 24,
         active_stock_days: int = 30,
+        strategy_execution_cron: str = "30 0 * * 1-5",
+        strategy_execution_enabled: bool = True,
     ) -> None:
         """Initialize scheduler configuration.
 
@@ -70,6 +81,17 @@ class SchedulerConfig:
             batch_delay_seconds: Delay between batches
             max_age_hours: Refresh if price older than this
             active_stock_days: Consider stocks traded in last N days
+            strategy_execution_cron: Cron expression for the live strategy
+                execution job (Phase C1.2). Defaults to 00:30 UTC Mon-Fri,
+                which sits ~30 minutes after the price-refresh job at 00:00
+                UTC so today's prices are warm before strategies fire. The
+                weekday-only restriction matches ``DAILY_MARKET_CLOSE`` —
+                US markets are closed on weekends so a weekend run would
+                reuse stale Friday prices.
+            strategy_execution_enabled: When False, the strategy execution
+                job is not registered. Useful for tests / staging where the
+                price-refresh job should still run but live trading must
+                stay off.
         """
         self.enabled = enabled
         self.refresh_cron = refresh_cron
@@ -79,6 +101,8 @@ class SchedulerConfig:
         self.batch_delay_seconds = batch_delay_seconds
         self.max_age_hours = max_age_hours
         self.active_stock_days = active_stock_days
+        self.strategy_execution_cron = strategy_execution_cron
+        self.strategy_execution_enabled = strategy_execution_enabled
 
 
 async def refresh_active_stocks(config: SchedulerConfig) -> None:
@@ -252,6 +276,68 @@ async def calculate_daily_snapshots() -> None:
         logger.info(f"Daily snapshot job completed in {duration.total_seconds():.1f}s")
 
 
+async def execute_active_strategies() -> None:
+    """Background job to run every active live strategy once.
+
+    Phase C1.2 — wired into the scheduler so each ACTIVE
+    :class:`StrategyActivation` is executed once per cycle. The work itself
+    (signal generation, transaction creation, error capture) lives in
+    :class:`StrategyExecutionService`; this function is just the
+    request-scoped wiring + DB transaction boundary.
+
+    Design notes:
+
+    * One DB session for the whole batch. Each per-activation update inside
+      ``execute_active_strategies`` is staged on the same unit-of-work and
+      committed once at the end. A bug in one activation does not roll
+      back the others' status updates because they're persisted as part
+      of the same atomic write — the *trades themselves* and the
+      ``last_executed_at`` / ``last_error`` mutations are tied together.
+    * Errors at the batch level (DB connection drop, market data outage)
+      propagate so APScheduler logs them and the operator can see the
+      failure. The service's per-activation try/except handles the
+      narrower "this strategy misbehaved" case.
+    """
+    logger.info("Starting strategy execution job")
+    start_time = datetime.now(UTC)
+
+    try:
+        async with async_session_maker() as session:
+            activation_repo = SQLModelStrategyActivationRepository(session)
+            strategy_repo = SQLModelStrategyRepository(session)
+            portfolio_repo = SQLModelPortfolioRepository(session)
+            transaction_repo = SQLModelTransactionRepository(session)
+            market_data = await get_market_data(session)
+
+            service = StrategyExecutionService(
+                activation_repo=activation_repo,
+                strategy_repo=strategy_repo,
+                portfolio_repo=portfolio_repo,
+                transaction_repo=transaction_repo,
+                market_data=market_data,
+            )
+
+            summary = await service.execute_active_strategies()
+            await session.commit()
+
+            logger.info(
+                "Strategy execution job completed: "
+                f"{summary['succeeded']}/{summary['processed']} succeeded, "
+                f"{summary['failed']} failed, "
+                f"{summary['trades']} trades persisted"
+            )
+
+    except Exception as exc:
+        logger.error(
+            f"Strategy execution job failed at batch level: {exc}", exc_info=True
+        )
+        raise
+
+    finally:
+        duration = datetime.now(UTC) - start_time
+        logger.info(f"Strategy execution job duration: {duration.total_seconds():.1f}s")
+
+
 async def start_scheduler(config: SchedulerConfig | None = None) -> None:
     """Initialize and start the background scheduler.
 
@@ -315,6 +401,32 @@ async def start_scheduler(config: SchedulerConfig | None = None) -> None:
     )
 
     logger.info("Scheduled daily snapshot job at midnight UTC")
+
+    # Add live strategy execution job (Phase C1.2). Runs after
+    # ``refresh_active_stocks`` so prices for the strategy's tickers are
+    # current. ``replace_existing=True`` makes the registration idempotent
+    # — calling ``start_scheduler`` twice does not duplicate the job.
+    if config.strategy_execution_enabled:
+        _scheduler.add_job(
+            execute_active_strategies,
+            trigger=CronTrigger.from_crontab(
+                config.strategy_execution_cron,
+                timezone=config.timezone,
+            ),
+            id="execute_active_strategies",
+            name="Execute Active Live Strategies",
+            max_instances=config.max_instances,
+            replace_existing=True,
+        )
+        logger.info(
+            f"Scheduled live strategy execution job with cron: "
+            f"{config.strategy_execution_cron} (timezone: {config.timezone})"
+        )
+    else:
+        logger.info(
+            "Live strategy execution job disabled by config "
+            "(strategy_execution_enabled=False)"
+        )
 
     # Start the scheduler
     _scheduler.start()

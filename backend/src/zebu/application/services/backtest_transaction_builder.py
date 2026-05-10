@@ -200,6 +200,24 @@ class BacktestTransactionBuilder:
         """
         return self._holdings.get(ticker, Quantity(Decimal("0")))
 
+    def seed_holdings(self, holdings: dict[Ticker, Quantity]) -> None:
+        """Pre-populate the builder's holdings before applying any signals.
+
+        Live execution (``StrategyExecutionService``) constructs a fresh
+        builder per cycle but the underlying portfolio already has open
+        positions from prior runs. Seeding lets SELL signals validate
+        against the *real* book rather than starting from zero. Backtests
+        do not call this — they run from a clean ledger by definition.
+
+        Args:
+            holdings: Mapping from ticker to quantity to install. Replaces
+                any existing holdings outright (this is a setup primitive,
+                not an additive merge). Zero-quantity entries are dropped.
+        """
+        self._holdings = {
+            ticker: qty for ticker, qty in holdings.items() if qty.is_positive()
+        }
+
     def count_trades(self) -> int:
         """Count BUY and SELL transactions (excludes DEPOSIT/WITHDRAWAL).
 
