@@ -25,6 +25,9 @@ from zebu.adapters.outbound.database.snapshot_repository import (
 from zebu.adapters.outbound.database.strategy_activation_repository import (
     SQLModelStrategyActivationRepository,
 )
+from zebu.adapters.outbound.database.strategy_condition_trigger_repository import (
+    SQLModelTriggerRepository,
+)
 from zebu.adapters.outbound.database.strategy_repository import (
     SQLModelStrategyRepository,
 )
@@ -41,6 +44,9 @@ from zebu.application.queries.get_active_tickers import (
 from zebu.application.services.snapshot_job import SnapshotJobService
 from zebu.application.services.strategy_execution_service import (
     StrategyExecutionService,
+)
+from zebu.application.services.trigger_evaluation_service import (
+    TriggerEvaluationService,
 )
 from zebu.infrastructure.database import async_session_maker
 
@@ -69,6 +75,9 @@ class SchedulerConfig:
         active_stock_days: int = 30,
         strategy_execution_cron: str = "30 0 * * 1-5",
         strategy_execution_enabled: bool = True,
+        trigger_evaluation_market_hours_cron: str = "*/15 14-20 * * 1-5",
+        trigger_evaluation_off_hours_cron: str = "0 */6 * * *",
+        trigger_evaluation_enabled: bool = True,
     ) -> None:
         """Initialize scheduler configuration.
 
@@ -92,6 +101,22 @@ class SchedulerConfig:
                 job is not registered. Useful for tests / staging where the
                 price-refresh job should still run but live trading must
                 stay off.
+            trigger_evaluation_market_hours_cron: Cron for the Phase F-2
+                trigger evaluator during US market hours. Default
+                ``*/15 14-20 * * 1-5`` runs every 15 minutes Mon-Fri
+                between 14:00 and 20:59 UTC (covers 09:30–17:00 ET ±1
+                hour for DST). Drawdown / volatility need timely fires
+                during market hours.
+            trigger_evaluation_off_hours_cron: Cron for the off-hours
+                trigger evaluator. Default ``0 */6 * * *`` (every 6
+                hours) catches earnings-proximity fires that may need
+                pre-market evaluation. APScheduler can't compose two
+                windows in one expression cleanly, so the two crons are
+                registered as separate jobs that share the same
+                handler.
+            trigger_evaluation_enabled: When False, the trigger
+                evaluator jobs are not registered. Tests / staging may
+                disable them while keeping the rest of the scheduler.
         """
         self.enabled = enabled
         self.refresh_cron = refresh_cron
@@ -103,6 +128,9 @@ class SchedulerConfig:
         self.active_stock_days = active_stock_days
         self.strategy_execution_cron = strategy_execution_cron
         self.strategy_execution_enabled = strategy_execution_enabled
+        self.trigger_evaluation_market_hours_cron = trigger_evaluation_market_hours_cron
+        self.trigger_evaluation_off_hours_cron = trigger_evaluation_off_hours_cron
+        self.trigger_evaluation_enabled = trigger_evaluation_enabled
 
 
 async def refresh_active_stocks(config: SchedulerConfig) -> None:
@@ -338,6 +366,73 @@ async def execute_active_strategies() -> None:
         logger.info(f"Strategy execution job duration: {duration.total_seconds():.1f}s")
 
 
+async def evaluate_triggers() -> None:
+    """Background job to run one trigger-evaluation cycle (Phase F-2).
+
+    Loads every ACTIVE :class:`StrategyConditionTrigger` whose cooldown
+    has expired, evaluates each one's condition (currently only
+    DRAWDOWN_THRESHOLD), and logs the per-cycle counts. F-2 stops at
+    "would fire" results — F-3 will wire the agent invocation and
+    persist :class:`TriggerFireRecord` rows for each fire.
+
+    The actual work lives in :class:`TriggerEvaluationService`; this
+    function is just the request-scoped wiring + DB transaction
+    boundary. Mirrors :func:`execute_active_strategies`.
+
+    Design notes:
+
+    * One DB session for the whole batch — the per-trigger errors are
+      caught inside the service so a misbehaving trigger never aborts
+      the cycle.
+    * Errors at the batch level (DB connection drop, market data
+      outage) propagate so APScheduler logs them and the scheduler
+      surfaces the failure.
+    """
+    logger.info("Starting trigger evaluation job")
+    start_time = datetime.now(UTC)
+
+    try:
+        async with async_session_maker() as session:
+            trigger_repo = SQLModelTriggerRepository(session)
+            activation_repo = SQLModelStrategyActivationRepository(session)
+            strategy_repo = SQLModelStrategyRepository(session)
+            portfolio_repo = SQLModelPortfolioRepository(session)
+            transaction_repo = SQLModelTransactionRepository(session)
+            market_data = await get_market_data(session)
+
+            service = TriggerEvaluationService(
+                trigger_repo=trigger_repo,
+                activation_repo=activation_repo,
+                strategy_repo=strategy_repo,
+                portfolio_repo=portfolio_repo,
+                transaction_repo=transaction_repo,
+                market_data=market_data,
+            )
+
+            summary = await service.evaluate_all()
+            await session.commit()
+
+            logger.info(
+                "trigger_evaluation_completed",
+                extra={
+                    "processed": summary["processed"],
+                    "fired": summary["fired"],
+                    "failed": summary["failed"],
+                    "skipped": summary["skipped"],
+                },
+            )
+
+    except Exception as exc:
+        logger.error(
+            f"Trigger evaluation job failed at batch level: {exc}", exc_info=True
+        )
+        raise
+
+    finally:
+        duration = datetime.now(UTC) - start_time
+        logger.info(f"Trigger evaluation job duration: {duration.total_seconds():.1f}s")
+
+
 async def start_scheduler(config: SchedulerConfig | None = None) -> None:
     """Initialize and start the background scheduler.
 
@@ -426,6 +521,48 @@ async def start_scheduler(config: SchedulerConfig | None = None) -> None:
         logger.info(
             "Live strategy execution job disabled by config "
             "(strategy_execution_enabled=False)"
+        )
+
+    # Phase F-2 — trigger evaluation jobs. Two cron windows (market
+    # hours every 15 minutes; off-hours every 6 hours) since
+    # APScheduler's cron parser can't compose disjoint windows in one
+    # expression. Both call the same ``evaluate_triggers`` handler.
+    # ``max_instances=1`` so a slow tick can't queue duplicates — the
+    # handler itself doesn't take a request-scoped lock so the
+    # APScheduler-level limit is the only deduplication mechanism.
+    if config.trigger_evaluation_enabled:
+        _scheduler.add_job(
+            evaluate_triggers,
+            trigger=CronTrigger.from_crontab(
+                config.trigger_evaluation_market_hours_cron,
+                timezone=config.timezone,
+            ),
+            id="evaluate_triggers_market_hours",
+            name="Evaluate Triggers (Market Hours)",
+            max_instances=1,
+            replace_existing=True,
+        )
+        _scheduler.add_job(
+            evaluate_triggers,
+            trigger=CronTrigger.from_crontab(
+                config.trigger_evaluation_off_hours_cron,
+                timezone=config.timezone,
+            ),
+            id="evaluate_triggers_off_hours",
+            name="Evaluate Triggers (Off Hours)",
+            max_instances=1,
+            replace_existing=True,
+        )
+        logger.info(
+            "Scheduled trigger evaluation jobs: "
+            f"market-hours='{config.trigger_evaluation_market_hours_cron}' "
+            f"off-hours='{config.trigger_evaluation_off_hours_cron}' "
+            f"(timezone: {config.timezone})"
+        )
+    else:
+        logger.info(
+            "Trigger evaluation jobs disabled by config "
+            "(trigger_evaluation_enabled=False)"
         )
 
     # Start the scheduler

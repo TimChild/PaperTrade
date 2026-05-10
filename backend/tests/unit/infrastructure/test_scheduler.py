@@ -2,6 +2,7 @@
 
 from zebu.infrastructure.scheduler import (
     SchedulerConfig,
+    evaluate_triggers,
     execute_active_strategies,
     start_scheduler,
     stop_scheduler,
@@ -26,6 +27,12 @@ class TestSchedulerConfiguration:
         # Phase C1.2 — live strategy execution job defaults
         assert config.strategy_execution_cron == "30 0 * * 1-5"
         assert config.strategy_execution_enabled is True
+        # Phase F-2 — trigger evaluation job defaults.
+        # Market-hours window every 15 minutes Mon-Fri 14:00-20:59 UTC
+        # (covers 09:30-17:00 ET ±1 hour for DST). Off-hours every 6h.
+        assert config.trigger_evaluation_market_hours_cron == "*/15 14-20 * * 1-5"
+        assert config.trigger_evaluation_off_hours_cron == "0 */6 * * *"
+        assert config.trigger_evaluation_enabled is True
 
     def test_scheduler_config_custom_values(self) -> None:
         """Test that SchedulerConfig accepts custom values."""
@@ -158,3 +165,104 @@ class TestStrategyExecutionJob:
         import inspect
 
         assert inspect.iscoroutinefunction(execute_active_strategies)
+
+
+class TestTriggerEvaluationJob:
+    """Phase F-2 — trigger evaluation job registration."""
+
+    async def test_trigger_evaluation_jobs_registered_by_default(self) -> None:
+        """Default config registers both trigger evaluator jobs."""
+        config = SchedulerConfig(enabled=True)
+        try:
+            await start_scheduler(config)
+            from zebu.infrastructure.scheduler import get_scheduler
+
+            scheduler = get_scheduler()
+            assert scheduler is not None
+            ids = {j.id for j in scheduler.get_jobs()}
+            assert "evaluate_triggers_market_hours" in ids
+            assert "evaluate_triggers_off_hours" in ids
+            # Idempotent re-registration: starting twice doesn't duplicate.
+            await start_scheduler(config)
+            jobs = scheduler.get_jobs()
+            market_jobs = [j for j in jobs if j.id == "evaluate_triggers_market_hours"]
+            off_hours_jobs = [j for j in jobs if j.id == "evaluate_triggers_off_hours"]
+            assert len(market_jobs) == 1
+            assert len(off_hours_jobs) == 1
+        finally:
+            await stop_scheduler()
+
+    async def test_trigger_evaluation_jobs_disabled_by_config(self) -> None:
+        """``trigger_evaluation_enabled=False`` skips job registration."""
+        config = SchedulerConfig(enabled=True, trigger_evaluation_enabled=False)
+        try:
+            await start_scheduler(config)
+            from zebu.infrastructure.scheduler import get_scheduler
+
+            scheduler = get_scheduler()
+            assert scheduler is not None
+            ids = {j.id for j in scheduler.get_jobs()}
+            assert "evaluate_triggers_market_hours" not in ids
+            assert "evaluate_triggers_off_hours" not in ids
+            # Other jobs unaffected.
+            assert "refresh_prices" in ids
+        finally:
+            await stop_scheduler()
+
+    async def test_trigger_evaluation_jobs_have_max_instances_one(self) -> None:
+        """Both trigger jobs are registered with ``max_instances=1``.
+
+        Per the Phase-F design §6.1: APScheduler ``max_instances=1`` is
+        the only deduplication mechanism so a slow tick can't queue up.
+        """
+        config = SchedulerConfig(enabled=True)
+        try:
+            await start_scheduler(config)
+            from zebu.infrastructure.scheduler import get_scheduler
+
+            scheduler = get_scheduler()
+            assert scheduler is not None
+            for job_id in (
+                "evaluate_triggers_market_hours",
+                "evaluate_triggers_off_hours",
+            ):
+                job = scheduler.get_job(job_id)
+                assert job is not None
+                assert job.max_instances == 1
+        finally:
+            await stop_scheduler()
+
+    async def test_trigger_evaluation_market_hours_cron_matches_config(
+        self,
+    ) -> None:
+        """The registered market-hours job uses the config cron string."""
+        # Use a custom cron so we can assert pass-through; APScheduler
+        # exposes the trigger via ``str(job.trigger)``.
+        config = SchedulerConfig(
+            enabled=True,
+            trigger_evaluation_market_hours_cron="*/30 14-20 * * 1-5",
+        )
+        try:
+            await start_scheduler(config)
+            from zebu.infrastructure.scheduler import get_scheduler
+
+            scheduler = get_scheduler()
+            assert scheduler is not None
+            job = scheduler.get_job("evaluate_triggers_market_hours")
+            assert job is not None
+            # APScheduler renders the CronTrigger as a string containing
+            # each field; check that the minute and hour overrides flow
+            # through.
+            trigger_repr = str(job.trigger)
+            assert "*/30" in trigger_repr
+            assert "14-20" in trigger_repr
+        finally:
+            await stop_scheduler()
+
+    def test_evaluate_triggers_is_callable(self) -> None:
+        """``evaluate_triggers`` must be importable and an async coroutine."""
+        # The scheduler registers ``evaluate_triggers`` directly. Pin
+        # this so a bad rename surfaces here, not at first cron fire.
+        import inspect
+
+        assert inspect.iscoroutinefunction(evaluate_triggers)
