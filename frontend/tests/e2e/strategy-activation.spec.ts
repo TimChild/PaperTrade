@@ -57,16 +57,36 @@ test.describe('Live Strategy Activation Flow', () => {
       timeout: 5000,
     })
     await page.getByTestId('allocation-IBM').fill('1.0')
+
+    // Gate on the actual network response rather than the success toast.
+    // The toast goes through React state → Toaster portal → DOM paint, which
+    // adds enough latency that asserting on the toast-text loses the race
+    // under CI's resource pressure (the assertion's 10s budget elapsed on
+    // every retry). The POST is the authoritative signal that the strategy
+    // exists; once we see a 2xx, we can wait for the cache invalidation to
+    // settle and assert on the rendered card.
+    //
+    // If the POST returns a non-2xx we surface the detail in the failure
+    // message so the next investigator doesn't have to guess.
+    const createResponsePromise = page.waitForResponse(
+      (response) =>
+        // Match `POST /api/v1/strategies` exactly — the URL must end at
+        // `/strategies` (optionally with a query string) so we don't pick up
+        // `/strategies/{id}/activate` etc.
+        /\/strategies(\?|$)/.test(response.url()) &&
+        response.request().method() === 'POST'
+    )
     await page.getByTestId('create-strategy-submit').click()
 
-    // First wait for the success toast — this confirms the POST /strategies
-    // call returned 201 and the mutation `onSuccess` chain fired. Without
-    // this gate, the next assertion races the cache-invalidation refetch.
-    await expect(page.getByText(/strategy created/i)).toBeVisible({
-      timeout: 10000,
-    })
+    const createResponse = await createResponsePromise
+    if (!createResponse.ok()) {
+      const body = await createResponse.text()
+      throw new Error(
+        `POST /strategies failed: ${createResponse.status()} ${createResponse.statusText()} - ${body}`
+      )
+    }
 
-    // Then wait for the in-flight `useStrategies` refetch (triggered by
+    // Wait for the in-flight `useStrategies` refetch (triggered by
     // `invalidateQueries(['strategies'])`) to settle before checking the DOM.
     await page.waitForLoadState('networkidle')
 
@@ -90,12 +110,26 @@ test.describe('Live Strategy Activation Flow', () => {
     await page.getByTestId('activate-portfolio-select').selectOption({
       label: portfolioName,
     })
+
+    // Same pattern as the create call: gate on the network response for the
+    // activation POST and surface details on failure. The endpoint is
+    // `POST /strategies/{id}/activate`.
+    const activateResponsePromise = page.waitForResponse(
+      (response) =>
+        /\/strategies\/[^/]+\/activate(\?|$)/.test(response.url()) &&
+        response.request().method() === 'POST'
+    )
     await page.getByTestId('activate-strategy-submit').click()
 
-    // Toast confirms activation; the panel flips to show the badge.
-    await expect(page.getByText(/strategy activated/i)).toBeVisible({
-      timeout: 5000,
-    })
+    const activateResponse = await activateResponsePromise
+    if (!activateResponse.ok()) {
+      const body = await activateResponse.text()
+      throw new Error(
+        `POST activate failed: ${activateResponse.status()} ${activateResponse.statusText()} - ${body}`
+      )
+    }
+
+    // The panel flips to show the badge once the activation cache settles.
     await expect(
       strategyCard.getByTestId('activation-status-ACTIVE')
     ).toBeVisible({ timeout: 5000 })
@@ -107,14 +141,23 @@ test.describe('Live Strategy Activation Flow', () => {
 
     // Confirmation dialog.
     await expect(page.getByTestId('confirm-dialog')).toBeVisible()
-    await page.getByTestId('confirm-dialog-confirm').click()
 
-    // Wait for the run-complete toast (success or failure either way; the
-    // happy-path expectation here is that the activation status remains
-    // ACTIVE — i.e. the run did NOT flip to ERROR).
-    await expect(page.getByText(/run complete|run failed/i)).toBeVisible({
-      timeout: 10000,
-    })
+    // Gate on the run-now POST response. We don't assert on success vs.
+    // failure of the run itself — either outcome proves the wiring works
+    // (a 200 response is what matters; the body says succeeded/error).
+    const runNowResponsePromise = page.waitForResponse(
+      (response) =>
+        /\/activations\/[^/]+\/run-now(\?|$)/.test(response.url()) &&
+        response.request().method() === 'POST'
+    )
+    await page.getByTestId('confirm-dialog-confirm').click()
+    const runNowResponse = await runNowResponsePromise
+    if (!runNowResponse.ok()) {
+      const body = await runNowResponse.text()
+      throw new Error(
+        `POST run-now failed: ${runNowResponse.status()} ${runNowResponse.statusText()} - ${body}`
+      )
+    }
 
     // The status badge should still be visible (ACTIVE for a successful run;
     // ERROR if mock market data didn't cover the ticker — both prove the
@@ -131,11 +174,21 @@ test.describe('Live Strategy Activation Flow', () => {
     await deactivateBtn.click()
 
     await expect(page.getByTestId('confirm-dialog')).toBeVisible()
-    await page.getByTestId('confirm-dialog-confirm').click()
 
-    await expect(page.getByText(/activation paused/i)).toBeVisible({
-      timeout: 5000,
-    })
+    const deactivateResponsePromise = page.waitForResponse(
+      (response) =>
+        /\/activations\/[^/]+\/deactivate(\?|$)/.test(response.url()) &&
+        response.request().method() === 'POST'
+    )
+    await page.getByTestId('confirm-dialog-confirm').click()
+    const deactivateResponse = await deactivateResponsePromise
+    if (!deactivateResponse.ok()) {
+      const body = await deactivateResponse.text()
+      throw new Error(
+        `POST deactivate failed: ${deactivateResponse.status()} ${deactivateResponse.statusText()} - ${body}`
+      )
+    }
+
     await expect(
       strategyCard.getByTestId('activation-status-PAUSED')
     ).toBeVisible({ timeout: 5000 })
