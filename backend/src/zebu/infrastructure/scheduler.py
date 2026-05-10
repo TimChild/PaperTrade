@@ -34,6 +34,9 @@ from zebu.adapters.outbound.database.strategy_repository import (
 from zebu.adapters.outbound.database.transaction_repository import (
     SQLModelTransactionRepository,
 )
+from zebu.adapters.outbound.earnings.stub_calendar_adapter import (
+    StubEarningsCalendarAdapter,
+)
 from zebu.adapters.outbound.repositories.watchlist_manager import (
     WatchlistManager,
 )
@@ -400,6 +403,12 @@ async def evaluate_triggers() -> None:
             transaction_repo = SQLModelTransactionRepository(session)
             market_data = await get_market_data(session)
 
+            # F-4 default: stub earnings calendar — returns []. Real
+            # source attaches via a third-party MCP at runtime per
+            # Phase F design Q5. The label is echoed into the audit
+            # row's ``source`` field.
+            earnings_calendar = StubEarningsCalendarAdapter()
+
             service = TriggerEvaluationService(
                 trigger_repo=trigger_repo,
                 activation_repo=activation_repo,
@@ -407,6 +416,8 @@ async def evaluate_triggers() -> None:
                 portfolio_repo=portfolio_repo,
                 transaction_repo=transaction_repo,
                 market_data=market_data,
+                earnings_calendar=earnings_calendar,
+                earnings_calendar_label="stub",
             )
 
             summary = await service.evaluate_all()

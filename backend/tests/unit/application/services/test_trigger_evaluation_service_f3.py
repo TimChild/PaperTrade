@@ -16,6 +16,9 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from uuid import UUID, uuid4
 
+from zebu.adapters.outbound.earnings.stub_calendar_adapter import (
+    StubEarningsCalendarAdapter,
+)
 from zebu.adapters.outbound.market_data.in_memory_adapter import (
     InMemoryMarketDataAdapter,
 )
@@ -317,6 +320,7 @@ class TestF3Wiring:
             portfolio_repo=portfolio_repo,
             transaction_repo=txn_repo,
             market_data=market_data,
+            earnings_calendar=StubEarningsCalendarAdapter(),
             orchestrator=orchestrator,
             fires_enabled_override=True,
         )
@@ -398,6 +402,7 @@ class TestF3Wiring:
             portfolio_repo=portfolio_repo,
             transaction_repo=txn_repo,
             market_data=market_data,
+            earnings_calendar=StubEarningsCalendarAdapter(),
             orchestrator=orchestrator,
             fires_enabled_override=False,  # explicit off
         )
@@ -458,6 +463,7 @@ class TestF3Wiring:
             portfolio_repo=portfolio_repo,
             transaction_repo=txn_repo,
             market_data=market_data,
+            earnings_calendar=StubEarningsCalendarAdapter(),
             orchestrator=None,
             fires_enabled_override=True,
         )
@@ -529,6 +535,7 @@ class TestF3Wiring:
             portfolio_repo=portfolio_repo,
             transaction_repo=txn_repo,
             market_data=market_data,
+            earnings_calendar=StubEarningsCalendarAdapter(),
             orchestrator=orchestrator,
             fires_enabled_override=True,
         )
@@ -604,6 +611,7 @@ class TestF3Wiring:
             portfolio_repo=portfolio_repo,
             transaction_repo=txn_repo,
             market_data=market_data,
+            earnings_calendar=StubEarningsCalendarAdapter(),
             orchestrator=orchestrator,
             fires_enabled_override=True,
         )

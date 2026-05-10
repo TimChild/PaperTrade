@@ -41,6 +41,9 @@ from zebu.adapters.outbound.database.strategy_repository import (
 from zebu.adapters.outbound.database.transaction_repository import (
     SQLModelTransactionRepository,
 )
+from zebu.adapters.outbound.earnings.stub_calendar_adapter import (
+    StubEarningsCalendarAdapter,
+)
 from zebu.adapters.outbound.market_data.in_memory_adapter import (
     InMemoryMarketDataAdapter,
 )
@@ -231,6 +234,7 @@ class TestTriggerEvaluationServiceSQL:
             portfolio_repo=SQLModelPortfolioRepository(session),
             transaction_repo=SQLModelTransactionRepository(session),
             market_data=_build_market_data(),
+            earnings_calendar=StubEarningsCalendarAdapter(),
         )
 
         summary = await service.evaluate_all()
@@ -242,8 +246,14 @@ class TestTriggerEvaluationServiceSQL:
         result = summary["results"][0]
         assert result["trigger_id"] == trigger.id
         assert result["fired"] is True
-        assert result["evaluation_data"] is not None
-        assert result["evaluation_data"]["metric"] == "PORTFOLIO_TOTAL"
+        evaluation_data = result["evaluation_data"]
+        assert evaluation_data is not None
+        # Narrow to the drawdown shape — for a DRAWDOWN_THRESHOLD trigger
+        # the union ``EvaluationData`` is always populated with the
+        # drawdown variant. A ``"metric"`` key only exists on that
+        # variant.
+        assert "metric" in evaluation_data
+        assert evaluation_data["metric"] == "PORTFOLIO_TOTAL"
 
         # Test note: F-2 doesn't yet write a TriggerFireRecord — that
         # comes in F-3 alongside the agent invocation. The trigger's
@@ -310,6 +320,7 @@ class TestTriggerEvaluationServiceSQL:
             portfolio_repo=SQLModelPortfolioRepository(session),
             transaction_repo=SQLModelTransactionRepository(session),
             market_data=_build_market_data(),
+            earnings_calendar=StubEarningsCalendarAdapter(),
         )
 
         summary = await service.evaluate_all()
