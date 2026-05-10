@@ -293,21 +293,74 @@ export interface ExplorationConstraintsResponse {
 }
 
 /**
+ * Primary backtest metrics for the recommended candidate (Phase E2).
+ *
+ * Mirrors `MetricsResponse` /
+ * `backend/.../exploration_task.py:ExplorationFindingsMetrics`.
+ *
+ * Decimal-shaped fields are wire strings (e.g. `"24.4"` means +24.4%) —
+ * same convention used for `BacktestRunResponse` metric columns.
+ * `total_return_pct` is the only required field; everything else is
+ * optional because not every backtest produces all metrics.
+ */
+export interface ExplorationFindingsMetricsResponse {
+  total_return_pct: string
+  sharpe_ratio: string | null
+  max_drawdown_pct: string | null
+  n_trades: number | null
+  annualized_return_pct: string | null
+}
+
+/**
+ * Comparison of the recommended candidate to a baseline backtest (Phase E2).
+ *
+ * Mirrors `ComparisonResponse` /
+ * `backend/.../exploration_task.py:ExplorationFindingsComparison`.
+ *
+ * Deltas are signed: positive means the candidate outperformed the
+ * baseline. The baseline strategy/backtest IDs should also appear in the
+ * parent finding's `strategy_ids` / `backtest_run_ids` so a reader can
+ * navigate to them.
+ */
+export interface ExplorationFindingsComparisonResponse {
+  baseline_strategy_id: string
+  baseline_total_return_pct: string
+  delta_total_return_pct: string
+  delta_sharpe: string | null
+}
+
+/**
  * Typed payload an agent submits when completing a task.
  *
  * Mirrors `FindingsResponse` /
  * `backend/src/zebu/domain/entities/exploration_task.py:ExplorationFindings`.
  *
- * Note: the backend does not surface free-form `links` separately — the
- * agent's narrative `summary` is the primary text channel, and any
- * structured references live in `backtest_run_ids` / `strategy_ids` /
- * the optional bullet-point `notes`.
+ * The narrative `summary` is the primary text channel; structured
+ * references live in `backtest_run_ids` / `strategy_ids` / the optional
+ * bullet-point `notes`.
+ *
+ * Phase E2 added the structured recommendation fields. They are all
+ * optional — narrative-only findings (negative results, no clear winner)
+ * leave them as `null` and rely on `summary`.
  */
 export interface ExplorationFindingsResponse {
   summary: string
   backtest_run_ids: string[]
   strategy_ids: string[]
   notes: string[] | null
+  recommended_strategy_id: string | null
+  /**
+   * Free-form per-strategy-type parameter dict — its shape varies by
+   * strategy type (MA-crossover has `fast_window`/`slow_window`/
+   * `invest_fraction`; DCA has `frequency_days`/`amount_per_period`/
+   * `allocation`; etc.). Rendered as a key/value list in the UI;
+   * specific renderers can switch on the recommended strategy's type
+   * to produce a typed view.
+   */
+  recommended_parameters: Record<string, unknown> | null
+  metrics: ExplorationFindingsMetricsResponse | null
+  comparison_to_baseline: ExplorationFindingsComparisonResponse | null
+  confidence: number | null
 }
 
 /**

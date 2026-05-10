@@ -16,6 +16,8 @@ from zebu.domain.entities.backtest_run import BacktestRun
 from zebu.domain.entities.exploration_task import (
     ExplorationConstraints,
     ExplorationFindings,
+    ExplorationFindingsComparison,
+    ExplorationFindingsMetrics,
     ExplorationTask,
     ExplorationTaskStatus,
 )
@@ -826,17 +828,52 @@ class ExplorationTaskConstraintsDict(TypedDict, total=False):
     strategy_type_whitelist: list[str] | None
 
 
+class ExplorationTaskMetricsDict(TypedDict, total=False):
+    """JSON-serialisable form of ExplorationFindingsMetrics.
+
+    Decimal values are stored as strings to keep the wire/DB shape exact —
+    same convention as BacktestRun's metric columns.
+    """
+
+    total_return_pct: str
+    sharpe_ratio: str | None
+    max_drawdown_pct: str | None
+    n_trades: int | None
+    annualized_return_pct: str | None
+
+
+class ExplorationTaskComparisonDict(TypedDict, total=False):
+    """JSON-serialisable form of ExplorationFindingsComparison."""
+
+    baseline_strategy_id: str
+    baseline_total_return_pct: str
+    delta_total_return_pct: str
+    delta_sharpe: str | None
+
+
 class ExplorationTaskFindingsDict(TypedDict, total=False):
     """JSON-serializable form of ExplorationFindings stored in `findings`.
 
     UUIDs are serialised as their canonical hex strings; the to_domain
     conversion rebuilds the UUID objects.
+
+    Phase E2 added the structured-recommendation fields. All E2 keys are
+    optional (``total=False``) so existing rows without them deserialise
+    cleanly.
     """
 
     summary: str
     backtest_run_ids: list[str]
     strategy_ids: list[str]
     notes: list[str] | None
+    recommended_strategy_id: str | None
+    # `recommended_parameters` is an opaque per-strategy-type JSON object;
+    # we don't model it further here. Strategy-side typing happens in the
+    # `strategy_parameters` value-object module.
+    recommended_parameters: dict[str, object] | None
+    metrics: ExplorationTaskMetricsDict | None
+    comparison_to_baseline: ExplorationTaskComparisonDict | None
+    confidence: float | None
 
 
 def _constraints_to_dict(
@@ -876,10 +913,115 @@ def _constraints_from_dict(
     )
 
 
+def _metrics_to_dict(
+    metrics: ExplorationFindingsMetrics | None,
+) -> ExplorationTaskMetricsDict | None:
+    """Serialise ExplorationFindingsMetrics to a JSON dict (or None)."""
+    if metrics is None:
+        return None
+    payload: ExplorationTaskMetricsDict = {
+        "total_return_pct": str(metrics.total_return_pct),
+        "sharpe_ratio": (
+            str(metrics.sharpe_ratio) if metrics.sharpe_ratio is not None else None
+        ),
+        "max_drawdown_pct": (
+            str(metrics.max_drawdown_pct)
+            if metrics.max_drawdown_pct is not None
+            else None
+        ),
+        "n_trades": metrics.n_trades,
+        "annualized_return_pct": (
+            str(metrics.annualized_return_pct)
+            if metrics.annualized_return_pct is not None
+            else None
+        ),
+    }
+    return payload
+
+
+def _metrics_from_dict(
+    raw: ExplorationTaskMetricsDict | None,
+) -> ExplorationFindingsMetrics | None:
+    """Deserialise a JSON dict into ExplorationFindingsMetrics (or None)."""
+    if raw is None:
+        return None
+    total_return_raw = raw.get("total_return_pct")
+    if total_return_raw is None:
+        raise ValueError(
+            "ExplorationFindings.metrics JSON missing required 'total_return_pct' field"
+        )
+    sharpe_raw = raw.get("sharpe_ratio")
+    drawdown_raw = raw.get("max_drawdown_pct")
+    annualized_raw = raw.get("annualized_return_pct")
+    return ExplorationFindingsMetrics(
+        total_return_pct=Decimal(total_return_raw),
+        sharpe_ratio=Decimal(sharpe_raw) if sharpe_raw is not None else None,
+        max_drawdown_pct=Decimal(drawdown_raw) if drawdown_raw is not None else None,
+        n_trades=raw.get("n_trades"),
+        annualized_return_pct=(
+            Decimal(annualized_raw) if annualized_raw is not None else None
+        ),
+    )
+
+
+def _comparison_to_dict(
+    comparison: ExplorationFindingsComparison | None,
+) -> ExplorationTaskComparisonDict | None:
+    """Serialise ExplorationFindingsComparison to a JSON dict (or None)."""
+    if comparison is None:
+        return None
+    payload: ExplorationTaskComparisonDict = {
+        "baseline_strategy_id": str(comparison.baseline_strategy_id),
+        "baseline_total_return_pct": str(comparison.baseline_total_return_pct),
+        "delta_total_return_pct": str(comparison.delta_total_return_pct),
+        "delta_sharpe": (
+            str(comparison.delta_sharpe)
+            if comparison.delta_sharpe is not None
+            else None
+        ),
+    }
+    return payload
+
+
+def _comparison_from_dict(
+    raw: ExplorationTaskComparisonDict | None,
+) -> ExplorationFindingsComparison | None:
+    """Deserialise a JSON dict into ExplorationFindingsComparison (or None)."""
+    if raw is None:
+        return None
+    baseline_id_raw = raw.get("baseline_strategy_id")
+    baseline_return_raw = raw.get("baseline_total_return_pct")
+    delta_return_raw = raw.get("delta_total_return_pct")
+    if (
+        baseline_id_raw is None
+        or baseline_return_raw is None
+        or delta_return_raw is None
+    ):
+        raise ValueError(
+            "ExplorationFindings.comparison_to_baseline JSON missing one of: "
+            "baseline_strategy_id, baseline_total_return_pct, "
+            "delta_total_return_pct"
+        )
+    delta_sharpe_raw = raw.get("delta_sharpe")
+    return ExplorationFindingsComparison(
+        baseline_strategy_id=UUID(baseline_id_raw),
+        baseline_total_return_pct=Decimal(baseline_return_raw),
+        delta_total_return_pct=Decimal(delta_return_raw),
+        delta_sharpe=(
+            Decimal(delta_sharpe_raw) if delta_sharpe_raw is not None else None
+        ),
+    )
+
+
 def _findings_to_dict(
     findings: ExplorationFindings | None,
 ) -> ExplorationTaskFindingsDict | None:
-    """Serialise ExplorationFindings to a JSON dict (or None)."""
+    """Serialise ExplorationFindings to a JSON dict (or None).
+
+    Phase E2 — emits the new structured fields when present. Existing
+    rows without the new keys deserialise cleanly because every E2 key
+    is optional in the entity.
+    """
     if findings is None:
         return None
     payload: ExplorationTaskFindingsDict = {
@@ -887,6 +1029,16 @@ def _findings_to_dict(
         "backtest_run_ids": [str(run_id) for run_id in findings.backtest_run_ids],
         "strategy_ids": [str(s_id) for s_id in findings.strategy_ids],
         "notes": findings.notes,
+        "recommended_strategy_id": (
+            str(findings.recommended_strategy_id)
+            if findings.recommended_strategy_id is not None
+            else None
+        ),
+        # `recommended_parameters` is opaque JSON — pass through unchanged.
+        "recommended_parameters": findings.recommended_parameters,
+        "metrics": _metrics_to_dict(findings.metrics),
+        "comparison_to_baseline": _comparison_to_dict(findings.comparison_to_baseline),
+        "confidence": findings.confidence,
     }
     return payload
 
@@ -894,7 +1046,13 @@ def _findings_to_dict(
 def _findings_from_dict(
     raw: ExplorationTaskFindingsDict | None,
 ) -> ExplorationFindings | None:
-    """Deserialise a JSON dict into ExplorationFindings (or None)."""
+    """Deserialise a JSON dict into ExplorationFindings (or None).
+
+    Backward-compatible: rows persisted before Phase E2 will not contain
+    the new keys, and ``raw.get`` returns ``None`` for each, so the
+    entity is constructed with ``None`` defaults — preserving the v1
+    behaviour for existing data.
+    """
     if raw is None:
         return None
     summary = raw.get("summary")
@@ -907,11 +1065,23 @@ def _findings_from_dict(
     backtest_run_ids = [UUID(value) for value in raw.get("backtest_run_ids", [])]
     strategy_ids = [UUID(value) for value in raw.get("strategy_ids", [])]
     notes = raw.get("notes")
+    recommended_strategy_id_raw = raw.get("recommended_strategy_id")
+    recommended_strategy_id = (
+        UUID(recommended_strategy_id_raw)
+        if recommended_strategy_id_raw is not None
+        else None
+    )
+    recommended_parameters = raw.get("recommended_parameters")
     return ExplorationFindings(
         summary=summary,
         backtest_run_ids=backtest_run_ids,
         strategy_ids=strategy_ids,
         notes=notes,
+        recommended_strategy_id=recommended_strategy_id,
+        recommended_parameters=recommended_parameters,
+        metrics=_metrics_from_dict(raw.get("metrics")),
+        comparison_to_baseline=_comparison_from_dict(raw.get("comparison_to_baseline")),
+        confidence=raw.get("confidence"),
     )
 
 

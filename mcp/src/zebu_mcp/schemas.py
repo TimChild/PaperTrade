@@ -237,13 +237,54 @@ class ExplorationConstraints(BaseModel):
     strategy_type_whitelist: list[str] | None = None
 
 
+class ExplorationFindingsMetrics(BaseModel):
+    """Primary backtest metrics for the chosen candidate (Phase E2).
+
+    Decimal fields are wire strings (e.g. ``"24.4"``) — same convention as
+    ``BacktestRun`` metric fields. ``total_return_pct`` is required;
+    everything else is optional because not every backtest yields all
+    metrics (e.g. a single-trade buy-and-hold has no Sharpe).
+    """
+
+    total_return_pct: str
+    sharpe_ratio: str | None = None
+    max_drawdown_pct: str | None = None
+    n_trades: int | None = None
+    annualized_return_pct: str | None = None
+
+
+class ExplorationFindingsComparison(BaseModel):
+    """Comparison of the chosen candidate to a baseline backtest (Phase E2).
+
+    Deltas are signed: positive means the candidate outperformed.
+    """
+
+    baseline_strategy_id: UUID
+    baseline_total_return_pct: str
+    delta_total_return_pct: str
+    delta_sharpe: str | None = None
+
+
 class ExplorationFindings(BaseModel):
-    """Findings submitted by an agent that completed an exploration task."""
+    """Findings submitted by an agent that completed an exploration task.
+
+    Phase E2 added structured fields for parameter-sweep results. Every E2
+    field is optional; agents may submit only ``summary`` for narrative
+    findings.
+    """
 
     summary: str
     backtest_run_ids: list[UUID]
     strategy_ids: list[UUID]
     notes: list[str] | None = None
+    recommended_strategy_id: UUID | None = None
+    # `recommended_parameters` is opaque per-strategy-type JSON. The shape
+    # varies by strategy_type — see the schema for ``CreateStrategyRequest``
+    # for the per-type contract.
+    recommended_parameters: dict[str, Any] | None = None
+    metrics: ExplorationFindingsMetrics | None = None
+    comparison_to_baseline: ExplorationFindingsComparison | None = None
+    confidence: float | None = None
 
 
 class ExplorationTask(BaseModel):
@@ -408,12 +449,21 @@ class SubmitExplorationFindingsRequest(BaseModel):
 
     Submitting findings transitions the task from IN_PROGRESS -> DONE.
     The backend rejects (409) if the task is in any other status.
+
+    Phase E2 — extended with structured recommendation fields. The
+    narrative ``summary`` remains the required wrapper; every E2 field is
+    optional so agents can submit just ``summary`` for narrative findings.
     """
 
     summary: str = Field(..., min_length=1, max_length=4000)
     backtest_run_ids: list[UUID] = Field(default_factory=list)
     strategy_ids: list[UUID] = Field(default_factory=list)
     notes: list[str] | None = None
+    recommended_strategy_id: UUID | None = None
+    recommended_parameters: dict[str, Any] | None = None
+    metrics: ExplorationFindingsMetrics | None = None
+    comparison_to_baseline: ExplorationFindingsComparison | None = None
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
 
 
 class NoteResult(BaseModel):

@@ -38,7 +38,9 @@ fully ``frozen=True``.
 
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
+from decimal import Decimal
 from enum import Enum
+from typing import Any
 from uuid import UUID
 
 from zebu.domain.exceptions import InvalidEntityError
@@ -121,6 +123,75 @@ class ExplorationConstraints:
 
 
 @dataclass(frozen=True)
+class ExplorationFindingsMetrics:
+    """Primary backtest metrics for the chosen candidate in a finding.
+
+    Mirrors the metric naming on ``BacktestRun`` so an agent that ran a
+    sweep can copy the winner's metrics directly. ``total_return_pct`` is
+    the only required field — every other metric is optional because not
+    every strategy / backtest produces it (e.g. a one-trade buy-and-hold
+    has no meaningful Sharpe ratio).
+
+    All percentage fields are stored as ``Decimal`` (e.g. ``Decimal("24.4")``
+    means +24.4%, not 0.244) — same convention used on ``BacktestRun``.
+
+    Attributes:
+        total_return_pct: Total return over the backtest period, in percent.
+            Required.
+        sharpe_ratio: Annualised Sharpe ratio. Optional — short or
+            single-trade backtests may not have a meaningful value.
+        max_drawdown_pct: Maximum peak-to-trough drawdown over the period,
+            in percent (typically negative or zero). Optional.
+        n_trades: Number of buy/sell trades executed. Optional.
+        annualized_return_pct: Annualised return over the period. Optional.
+
+    Raises:
+        InvalidExplorationTaskError: If ``n_trades`` is negative.
+    """
+
+    total_return_pct: Decimal
+    sharpe_ratio: Decimal | None = None
+    max_drawdown_pct: Decimal | None = None
+    n_trades: int | None = None
+    annualized_return_pct: Decimal | None = None
+
+    def __post_init__(self) -> None:
+        """Validate metric invariants after initialization."""
+        if self.n_trades is not None and self.n_trades < 0:
+            raise InvalidExplorationTaskError(
+                f"ExplorationFindingsMetrics.n_trades cannot be negative, "
+                f"got {self.n_trades}"
+            )
+
+
+@dataclass(frozen=True)
+class ExplorationFindingsComparison:
+    """Comparison of the chosen candidate to a baseline backtest.
+
+    The baseline is typically a buy-and-hold run on the same tickers /
+    period, but any backtest can serve as the baseline — the agent chooses.
+    Deltas are signed: positive means the candidate outperforms the
+    baseline on that metric.
+
+    Attributes:
+        baseline_strategy_id: Strategy ID of the baseline (typically a
+            buy-and-hold strategy the agent created for comparison). The
+            backtest run for the baseline should appear in the finding's
+            ``backtest_run_ids`` so a reader can navigate to it.
+        baseline_total_return_pct: The baseline's total return, in percent.
+        delta_total_return_pct: Candidate's total return minus the
+            baseline's. Positive = outperformed; negative = underperformed.
+        delta_sharpe: Optional Sharpe-ratio delta. ``None`` means either
+            the candidate or the baseline didn't have a Sharpe ratio.
+    """
+
+    baseline_strategy_id: UUID
+    baseline_total_return_pct: Decimal
+    delta_total_return_pct: Decimal
+    delta_sharpe: Decimal | None = None
+
+
+@dataclass(frozen=True)
 class ExplorationFindings:
     """Typed payload an agent submits when completing an exploration task.
 
@@ -130,9 +201,16 @@ class ExplorationFindings:
     context (e.g. "tried 5 parameter sweeps, #3 had best Sharpe but #1 had
     lowest drawdown") that does not fit a single summary line.
 
+    Phase E2 added structured fields for the most common agent output —
+    parameter-sweep results — so the GUI can render the recommendation
+    meaningfully instead of parsing the free-form summary. Every E2 field
+    is optional; agents may submit just ``summary`` for narrative findings
+    (negative results, free-form prose, no clear winner).
+
     Attributes:
         summary: Free-form narrative — the agent's primary writeup. Required
-            (1–4000 chars). Surfaces directly in the human's GUI dashboard.
+            (1–4000 chars). Surfaces directly in the human's GUI dashboard
+            as the readable wrapper around the structured fields.
         backtest_run_ids: List of ``BacktestRun`` IDs the agent created
             while exploring. Empty list when no backtests were run (e.g. a
             "research-only" task whose findings are pure prose).
@@ -141,16 +219,55 @@ class ExplorationFindings:
         notes: Optional list of additional bullet-point observations.
             ``None`` (default) means "no extra notes"; an empty list is
             allowed and treated the same way.
+        recommended_strategy_id: The chosen winner from the sweep. When
+            set, this ID **should** also appear in ``strategy_ids`` (the
+            entity raises if it doesn't, so the recommendation isn't
+            dangling). ``None`` means "no clear winner / narrative finding".
+        recommended_parameters: The chosen parameter combo for the
+            recommended strategy. Free-form ``dict[str, Any]`` because
+            the shape varies by strategy type (MA-crossover has
+            ``fast_window``/``slow_window``/``invest_fraction``; DCA has
+            ``frequency_days``/``amount_per_period``/``allocation``; etc.).
+            ``Any`` is permitted here as a documented exception — see the
+            class-level note.
+        metrics: Primary backtest metrics for the recommended candidate.
+            ``None`` when no candidate was recommended.
+        comparison_to_baseline: Comparison of the recommended candidate
+            to a baseline backtest (typically buy-and-hold on the same
+            tickers/period). ``None`` when no baseline was run.
+        confidence: Agent's qualitative confidence in the recommendation,
+            in [0.0, 1.0]. Optional. ``None`` means "unspecified".
 
     Raises:
-        InvalidExplorationTaskError: If ``summary`` is empty/whitespace or
-            exceeds the 4000-character cap.
+        InvalidExplorationTaskError: If ``summary`` is empty/whitespace,
+            exceeds the 4000-character cap, ``confidence`` falls outside
+            [0, 1], or ``recommended_strategy_id`` is set but does not
+            appear in ``strategy_ids``.
+
+    Note:
+        ``recommended_parameters`` deliberately uses ``dict[str, Any]``.
+        The parameter shape varies per strategy type and the value
+        objects describing each shape live in
+        ``zebu.domain.value_objects.strategy_parameters``. Encoding them
+        here as a typed union would require keeping this entity in sync
+        with every new strategy type — instead we forward the dict as-is.
+        Callers that need a typed value should use ``parameters_from_dict``
+        from the strategy_parameters module against the recommended
+        strategy's type.
     """
 
     summary: str
     backtest_run_ids: list[UUID] = field(default_factory=list)
     strategy_ids: list[UUID] = field(default_factory=list)
     notes: list[str] | None = None
+    recommended_strategy_id: UUID | None = None
+    # ``Any`` is intentional here — see class docstring. Parameter shape
+    # varies per strategy type; encoding the discriminated union would
+    # couple the entity to every new strategy type added.
+    recommended_parameters: dict[str, Any] | None = None
+    metrics: ExplorationFindingsMetrics | None = None
+    comparison_to_baseline: ExplorationFindingsComparison | None = None
+    confidence: float | None = None
 
     def __post_init__(self) -> None:
         """Validate findings invariants after initialization."""
@@ -162,6 +279,20 @@ class ExplorationFindings:
             raise InvalidExplorationTaskError(
                 f"ExplorationFindings.summary must be at most 4000 characters, "
                 f"got {len(self.summary)}"
+            )
+        if self.confidence is not None and not 0.0 <= self.confidence <= 1.0:
+            raise InvalidExplorationTaskError(
+                f"ExplorationFindings.confidence must be in [0.0, 1.0] if set, "
+                f"got {self.confidence}"
+            )
+        if (
+            self.recommended_strategy_id is not None
+            and self.recommended_strategy_id not in self.strategy_ids
+        ):
+            raise InvalidExplorationTaskError(
+                "ExplorationFindings.recommended_strategy_id must appear in "
+                "strategy_ids — the recommendation cannot reference a "
+                "strategy the finding doesn't list."
             )
 
 

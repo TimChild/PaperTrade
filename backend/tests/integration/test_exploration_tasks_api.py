@@ -553,6 +553,222 @@ class TestSubmitFindings:
         )
         assert response.status_code == 404
 
+    # -----------------------------------------------------------------------
+    # Phase E2 — structured findings round-trip
+    # -----------------------------------------------------------------------
+
+    def test_submit_structured_findings_roundtrips(
+        self,
+        client: TestClient,
+        auth_headers: dict[str, str],
+    ) -> None:
+        """Submit a Phase E2 structured finding and verify every field
+        comes back through the GET endpoint with values intact.
+
+        Sample fixture for reviewer reference:
+
+        ```json
+        {
+          "summary": "MA(20/50) on AAPL+NVDA beat buy-and-hold.",
+          "backtest_run_ids": ["<uuid>"],
+          "strategy_ids": ["<recommended-uuid>", "<baseline-uuid>"],
+          "notes": ["Tried 5 sweeps"],
+          "recommended_strategy_id": "<recommended-uuid>",
+          "recommended_parameters": {
+            "fast_window": 20,
+            "slow_window": 50,
+            "invest_fraction": "1.0"
+          },
+          "metrics": {
+            "total_return_pct": "24.4",
+            "sharpe_ratio": "1.32",
+            "max_drawdown_pct": "-11.7",
+            "n_trades": 14,
+            "annualized_return_pct": "12.5"
+          },
+          "comparison_to_baseline": {
+            "baseline_strategy_id": "<baseline-uuid>",
+            "baseline_total_return_pct": "18.1",
+            "delta_total_return_pct": "6.3",
+            "delta_sharpe": "0.38"
+          },
+          "confidence": 0.75
+        }
+        ```
+        """
+        body = _create_task(client, auth_headers)
+        client.post(
+            f"/api/v1/exploration-tasks/{body['id']}/claim",
+            headers=auth_headers,
+            json={"agent_id": "agent-a"},
+        )
+
+        recommended_id = str(uuid4())
+        baseline_id = str(uuid4())
+        run_id = str(uuid4())
+
+        payload: dict[str, object] = {
+            "summary": "MA(20/50) on AAPL+NVDA beat buy-and-hold.",
+            "backtest_run_ids": [run_id],
+            "strategy_ids": [recommended_id, baseline_id],
+            "notes": ["Tried 5 sweeps"],
+            "recommended_strategy_id": recommended_id,
+            "recommended_parameters": {
+                "fast_window": 20,
+                "slow_window": 50,
+                "invest_fraction": "1.0",
+            },
+            "metrics": {
+                "total_return_pct": "24.4",
+                "sharpe_ratio": "1.32",
+                "max_drawdown_pct": "-11.7",
+                "n_trades": 14,
+                "annualized_return_pct": "12.5",
+            },
+            "comparison_to_baseline": {
+                "baseline_strategy_id": baseline_id,
+                "baseline_total_return_pct": "18.1",
+                "delta_total_return_pct": "6.3",
+                "delta_sharpe": "0.38",
+            },
+            "confidence": 0.75,
+        }
+
+        post_response = client.post(
+            f"/api/v1/exploration-tasks/{body['id']}/findings",
+            headers=auth_headers,
+            json=payload,
+        )
+        assert post_response.status_code == 200, post_response.text
+        completed = post_response.json()
+
+        # The POST response shows the structured payload faithfully...
+        findings = completed["findings"]
+        assert findings["recommended_strategy_id"] == recommended_id
+        assert findings["recommended_parameters"] == {
+            "fast_window": 20,
+            "slow_window": 50,
+            "invest_fraction": "1.0",
+        }
+        assert findings["metrics"]["total_return_pct"] == "24.4"
+        assert findings["metrics"]["sharpe_ratio"] == "1.32"
+        assert findings["metrics"]["max_drawdown_pct"] == "-11.7"
+        assert findings["metrics"]["n_trades"] == 14
+        assert findings["metrics"]["annualized_return_pct"] == "12.5"
+        assert findings["comparison_to_baseline"]["baseline_strategy_id"] == baseline_id
+        assert findings["comparison_to_baseline"]["baseline_total_return_pct"] == "18.1"
+        assert findings["comparison_to_baseline"]["delta_total_return_pct"] == "6.3"
+        assert findings["comparison_to_baseline"]["delta_sharpe"] == "0.38"
+        assert findings["confidence"] == 0.75
+
+        # ...and a subsequent GET returns the same shape (verifies the
+        # round-trip through SQLite's JSON column).
+        get_response = client.get(
+            f"/api/v1/exploration-tasks/{body['id']}",
+            headers=auth_headers,
+        )
+        assert get_response.status_code == 200
+        fetched = get_response.json()["findings"]
+        assert fetched == findings  # exact equality after persist/reload
+
+    def test_submit_narrative_findings_still_works(
+        self,
+        client: TestClient,
+        auth_headers: dict[str, str],
+    ) -> None:
+        """Backward compatibility — v1 narrative-only payloads remain valid.
+
+        This is the regression guard for Phase E2: existing free-form
+        agents must continue submitting findings without the new fields.
+        """
+        body = _create_task(client, auth_headers)
+        client.post(
+            f"/api/v1/exploration-tasks/{body['id']}/claim",
+            headers=auth_headers,
+            json={"agent_id": "agent-a"},
+        )
+
+        response = client.post(
+            f"/api/v1/exploration-tasks/{body['id']}/findings",
+            headers=auth_headers,
+            json={"summary": "Nothing beat baseline; closing as DONE."},
+        )
+        assert response.status_code == 200, response.text
+        completed = response.json()
+        assert completed["status"] == "DONE"
+        # Every E2 field is None when absent in the request.
+        findings = completed["findings"]
+        assert findings["recommended_strategy_id"] is None
+        assert findings["recommended_parameters"] is None
+        assert findings["metrics"] is None
+        assert findings["comparison_to_baseline"] is None
+        assert findings["confidence"] is None
+
+    def test_submit_findings_dangling_recommendation_returns_422(
+        self,
+        client: TestClient,
+        auth_headers: dict[str, str],
+    ) -> None:
+        """``recommended_strategy_id`` must appear in ``strategy_ids``."""
+        body = _create_task(client, auth_headers)
+        client.post(
+            f"/api/v1/exploration-tasks/{body['id']}/claim",
+            headers=auth_headers,
+            json={"agent_id": "agent-a"},
+        )
+
+        response = client.post(
+            f"/api/v1/exploration-tasks/{body['id']}/findings",
+            headers=auth_headers,
+            json={
+                "summary": "ok",
+                "strategy_ids": [str(uuid4())],
+                "recommended_strategy_id": str(uuid4()),  # different
+            },
+        )
+        assert response.status_code == 422
+
+    def test_submit_findings_invalid_confidence_returns_422(
+        self,
+        client: TestClient,
+        auth_headers: dict[str, str],
+    ) -> None:
+        body = _create_task(client, auth_headers)
+        client.post(
+            f"/api/v1/exploration-tasks/{body['id']}/claim",
+            headers=auth_headers,
+            json={"agent_id": "agent-a"},
+        )
+
+        response = client.post(
+            f"/api/v1/exploration-tasks/{body['id']}/findings",
+            headers=auth_headers,
+            json={"summary": "ok", "confidence": 1.5},
+        )
+        assert response.status_code == 422
+
+    def test_submit_findings_invalid_decimal_returns_422(
+        self,
+        client: TestClient,
+        auth_headers: dict[str, str],
+    ) -> None:
+        body = _create_task(client, auth_headers)
+        client.post(
+            f"/api/v1/exploration-tasks/{body['id']}/claim",
+            headers=auth_headers,
+            json={"agent_id": "agent-a"},
+        )
+
+        response = client.post(
+            f"/api/v1/exploration-tasks/{body['id']}/findings",
+            headers=auth_headers,
+            json={
+                "summary": "ok",
+                "metrics": {"total_return_pct": "not-a-number"},
+            },
+        )
+        assert response.status_code == 422
+
 
 # ---------------------------------------------------------------------------
 # Auth coverage — all routes require auth
