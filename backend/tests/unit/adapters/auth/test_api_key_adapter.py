@@ -42,6 +42,7 @@ def _build_record(
     created_at: datetime | None = None,
     last_used_at: datetime | None = None,
     clerk_user_id: str = TEST_USER,
+    label: str = "unit-test",
 ) -> ApiKey:
     """Build a persisted :class:`ApiKey` whose hash matches ``raw_key``."""
     hasher = _hasher()
@@ -49,7 +50,7 @@ def _build_record(
         id=uuid4(),
         user_id=uuid5(NAMESPACE_DNS, clerk_user_id),
         clerk_user_id=clerk_user_id,
-        label="unit-test",
+        label=label,
         key_hash=hasher.hash(raw_key),
         scopes=frozenset({ApiKeyScope.READ}),
         created_at=created_at or datetime.now(UTC) - timedelta(hours=1),
@@ -124,6 +125,69 @@ class TestVerifyTokenSuccess:
         bumped = await repo.get(record.id)
         assert bumped is not None
         assert bumped.last_used_at == datetime(2026, 5, 9, 12, 5, 0, tzinfo=UTC)
+
+    @pytest.mark.asyncio
+    async def test_valid_key_carries_auth_method_api_key(self) -> None:
+        """Phase H5: verify_token must surface auth_method='api_key'."""
+        repo = InMemoryApiKeyRepository()
+        await _seed(repo, _build_record(raw_key="zk_valid"))
+        adapter = ApiKeyAuthAdapter(repository=repo, hasher=_hasher())
+
+        user = await adapter.verify_token("zk_valid")
+
+        assert user.auth_method == "api_key"
+
+    @pytest.mark.asyncio
+    async def test_valid_key_carries_persisted_id_and_label(self) -> None:
+        """Phase H5: verify_token must surface the key's id and label.
+
+        These fields are the identity column for the activity feed
+        (Phase H2) and per-key rate limiter (Phase F): a single human
+        user can mint multiple keys and have them differentiated in
+        observability without any new code paths per role.
+        """
+        repo = InMemoryApiKeyRepository()
+        record = _build_record(raw_key="zk_valid", label="claude-code-laptop-explorer")
+        await _seed(repo, record)
+        adapter = ApiKeyAuthAdapter(repository=repo, hasher=_hasher())
+
+        user = await adapter.verify_token("zk_valid")
+
+        assert user.api_key_id == record.id
+        assert user.api_key_label == "claude-code-laptop-explorer"
+
+    @pytest.mark.asyncio
+    async def test_two_keys_for_same_user_resolve_distinct_labels(self) -> None:
+        """Two keys minted by one user must be differentiable on the wire.
+
+        This is the core multi-agent identity invariant: when the same
+        Clerk user mints both ``claude-code-laptop-explorer`` and
+        ``claude-code-laptop-strategist`` keys, the resulting
+        ``AuthenticatedUser`` for each must carry the right label so
+        observability hooks can route activity correctly.
+        """
+        repo = InMemoryApiKeyRepository()
+        explorer_record = _build_record(
+            raw_key="zk_explorer",
+            label="claude-code-laptop-explorer",
+        )
+        strategist_record = _build_record(
+            raw_key="zk_strategist",
+            label="claude-code-laptop-strategist",
+        )
+        await _seed(repo, explorer_record)
+        await _seed(repo, strategist_record)
+        adapter = ApiKeyAuthAdapter(repository=repo, hasher=_hasher())
+
+        explorer_user = await adapter.verify_token("zk_explorer")
+        strategist_user = await adapter.verify_token("zk_strategist")
+
+        # Same Clerk user_id (user_id is the identity that owns both)…
+        assert explorer_user.id == strategist_user.id == TEST_USER
+        # …but distinct API-key identities exposed to logs / activity feed.
+        assert explorer_user.api_key_label == "claude-code-laptop-explorer"
+        assert strategist_user.api_key_label == "claude-code-laptop-strategist"
+        assert explorer_user.api_key_id != strategist_user.api_key_id
 
 
 class TestVerifyTokenRejection:
@@ -212,6 +276,12 @@ class TestGetUser:
         assert user is not None
         assert user.id == "user_2abc"
         assert user.email == ""
+        # No raw key was presented, so the per-key identity fields are None.
+        # auth_method is "api_key" because this method is part of the
+        # API-key adapter's contract.
+        assert user.auth_method == "api_key"
+        assert user.api_key_id is None
+        assert user.api_key_label is None
 
     @pytest.mark.asyncio
     async def test_get_user_returns_none_for_blank(self) -> None:

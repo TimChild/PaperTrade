@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
+import structlog
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
@@ -30,6 +31,11 @@ from zebu.domain.value_objects.strategy_type import StrategyType
 from zebu.infrastructure.database import SessionDep
 
 router = APIRouter(prefix="/strategies", tags=["strategies"])
+
+# Module-level structlog logger. Picks up the actor identity bound by
+# get_current_user (auth_method, clerk_user_id, api_key_id, api_key_label)
+# automatically via structlog.contextvars — Phase H5.
+logger = structlog.get_logger(__name__)
 
 
 # Request/Response Models
@@ -136,6 +142,13 @@ async def create_strategy(
 
     repo = SQLModelStrategyRepository(session)
     await repo.save(strategy)
+
+    logger.info(
+        "Strategy created",
+        strategy_id=str(strategy.id),
+        strategy_type=strategy_type.value,
+        ticker_count=len(request.tickers),
+    )
 
     return _to_strategy_response(strategy)
 

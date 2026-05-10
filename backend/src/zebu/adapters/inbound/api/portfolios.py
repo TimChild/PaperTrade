@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID
 
+import structlog
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator
 
@@ -71,6 +72,11 @@ from zebu.domain.value_objects.portfolio_type import PortfolioType
 from zebu.domain.value_objects.ticker import Ticker
 
 router = APIRouter(prefix="/portfolios", tags=["portfolios"])
+
+# Module-level structlog logger. Pick up the actor identity bound by
+# get_current_user (auth_method, clerk_user_id, api_key_id, api_key_label)
+# automatically via structlog.contextvars — no per-call ``extra={...}``.
+logger = structlog.get_logger(__name__)
 
 # Default currency for Phase 1 (hardcoded until multi-currency support added)
 DEFAULT_CURRENCY = "USD"
@@ -496,14 +502,18 @@ async def execute_trade(
         HTTPException: 503 if market data service is unavailable
         HTTPException: 400 if as_of is in the future
     """
-    # Log the trade request for debugging (especially useful in CI)
-    import logging
-
-    logger = logging.getLogger(__name__)
+    # Log the trade request — actor identity (auth_method, clerk_user_id,
+    # api_key_id, api_key_label) is auto-merged from structlog contextvars
+    # bound by get_current_user. Phase H5: this lets the activity feed
+    # group "trades by claude-code-laptop-explorer" without any handler
+    # changes here.
     logger.info(
-        f"Trade request received: portfolio_id={portfolio_id}, "
-        f"action={request.action}, ticker={request.ticker}, "
-        f"quantity={request.quantity}, as_of={request.as_of}"
+        "Trade request received",
+        portfolio_id=str(portfolio_id),
+        action=request.action,
+        ticker=request.ticker,
+        quantity=str(request.quantity),
+        as_of=request.as_of.isoformat() if request.as_of else None,
     )
 
     # Verify user owns this portfolio
@@ -636,17 +646,16 @@ async def _verify_portfolio_ownership(
     Raises:
         HTTPException: 404 if portfolio not found, 403 if user doesn't own it
     """
-    import logging
-
-    logger = logging.getLogger(__name__)
     logger.info(
-        f"Verifying portfolio ownership: portfolio_id={portfolio_id}, user_id={user_id}"
+        "Verifying portfolio ownership",
+        portfolio_id=str(portfolio_id),
+        user_id=str(user_id),
     )
 
     portfolio = await portfolio_repo.get(portfolio_id)
 
     if portfolio is None:
-        logger.warning(f"Portfolio not found: {portfolio_id}")
+        logger.warning("Portfolio not found", portfolio_id=str(portfolio_id))
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Portfolio not found: {portfolio_id}",

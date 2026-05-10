@@ -10,6 +10,7 @@ from typing import Annotated
 from uuid import UUID
 
 import httpx
+import structlog
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from redis.asyncio import Redis
@@ -261,6 +262,35 @@ def extract_api_key_from_request(request: Request) -> str | None:
     return None
 
 
+def _bind_actor_to_log_context(user: AuthenticatedUser) -> None:
+    """Bind the resolved actor identity to structlog contextvars.
+
+    Once bound, every log line emitted during the rest of the request
+    handler (and the dependencies that run after this) automatically
+    carries the actor fields — no per-handler ``extra={...}`` needed.
+    The :class:`LoggingContextMiddleware` clears the context at the
+    start of each request, so there's no cross-request leak.
+
+    Phase H5 (multi-agent identity prep): the ``api_key_label`` is the
+    identity column the activity feed (Phase H2) and per-key rate
+    limiter (Phase F) will key on. Surfacing it on every authenticated
+    log line makes "find everything `claude-code-laptop-explorer` did
+    today" a one-grep operation instead of a join across DB tables.
+
+    Args:
+        user: The authenticated user produced by :func:`get_current_user`.
+    """
+    bindings: dict[str, str] = {
+        "auth_method": user.auth_method,
+        "clerk_user_id": user.id,
+    }
+    if user.api_key_id is not None:
+        bindings["api_key_id"] = str(user.api_key_id)
+    if user.api_key_label is not None:
+        bindings["api_key_label"] = user.api_key_label
+    structlog.contextvars.bind_contextvars(**bindings)
+
+
 async def get_current_user(
     request: Request,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)],
@@ -278,7 +308,11 @@ async def get_current_user(
 
     Returns the same :class:`AuthenticatedUser` shape regardless of which
     scheme authenticated the request. Downstream code does not need to
-    care which path the request came in on.
+    care which path the request came in on. The
+    :class:`AuthenticatedUser` carries the originating ``auth_method``
+    plus, on the API-key path, the persisted key's ``id`` and
+    ``label`` — surfaced to every log line via structlog contextvars
+    (Phase H5).
 
     Selection rule: a Bearer token wins if both are present; this keeps
     behaviour unchanged for browser clients that always send ``Bearer``.
@@ -323,15 +357,21 @@ async def get_current_user(
 
     if bearer_token is not None:
         try:
-            return await auth.verify_token(bearer_token)
+            user = await auth.verify_token(bearer_token)
         except InvalidTokenError as exc:
             last_error = exc
+        else:
+            _bind_actor_to_log_context(user)
+            return user
 
     if api_key_token is not None:
         try:
-            return await api_key_auth.verify_token(api_key_token)
+            user = await api_key_auth.verify_token(api_key_token)
         except InvalidTokenError as exc:
             last_error = exc
+        else:
+            _bind_actor_to_log_context(user)
+            return user
 
     if last_error is None:
         # Neither scheme presented anything — the request was missing auth.

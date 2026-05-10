@@ -12,6 +12,7 @@ from decimal import Decimal
 from typing import Self
 from uuid import UUID
 
+import structlog
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -49,6 +50,11 @@ from zebu.domain.exceptions import InsufficientHistoricalDataError, InvalidStrat
 from zebu.infrastructure.database import SessionDep
 
 router = APIRouter(prefix="/backtests", tags=["backtests"])
+
+# Module-level structlog logger. Picks up the actor identity bound by
+# get_current_user (auth_method, clerk_user_id, api_key_id, api_key_label)
+# automatically via structlog.contextvars — Phase H5.
+logger = structlog.get_logger(__name__)
 
 _MAX_DATE_RANGE_DAYS = 3 * 365
 
@@ -197,6 +203,14 @@ async def run_backtest(
 
     executor = _build_executor(session=session, market_data=market_data)
 
+    logger.info(
+        "Backtest run requested",
+        strategy_id=str(request.strategy_id),
+        start_date=request.start_date.isoformat(),
+        end_date=request.end_date.isoformat(),
+        initial_cash=str(request.initial_cash),
+    )
+
     try:
         backtest_run = await executor.execute(command)
     except InvalidStrategyError as exc:
@@ -209,6 +223,13 @@ async def run_backtest(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(exc),
         ) from exc
+
+    logger.info(
+        "Backtest run completed",
+        backtest_id=str(backtest_run.id),
+        status=backtest_run.status.value,
+        total_trades=backtest_run.total_trades,
+    )
 
     return _to_backtest_response(backtest_run)
 
