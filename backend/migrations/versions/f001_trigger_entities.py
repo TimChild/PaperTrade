@@ -58,7 +58,7 @@ from alembic import op
 # characters — well under the 32-character cap on
 # ``alembic_version.version_num``. Filename matches.
 revision: str = "f001_trigger_entities"
-down_revision: str | Sequence[str] | None = "c002_add_api_keys"
+down_revision: str | Sequence[str] | None = "h001_add_api_key_id_audit"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
