@@ -257,3 +257,109 @@ export interface RunNowResponse {
   trades: number
   error: string | null
 }
+
+// Exploration task types (Phase H1)
+/**
+ * Lifecycle status of an exploration task.
+ *
+ * Mirrors
+ * `backend/src/zebu/domain/entities/exploration_task.py:ExplorationTaskStatus`.
+ *
+ * - `OPEN` — Created by a human; available for any agent to claim.
+ * - `IN_PROGRESS` — Claimed by an agent and being worked. (Some UI surfaces
+ *   refer to this as "claimed".)
+ * - `DONE` — Agent submitted findings and marked it complete.
+ * - `ABANDONED` — Cancelled (terminal). Currently `DELETE` is a hard delete
+ *   server-side, so abandoned tasks won't show up in the list — but the
+ *   entity supports the state and a future "soft abandon" endpoint could
+ *   surface it. The UI is forward-compatible.
+ */
+export type ExplorationTaskStatus =
+  | 'OPEN'
+  | 'IN_PROGRESS'
+  | 'DONE'
+  | 'ABANDONED'
+
+/**
+ * Optional structured guardrails attached to an exploration task.
+ *
+ * Mirrors `ConstraintsResponse` /
+ * `backend/src/zebu/domain/entities/exploration_task.py:ExplorationConstraints`.
+ */
+export interface ExplorationConstraintsResponse {
+  max_backtests: number | null
+  allow_live_activation: boolean
+  strategy_type_whitelist: string[] | null
+}
+
+/**
+ * Typed payload an agent submits when completing a task.
+ *
+ * Mirrors `FindingsResponse` /
+ * `backend/src/zebu/domain/entities/exploration_task.py:ExplorationFindings`.
+ *
+ * Note: the backend does not surface free-form `links` separately — the
+ * agent's narrative `summary` is the primary text channel, and any
+ * structured references live in `backtest_run_ids` / `strategy_ids` /
+ * the optional bullet-point `notes`.
+ */
+export interface ExplorationFindingsResponse {
+  summary: string
+  backtest_run_ids: string[]
+  strategy_ids: string[]
+  notes: string[] | null
+}
+
+/**
+ * Wire shape for an `ExplorationTask`.
+ *
+ * Mirrors `ExplorationTaskResponse` in
+ * `backend/src/zebu/adapters/inbound/api/exploration_tasks.py`.
+ *
+ * `claimed_by` is a free-form string label the agent chose at claim time
+ * (typically the API-key label, e.g. "claude-code-laptop-explorer"). The
+ * raw user UUID may appear here if the claim was made through a Clerk-only
+ * session, but in normal agent operation this is the API key's label.
+ */
+export interface ExplorationTaskResponse {
+  id: string
+  created_by: string
+  prompt: string
+  status: ExplorationTaskStatus
+  target_portfolio_id: string | null
+  tickers: string[] | null
+  constraints: ExplorationConstraintsResponse | null
+  claimed_by: string | null
+  claimed_at: string | null
+  findings: ExplorationFindingsResponse | null
+  created_at: string
+  updated_at: string
+}
+
+/**
+ * Request body for `POST /exploration-tasks`.
+ *
+ * `prompt` is the only required field — every other field is optional.
+ */
+export interface CreateExplorationTaskRequest {
+  prompt: string
+  target_portfolio_id?: string
+  tickers?: string[]
+  constraints?: {
+    max_backtests?: number
+    allow_live_activation?: boolean
+    strategy_type_whitelist?: string[]
+  }
+}
+
+/**
+ * Query params accepted by `GET /exploration-tasks`. The backend supports
+ * a `scope=mine|all` toggle (default `all`) and a `status` filter; under
+ * `scope=all` the default status is `OPEN` (the queue view).
+ */
+export interface ListExplorationTasksParams {
+  scope?: 'all' | 'mine'
+  status?: ExplorationTaskStatus
+  limit?: number
+  offset?: number
+}
