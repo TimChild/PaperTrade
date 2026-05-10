@@ -102,6 +102,11 @@ This checklist ensures your Zebu deployment is production-ready. Complete all it
   - [ ] Alpha Vantage API key valid and rate limits configured
   - [ ] Logging level appropriate (`INFO` for production)
 
+- [ ] **Phase F-3 trigger-fire agent (added F-3, gated off by default)**
+  - [ ] `ANTHROPIC_API_KEY` set in `.env` if `ZEBU_TRIGGER_FIRES_ENABLED=true`. The trigger-fire orchestrator calls the Anthropic Messages API; without a key, all fires record `INVOCATION_FAILED`. Required only when fires are enabled.
+  - [ ] `ZEBU_AGENT_MODEL` (optional). Defaults to `claude-haiku-4-5-20251001` — Haiku 4.5 is the right cost tier for the trigger-fire context (small prompt, single decision call). Override to a Sonnet/Opus model only if the latency-vs-quality trade-off justifies it.
+  - [ ] `ZEBU_TRIGGER_FIRES_ENABLED` (default `false`). Feature flag for the F-3 fire path. While `false`, the F-2 evaluator detects fires but does **not** invoke the agent or write `TriggerFireRecord` rows (matches F-2 behaviour). Flip to `true` (`yes` / `1` also accepted) only after F-7's smoke test against staging passes.
+
 - [ ] **Docker Configuration**
   - [ ] Production Docker Compose file used (`docker-compose.prod.yml`)
   - [ ] Health checks configured for all services

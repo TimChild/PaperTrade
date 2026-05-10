@@ -143,11 +143,185 @@ A negative result is a **valid finding** — explicitly say "nothing beat baseli
 
 If the finding is strong AND the task didn't say "don't activate live," call `activate_strategy(strategy_id, portfolio_id, frequency='daily')`. Note the activation in the finding. Otherwise wait for Tim.
 
-### 3.5.1 Agent-in-the-loop triggers (Phase F preview)
+### 3.5.1 Agent-in-the-loop triggers (Phase F)
 
-Phase F is landing the **trigger system** in pieces (PRs F-1 through F-7). Once fully shipped, an active strategy can carry one or more `StrategyConditionTrigger` rows that wake the agent when a condition fires (drawdown threshold, volatility spike, earnings proximity). When woken, the agent reads context via the Zebu MCP read tools, then **terminates the conversation** by calling a virtual `record_decision` tool with one of: `BUY` / `SELL` (paper trade routed through the live executor), `HOLD` (no action; recorded for audit), `MODIFY_STRATEGY` (parameter override, validated; the asset-universe `tickers` list is **not** modifiable via this path — security boundary), or `NEEDS_HUMAN` (escalates to a `[TRIGGER FIRE]`-prefixed `ExplorationTask`).
+Phase F is the **trigger system**: an active strategy can carry one or more `StrategyConditionTrigger` rows that wake an agent (you) when a condition fires (drawdown threshold, volatility spike, earnings proximity). The trigger evaluator runs on a cron inside the API process; when a condition fires, the orchestrator builds a structured prompt, calls the Anthropic Messages API with you on the other end, and persists your decision as a `TriggerFireRecord` audit row.
 
-**Until F-7 lands, this is just storage + scaffolding** — the tables exist but no scheduler job evaluates them, and no `record_decision` virtual tool is exposed. **Agents shouldn't expect trigger-fire callbacks yet.** Full design at [`docs/architecture/phase-f-agent-in-the-loop.md`](../architecture/phase-f-agent-in-the-loop.md).
+#### Status (as of F-3)
+
+| Phase | Ships | Status |
+|---|---|---|
+| F-1 | `StrategyConditionTrigger` + `TriggerFireRecord` entities, repos, migration | ✅ Merged |
+| F-2 | Evaluator service + DRAWDOWN_THRESHOLD condition + scheduler job | ✅ Merged |
+| **F-3** | **`AgentInvocationPort` + Anthropic adapter + decision-execution flow** | **✅ This PR** |
+| F-4 | VOLATILITY_SPIKE + EARNINGS_PROXIMITY conditions | Pending |
+| F-5 | Trigger fire log API + kill-switch endpoints | Pending |
+| F-6 | Per-key rate limit on `run_backtest` + per-portfolio agent-trade caps | Pending |
+| F-7 | End-to-end smoke against real Anthropic API on staging | Pending |
+
+**F-3 ships the actual fire path** — the orchestrator wakes the agent and acts on its decision. **The scheduler job is gated behind a feature flag (`ZEBU_TRIGGER_FIRES_ENABLED`, default `false`)** until Tim opts in. With the flag off, the evaluator runs and detects fires but doesn't invoke an agent (this is the F-2 behavior).
+
+#### When you're woken: the prompt you receive
+
+The orchestrator sends you two messages.
+
+**System prompt (cached across invocations):**
+
+```
+You are a Zebu trigger-fire decision agent.
+
+## Role
+A condition trigger has fired on an active paper-trading strategy.
+You will receive the trigger's context (condition snapshot, strategy
+state, portfolio state, and the operator's free-form prompt) and must
+return a structured decision via the `record_decision` tool.
+
+## Hard rules
+1. Paper-trading only. Zebu is paper money.
+2. Terminate by calling `record_decision` exactly once. The
+   conversation ends when you call it.
+3. Be conservative. When in doubt, prefer HOLD or NEEDS_HUMAN over a
+   forced trade.
+4. Decisions: BUY / SELL / HOLD / MODIFY_STRATEGY / NEEDS_HUMAN.
+5. Trades on tickers outside the strategy universe are rejected
+   automatically; do not attempt them.
+6. Respect the operator's instructions in the user prompt.
+
+## Output format
+Always call the `record_decision` tool. The `rationale` field should
+be 1-2 sentences explaining your reasoning; this is persisted on the
+audit row for review.
+```
+
+**User prompt (rebuilt every fire):**
+
+```markdown
+## Trigger
+- id: <uuid>
+- condition_type: DRAWDOWN_THRESHOLD
+- cooldown_seconds: 21600
+- last_fired_at: <iso8601 or absent>
+- priority: 0
+
+## Condition snapshot
+- drawdown_pct: 10.5
+- peak_value: 10000
+- current_value: 8950
+- threshold_pct: 5
+- metric: PORTFOLIO_TOTAL
+- ...
+
+## Strategy
+- id: <uuid>
+- type: BUY_AND_HOLD
+- tickers: ['AAPL']
+- name: Tech Watch
+
+## Activation
+- id: <uuid>
+- status: ACTIVE
+- frequency: DAILY_MARKET_CLOSE
+- last_executed_at: <iso8601>
+
+## Portfolio
+- id: <uuid>
+- cash_balance: 8500.00
+- holdings:
+  - AAPL: 50
+
+## Operator instruction
+<the trigger's `agent_prompt` field, verbatim>
+
+## Directive
+Decide what to do and call `record_decision`. Be conservative —
+prefer HOLD or NEEDS_HUMAN over forced trades when the right
+answer is unclear.
+```
+
+#### How to respond — the `record_decision` tool
+
+Always call the `record_decision` tool. Required fields:
+
+- `decision`: one of `BUY` / `SELL` / `HOLD` / `MODIFY_STRATEGY` / `NEEDS_HUMAN`
+- `rationale`: 1–2 sentences (persisted on audit row)
+
+Per-decision payload:
+
+| Decision | Required fields | Notes |
+|---|---|---|
+| `BUY` / `SELL` | `ticker` (must be in strategy universe), `notes` | Optional `quantity` (decimal string). Omit / null = default sizing (1 share). |
+| `HOLD` | `notes` | No-op. Still recorded. |
+| `MODIFY_STRATEGY` | `parameter_overrides` (object), `notes` | **`tickers` key is forbidden** — security boundary. |
+| `NEEDS_HUMAN` | `summary`, `urgency` (`low` / `medium` / `high`) | Files an `ExplorationTask` with `[TRIGGER FIRE] [NEEDS HUMAN]` prefix. |
+
+#### Worked example: drawdown trigger fires
+
+**The trigger:**
+
+```python
+StrategyConditionTrigger(
+    condition_type=DRAWDOWN_THRESHOLD,
+    condition_params=DrawdownParams(threshold_pct=5%, lookback_days=30),
+    agent_prompt=(
+        "If NVDA cracks 5% from peak, decide whether to hold based on "
+        "earnings context. Call NEEDS_HUMAN if there's a major "
+        "catalyst pending."
+    ),
+    cooldown_seconds=21600,
+)
+```
+
+**You receive (user prompt) — fictional snapshot:**
+
+```
+## Condition snapshot
+- drawdown_pct: 6.2
+- current_value: 9380.00
+- peak_value: 10000.00
+...
+## Operator instruction
+If NVDA cracks 5% from peak, decide whether to hold based on
+earnings context. Call NEEDS_HUMAN if there's a major catalyst
+pending.
+```
+
+**You decide (call `record_decision`):**
+
+```json
+{
+  "decision": "NEEDS_HUMAN",
+  "rationale": "Drawdown crossed threshold but earnings are tomorrow. Operator asked to escalate when a major catalyst is pending — escalating.",
+  "summary": "NVDA -6.2% from peak; earnings tomorrow. Need human direction on whether to hold through the print.",
+  "urgency": "high"
+}
+```
+
+**What happens:**
+
+1. The orchestrator validates your payload, files an `ExplorationTask` with title prefix `[TRIGGER FIRE] [NEEDS HUMAN]`, and prompt body containing the trigger's metadata + your `summary`.
+2. A `TriggerFireRecord` is appended to the audit table linking the trigger fire → your decision → the `ExplorationTask` ID.
+3. The trigger's `last_fired_at` updates so cooldown applies to the next eval tick.
+
+#### Audit chain
+
+Every decision lands in the `TriggerFireRecord` table:
+
+| Decision | What lands on the audit row | Side effect |
+|---|---|---|
+| `BUY` / `SELL` | `agent_response`, `agent_response_raw` (your rationale), `resulting_trade_id` | Transaction persisted |
+| `HOLD` | Same; `resulting_*` all null | None |
+| `MODIFY_STRATEGY` | `resulting_modify_payload` carries the overrides | Strategy parameters updated |
+| `NEEDS_HUMAN` | `resulting_exploration_task_id` | New `ExplorationTask` filed |
+| `INVOCATION_FAILED` | System-generated (network failure, parse error, etc.); your rationale + the failure message land in `agent_response_raw` | None |
+
+#### Guardrails the orchestrator enforces
+
+- **Trades outside the strategy ticker universe** are rejected and downgraded to `HOLD` with the reason in the audit row.
+- **Insufficient funds / shares** likewise downgrade to `HOLD`.
+- **`MODIFY_STRATEGY` with `tickers` in the overrides** is rejected with "forbidden parameter overrides".
+- **Failures (network, parse, invalid input)** are caught and recorded as `INVOCATION_FAILED` audit rows. The trigger's `last_fired_at` still updates so cooldown applies — failures don't immediately re-fire.
+
+Full design: [`docs/architecture/phase-f-agent-in-the-loop.md`](../architecture/phase-f-agent-in-the-loop.md).
 
 ### 3.6 If the task is truly out of scope
 
