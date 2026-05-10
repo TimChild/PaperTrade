@@ -363,3 +363,57 @@ export interface ListExplorationTasksParams {
   limit?: number
   offset?: number
 }
+
+// API Key types --------------------------------------------------------------
+
+/**
+ * Permission scopes an API key can carry.
+ *
+ * Mirrors `backend/src/zebu/domain/value_objects/api_key_scope.py`:
+ * - `read`: Read-only access (list, get).
+ * - `trade`: Write access to trading operations.
+ * - `admin`: Administrative access (cannot mint/revoke other API keys —
+ *   that path is Clerk-gated only).
+ */
+export type ApiKeyScope = 'read' | 'trade' | 'admin'
+
+/**
+ * Summary of an API key. The raw secret is **never** included here;
+ * only on `CreateApiKeyResponse` immediately after minting.
+ *
+ * Mirrors `ApiKeySummary` in `backend/.../api_keys.py`.
+ */
+export interface ApiKeySummary {
+  id: string
+  label: string
+  scopes: ApiKeyScope[]
+  created_at: string // ISO 8601
+  last_used_at: string | null
+  revoked_at: string | null
+  expires_at: string | null
+  is_active: boolean
+}
+
+export interface ApiKeyListResponse {
+  items: ApiKeySummary[]
+  total: number
+}
+
+export interface CreateApiKeyRequest {
+  label: string
+  scopes: ApiKeyScope[]
+  expires_at?: string | null // ISO 8601, omit for no expiry
+}
+
+/**
+ * Response after minting a key. The `raw_key` field is returned **once**.
+ * The server keeps only the hash; a lost key must be revoked and re-minted.
+ */
+export interface CreateApiKeyResponse {
+  id: string
+  label: string
+  scopes: ApiKeyScope[]
+  raw_key: string
+  created_at: string
+  expires_at: string | null
+}
