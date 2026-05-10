@@ -39,15 +39,39 @@ test.describe('Live Strategy Activation Flow', () => {
 
     await page.getByTestId('create-strategy-button').click()
 
+    // Wait for the form to mount before filling. The form is conditionally
+    // rendered behind `{showForm && (...)}` so we need to wait for the
+    // `data-testid="create-strategy-form"` element to appear before relying
+    // on its inputs being editable.
+    await expect(page.getByTestId('create-strategy-form')).toBeVisible({
+      timeout: 5000,
+    })
+
     const strategyName = `Activation Strategy ${Date.now()}`
     await page.getByTestId('strategy-name-input').fill(strategyName)
     // BUY_AND_HOLD is the default in the form, so no need to change the type.
     await page.getByTestId('strategy-tickers-input').fill('IBM')
+    // The allocation input only renders once the parsed `tickers` array
+    // contains the symbol — wait for it before filling.
+    await expect(page.getByTestId('allocation-IBM')).toBeVisible({
+      timeout: 5000,
+    })
     await page.getByTestId('allocation-IBM').fill('1.0')
     await page.getByTestId('create-strategy-submit').click()
 
-    // Wait for the strategy card to appear.
-    await expect(page.getByText(strategyName)).toBeVisible({ timeout: 5000 })
+    // First wait for the success toast — this confirms the POST /strategies
+    // call returned 201 and the mutation `onSuccess` chain fired. Without
+    // this gate, the next assertion races the cache-invalidation refetch.
+    await expect(page.getByText(/strategy created/i)).toBeVisible({
+      timeout: 10000,
+    })
+
+    // Then wait for the in-flight `useStrategies` refetch (triggered by
+    // `invalidateQueries(['strategies'])`) to settle before checking the DOM.
+    await page.waitForLoadState('networkidle')
+
+    // Now the strategy card should be in the grid.
+    await expect(page.getByText(strategyName)).toBeVisible({ timeout: 10000 })
 
     // 3. Find the strategy card and activate the strategy.
     // We use the heading text to locate the card, then scope subsequent
