@@ -14,6 +14,10 @@
 import { test, expect } from './fixtures'
 
 test.describe('Trigger Configuration Flow', () => {
+  // Multi-step flow: portfolio → strategy → activation → trigger CRUD.
+  // Default 60s isn't enough; bump to 180s.
+  test.setTimeout(180_000)
+
   test('attaches, pauses, and deletes a trigger on an activation', async ({
     page,
   }) => {
