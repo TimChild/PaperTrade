@@ -386,6 +386,81 @@ class TestSubmitExplorationFinding:
         assert body["backtest_run_ids"] == []
         assert body["strategy_ids"] == []
 
+    async def test_structured_payload_forwards_all_e2_fields(
+        self,
+        server: FastMCP,
+        respx_mock_session: respx.MockRouter,
+    ) -> None:
+        """Phase E2 — the new structured kwargs forward through to the
+        backend body intact. Validates the tool wiring rather than the
+        backend semantics (which the integration tests cover)."""
+        route = respx_mock_session.post(f"/exploration-tasks/{TASK_ID}/findings").mock(
+            return_value=httpx.Response(
+                200,
+                json=_task_json(
+                    status="DONE",
+                    findings={
+                        "summary": "MA(20/50) won",
+                        "backtest_run_ids": [RUN_ID],
+                        "strategy_ids": [STRATEGY_ID],
+                        "notes": None,
+                        "recommended_strategy_id": STRATEGY_ID,
+                        "recommended_parameters": {"fast_window": 20},
+                        "metrics": {"total_return_pct": "24.4"},
+                        "comparison_to_baseline": None,
+                        "confidence": 0.75,
+                    },
+                ),
+            ),
+        )
+
+        await server.call_tool(
+            "submit_exploration_finding",
+            {
+                "task_id": TASK_ID,
+                "summary": "MA(20/50) won",
+                "backtest_run_ids": [RUN_ID],
+                "strategy_ids": [STRATEGY_ID],
+                "recommended_strategy_id": STRATEGY_ID,
+                "recommended_parameters": {
+                    "fast_window": 20,
+                    "slow_window": 50,
+                    "invest_fraction": "1.0",
+                },
+                "metrics": {
+                    "total_return_pct": "24.4",
+                    "sharpe_ratio": "1.32",
+                    "max_drawdown_pct": "-11.7",
+                    "n_trades": 14,
+                    "annualized_return_pct": "12.5",
+                },
+                "comparison_to_baseline": {
+                    "baseline_strategy_id": "11111111-1111-1111-1111-111111111111",
+                    "baseline_total_return_pct": "18.1",
+                    "delta_total_return_pct": "6.3",
+                    "delta_sharpe": "0.38",
+                },
+                "confidence": 0.75,
+            },
+        )
+
+        assert route.called
+        body = json.loads(route.calls.last.request.content.decode())
+        # Every E2 field made it onto the wire body.
+        assert body["recommended_strategy_id"] == STRATEGY_ID
+        assert body["recommended_parameters"] == {
+            "fast_window": 20,
+            "slow_window": 50,
+            "invest_fraction": "1.0",
+        }
+        assert body["metrics"]["total_return_pct"] == "24.4"
+        assert body["metrics"]["sharpe_ratio"] == "1.32"
+        assert body["metrics"]["max_drawdown_pct"] == "-11.7"
+        assert body["metrics"]["n_trades"] == 14
+        assert body["comparison_to_baseline"]["delta_total_return_pct"] == "6.3"
+        assert body["comparison_to_baseline"]["delta_sharpe"] == "0.38"
+        assert body["confidence"] == 0.75
+
     async def test_conflict_when_not_in_progress(
         self,
         server: FastMCP,

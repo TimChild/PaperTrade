@@ -69,6 +69,27 @@ const baseTask: ExplorationTaskResponse = {
   updated_at: '2026-05-09T12:00:00Z',
 }
 
+/**
+ * Helper to build a `findings` block. Every Phase E2 field defaults to
+ * the v1 (no structured data) shape so individual tests can opt-in.
+ */
+function makeFindings(
+  overrides: Partial<NonNullable<ExplorationTaskResponse['findings']>> = {}
+): NonNullable<ExplorationTaskResponse['findings']> {
+  return {
+    summary: 'Found a winning variant. Sharpe 1.4, max drawdown 8%.',
+    backtest_run_ids: ['bt-1', 'bt-2'],
+    strategy_ids: ['s-1'],
+    notes: ['Tried 5 parameter sweeps', 'Best one was #3'],
+    recommended_strategy_id: null,
+    recommended_parameters: null,
+    metrics: null,
+    comparison_to_baseline: null,
+    confidence: null,
+    ...overrides,
+  }
+}
+
 function renderDetail(task: ExplorationTaskResponse): {
   user: ReturnType<typeof userEvent.setup>
 } {
@@ -176,12 +197,7 @@ describe('ExplorationTaskDetail (DONE)', () => {
       status: 'DONE',
       claimed_by: 'agent-a',
       claimed_at: '2026-05-09T13:00:00Z',
-      findings: {
-        summary: 'Found a winning variant. Sharpe 1.4, max drawdown 8%.',
-        backtest_run_ids: ['bt-1', 'bt-2'],
-        strategy_ids: ['s-1'],
-        notes: ['Tried 5 parameter sweeps', 'Best one was #3'],
-      },
+      findings: makeFindings(),
     })
 
     expect(
@@ -206,6 +222,203 @@ describe('ExplorationTaskDetail (DONE)', () => {
     expect(
       screen.getByTestId('exploration-task-detail-strategy-id-s-1')
     ).toBeInTheDocument()
+  })
+
+  it('does not render structured blocks when fields are null', async () => {
+    renderDetail({
+      ...baseTask,
+      status: 'DONE',
+      claimed_by: 'agent-a',
+      claimed_at: '2026-05-09T13:00:00Z',
+      findings: makeFindings(),
+    })
+
+    // Wait for the page to load.
+    await screen.findByTestId('exploration-task-detail-findings-summary')
+
+    // Structured E2 sections must NOT render when their fields are null —
+    // backward compatibility with v1 narrative-only findings.
+    expect(
+      screen.queryByTestId('exploration-task-detail-recommended')
+    ).toBeNull()
+    expect(screen.queryByTestId('exploration-task-detail-metrics')).toBeNull()
+    expect(
+      screen.queryByTestId('exploration-task-detail-comparison')
+    ).toBeNull()
+    expect(
+      screen.queryByTestId('exploration-task-detail-confidence')
+    ).toBeNull()
+  })
+})
+
+describe('ExplorationTaskDetail (DONE, structured E2 payload)', () => {
+  it('renders the recommended-strategy banner with parameters', async () => {
+    renderDetail({
+      ...baseTask,
+      status: 'DONE',
+      claimed_by: 'agent-a',
+      claimed_at: '2026-05-09T13:00:00Z',
+      findings: makeFindings({
+        recommended_strategy_id: 's-1',
+        recommended_parameters: {
+          fast_window: 20,
+          slow_window: 50,
+          invest_fraction: '1.0',
+        },
+      }),
+    })
+
+    const banner = await screen.findByTestId(
+      'exploration-task-detail-recommended'
+    )
+    expect(banner).toBeInTheDocument()
+    expect(
+      screen.getByTestId('exploration-task-detail-recommended-strategy-id')
+    ).toHaveTextContent('s-1')
+
+    // Parameter list renders one row per key.
+    const params = screen.getByTestId('exploration-task-detail-parameters')
+    expect(params).toHaveTextContent('fast_window')
+    expect(params).toHaveTextContent('20')
+    expect(params).toHaveTextContent('slow_window')
+    expect(params).toHaveTextContent('50')
+    expect(params).toHaveTextContent('invest_fraction')
+    expect(params).toHaveTextContent('1.0')
+  })
+
+  it('renders the metrics block with gain/loss tones', async () => {
+    renderDetail({
+      ...baseTask,
+      status: 'DONE',
+      claimed_by: 'agent-a',
+      claimed_at: '2026-05-09T13:00:00Z',
+      findings: makeFindings({
+        metrics: {
+          total_return_pct: '24.4',
+          sharpe_ratio: '1.32',
+          max_drawdown_pct: '-11.7',
+          n_trades: 14,
+          annualized_return_pct: '12.5',
+        },
+      }),
+    })
+
+    const metrics = await screen.findByTestId('exploration-task-detail-metrics')
+    expect(metrics).toBeInTheDocument()
+
+    const totalReturn = screen.getByTestId('metric-finding-total-return-value')
+    expect(totalReturn).toHaveClass('text-gain')
+    expect(totalReturn).toHaveTextContent('24.40%')
+
+    const sharpe = screen.getByTestId('metric-finding-sharpe-value')
+    expect(sharpe).toHaveTextContent('1.32')
+
+    const maxDrawdown = screen.getByTestId('metric-finding-max-drawdown-value')
+    // Max drawdown is negative — displays in loss tone.
+    expect(maxDrawdown).toHaveClass('text-loss')
+
+    expect(
+      screen.getByTestId('metric-finding-n-trades-value')
+    ).toHaveTextContent('14')
+    expect(
+      screen.getByTestId('metric-finding-annualized-value')
+    ).toHaveTextContent('12.50%')
+  })
+
+  it('omits optional metric tiles when their values are null', async () => {
+    renderDetail({
+      ...baseTask,
+      status: 'DONE',
+      claimed_by: 'agent-a',
+      claimed_at: '2026-05-09T13:00:00Z',
+      findings: makeFindings({
+        metrics: {
+          total_return_pct: '5.0',
+          sharpe_ratio: null,
+          max_drawdown_pct: null,
+          n_trades: null,
+          annualized_return_pct: null,
+        },
+      }),
+    })
+
+    await screen.findByTestId('exploration-task-detail-metrics')
+    expect(
+      screen.getByTestId('metric-finding-total-return')
+    ).toBeInTheDocument()
+    // Optional tiles are absent when their underlying value is null.
+    expect(screen.queryByTestId('metric-finding-sharpe')).toBeNull()
+    expect(screen.queryByTestId('metric-finding-max-drawdown')).toBeNull()
+    expect(screen.queryByTestId('metric-finding-n-trades')).toBeNull()
+    expect(screen.queryByTestId('metric-finding-annualized')).toBeNull()
+  })
+
+  it('renders the comparison-to-baseline table with delta tones', async () => {
+    renderDetail({
+      ...baseTask,
+      status: 'DONE',
+      claimed_by: 'agent-a',
+      claimed_at: '2026-05-09T13:00:00Z',
+      findings: makeFindings({
+        comparison_to_baseline: {
+          baseline_strategy_id: 'baseline-strategy-uuid',
+          baseline_total_return_pct: '18.1',
+          delta_total_return_pct: '6.3',
+          delta_sharpe: '0.38',
+        },
+      }),
+    })
+
+    await screen.findByTestId('exploration-task-detail-comparison')
+
+    const deltaReturn = screen.getByTestId(
+      'exploration-task-detail-comparison-delta-return'
+    )
+    // Positive delta -> gain tone.
+    expect(deltaReturn).toHaveClass('text-gain')
+
+    const deltaSharpe = screen.getByTestId(
+      'exploration-task-detail-comparison-delta-sharpe'
+    )
+    expect(deltaSharpe).toHaveClass('text-gain')
+
+    expect(
+      screen.getByTestId('exploration-task-detail-comparison-baseline-id')
+    ).toHaveTextContent('baseline-strategy-uuid')
+  })
+
+  it('renders the confidence bar with correct width', async () => {
+    renderDetail({
+      ...baseTask,
+      status: 'DONE',
+      claimed_by: 'agent-a',
+      claimed_at: '2026-05-09T13:00:00Z',
+      findings: makeFindings({ confidence: 0.72 }),
+    })
+
+    await screen.findByTestId('exploration-task-detail-confidence')
+    expect(
+      screen.getByTestId('exploration-task-detail-confidence-label')
+    ).toHaveTextContent('72%')
+
+    // The fill bar has a style attribute reflecting the percentage width.
+    const fill = screen.getByTestId('exploration-task-detail-confidence-fill')
+    expect(fill).toHaveAttribute('style', expect.stringContaining('72%'))
+  })
+
+  it('renders confidence of 0 without crashing', async () => {
+    renderDetail({
+      ...baseTask,
+      status: 'DONE',
+      claimed_by: 'agent-a',
+      claimed_at: '2026-05-09T13:00:00Z',
+      findings: makeFindings({ confidence: 0.0 }),
+    })
+
+    await screen.findByTestId('exploration-task-detail-confidence')
+    expect(
+      screen.getByTestId('exploration-task-detail-confidence-label')
+    ).toHaveTextContent('0%')
   })
 })
 

@@ -11,6 +11,7 @@ pure domain units. Repository round-tripping is covered separately under
 
 from dataclasses import FrozenInstanceError, replace
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from uuid import uuid4
 
 import pytest
@@ -18,6 +19,8 @@ import pytest
 from zebu.domain.entities.exploration_task import (
     ExplorationConstraints,
     ExplorationFindings,
+    ExplorationFindingsComparison,
+    ExplorationFindingsMetrics,
     ExplorationTask,
     ExplorationTaskStatus,
     InvalidExplorationTaskError,
@@ -130,6 +133,210 @@ class TestExplorationFindings:
         findings = ExplorationFindings(summary="ok")
         with pytest.raises(FrozenInstanceError):
             findings.summary = "different"  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------
+# ExplorationFindingsMetrics (Phase E2)
+# ---------------------------------------------------------------------------
+
+
+class TestExplorationFindingsMetrics:
+    def test_minimal_construction(self) -> None:
+        metrics = ExplorationFindingsMetrics(total_return_pct=Decimal("24.4"))
+        assert metrics.total_return_pct == Decimal("24.4")
+        assert metrics.sharpe_ratio is None
+        assert metrics.max_drawdown_pct is None
+        assert metrics.n_trades is None
+        assert metrics.annualized_return_pct is None
+
+    def test_full_construction(self) -> None:
+        metrics = ExplorationFindingsMetrics(
+            total_return_pct=Decimal("24.4"),
+            sharpe_ratio=Decimal("1.32"),
+            max_drawdown_pct=Decimal("-11.7"),
+            n_trades=14,
+            annualized_return_pct=Decimal("12.5"),
+        )
+        assert metrics.sharpe_ratio == Decimal("1.32")
+        assert metrics.n_trades == 14
+
+    def test_negative_n_trades_raises(self) -> None:
+        with pytest.raises(InvalidExplorationTaskError, match="n_trades"):
+            ExplorationFindingsMetrics(total_return_pct=Decimal("0"), n_trades=-1)
+
+    def test_zero_n_trades_is_valid(self) -> None:
+        # A backtest that ran but executed no trades is a valid finding —
+        # the agent might surface "the strategy never triggered" as a
+        # negative result.
+        metrics = ExplorationFindingsMetrics(total_return_pct=Decimal("0"), n_trades=0)
+        assert metrics.n_trades == 0
+
+    def test_is_frozen(self) -> None:
+        metrics = ExplorationFindingsMetrics(total_return_pct=Decimal("0"))
+        with pytest.raises(FrozenInstanceError):
+            metrics.total_return_pct = Decimal("1")  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------
+# ExplorationFindingsComparison (Phase E2)
+# ---------------------------------------------------------------------------
+
+
+class TestExplorationFindingsComparison:
+    def test_minimal_construction(self) -> None:
+        baseline_id = uuid4()
+        comparison = ExplorationFindingsComparison(
+            baseline_strategy_id=baseline_id,
+            baseline_total_return_pct=Decimal("18.1"),
+            delta_total_return_pct=Decimal("6.3"),
+        )
+        assert comparison.baseline_strategy_id == baseline_id
+        assert comparison.baseline_total_return_pct == Decimal("18.1")
+        assert comparison.delta_total_return_pct == Decimal("6.3")
+        assert comparison.delta_sharpe is None
+
+    def test_with_sharpe_delta(self) -> None:
+        comparison = ExplorationFindingsComparison(
+            baseline_strategy_id=uuid4(),
+            baseline_total_return_pct=Decimal("18.1"),
+            delta_total_return_pct=Decimal("6.3"),
+            delta_sharpe=Decimal("0.38"),
+        )
+        assert comparison.delta_sharpe == Decimal("0.38")
+
+    def test_negative_delta_is_allowed(self) -> None:
+        # A finding can legitimately show the candidate underperformed —
+        # negative deltas are valid (and useful) data.
+        comparison = ExplorationFindingsComparison(
+            baseline_strategy_id=uuid4(),
+            baseline_total_return_pct=Decimal("18.1"),
+            delta_total_return_pct=Decimal("-2.5"),
+            delta_sharpe=Decimal("-0.1"),
+        )
+        assert comparison.delta_total_return_pct == Decimal("-2.5")
+
+    def test_is_frozen(self) -> None:
+        comparison = ExplorationFindingsComparison(
+            baseline_strategy_id=uuid4(),
+            baseline_total_return_pct=Decimal("0"),
+            delta_total_return_pct=Decimal("0"),
+        )
+        with pytest.raises(FrozenInstanceError):
+            comparison.delta_total_return_pct = Decimal("1")  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------
+# ExplorationFindings — Phase E2 structured fields
+# ---------------------------------------------------------------------------
+
+
+class TestExplorationFindingsStructured:
+    def test_minimal_findings_remains_valid_post_e2(self) -> None:
+        # Backward compatibility — v1 narrative-only findings still work.
+        findings = ExplorationFindings(summary="narrative")
+        assert findings.recommended_strategy_id is None
+        assert findings.recommended_parameters is None
+        assert findings.metrics is None
+        assert findings.comparison_to_baseline is None
+        assert findings.confidence is None
+
+    def test_full_e2_construction(self) -> None:
+        strategy_id = uuid4()
+        baseline_id = uuid4()
+        run_id = uuid4()
+        findings = ExplorationFindings(
+            summary="MA(20/50) on AAPL+NVDA outperformed the buy-and-hold baseline.",
+            backtest_run_ids=[run_id],
+            strategy_ids=[strategy_id, baseline_id],
+            notes=["Tried 5 sweeps", "Best one was #3"],
+            recommended_strategy_id=strategy_id,
+            recommended_parameters={
+                "fast_window": 20,
+                "slow_window": 50,
+                "invest_fraction": "1.0",
+            },
+            metrics=ExplorationFindingsMetrics(
+                total_return_pct=Decimal("24.4"),
+                sharpe_ratio=Decimal("1.32"),
+                max_drawdown_pct=Decimal("-11.7"),
+                n_trades=14,
+            ),
+            comparison_to_baseline=ExplorationFindingsComparison(
+                baseline_strategy_id=baseline_id,
+                baseline_total_return_pct=Decimal("18.1"),
+                delta_total_return_pct=Decimal("6.3"),
+                delta_sharpe=Decimal("0.38"),
+            ),
+            confidence=0.75,
+        )
+        assert findings.recommended_strategy_id == strategy_id
+        assert findings.metrics is not None
+        assert findings.metrics.sharpe_ratio == Decimal("1.32")
+        assert findings.confidence == 0.75
+
+    def test_recommended_strategy_must_appear_in_strategy_ids(self) -> None:
+        # Defends against dangling recommendations — the chosen strategy
+        # must be one the finding lists.
+        recommended = uuid4()
+        with pytest.raises(
+            InvalidExplorationTaskError,
+            match="recommended_strategy_id must appear in strategy_ids",
+        ):
+            ExplorationFindings(
+                summary="ok",
+                strategy_ids=[uuid4()],  # different ID
+                recommended_strategy_id=recommended,
+            )
+
+    def test_recommended_strategy_id_only_with_empty_strategy_ids_raises(
+        self,
+    ) -> None:
+        with pytest.raises(
+            InvalidExplorationTaskError,
+            match="recommended_strategy_id must appear in strategy_ids",
+        ):
+            ExplorationFindings(
+                summary="ok",
+                recommended_strategy_id=uuid4(),
+            )
+
+    def test_recommended_strategy_id_in_strategy_ids_is_valid(self) -> None:
+        recommended = uuid4()
+        findings = ExplorationFindings(
+            summary="ok",
+            strategy_ids=[recommended, uuid4()],
+            recommended_strategy_id=recommended,
+        )
+        assert findings.recommended_strategy_id == recommended
+
+    def test_confidence_below_zero_raises(self) -> None:
+        with pytest.raises(InvalidExplorationTaskError, match="confidence must be in"):
+            ExplorationFindings(summary="ok", confidence=-0.01)
+
+    def test_confidence_above_one_raises(self) -> None:
+        with pytest.raises(InvalidExplorationTaskError, match="confidence must be in"):
+            ExplorationFindings(summary="ok", confidence=1.01)
+
+    def test_confidence_at_zero_is_valid(self) -> None:
+        findings = ExplorationFindings(summary="ok", confidence=0.0)
+        assert findings.confidence == 0.0
+
+    def test_confidence_at_one_is_valid(self) -> None:
+        findings = ExplorationFindings(summary="ok", confidence=1.0)
+        assert findings.confidence == 1.0
+
+    def test_recommended_parameters_can_be_arbitrary_dict(self) -> None:
+        # Parameter shapes vary per strategy type; the entity accepts
+        # whatever dict the agent sends.
+        findings = ExplorationFindings(
+            summary="ok",
+            recommended_parameters={
+                "allocation": {"AAPL": "0.5", "NVDA": "0.5"},
+            },
+        )
+        assert findings.recommended_parameters == {
+            "allocation": {"AAPL": "0.5", "NVDA": "0.5"},
+        }
 
 
 # ---------------------------------------------------------------------------

@@ -13,6 +13,7 @@ Phase C4 — exercises:
 """
 
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from uuid import uuid4
 
 import pytest
@@ -23,6 +24,8 @@ from zebu.adapters.outbound.database.exploration_task_repository import (
 from zebu.domain.entities.exploration_task import (
     ExplorationConstraints,
     ExplorationFindings,
+    ExplorationFindingsComparison,
+    ExplorationFindingsMetrics,
     ExplorationTask,
     ExplorationTaskStatus,
     InvalidExplorationTaskError,
@@ -180,6 +183,143 @@ class TestRoundTrip:
         assert loaded.findings.backtest_run_ids == [run_id]
         assert loaded.findings.strategy_ids == [strategy_id]
         assert loaded.findings.notes == ["volatility was unusual on day 5"]
+
+    @pytest.mark.asyncio
+    async def test_done_with_structured_findings_round_trip(self, session):
+        """Phase E2 — structured fields round-trip through the JSON column.
+
+        Decimals are stored as strings, so ``Decimal("24.4")`` going in
+        must come back out as the same ``Decimal("24.4")`` (not
+        ``Decimal("24.40")`` or a mangled float).
+        """
+        repo = SQLModelExplorationTaskRepository(session)
+        task = _make_task()
+        await repo.save(task)
+        await session.commit()
+
+        recommended_id = uuid4()
+        baseline_id = uuid4()
+        run_id = uuid4()
+
+        completed = task.claim(
+            agent_id="agent-a", claimed_at=datetime.now(UTC)
+        ).complete(
+            findings=ExplorationFindings(
+                summary="MA(20/50) on AAPL+NVDA outperformed buy-and-hold.",
+                backtest_run_ids=[run_id],
+                strategy_ids=[recommended_id, baseline_id],
+                notes=["Tried 5 sweeps", "Best one was #3"],
+                recommended_strategy_id=recommended_id,
+                recommended_parameters={
+                    "fast_window": 20,
+                    "slow_window": 50,
+                    "invest_fraction": "1.0",
+                },
+                metrics=ExplorationFindingsMetrics(
+                    total_return_pct=Decimal("24.4"),
+                    sharpe_ratio=Decimal("1.32"),
+                    max_drawdown_pct=Decimal("-11.7"),
+                    n_trades=14,
+                    annualized_return_pct=Decimal("12.5"),
+                ),
+                comparison_to_baseline=ExplorationFindingsComparison(
+                    baseline_strategy_id=baseline_id,
+                    baseline_total_return_pct=Decimal("18.1"),
+                    delta_total_return_pct=Decimal("6.3"),
+                    delta_sharpe=Decimal("0.38"),
+                ),
+                confidence=0.75,
+            ),
+            completed_at=datetime.now(UTC),
+        )
+        await repo.save(completed)
+        await session.commit()
+
+        loaded = await repo.get(task.id)
+        assert loaded is not None
+        assert loaded.findings is not None
+
+        # Existing v1 fields preserved.
+        assert loaded.findings.summary.startswith("MA(20/50)")
+        assert loaded.findings.backtest_run_ids == [run_id]
+
+        # New E2 fields round-trip through the JSON column.
+        assert loaded.findings.recommended_strategy_id == recommended_id
+        assert loaded.findings.recommended_parameters == {
+            "fast_window": 20,
+            "slow_window": 50,
+            "invest_fraction": "1.0",
+        }
+        assert loaded.findings.confidence == 0.75
+
+        assert loaded.findings.metrics is not None
+        # Decimals come back exactly — string-based JSON storage preserves
+        # precision (no float conversion round-trip).
+        assert loaded.findings.metrics.total_return_pct == Decimal("24.4")
+        assert loaded.findings.metrics.sharpe_ratio == Decimal("1.32")
+        assert loaded.findings.metrics.max_drawdown_pct == Decimal("-11.7")
+        assert loaded.findings.metrics.n_trades == 14
+        assert loaded.findings.metrics.annualized_return_pct == Decimal("12.5")
+
+        assert loaded.findings.comparison_to_baseline is not None
+        assert (
+            loaded.findings.comparison_to_baseline.baseline_strategy_id == baseline_id
+        )
+        assert (
+            loaded.findings.comparison_to_baseline.baseline_total_return_pct
+            == Decimal("18.1")
+        )
+        assert loaded.findings.comparison_to_baseline.delta_total_return_pct == Decimal(
+            "6.3"
+        )
+        assert loaded.findings.comparison_to_baseline.delta_sharpe == Decimal("0.38")
+
+    @pytest.mark.asyncio
+    async def test_legacy_findings_without_e2_fields_load_correctly(self, session):
+        """Phase E2 backward compatibility — v1 narrative-only findings stored
+        before E2 must continue to load with E2 fields defaulting to ``None``.
+
+        We simulate a v1 row by writing the finding JSON without the new
+        keys (mirroring the shape stored before this PR).
+        """
+        from sqlalchemy import update
+
+        from zebu.adapters.outbound.database.models import ExplorationTaskModel
+
+        repo = SQLModelExplorationTaskRepository(session)
+        task = _make_task()
+        await repo.save(task)
+        await session.commit()
+
+        # Manually write a "v1 shape" findings JSON — no E2 keys.
+        legacy_findings: dict[str, object] = {
+            "summary": "Negative result; nothing beat baseline.",
+            "backtest_run_ids": [str(uuid4())],
+            "strategy_ids": [str(uuid4())],
+            "notes": None,
+        }
+        await session.exec(  # type: ignore[call-overload]
+            update(ExplorationTaskModel)
+            .where(ExplorationTaskModel.id == task.id)  # type: ignore[arg-type]
+            .values(
+                status="DONE",
+                claimed_by="agent-a",
+                claimed_at=datetime.now(UTC).replace(tzinfo=None),
+                findings=legacy_findings,
+            )
+        )
+        await session.commit()
+
+        loaded = await repo.get(task.id)
+        assert loaded is not None
+        assert loaded.findings is not None
+        assert loaded.findings.summary.startswith("Negative result")
+        # E2 fields default to None for legacy rows — no crash, no junk.
+        assert loaded.findings.recommended_strategy_id is None
+        assert loaded.findings.recommended_parameters is None
+        assert loaded.findings.metrics is None
+        assert loaded.findings.comparison_to_baseline is None
+        assert loaded.findings.confidence is None
 
 
 class TestListAndCount:

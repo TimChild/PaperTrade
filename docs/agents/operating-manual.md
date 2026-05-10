@@ -28,7 +28,7 @@ If you're a fresh session and Tim hasn't given you a specific role yet, default 
 - **Read tasks** — `list_exploration_tasks(status='open')`, `get_exploration_task(id)`
 - **Write strategies** — `create_strategy(type, params, tickers, name)`, `run_backtest(strategy_id, start, end, initial_cash)`
 - **Activate strategies live** — `activate_strategy(strategy_id, portfolio_id, frequency)`, `deactivate_activation(activation_id)`, `run_activation_now(activation_id)`
-- **Task lifecycle** — `claim_exploration_task(task_id)`, `submit_exploration_finding(task_id, summary, links)`, `abandon_exploration_task(task_id)` (creator-only), `create_exploration_task(...)`
+- **Task lifecycle** — `claim_exploration_task(task_id)`, `submit_exploration_finding(task_id, summary, ...)` (Phase E2 — see §3.4 for the structured payload), `abandon_exploration_task(task_id)` (creator-only), `create_exploration_task(...)`
 - **Local-only** — `note(text)` — echoes back; useful for thinking out loud but **not persistent**. To persist, use `submit_exploration_finding` (when you have a claimed task) or `create_exploration_task` (when you want to file a sub-task or escalation).
 
 ### Third-party MCPs you should attach
@@ -84,51 +84,60 @@ For a free-form task ("explore mean-reversion on tech stocks"): start with **2�
 
 ### 3.4 Submit the finding
 
+For parameter-sweep work — the typical case — use the **structured payload** introduced by Phase E2 so the GUI can render the recommendation as first-class data instead of parsing markdown:
+
 ```text
 mcp__zebu__submit_exploration_finding(
-  task_id=...,
-  summary="<markdown body — see structure below>",
-  links=[backtest_id_1, backtest_id_2, ...]  # link the backtests you ran
+  task_id=task_id,
+  summary="MA(20/50) on AAPL+NVDA+MSFT outperformed buy-and-hold by +6.3pp. ...",
+  backtest_run_ids=[run_id_1, run_id_2, ...],
+  strategy_ids=[recommended_strategy_id, baseline_strategy_id],
+  notes=["Tried 5 parameter sweeps", "Sweep #3 had best sharpe"],
+  recommended_strategy_id=recommended_strategy_id,
+  recommended_parameters={
+    "fast_window": 20,
+    "slow_window": 50,
+    "invest_fraction": "1.0",
+  },
+  metrics={
+    "total_return_pct": "24.4",
+    "sharpe_ratio": "1.32",
+    "max_drawdown_pct": "-11.7",
+    "n_trades": 14,
+    "annualized_return_pct": "12.5",
+  },
+  comparison_to_baseline={
+    "baseline_strategy_id": baseline_strategy_id,
+    "baseline_total_return_pct": "18.1",
+    "delta_total_return_pct": "6.3",
+    "delta_sharpe": "0.38",
+  },
+  confidence=0.75,
 )
 ```
 
-The `summary` should be **structured markdown** Tim can read in 2 minutes:
+Field semantics:
 
-```markdown
-## TL;DR
+- `summary` (required) — narrative wrapper, still required. Surfaces below the structured fields in the GUI as the readable explanation. Aim for 2–6 sentences: "what I tried, what won, why it won, what could break it."
+- `recommended_strategy_id` — the chosen winner. **Must appear in `strategy_ids`** (the backend rejects dangling recommendations with 422).
+- `recommended_parameters` — free-form per-strategy-type dict. Shape depends on the recommended strategy's type — see `mcp/src/zebu_mcp/schemas.py:CreateStrategyRequest` for per-type contracts (MA-crossover: `fast_window`/`slow_window`/`invest_fraction`; DCA: `frequency_days`/`amount_per_period`/`allocation`; buy-and-hold: `allocation`).
+- `metrics` — primary backtest metrics for the recommended candidate. `total_return_pct` is required if `metrics` is set. Decimal values are wire strings (e.g. `"24.4"` means +24.4%).
+- `comparison_to_baseline` — vs a baseline backtest (typically buy-and-hold on the same tickers/period). Deltas are signed: positive = candidate outperformed. Include the baseline strategy in `strategy_ids` and its backtest run in `backtest_run_ids` so a reader can navigate to it.
+- `confidence` — qualitative confidence in `[0.0, 1.0]`. Calibration suggestion: `0.7+` for "strong, would activate"; `0.4–0.7` for "plausible, mixed evidence"; `<0.4` for "weak, surface for human judgment."
 
-One-paragraph recommendation. Specific: which strategy / parameters, on which tickers, vs which baseline.
+For **narrative findings** (negative results, no clear winner, abandonment notes) submit only `summary` and the optional `notes`/`backtest_run_ids`/`strategy_ids` — the structured fields all default to `null` and the GUI gracefully omits the structured panels. Example:
 
-## What I tried
-
-- 5 sweeps of MA-crossover on AAPL, NVDA, MSFT (2023-01-01 to 2024-12-31)
-- Buy-and-hold baseline on the same basket
-
-## Best candidate
-
-- **Type**: MOVING_AVERAGE_CROSSOVER
-- **Params**: fast=20, slow=50, invest_fraction=1.0
-- **Tickers**: AAPL+NVDA+MSFT
-- **Total return**: +24.4% (vs +18.1% baseline)
-- **Sharpe**: 1.32 (vs 0.94 baseline)
-- **Max drawdown**: -11.7%
-- **N trades**: 14
-- Backtest: <link>
-
-## Reasoning
-
-Why this combo beat the others; what signal pattern it picked up; what conditions it might fail in.
-
-## Caveats / limits
-
-The boring stuff: lookback bias, single-period evaluation, transaction costs ignored, etc. **Be honest about what the backtest doesn't tell you.**
-
-## Suggested next step
-
-Either: "activate this on portfolio P with $X via mcp__zebu__activate_strategy" — or — "needs human judgment on whether to deploy" — or — "no good candidate found; closing as DONE with negative result."
+```text
+mcp__zebu__submit_exploration_finding(
+  task_id=task_id,
+  summary="Explored mean-reversion on FAANG for 2024; no variant beat the buy-and-hold baseline on Sharpe. Recommending we move on.",
+  backtest_run_ids=[run_1, run_2, run_3],
+  strategy_ids=[s_1, s_2, s_3, baseline],
+  notes=["Tested 8 lookback windows", "Volatility regime in Q3 hurt every variant"],
+)
 ```
 
-A negative result is a **valid finding** — explicitly say "explored mean-reversion on this basket; nothing beat baseline." Tim wants the search-space narrowed, not just the wins.
+A negative result is a **valid finding** — explicitly say "nothing beat baseline." Tim wants the search-space narrowed, not just the wins.
 
 ### 3.5 Optionally activate
 

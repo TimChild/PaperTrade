@@ -19,6 +19,8 @@ the standard ``ErrorResponse`` envelope).
 """
 
 from datetime import UTC, datetime
+from decimal import Decimal, InvalidOperation
+from typing import Any
 from uuid import UUID, uuid4
 
 import structlog
@@ -38,6 +40,8 @@ from zebu.adapters.outbound.database.exploration_task_repository import (
 from zebu.domain.entities.exploration_task import (
     ExplorationConstraints,
     ExplorationFindings,
+    ExplorationFindingsComparison,
+    ExplorationFindingsMetrics,
     ExplorationTask,
     ExplorationTaskStatus,
 )
@@ -89,13 +93,51 @@ class CreateExplorationTaskRequest(BaseModel):
     constraints: ConstraintsPayload | None = None
 
 
+class MetricsPayload(BaseModel):
+    """Wire shape for ``ExplorationFindingsMetrics`` (Phase E2).
+
+    Decimal-shaped fields are accepted as strings (or numbers — Pydantic
+    coerces) and round-tripped back as decimal strings via
+    :class:`MetricsResponse`. ``total_return_pct`` is the only required
+    field.
+    """
+
+    total_return_pct: str
+    sharpe_ratio: str | None = None
+    max_drawdown_pct: str | None = None
+    n_trades: int | None = Field(default=None, ge=0)
+    annualized_return_pct: str | None = None
+
+
+class ComparisonPayload(BaseModel):
+    """Wire shape for ``ExplorationFindingsComparison`` (Phase E2)."""
+
+    baseline_strategy_id: UUID
+    baseline_total_return_pct: str
+    delta_total_return_pct: str
+    delta_sharpe: str | None = None
+
+
 class FindingsPayload(BaseModel):
-    """Wire shape for ``ExplorationFindings`` on the submit-findings route."""
+    """Wire shape for ``ExplorationFindings`` on the submit-findings route.
+
+    Phase E2 — extended with structured recommendation fields. The narrative
+    ``summary`` remains the required wrapper; every E2 field is optional so
+    a caller can submit just ``summary`` for narrative findings.
+    """
 
     summary: str = Field(..., min_length=1, max_length=4000)
     backtest_run_ids: list[UUID] = Field(default_factory=list)
     strategy_ids: list[UUID] = Field(default_factory=list)
     notes: list[str] | None = None
+    recommended_strategy_id: UUID | None = None
+    # `recommended_parameters` is opaque per-strategy-type JSON. We accept
+    # any object the agent sends and forward it to the entity unchanged.
+    # Pydantic rejects non-object JSON automatically.
+    recommended_parameters: dict[str, Any] | None = None
+    metrics: MetricsPayload | None = None
+    comparison_to_baseline: ComparisonPayload | None = None
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
 
 
 class ClaimRequest(BaseModel):
@@ -118,13 +160,46 @@ class ConstraintsResponse(BaseModel):
     strategy_type_whitelist: list[str] | None
 
 
+class MetricsResponse(BaseModel):
+    """Response shape for ``ExplorationFindingsMetrics`` (Phase E2).
+
+    Decimal fields are emitted as strings so the wire shape preserves
+    full precision — same convention used by ``BacktestRun`` metrics.
+    """
+
+    total_return_pct: str
+    sharpe_ratio: str | None
+    max_drawdown_pct: str | None
+    n_trades: int | None
+    annualized_return_pct: str | None
+
+
+class ComparisonResponse(BaseModel):
+    """Response shape for ``ExplorationFindingsComparison`` (Phase E2)."""
+
+    baseline_strategy_id: UUID
+    baseline_total_return_pct: str
+    delta_total_return_pct: str
+    delta_sharpe: str | None
+
+
 class FindingsResponse(BaseModel):
-    """Response shape for findings."""
+    """Response shape for findings.
+
+    Phase E2 added the structured recommendation fields. All E2 fields are
+    optional; they're ``None`` when the agent submitted only a narrative
+    summary (the v1 finding shape).
+    """
 
     summary: str
     backtest_run_ids: list[UUID]
     strategy_ids: list[UUID]
     notes: list[str] | None
+    recommended_strategy_id: UUID | None = None
+    recommended_parameters: dict[str, Any] | None = None
+    metrics: MetricsResponse | None = None
+    comparison_to_baseline: ComparisonResponse | None = None
+    confidence: float | None = None
 
 
 class ExplorationTaskResponse(BaseModel):
@@ -147,6 +222,86 @@ class ExplorationTaskResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _decimal_or_422(value: str, *, field_path: str) -> Decimal:
+    """Parse a wire-format decimal string, surfacing failures as 422.
+
+    The wire shape uses strings for decimals (e.g. ``"24.4"``) so the
+    representation is exact. ``Decimal(...)`` raises
+    :class:`decimal.InvalidOperation` for malformed input — we catch it
+    and raise a 422 with a precise field path so agents see "I sent a
+    bad number on field X" instead of a generic 500.
+    """
+    try:
+        return Decimal(value)
+    except (InvalidOperation, ValueError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Invalid decimal value for {field_path}: {value!r}",
+        ) from exc
+
+
+def _payload_to_metrics(
+    payload: MetricsPayload | None,
+) -> ExplorationFindingsMetrics | None:
+    """Convert MetricsPayload to the domain value object (or ``None``)."""
+    if payload is None:
+        return None
+    return ExplorationFindingsMetrics(
+        total_return_pct=_decimal_or_422(
+            payload.total_return_pct,
+            field_path="metrics.total_return_pct",
+        ),
+        sharpe_ratio=(
+            _decimal_or_422(payload.sharpe_ratio, field_path="metrics.sharpe_ratio")
+            if payload.sharpe_ratio is not None
+            else None
+        ),
+        max_drawdown_pct=(
+            _decimal_or_422(
+                payload.max_drawdown_pct, field_path="metrics.max_drawdown_pct"
+            )
+            if payload.max_drawdown_pct is not None
+            else None
+        ),
+        n_trades=payload.n_trades,
+        annualized_return_pct=(
+            _decimal_or_422(
+                payload.annualized_return_pct,
+                field_path="metrics.annualized_return_pct",
+            )
+            if payload.annualized_return_pct is not None
+            else None
+        ),
+    )
+
+
+def _payload_to_comparison(
+    payload: ComparisonPayload | None,
+) -> ExplorationFindingsComparison | None:
+    """Convert ComparisonPayload to the domain value object (or ``None``)."""
+    if payload is None:
+        return None
+    return ExplorationFindingsComparison(
+        baseline_strategy_id=payload.baseline_strategy_id,
+        baseline_total_return_pct=_decimal_or_422(
+            payload.baseline_total_return_pct,
+            field_path="comparison_to_baseline.baseline_total_return_pct",
+        ),
+        delta_total_return_pct=_decimal_or_422(
+            payload.delta_total_return_pct,
+            field_path="comparison_to_baseline.delta_total_return_pct",
+        ),
+        delta_sharpe=(
+            _decimal_or_422(
+                payload.delta_sharpe,
+                field_path="comparison_to_baseline.delta_sharpe",
+            )
+            if payload.delta_sharpe is not None
+            else None
+        ),
+    )
 
 
 def _payload_to_constraints(
@@ -207,11 +362,61 @@ def _to_response(task: ExplorationTask) -> ExplorationTaskResponse:
     if task.findings is None:
         findings_response = None
     else:
+        metrics_response: MetricsResponse | None
+        if task.findings.metrics is None:
+            metrics_response = None
+        else:
+            metrics_response = MetricsResponse(
+                total_return_pct=str(task.findings.metrics.total_return_pct),
+                sharpe_ratio=(
+                    str(task.findings.metrics.sharpe_ratio)
+                    if task.findings.metrics.sharpe_ratio is not None
+                    else None
+                ),
+                max_drawdown_pct=(
+                    str(task.findings.metrics.max_drawdown_pct)
+                    if task.findings.metrics.max_drawdown_pct is not None
+                    else None
+                ),
+                n_trades=task.findings.metrics.n_trades,
+                annualized_return_pct=(
+                    str(task.findings.metrics.annualized_return_pct)
+                    if task.findings.metrics.annualized_return_pct is not None
+                    else None
+                ),
+            )
+
+        comparison_response: ComparisonResponse | None
+        if task.findings.comparison_to_baseline is None:
+            comparison_response = None
+        else:
+            comparison_response = ComparisonResponse(
+                baseline_strategy_id=(
+                    task.findings.comparison_to_baseline.baseline_strategy_id
+                ),
+                baseline_total_return_pct=str(
+                    task.findings.comparison_to_baseline.baseline_total_return_pct
+                ),
+                delta_total_return_pct=str(
+                    task.findings.comparison_to_baseline.delta_total_return_pct
+                ),
+                delta_sharpe=(
+                    str(task.findings.comparison_to_baseline.delta_sharpe)
+                    if task.findings.comparison_to_baseline.delta_sharpe is not None
+                    else None
+                ),
+            )
+
         findings_response = FindingsResponse(
             summary=task.findings.summary,
             backtest_run_ids=task.findings.backtest_run_ids,
             strategy_ids=task.findings.strategy_ids,
             notes=task.findings.notes,
+            recommended_strategy_id=task.findings.recommended_strategy_id,
+            recommended_parameters=task.findings.recommended_parameters,
+            metrics=metrics_response,
+            comparison_to_baseline=comparison_response,
+            confidence=task.findings.confidence,
         )
 
     tickers_response: list[str] | None
@@ -525,6 +730,13 @@ async def submit_exploration_task_findings(
         backtest_run_ids=list(findings_payload.backtest_run_ids),
         strategy_ids=list(findings_payload.strategy_ids),
         notes=findings_payload.notes,
+        recommended_strategy_id=findings_payload.recommended_strategy_id,
+        recommended_parameters=findings_payload.recommended_parameters,
+        metrics=_payload_to_metrics(findings_payload.metrics),
+        comparison_to_baseline=_payload_to_comparison(
+            findings_payload.comparison_to_baseline
+        ),
+        confidence=findings_payload.confidence,
     )
 
     repo = SQLModelExplorationTaskRepository(session)
@@ -552,6 +764,10 @@ async def submit_exploration_task_findings(
         task_id=str(task_id),
         backtest_run_count=len(findings.backtest_run_ids),
         strategy_count=len(findings.strategy_ids),
+        has_recommended_strategy=findings.recommended_strategy_id is not None,
+        has_metrics=findings.metrics is not None,
+        has_comparison=findings.comparison_to_baseline is not None,
+        confidence=findings.confidence,
     )
 
     return _to_response(completed)

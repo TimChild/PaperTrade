@@ -24,15 +24,20 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Eyebrow } from '@/components/ui/Eyebrow'
 import { Caption } from '@/components/ui/Caption'
 import { Panel } from '@/components/ui/Panel'
+import { MetricStat } from '@/components/ui/MetricStat'
 import { ExplorationTaskStatusBadge } from '@/components/features/exploration-tasks/ExplorationTaskStatusBadge'
 import {
   useAbandonExplorationTask,
   useExplorationTask,
 } from '@/hooks/useExplorationTasks'
 import { usePortfolios } from '@/hooks/usePortfolio'
-import { formatDate } from '@/utils/formatters'
+import { formatDate, formatNumber, formatPercent } from '@/utils/formatters'
 import { extractTaskBody, extractTaskTitle } from '@/utils/explorationTaskTitle'
-import type { ExplorationTaskResponse } from '@/services/api/types'
+import type {
+  ExplorationFindingsComparisonResponse,
+  ExplorationFindingsMetricsResponse,
+  ExplorationTaskResponse,
+} from '@/services/api/types'
 
 export function ExplorationTaskDetail(): React.JSX.Element {
   const { id } = useParams<{ id: string }>()
@@ -282,12 +287,46 @@ export function ExplorationTaskDetail(): React.JSX.Element {
             <h2 className="mt-1.5 font-display text-display-sm tracking-tight text-ink">
               Agent submission
             </h2>
-            <p
-              className="mt-4 font-sans text-body-md text-ink whitespace-pre-wrap leading-relaxed"
-              data-testid="exploration-task-detail-findings-summary"
+
+            {/* Recommended-strategy banner — Phase E2 structured payload */}
+            {task.findings.recommended_strategy_id && (
+              <RecommendedStrategyBanner
+                strategyId={task.findings.recommended_strategy_id}
+                parameters={task.findings.recommended_parameters}
+              />
+            )}
+
+            {/* Confidence — Phase E2 */}
+            {task.findings.confidence !== null && (
+              <ConfidenceBar value={task.findings.confidence} />
+            )}
+
+            {/* Metrics — Phase E2 */}
+            {task.findings.metrics && (
+              <FindingsMetricsBlock metrics={task.findings.metrics} />
+            )}
+
+            {/* Comparison to baseline — Phase E2 */}
+            {task.findings.comparison_to_baseline && (
+              <ComparisonToBaselineTable
+                comparison={task.findings.comparison_to_baseline}
+              />
+            )}
+
+            {/* Narrative summary — still the readable wrapper, kept
+                prominent below the structured fields. */}
+            <div
+              className="mt-6"
+              data-testid="exploration-task-detail-findings-summary-section"
             >
-              {task.findings.summary}
-            </p>
+              <Eyebrow>Summary</Eyebrow>
+              <p
+                className="mt-2 font-sans text-body-md text-ink whitespace-pre-wrap leading-relaxed"
+                data-testid="exploration-task-detail-findings-summary"
+              >
+                {task.findings.summary}
+              </p>
+            </div>
 
             {task.findings.notes && task.findings.notes.length > 0 && (
               <div
@@ -418,6 +457,287 @@ function MetadataField({
         <Eyebrow>{label}</Eyebrow>
       </dt>
       <dd>{children}</dd>
+    </div>
+  )
+}
+
+/**
+ * Renders a key/value list for the agent's chosen parameter combination.
+ * The shape varies per strategy type (MA-crossover has different keys
+ * from DCA), so we just render the dict as-is. Object values render as
+ * a nested key/value list (one level of nesting handles the common
+ * "allocation: {AAPL: 1.0}" case for buy-and-hold).
+ */
+function ParameterList({
+  parameters,
+}: {
+  parameters: Record<string, unknown>
+}): React.JSX.Element {
+  const entries = Object.entries(parameters)
+  if (entries.length === 0) {
+    return (
+      <span
+        className="text-ink-subtle font-tabular text-body-sm"
+        data-testid="exploration-task-detail-parameters-empty"
+      >
+        No parameters
+      </span>
+    )
+  }
+  return (
+    <dl
+      className="grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-[max-content_1fr]"
+      data-testid="exploration-task-detail-parameters"
+    >
+      {entries.map(([key, value]) => (
+        <div
+          key={key}
+          className="contents"
+          data-testid={`exploration-task-detail-param-${key}`}
+        >
+          <dt className="font-eyebrow text-ink-subtle">{key}</dt>
+          <dd className="font-tabular text-body-sm text-ink">
+            {renderParameterValue(value)}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
+function renderParameterValue(value: unknown): React.ReactNode {
+  if (value === null || value === undefined) return '—'
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    // Nested dict — render inline as "k=v, k=v" so callers can scan it
+    // without growing the visual hierarchy.
+    const inner = Object.entries(value as Record<string, unknown>)
+      .map(([k, v]) => `${k}=${String(v)}`)
+      .join(', ')
+    return inner.length > 0 ? `{${inner}}` : '{}'
+  }
+  if (Array.isArray(value)) return value.map((v) => String(v)).join(', ')
+  return String(value)
+}
+
+/**
+ * Banner highlighting the agent's recommended strategy + its parameter
+ * combination (Phase E2). The strategy ID renders as a non-link mono
+ * text — there is no detail page yet, but it's still the recommendation
+ * stamp at the top of the findings panel.
+ */
+function RecommendedStrategyBanner({
+  strategyId,
+  parameters,
+}: {
+  strategyId: string
+  parameters: Record<string, unknown> | null
+}): React.JSX.Element {
+  return (
+    <div
+      className="mt-4 rounded-editorial border border-amber/40 bg-amber-soft/30 p-4"
+      data-testid="exploration-task-detail-recommended"
+    >
+      <Eyebrow tone="accent">Recommended</Eyebrow>
+      <div className="mt-1 flex flex-col gap-3 sm:flex-row sm:items-baseline sm:gap-6">
+        <span
+          className="font-tabular text-body-sm text-ink"
+          data-testid="exploration-task-detail-recommended-strategy-id"
+        >
+          {strategyId}
+        </span>
+      </div>
+      {parameters !== null && (
+        <div className="mt-3">
+          <ParameterList parameters={parameters} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Visual progress bar for the agent's confidence in the recommendation
+ * (Phase E2). Renders as a small amber-filled track + a percentage
+ * label. Out-of-range values are clamped to [0, 1] to keep the bar
+ * stable even if the backend somehow lets through an invalid value.
+ */
+function ConfidenceBar({ value }: { value: number }): React.JSX.Element {
+  const clamped = Math.max(0, Math.min(1, value))
+  const percentLabel = `${Math.round(clamped * 100)}%`
+  return (
+    <div className="mt-5" data-testid="exploration-task-detail-confidence">
+      <div className="flex items-baseline justify-between">
+        <Eyebrow>Confidence</Eyebrow>
+        <span
+          className="font-tabular text-body-sm text-ink-muted"
+          data-testid="exploration-task-detail-confidence-label"
+        >
+          {percentLabel}
+        </span>
+      </div>
+      <div
+        className="mt-2 h-2 w-full overflow-hidden rounded-editorial bg-canvas-sunken border border-hairline"
+        role="progressbar"
+        aria-valuenow={Math.round(clamped * 100)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label="Agent confidence"
+      >
+        <div
+          className="h-full bg-amber"
+          data-testid="exploration-task-detail-confidence-fill"
+          style={{ width: `${clamped * 100}%` }}
+        />
+      </div>
+    </div>
+  )
+}
+
+function metricTone(value: number | null): 'neutral' | 'gain' | 'loss' {
+  if (value === null) return 'neutral'
+  return value >= 0 ? 'gain' : 'loss'
+}
+
+/**
+ * Renders the structured metric block (Phase E2) using `MetricStat`
+ * primitives. Decimal values arrive as wire strings (e.g. "24.4" means
+ * +24.4%) — same convention as `BacktestRun` metrics.
+ */
+function FindingsMetricsBlock({
+  metrics,
+}: {
+  metrics: ExplorationFindingsMetricsResponse
+}): React.JSX.Element {
+  // Wire decimals are percent-already (e.g. "24.4" = 24.4%); divide by 100
+  // because formatPercent expects a fraction (0.244 = 24.40%).
+  const totalReturn = parseFloat(metrics.total_return_pct) / 100
+  const annualizedReturn =
+    metrics.annualized_return_pct !== null
+      ? parseFloat(metrics.annualized_return_pct) / 100
+      : null
+  const maxDrawdown =
+    metrics.max_drawdown_pct !== null
+      ? parseFloat(metrics.max_drawdown_pct) / 100
+      : null
+  const sharpe =
+    metrics.sharpe_ratio !== null ? parseFloat(metrics.sharpe_ratio) : null
+
+  return (
+    <div className="mt-5" data-testid="exploration-task-detail-metrics">
+      <Eyebrow>Metrics</Eyebrow>
+      <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-6 sm:grid-cols-4 lg:grid-cols-5">
+        <MetricStat
+          label="Total return"
+          value={formatPercent(totalReturn)}
+          size="sm"
+          tone={metricTone(totalReturn)}
+          testId="metric-finding-total-return"
+        />
+        {sharpe !== null && (
+          <MetricStat
+            label="Sharpe"
+            value={formatNumber(sharpe)}
+            size="sm"
+            tone={metricTone(sharpe)}
+            testId="metric-finding-sharpe"
+          />
+        )}
+        {maxDrawdown !== null && (
+          <MetricStat
+            label="Max drawdown"
+            value={formatPercent(maxDrawdown, false)}
+            size="sm"
+            tone={maxDrawdown < 0 ? 'loss' : 'neutral'}
+            testId="metric-finding-max-drawdown"
+          />
+        )}
+        {annualizedReturn !== null && (
+          <MetricStat
+            label="Annualized"
+            value={formatPercent(annualizedReturn)}
+            size="sm"
+            tone={metricTone(annualizedReturn)}
+            testId="metric-finding-annualized"
+          />
+        )}
+        {metrics.n_trades !== null && (
+          <MetricStat
+            label="Trades"
+            value={String(metrics.n_trades)}
+            size="sm"
+            testId="metric-finding-n-trades"
+          />
+        )}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Comparison-to-baseline table (Phase E2). Shows total-return and Sharpe
+ * deltas with gain/loss tones. The baseline strategy ID is rendered as a
+ * mono identifier (no detail page yet).
+ */
+function ComparisonToBaselineTable({
+  comparison,
+}: {
+  comparison: ExplorationFindingsComparisonResponse
+}): React.JSX.Element {
+  const baselineReturn = parseFloat(comparison.baseline_total_return_pct) / 100
+  const deltaReturn = parseFloat(comparison.delta_total_return_pct) / 100
+  const deltaSharpe =
+    comparison.delta_sharpe !== null
+      ? parseFloat(comparison.delta_sharpe)
+      : null
+
+  return (
+    <div className="mt-5" data-testid="exploration-task-detail-comparison">
+      <Eyebrow>vs baseline</Eyebrow>
+      <table className="mt-2 w-full border-collapse text-body-sm">
+        <thead>
+          <tr className="text-left">
+            <th className="border-b border-hairline pb-1 pr-4 font-eyebrow font-normal text-ink-subtle">
+              Metric
+            </th>
+            <th className="border-b border-hairline pb-1 pr-4 font-eyebrow font-normal text-ink-subtle">
+              Baseline
+            </th>
+            <th className="border-b border-hairline pb-1 font-eyebrow font-normal text-ink-subtle">
+              Δ
+            </th>
+          </tr>
+        </thead>
+        <tbody className="font-tabular text-ink">
+          <tr>
+            <td className="py-2 pr-4 text-ink-muted">Total return</td>
+            <td className="py-2 pr-4">{formatPercent(baselineReturn)}</td>
+            <td
+              className={`py-2 ${deltaReturn >= 0 ? 'text-gain' : 'text-loss'}`}
+              data-testid="exploration-task-detail-comparison-delta-return"
+            >
+              {formatPercent(deltaReturn)}
+            </td>
+          </tr>
+          {deltaSharpe !== null && (
+            <tr>
+              <td className="py-2 pr-4 text-ink-muted">Sharpe</td>
+              <td className="py-2 pr-4 text-ink-muted">—</td>
+              <td
+                className={`py-2 ${deltaSharpe >= 0 ? 'text-gain' : 'text-loss'}`}
+                data-testid="exploration-task-detail-comparison-delta-sharpe"
+              >
+                {formatNumber(deltaSharpe)}
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+      <div
+        className="mt-2 font-tabular text-body-sm text-ink-subtle"
+        data-testid="exploration-task-detail-comparison-baseline-id"
+      >
+        Baseline strategy: {comparison.baseline_strategy_id}
+      </div>
     </div>
   )
 }

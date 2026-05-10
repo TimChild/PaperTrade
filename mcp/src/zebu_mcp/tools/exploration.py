@@ -7,6 +7,7 @@ the local-only ``note`` tool.
 
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
 from mcp.server.fastmcp import FastMCP
@@ -16,6 +17,8 @@ from zebu_mcp.schemas import (
     ClaimExplorationTaskRequest,
     CreateExplorationTaskRequest,
     ExplorationConstraints,
+    ExplorationFindingsComparison,
+    ExplorationFindingsMetrics,
     ExplorationTask,
     NoteResult,
     Page,
@@ -118,11 +121,41 @@ def register(server: FastMCP, client: ZebuClient) -> None:
         name="submit_exploration_finding",
         description=(
             "Submit findings for a claimed task and DONE-transition it. "
-            "summary is required; backtest_run_ids and strategy_ids "
-            "reference work the agent produced; notes is a free-form list "
-            "of additional commentary. The task must currently be in "
-            "IN_PROGRESS status — submitting against an OPEN / DONE / "
-            "ABANDONED task returns 409."
+            "summary (required) is the narrative writeup that surfaces in "
+            "the human's GUI as the readable wrapper. backtest_run_ids "
+            "and strategy_ids reference work the agent produced; notes is "
+            "a free-form list of additional commentary. The task must "
+            "currently be in IN_PROGRESS status — submitting against an "
+            "OPEN / DONE / ABANDONED task returns 409.\n\n"
+            "Phase E2 structured-finding fields (all optional) — use these "
+            "when reporting parameter-sweep / candidate-evaluation work so "
+            "the GUI can render the recommendation meaningfully:\n\n"
+            "* recommended_strategy_id — the chosen winner from the sweep. "
+            "When supplied, it MUST also appear in strategy_ids (the "
+            "backend rejects dangling recommendations with 422).\n"
+            "* recommended_parameters — the chosen parameter combo, as a "
+            "free-form dict whose shape matches the strategy type "
+            "(e.g. for MOVING_AVERAGE_CROSSOVER: "
+            "{'fast_window': 20, 'slow_window': 50, 'invest_fraction': "
+            "'1.0'}; for DOLLAR_COST_AVERAGING: "
+            "{'frequency_days': 7, 'amount_per_period': '500.00', "
+            "'allocation': {'AAPL': '1.0'}}).\n"
+            "* metrics — primary backtest metrics for the recommended "
+            "candidate. total_return_pct is required if metrics is set; "
+            "sharpe_ratio / max_drawdown_pct / n_trades / "
+            "annualized_return_pct are optional. Decimal values are "
+            "wire strings (e.g. '24.4' means +24.4%).\n"
+            "* comparison_to_baseline — comparison vs a baseline backtest "
+            "(typically buy-and-hold). Deltas are signed (positive = "
+            "candidate outperformed). The baseline strategy itself should "
+            "appear in strategy_ids and its run in backtest_run_ids so a "
+            "reader can navigate to it.\n"
+            "* confidence — agent's qualitative confidence in the "
+            "recommendation, in [0.0, 1.0]. Use 0.7+ for 'strong "
+            "candidate', 0.4-0.7 for 'plausible but mixed', <0.4 for "
+            "'weak / surface for human judgment'.\n\n"
+            "For narrative / negative-result findings (no clear winner), "
+            "submit just summary — every structured field is optional."
         ),
     )
     async def submit_exploration_finding(
@@ -131,13 +164,30 @@ def register(server: FastMCP, client: ZebuClient) -> None:
         backtest_run_ids: list[UUID] | None = None,
         strategy_ids: list[UUID] | None = None,
         notes: list[str] | None = None,
+        recommended_strategy_id: UUID | None = None,
+        recommended_parameters: dict[str, Any] | None = None,
+        metrics: ExplorationFindingsMetrics | None = None,
+        comparison_to_baseline: ExplorationFindingsComparison | None = None,
+        confidence: float | None = None,
     ) -> ExplorationTask:
-        """Submit findings + DONE-transition a claimed task."""
+        """Submit findings + DONE-transition a claimed task.
+
+        See the tool description for the meaning of each Phase E2 field.
+        Pass only ``summary`` (and optionally ``backtest_run_ids`` /
+        ``strategy_ids`` / ``notes``) for narrative findings; populate
+        the structured fields when reporting a parameter-sweep
+        recommendation.
+        """
         request = SubmitExplorationFindingsRequest(
             summary=summary,
             backtest_run_ids=backtest_run_ids or [],
             strategy_ids=strategy_ids or [],
             notes=notes,
+            recommended_strategy_id=recommended_strategy_id,
+            recommended_parameters=recommended_parameters,
+            metrics=metrics,
+            comparison_to_baseline=comparison_to_baseline,
+            confidence=confidence,
         )
         return await client.submit_exploration_findings(task_id, request)
 
