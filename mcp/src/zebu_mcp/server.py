@@ -62,19 +62,26 @@ def build_server(config: ZebuMcpConfig) -> FastMCP:
     server = FastMCP(
         name="zebu",
         instructions=(
-            "Zebu MCP server (read tools only — Phase D Wave 1).\n\n"
-            "Exposes the Zebu paper-trading backend as named tools. Use "
-            "list_supported_tickers / list_portfolios / list_strategies / "
-            "list_backtests / list_active_strategies / list_exploration_tasks "
-            "as starting points, then drill into specific entities with the "
-            "get_* tools. Every list-returning tool is paginated — check "
+            "Zebu MCP server — Phase D Waves 1+2 (read + write tools).\n\n"
+            "Exposes the Zebu paper-trading backend as named tools. Read "
+            "starts: list_supported_tickers / list_portfolios / "
+            "list_strategies / list_backtests / list_active_strategies / "
+            "list_exploration_tasks. Drill into specifics with the get_* "
+            "tools. Every list-returning tool is paginated — check "
             "has_more before assuming you've seen everything.\n\n"
+            "Write tools cover the agent's full workflow: create_strategy, "
+            "run_backtest, activate_strategy / deactivate_activation / "
+            "run_activation_now, and the exploration-task lifecycle "
+            "(create_exploration_task, claim_exploration_task, "
+            "submit_exploration_finding, abandon_exploration_task). The "
+            "note tool is local-only — it echoes a thought back; persist "
+            "via submit_exploration_finding or create_exploration_task.\n\n"
             "Authentication: every request goes through a Zebu API key "
             "(set via ZEBU_API_KEY in the env). The server hashes the key "
             "and resolves it to the human user that minted it; everything "
-            "you read is owner-scoped to that user.\n\n"
-            "Write tools (create_strategy, run_backtest, activate_strategy, "
-            "claim_exploration_task, etc.) ship in Wave 2."
+            "you read or write is owner-scoped to that user.\n\n"
+            "Research-context tools (web_search, fetch_news, fetch_url, "
+            "etc.) live in a separate composable MCP — not in this server."
         ),
         lifespan=lifespan,
         log_level="INFO",

@@ -19,6 +19,15 @@ Design notes:
 * Datetime fields stay as ISO-8601 strings for the same reason — the MCP
   protocol serialises tool results to JSON, so re-parsing to ``datetime``
   on this side and serialising back is wasted work.
+* For *write* tools added in Wave 2 we also have request-body schemas
+  (e.g. :class:`CreateStrategyRequest`, :class:`RunBacktestRequest`).
+  These mirror the backend's request models but are intentionally
+  permissive — the backend is the source of truth for parameter
+  invariants. For example, ``parameters`` on
+  :class:`CreateStrategyRequest` is a free-form ``dict[str, object]``
+  matching the wire shape; the typed-dataclass per-type shape is checked
+  server-side and the typed 422 ``ZebuApiError`` carries the field-level
+  detail back to the agent.
 """
 
 from __future__ import annotations
@@ -252,3 +261,189 @@ class ExplorationTask(BaseModel):
     findings: ExplorationFindings | None = None
     created_at: str
     updated_at: str
+
+
+# ---------------------------------------------------------------------------
+# Write-tool request bodies (Wave 2)
+#
+# These mirror the backend's request models. We keep them in this single
+# schemas module so the MCP package has one place to look up "what shape
+# do I send to /strategies vs /backtests vs /strategies/{id}/activate?".
+# ---------------------------------------------------------------------------
+
+
+class CreateStrategyRequest(BaseModel):
+    """Request body for ``POST /api/v1/strategies``.
+
+    The ``parameters`` field is intentionally a free-form mapping — the
+    backend's ``CreateStrategyRequest`` accepts ``dict[str, Any]`` and
+    parses it into one of three typed dataclasses (``BuyAndHoldParameters``
+    / ``DcaParameters`` / ``MaCrossoverParameters``) using ``strategy_type``
+    as the discriminator. Encoding the discriminated union in this schema
+    would force the MCP tool's JSON Schema to be a sprawling ``oneOf``,
+    which most agents can drive but few render usefully.
+
+    Per-type expected shape (see
+    ``backend/.../value_objects/strategy_parameters.py`` for the canonical
+    contract):
+
+    * ``BUY_AND_HOLD``: ``{"allocation": {"<TICKER>": "<fraction>", ...}}``
+      — fractions are decimal strings summing to 1.0 (±0.001).
+    * ``DOLLAR_COST_AVERAGING``: ``{"frequency_days": <int 1-365>,
+      "amount_per_period": "<decimal-str>", "allocation": {...}}``.
+    * ``MOVING_AVERAGE_CROSSOVER``: ``{"fast_window": <int 2-200>,
+      "slow_window": <int 2-200, > fast_window>,
+      "invest_fraction": "<decimal-str in (0, 1]>"}``.
+
+    Invalid shapes come back as a typed 422 ``ZebuApiError`` with the
+    backend's per-field detail map.
+    """
+
+    name: str = Field(..., min_length=1, max_length=100)
+    strategy_type: str = Field(
+        ...,
+        description=(
+            "Algorithm type: BUY_AND_HOLD, DOLLAR_COST_AVERAGING, "
+            "MOVING_AVERAGE_CROSSOVER."
+        ),
+    )
+    tickers: list[str] = Field(..., min_length=1, max_length=10)
+    parameters: dict[str, Any] = Field(default_factory=dict)
+
+
+class RunBacktestRequest(BaseModel):
+    """Request body for ``POST /api/v1/backtests``.
+
+    Dates are accepted as ISO-8601 ``YYYY-MM-DD`` strings (the backend
+    parses them with Pydantic's date parser). ``initial_cash`` is a
+    decimal-string with at most 2 decimal places — encoded as a string
+    so the wire-side decimal representation is exact.
+    """
+
+    strategy_id: UUID
+    backtest_name: str = Field(..., min_length=1, max_length=100)
+    start_date: str = Field(
+        ..., description="YYYY-MM-DD ISO-8601 date for the backtest start."
+    )
+    end_date: str = Field(
+        ...,
+        description=(
+            "YYYY-MM-DD ISO-8601 date for the backtest end (must be after "
+            "start_date and not in the future; range <= 3 years)."
+        ),
+    )
+    initial_cash: str = Field(
+        ...,
+        description="Starting cash as a decimal string, e.g. '10000.00'. > 0.",
+    )
+
+
+class ActivateStrategyRequest(BaseModel):
+    """Request body for ``POST /api/v1/strategies/{id}/activate``."""
+
+    portfolio_id: UUID
+    frequency: str = Field(
+        default="DAILY_MARKET_CLOSE",
+        description=(
+            "Execution cadence. Phase C1 ships only DAILY_MARKET_CLOSE; "
+            "the field is forward-compatible for future cadences."
+        ),
+    )
+
+
+class DeactivateActivationRequest(BaseModel):
+    """Request body for ``POST /api/v1/activations/{id}/deactivate``."""
+
+    reason: str | None = Field(
+        default=None,
+        max_length=500,
+        description=(
+            "Optional human-readable reason; surfaced on the activation's "
+            "``last_error`` field for UI display."
+        ),
+    )
+
+
+class RunNowResponse(BaseModel):
+    """Response shape for ``POST /api/v1/activations/{id}/run-now``.
+
+    Carries the immediate execution outcome along with the post-run
+    activation state, so a caller can see "ran X, executed Y trades"
+    without polling.
+    """
+
+    activation: StrategyActivation
+    succeeded: bool
+    trades: int
+    error: str | None = None
+
+
+class CreateExplorationTaskRequest(BaseModel):
+    """Request body for ``POST /api/v1/exploration-tasks``.
+
+    Mirrors the backend's ``CreateExplorationTaskRequest``. Optional
+    fields are forwarded as-is when supplied; ``constraints`` is a
+    nested object reusing :class:`ExplorationConstraints`.
+    """
+
+    prompt: str = Field(..., min_length=1, max_length=4000)
+    target_portfolio_id: UUID | None = None
+    tickers: list[str] | None = Field(default=None, max_length=50)
+    constraints: ExplorationConstraints | None = None
+
+
+class ClaimExplorationTaskRequest(BaseModel):
+    """Request body for ``POST /api/v1/exploration-tasks/{id}/claim``.
+
+    The backend accepts an empty body; supplying ``agent_id`` lets the
+    caller stamp a free-form label (typically the API-key label or the
+    agent's chosen identifier) for audit visibility.
+    """
+
+    agent_id: str | None = Field(default=None, min_length=1, max_length=200)
+
+
+class SubmitExplorationFindingsRequest(BaseModel):
+    """Request body for ``POST /api/v1/exploration-tasks/{id}/findings``.
+
+    Submitting findings transitions the task from IN_PROGRESS -> DONE.
+    The backend rejects (409) if the task is in any other status.
+    """
+
+    summary: str = Field(..., min_length=1, max_length=4000)
+    backtest_run_ids: list[UUID] = Field(default_factory=list)
+    strategy_ids: list[UUID] = Field(default_factory=list)
+    notes: list[str] | None = None
+
+
+class NoteResult(BaseModel):
+    """Result of the ``note`` tool.
+
+    The note tool is intentionally local-only in Wave 2 — the backend
+    has no free-floating note endpoint, and the only way to attach text
+    to an ``ExplorationTask`` is via ``submit_exploration_finding``,
+    which transitions the task to DONE (so it can't be used as an
+    "append a thought" channel without ending the task). Rather than
+    add a new backend endpoint, the tool echoes the note back to the
+    agent with guidance on the persistent paths.
+    """
+
+    text: str
+    exploration_task_id: UUID | None = None
+    strategy_id: UUID | None = None
+    persisted: bool = Field(
+        default=False,
+        description=(
+            "Always false in Wave 2 — the note is local-only. To persist a "
+            "note, call ``submit_exploration_finding`` (which DONE-transitions "
+            "an IN_PROGRESS task and accepts a ``notes`` list) or include "
+            "the text in a future ``create_exploration_task`` ``prompt``."
+        ),
+    )
+    advice: str = Field(
+        description=(
+            "Suggested follow-up — typically points the agent at the right "
+            "persistent tool (submit_exploration_finding / "
+            "create_exploration_task)."
+        ),
+    )

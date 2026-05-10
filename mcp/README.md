@@ -1,11 +1,11 @@
 # zebu-mcp
 
 MCP server that exposes the Zebu paper-trading backend to Claude Code agents
-as named tools. **Phase D, Wave 1** of the
+as named tools. **Phase D, Waves 1+2** of the
 [agent platform proposal](../docs/planning/agent-platform-proposal.md):
-the foundation plus the complete read-tool surface. Write tools
-(create-strategy, run-backtest, activate-strategy,
-claim-exploration-task, ...) ship in Wave 2.
+the foundation, the complete read-tool surface, and the write tools
+agents need to actually do work (create strategies, run backtests,
+manage activations, drive the exploration-task queue).
 
 The server runs as a thin local **stdio** process — no network listener,
 no central state, no shared infra. It auth's to a deployed Zebu backend
@@ -15,6 +15,8 @@ each MCP tool call into the matching REST endpoint.
 ## What you get
 
 A FastMCP server registered under the name **`zebu`** with these tools:
+
+### Read tools
 
 | Tool | What it does |
 |---|---|
@@ -32,9 +34,47 @@ A FastMCP server registered under the name **`zebu`** with these tools:
 | `list_exploration_tasks` | The human → agent task queue |
 | `get_exploration_task` | One exploration task by ID |
 
+### Write tools (Wave 2)
+
+| Tool | What it does |
+|---|---|
+| `create_strategy` | Create a new strategy template (BUY_AND_HOLD / DOLLAR_COST_AVERAGING / MOVING_AVERAGE_CROSSOVER) |
+| `run_backtest` | Run a backtest synchronously; optionally polls until terminal (default 60s timeout) |
+| `activate_strategy` | Link a strategy to a portfolio for daily live execution |
+| `deactivate_activation` | Pause an active activation |
+| `run_activation_now` | Trigger immediate execution outside the activation's cadence |
+| `create_exploration_task` | File a new task on the human → agent queue |
+| `claim_exploration_task` | Atomically claim an OPEN task — the core agent intake |
+| `submit_exploration_finding` | Submit findings for a claimed task and DONE-transition it |
+| `abandon_exploration_task` | Delete a task (creator-only — claiming agents that give up should submit findings explaining instead) |
+| `note` | Local-only echo of a thought; suggests the right persistent path (`submit_exploration_finding` / `create_exploration_task`) |
+
 All list-returning tools are paginated and surface `total` / `limit` /
 `offset` / `has_more` so the agent doesn't silently miss rows past the
 default 20-item page.
+
+### Notes on write semantics
+
+- **`create_strategy.parameters`** is a free-form mapping — the backend
+  parses it into one of three typed dataclasses (`BuyAndHoldParameters`,
+  `DcaParameters`, `MaCrossoverParameters`) using `strategy_type` as the
+  discriminator. Bad shapes come back as a typed 422 error with
+  field-level detail. Encoding the discriminated union in the tool's JSON
+  Schema would be a sprawling `oneOf`; we let the backend be the source
+  of truth instead.
+- **`run_backtest`** runs synchronously today (the backend executes in
+  the request handler), so `wait_for_completion=True` (default) usually
+  exits on the first response. If the backend ever switches to a
+  background-job model, the polling loop will pick up COMPLETED / FAILED
+  status updates within `poll_timeout_secs` (default 60s).
+- **`abandon_exploration_task`** maps to the backend's `DELETE
+  /exploration-tasks/{id}`, which is **creator-only**. A claiming agent
+  that wants to give up cannot use this tool; it should
+  `submit_exploration_finding` with a `notes` entry explaining the
+  abandonment instead, or escalate to a human.
+- **`note`** is local-only — Wave 2 deliberately avoids adding new
+  backend endpoints. Persistent context lives on `ExplorationTask`s
+  (`prompt` at create time, `notes` in submitted findings).
 
 ## Install
 
@@ -155,18 +195,19 @@ The integration test (`tests/test_smoke.py`) is opt-in. Set
 
 ## Roadmap
 
-- **Wave 2** (next): write tools — `create_strategy`, `run_backtest`,
-  `activate_strategy`, `deactivate_strategy`, `claim_exploration_task`,
-  `submit_exploration_finding`, `note`. Per-tool scope enforcement (the
-  API-key scopes set on the key — `read` / `trade` / `admin` — are
-  carried at the auth layer; tools become aware of them in Wave 2).
-- **Future research-context MCP** (separate composable server, not in
-  this package): `web_search`, `fetch_news`, `fetch_url`,
-  `get_earnings_calendar`. Intentionally split so the trading-data MCP
-  stays focused.
+- **Wave 3** (next): research-context tools live in a *separate*
+  composable MCP server (not this package): `web_search`, `fetch_news`,
+  `fetch_url`, `get_earnings_calendar`. Intentionally split so the
+  trading-data MCP stays focused. Per-tool scope enforcement on the
+  backend (the API-key scopes — `read` / `trade` / `admin` — are
+  currently carried at the auth layer but not enforced per-route) is a
+  larger Phase D sweep deferred from C2.
 - **Sidecar deployment** on Tim's personal Proxmox — graduates the server
   from "thin local stdio" to a long-lived process — once the tool
   surface stabilises (per Q6 of the proposal: never on company infra).
+- **Long-running scheduled-agent harness** (Phase F) — wakes a remote
+  agent on a cadence to drain the `ExplorationTask` queue via these
+  tools.
 
 ## Layout
 
