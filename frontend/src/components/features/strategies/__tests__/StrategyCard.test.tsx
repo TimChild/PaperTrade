@@ -5,11 +5,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import { StrategyCard } from '../StrategyCard'
 import type { StrategyResponse } from '@/services/api/types'
 import * as strategiesApi from '@/services/api/strategies'
 import { strategyActivationsApi } from '@/services/api/strategyActivations'
 import { portfoliosApi } from '@/services/api/portfolios'
+import { activityApi } from '@/services/api/activity'
+import { explorationTasksApi } from '@/services/api/explorationTasks'
 
 vi.mock('react-hot-toast', () => ({
   default: {
@@ -35,6 +38,24 @@ vi.mock('@/services/api/portfolios', () => ({
   },
 }))
 
+// Provenance hook touches the activity + exploration-tasks APIs. Default
+// to "no agent activity, no recommending task" so the StrategyCard tests
+// see the human-authored case (no chip rendered).
+vi.mock('@/services/api/activity', () => ({
+  activityApi: {
+    list: vi.fn(),
+  },
+}))
+
+vi.mock('@/services/api/explorationTasks', () => ({
+  explorationTasksApi: {
+    list: vi.fn(),
+    getById: vi.fn(),
+    create: vi.fn(),
+    abandon: vi.fn(),
+  },
+}))
+
 beforeEach(() => {
   vi.clearAllMocks()
   // Default: no activation exists for the strategy under test, and portfolios
@@ -48,6 +69,21 @@ beforeEach(() => {
     offset: 0,
     has_more: false,
   })
+  // Provenance probes — empty by default so the chip renders nothing.
+  vi.mocked(activityApi.list).mockResolvedValue({
+    items: [],
+    total: 0,
+    limit: 100,
+    offset: 0,
+    has_more: false,
+  })
+  vi.mocked(explorationTasksApi.list).mockResolvedValue({
+    items: [],
+    total: 0,
+    limit: 100,
+    offset: 0,
+    has_more: false,
+  })
 })
 
 function createWrapper() {
@@ -58,7 +94,9 @@ function createWrapper() {
     },
   })
   return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </QueryClientProvider>
   )
 }
 

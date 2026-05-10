@@ -4,10 +4,12 @@
  * surface, and a creation timestamp + delete control.
  */
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Eyebrow } from '@/components/ui/Eyebrow'
 import { StrategyActivationPanel } from './StrategyActivationPanel'
+import { StrategyProvenanceChip } from './StrategyProvenanceChip'
 import { useDeleteStrategy } from '@/hooks/useStrategies'
 import { formatDate } from '@/utils/formatters'
 import type { StrategyResponse, StrategyType } from '@/services/api/types'
@@ -51,8 +53,20 @@ export function StrategyCard({
           <div className="min-w-0">
             <Eyebrow>Strategy</Eyebrow>
             <h3 className="mt-1.5 font-display text-display-sm tracking-tight text-ink line-clamp-2">
-              {strategy.name}
+              <Link
+                to={`/strategies/${strategy.id}`}
+                className="hover:text-amber transition-colors duration-quick ease-editorial"
+                data-testid={`strategy-card-detail-link-${strategy.id}`}
+              >
+                {strategy.name}
+              </Link>
             </h3>
+            {/* Provenance chip — agent-authored strategies surface
+                "Authored by <label>" beneath the name. Renders null for
+                human-authored strategies (the default). */}
+            <div className="mt-1">
+              <StrategyProvenanceChip strategyId={strategy.id} />
+            </div>
           </div>
           <span
             className="shrink-0 inline-flex items-center font-eyebrow rounded-editorial bg-canvas-raised border border-hairline px-2 py-1 text-ink-muted"

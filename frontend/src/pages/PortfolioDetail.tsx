@@ -14,6 +14,7 @@ import { TradeForm } from '@/components/features/portfolio/TradeForm'
 import { LightweightPriceChart } from '@/components/features/PriceChart'
 import { PortfolioHero } from '@/components/features/portfolio/PortfolioHero'
 import { PortfolioDetailSkeleton } from '@/components/features/portfolio/PortfolioDetailSkeleton'
+import { AskAnAgentButton } from '@/components/features/exploration-tasks/AskAnAgentButton'
 import { ErrorDisplay } from '@/components/ui/ErrorDisplay'
 import { Eyebrow } from '@/components/ui/Eyebrow'
 import { SectionHeader } from '@/components/ui/SectionHeader'
@@ -175,15 +176,24 @@ export function PortfolioDetail(): React.JSX.Element {
         >
           <ArrowLeft className="h-3.5 w-3.5" /> Dashboard
         </Link>
-        <Link
-          to={`/portfolio/${portfolioId}/analytics`}
-          data-testid="analytics-tab"
-          className="inline-flex items-center gap-1.5 border border-hairline-strong rounded-editorial px-3 py-2 text-body-sm text-ink hover:border-amber hover:text-amber transition-colors"
-          style={{ minHeight: 'auto' }}
-        >
-          Analytics
-          <ArrowUpRight className="h-3.5 w-3.5" />
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Ask-an-agent CTA — secondary, amber-outlined. Pre-fills the
+              target portfolio so the agent dialog opens with portfolio
+              context already wired in. */}
+          <AskAnAgentButton
+            triggerContext="portfolio"
+            initialPortfolioId={portfolioId}
+          />
+          <Link
+            to={`/portfolio/${portfolioId}/analytics`}
+            data-testid="analytics-tab"
+            className="inline-flex items-center gap-1.5 border border-hairline-strong rounded-editorial px-3 py-2 text-body-sm text-ink hover:border-amber hover:text-amber transition-colors"
+            style={{ minHeight: 'auto' }}
+          >
+            Analytics
+            <ArrowUpRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
       </div>
 
       {/* ─── Editorial header (eyebrow + name) ─── */}
