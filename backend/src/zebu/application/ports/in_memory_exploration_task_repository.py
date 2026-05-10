@@ -88,8 +88,18 @@ class InMemoryExplorationTaskRepository:
                 count += 1
             return count
 
-    async def save(self, task: ExplorationTask) -> None:
-        """Persist a task (idempotent upsert)."""
+    async def save(
+        self,
+        task: ExplorationTask,
+        *,
+        api_key_id: UUID | None = None,
+    ) -> None:
+        """Persist a task (idempotent upsert).
+
+        ``api_key_id`` is accepted for protocol compatibility (Phase H2) but
+        ignored in this in-memory implementation.
+        """
+        del api_key_id
         with self._lock:
             self._tasks[task.id] = task
 

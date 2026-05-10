@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePortfolios, usePortfolioBalance } from '@/hooks/usePortfolio'
+import { ActivityFeed } from '@/components/features/activity/ActivityFeed'
 import { PortfolioCard } from '@/components/features/portfolio/PortfolioCard'
 import { PortfolioListSkeleton } from '@/components/features/portfolio/PortfolioListSkeleton'
 import { ErrorDisplay } from '@/components/ui/ErrorDisplay'
@@ -22,6 +23,8 @@ import type { PortfolioDTO } from '@/services/api/types'
  *   - Portfolios render as a 1/2/3 column grid of editorial PortfolioCards.
  *   - The "Create Portfolio" CTA lives in the header trailing slot — quiet,
  *     not the dominant moment on the page (the portfolios themselves are).
+ *   - Recent activity (Phase H2) follows below — agent + human activity in
+ *     one feed; the actor column distinguishes between them.
  */
 
 function PortfolioCardWithBalance({
@@ -122,6 +125,22 @@ export function Dashboard(): React.JSX.Element {
             </div>
           </>
         )}
+      </section>
+
+      <section
+        className="mt-12 sm:mt-16 reveal"
+        style={{ ['--reveal-delay' as string]: '240ms' }}
+        data-testid="dashboard-activity-section"
+      >
+        <SectionHeader
+          eyebrow="Recent activity"
+          title="What's been happening"
+          as="h2"
+          description="Trades, backtests, strategies, and agent activity across your portfolios."
+        />
+        <div className="mt-6">
+          <ActivityFeed />
+        </div>
       </section>
 
       <Dialog

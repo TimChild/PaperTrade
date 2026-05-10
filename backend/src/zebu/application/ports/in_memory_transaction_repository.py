@@ -85,8 +85,19 @@ class InMemoryTransactionRepository:
 
             return len(portfolio_transactions)
 
-    async def save(self, transaction: Transaction) -> None:
-        """Save a transaction (append-only, raises error if already exists)."""
+    async def save(
+        self,
+        transaction: Transaction,
+        *,
+        api_key_id: UUID | None = None,
+    ) -> None:
+        """Save a transaction (append-only, raises error if already exists).
+
+        ``api_key_id`` is accepted for protocol compatibility (Phase H2) but
+        ignored in this in-memory implementation. The activity-feed
+        aggregator targets the SQLModel adapter where the column lives.
+        """
+        del api_key_id  # in-memory adapter doesn't track originating credential
         with self._lock:
             if transaction.id in self._transactions:
                 raise DuplicateTransactionError(
@@ -94,8 +105,18 @@ class InMemoryTransactionRepository:
                 )
             self._transactions[transaction.id] = transaction
 
-    async def save_all(self, transactions: list[Transaction]) -> None:
-        """Bulk-save transactions atomically (none persisted on duplicate)."""
+    async def save_all(
+        self,
+        transactions: list[Transaction],
+        *,
+        api_key_id: UUID | None = None,
+    ) -> None:
+        """Bulk-save transactions atomically (none persisted on duplicate).
+
+        ``api_key_id`` is accepted for protocol compatibility but ignored in
+        this in-memory adapter; see :meth:`save` for rationale.
+        """
+        del api_key_id
         if not transactions:
             return
         with self._lock:

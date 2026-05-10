@@ -141,7 +141,11 @@ class BacktestExecutor:
             status=BacktestStatus.RUNNING,
             created_at=now,
         )
-        await self._backtest_run_repo.save(backtest_run)
+        # Phase H2: stamp the originating credential on the run row so the
+        # activity feed can resolve the actor for backtest events. Lifecycle
+        # transitions (RUNNING -> COMPLETED/FAILED) leave the original
+        # api_key_id intact via the repository's save semantics.
+        await self._backtest_run_repo.save(backtest_run, api_key_id=command.api_key_id)
 
         try:
             result = await self._run_pipeline(
@@ -169,7 +173,9 @@ class BacktestExecutor:
                 completed_at=datetime.now(UTC),
                 error_message=str(exc),
             )
-            await self._backtest_run_repo.save(failed_run)
+            await self._backtest_run_repo.save(
+                failed_run, api_key_id=command.api_key_id
+            )
             return failed_run
 
         return result
@@ -231,7 +237,7 @@ class BacktestExecutor:
             price_per_share=None,
             notes="Initial backtest deposit",
         )
-        await self._transaction_repo.save(deposit)
+        await self._transaction_repo.save(deposit, api_key_id=command.api_key_id)
 
         # ── Phase 1: Pre-fetch price data ─────────────────────────────────────
         trading_strategy = self._build_strategy(strategy)
@@ -299,7 +305,9 @@ class BacktestExecutor:
         # See agent_docs/audits/2026-05-09/database.md (P1-db-1): a per-trade
         # save() loop drove ~3 DB round-trips per transaction (SELECT + INSERT
         # + flush), turning a 100-trade backtest into 300+ round-trips.
-        await self._transaction_repo.save_all(builder.transactions)
+        await self._transaction_repo.save_all(
+            builder.transactions, api_key_id=command.api_key_id
+        )
 
         # ── Phase 4: Generate snapshots ───────────────────────────────────────
         await self._snapshot_service.backfill_snapshots(
@@ -335,7 +343,7 @@ class BacktestExecutor:
             annualized_return_pct=metrics["annualized_return_pct"],
             total_trades=metrics["total_trades"],
         )
-        await self._backtest_run_repo.save(completed_run)
+        await self._backtest_run_repo.save(completed_run, api_key_id=command.api_key_id)
 
         return completed_run
 

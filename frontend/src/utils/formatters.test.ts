@@ -5,6 +5,7 @@ import {
   formatNumber,
   formatDate,
   formatClockTime,
+  formatRelativeTime,
 } from '@/utils/formatters'
 
 describe('formatters', () => {
@@ -147,6 +148,44 @@ describe('formatters', () => {
     it('returns the placeholder for non-finite values', () => {
       expect(formatClockTime(NaN)).toBe('--:--:--')
       expect(formatClockTime(Infinity)).toBe('--:--:--')
+    })
+  })
+
+  describe('formatRelativeTime', () => {
+    const NOW = new Date('2026-05-10T12:00:00Z')
+
+    it('renders "just now" for recent events (<60s)', () => {
+      const ts = new Date(NOW.getTime() - 30_000).toISOString()
+      expect(formatRelativeTime(ts, NOW)).toBe('just now')
+    })
+
+    it('renders Nm ago for events within an hour', () => {
+      const ts = new Date(NOW.getTime() - 12 * 60_000).toISOString()
+      expect(formatRelativeTime(ts, NOW)).toBe('12m ago')
+    })
+
+    it('renders Nh ago for events within a day', () => {
+      const ts = new Date(NOW.getTime() - 5 * 3_600_000).toISOString()
+      expect(formatRelativeTime(ts, NOW)).toBe('5h ago')
+    })
+
+    it('renders Nd ago for events within a week', () => {
+      const ts = new Date(NOW.getTime() - 3 * 86_400_000).toISOString()
+      expect(formatRelativeTime(ts, NOW)).toBe('3d ago')
+    })
+
+    it('falls back to short date for events older than a week', () => {
+      const ts = new Date(NOW.getTime() - 30 * 86_400_000).toISOString()
+      const result = formatRelativeTime(ts, NOW)
+      // Older than 7 days — should be a short date format like "Apr 10".
+      expect(result).not.toMatch(/ago$/)
+    })
+
+    it('renders future timestamps as "just now"', () => {
+      // Clock-skew defence: a timestamp slightly in the future
+      // shouldn't render as "-1m ago".
+      const ts = new Date(NOW.getTime() + 5_000).toISOString()
+      expect(formatRelativeTime(ts, NOW)).toBe('just now')
     })
   })
 })

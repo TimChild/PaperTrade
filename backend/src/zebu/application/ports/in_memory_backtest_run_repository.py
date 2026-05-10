@@ -41,8 +41,18 @@ class InMemoryBacktestRunRepository:
             ]
             return sorted(strategy_runs, key=lambda r: r.created_at)
 
-    async def save(self, backtest_run: BacktestRun) -> None:
-        """Save a backtest run (idempotent upsert)."""
+    async def save(
+        self,
+        backtest_run: BacktestRun,
+        *,
+        api_key_id: UUID | None = None,
+    ) -> None:
+        """Save a backtest run (idempotent upsert).
+
+        ``api_key_id`` is accepted for protocol compatibility (Phase H2) but
+        ignored in this in-memory implementation.
+        """
+        del api_key_id
         with self._lock:
             self._runs[backtest_run.id] = backtest_run
 

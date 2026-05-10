@@ -417,3 +417,81 @@ export interface CreateApiKeyResponse {
   created_at: string
   expires_at: string | null
 }
+
+// Recent-activity feed (Phase H2) ------------------------------------------
+
+/**
+ * Discriminator for the kind of underlying event a row represents.
+ *
+ * Mirrors the backend enum at
+ * `backend/src/zebu/application/dtos/activity_event_dto.py:ActivityEventType`.
+ * The wire shape allows unknown future values to degrade gracefully.
+ */
+export type ActivityEventType =
+  | 'trade'
+  | 'backtest'
+  | 'strategy_created'
+  | 'activation_created'
+  | 'activation_run'
+  | 'task_filed'
+  | 'task_claimed'
+  | 'task_done'
+  | 'api_key_minted'
+
+/**
+ * Whether the row was authored via Clerk Bearer (a human via UI) or via
+ * an API key (an agent / scheduled task / MCP server).
+ *
+ * - `user`: Clerk-authenticated. `actor_label` is `null`; the UI typically
+ *   renders this as "you" since the feed is per-user.
+ * - `api_key`: API-key authenticated. `actor_label` carries the key's
+ *   human label.
+ */
+export type ActorKind = 'user' | 'api_key'
+
+/**
+ * The kind of underlying entity a feed row points at.
+ *
+ * Drives the click-to-navigate behaviour on the frontend: the row's
+ * `subject_id` plus `subject_type` together identify the destination
+ * detail page.
+ */
+export type SubjectType =
+  | 'portfolio'
+  | 'strategy'
+  | 'backtest'
+  | 'activation'
+  | 'task'
+  | 'api_key'
+
+/**
+ * Wire shape for one row in the recent-activity feed.
+ *
+ * Mirrors `ActivityEventResponse` in
+ * `backend/src/zebu/adapters/inbound/api/activity.py`.
+ */
+export interface ActivityEventResponse {
+  type: ActivityEventType
+  occurred_at: string // ISO 8601 UTC
+  actor_kind: ActorKind
+  actor_label: string | null
+  actor_user_id: string
+  subject_type: SubjectType
+  subject_id: string
+  subject_name: string | null
+  summary: string
+}
+
+/**
+ * Query parameters for the activity feed.
+ *
+ * `event_type` is repeatable (passed as multiple `event_type=...` params
+ * when the array has multiple entries).
+ */
+export interface ListActivityParams {
+  limit?: number
+  offset?: number
+  since?: string // ISO 8601
+  actor_label?: string
+  event_type?: ActivityEventType[]
+}

@@ -143,3 +143,53 @@ export function formatClockTime(epochMs: number | undefined | null): string {
     second: '2-digit',
   }).format(date)
 }
+
+/**
+ * Format a timestamp as a compact "X ago" relative-time label.
+ *
+ * The recent-activity feed (Phase H2) renders timestamps in this form
+ * because feed entries are most useful in relative terms ("2m ago"
+ * is more informative than "8:42 AM" when scanning a list). The
+ * granularity steps coarsen as time passes:
+ *
+ * - <60s: "just now"
+ * - <60m: "Nm ago"
+ * - <24h: "Nh ago"
+ * - <7d:  "Nd ago"
+ * - else: full date via `formatDate`
+ *
+ * Future timestamps (clock skew) render as "just now" rather than a
+ * misleading negative.
+ *
+ * @param dateString ISO 8601 timestamp.
+ * @param now Optional clock override for deterministic tests.
+ * @returns Compact "X ago" label.
+ */
+export function formatRelativeTime(
+  dateString: string,
+  now: Date = new Date()
+): string {
+  const then = new Date(dateString)
+  const deltaMs = now.getTime() - then.getTime()
+
+  if (deltaMs < 60_000) {
+    return 'just now'
+  }
+
+  const minutes = Math.floor(deltaMs / 60_000)
+  if (minutes < 60) {
+    return `${minutes}m ago`
+  }
+
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) {
+    return `${hours}h ago`
+  }
+
+  const days = Math.floor(hours / 24)
+  if (days < 7) {
+    return `${days}d ago`
+  }
+
+  return formatDate(dateString, 'short')
+}

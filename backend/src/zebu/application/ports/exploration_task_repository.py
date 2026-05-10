@@ -131,7 +131,12 @@ class ExplorationTaskRepository(Protocol):
         """
         ...
 
-    async def save(self, task: ExplorationTask) -> None:
+    async def save(
+        self,
+        task: ExplorationTask,
+        *,
+        api_key_id: UUID | None = None,
+    ) -> None:
         """Persist a task (create if new, update if existing).
 
         Idempotent: calling ``save`` on the same entity twice produces the
@@ -139,6 +144,9 @@ class ExplorationTaskRepository(Protocol):
 
         Args:
             task: Entity to persist.
+            api_key_id: Phase H2 — ID of the API key that authenticated the
+                writing request, or None for Clerk Bearer (human via UI).
+                Stamped only on insert.
         """
         ...
 

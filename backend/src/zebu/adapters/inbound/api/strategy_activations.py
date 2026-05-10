@@ -26,7 +26,11 @@ import structlog
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from zebu.adapters.inbound.api.dependencies import CurrentUserDep, MarketDataDep
+from zebu.adapters.inbound.api.dependencies import (
+    ActiveApiKeyIdDep,
+    CurrentUserDep,
+    MarketDataDep,
+)
 from zebu.adapters.inbound.api.schemas import (
     DEFAULT_PAGE_LIMIT,
     MAX_PAGE_LIMIT,
@@ -179,6 +183,7 @@ async def activate_strategy(
     strategy_id: UUID,
     request: ActivateStrategyRequest,
     current_user: CurrentUserDep,
+    api_key_id: ActiveApiKeyIdDep,
     session: SessionDep,
 ) -> StrategyActivationResponse:
     """Activate a strategy for live execution against a portfolio.
@@ -247,7 +252,9 @@ async def activate_strategy(
         created_at=now,
         updated_at=now,
     )
-    await activation_repo.save(activation)
+    # Phase H2: stamp the originating credential so the activity feed can
+    # surface the API-key label for activation_created rows.
+    await activation_repo.save(activation, api_key_id=api_key_id)
     logger.info(
         "Strategy activated",
         activation_id=str(activation.id),

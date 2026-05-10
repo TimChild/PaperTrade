@@ -7,6 +7,7 @@ import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from zebu.adapters.inbound.api.activity import router as activity_router
 from zebu.adapters.inbound.api.analytics import (
     admin_router as analytics_admin_router,
 )
@@ -166,6 +167,7 @@ app.include_router(strategy_activations_router, prefix="/api/v1")
 app.include_router(backtests_router, prefix="/api/v1")
 app.include_router(exploration_tasks_router, prefix="/api/v1")
 app.include_router(api_keys_router, prefix="/api/v1")
+app.include_router(activity_router, prefix="/api/v1")
 
 
 @app.get("/health")

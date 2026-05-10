@@ -18,6 +18,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator
 
 from zebu.adapters.inbound.api.dependencies import (
+    ActiveApiKeyIdDep,
     CurrentUserDep,
     MarketDataDep,
     PortfolioRepositoryDep,
@@ -485,6 +486,7 @@ async def execute_trade(
     portfolio_id: UUID,
     request: TradeRequest,
     current_user: CurrentUserDep,
+    api_key_id: ActiveApiKeyIdDep,
     portfolio_repo: PortfolioRepositoryDep,
     transaction_repo: TransactionRepositoryDep,
     market_data: MarketDataDep,
@@ -541,6 +543,7 @@ async def execute_trade(
             price_per_share_amount=price_point.price.amount,
             price_per_share_currency=price_point.price.currency,
             as_of=request.as_of,
+            api_key_id=api_key_id,
         )
         handler = BuyStockHandler(portfolio_repo, transaction_repo)
         result = await handler.execute(command)
@@ -552,6 +555,7 @@ async def execute_trade(
             price_per_share_amount=price_point.price.amount,
             price_per_share_currency=price_point.price.currency,
             as_of=request.as_of,
+            api_key_id=api_key_id,
         )
         handler = SellStockHandler(portfolio_repo, transaction_repo)
         result = await handler.execute(command)

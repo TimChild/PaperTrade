@@ -172,6 +172,16 @@ class TransactionModel(SQLModel, table=True):
     price_per_share_currency: str | None = Field(default=None, max_length=3)
     notes: str | None = Field(default=None, max_length=500)
     created_at: datetime = Field(default_factory=datetime.now)
+    # Phase H2: stamps which API key (if any) authenticated the request that
+    # wrote this row. Null for Clerk Bearer (human via UI). FK is ON DELETE
+    # SET NULL — deleting an API key must not erase historical activity, just
+    # detach the credential reference. The activity-feed aggregator joins on
+    # this column to surface the API-key label as the actor identity.
+    api_key_id: UUID | None = Field(
+        default=None,
+        foreign_key="api_keys.id",
+        ondelete="SET NULL",
+    )
 
     def to_domain(self) -> Transaction:
         """Convert database model to domain entity.
@@ -413,6 +423,13 @@ class StrategyModel(SQLModel, table=True):
         sa_column=Column(JSON, nullable=False)
     )
     created_at: datetime
+    # Phase H2: see TransactionModel.api_key_id for the full doc. Null for
+    # Clerk Bearer rows; activity-feed aggregator joins to api_keys.label.
+    api_key_id: UUID | None = Field(
+        default=None,
+        foreign_key="api_keys.id",
+        ondelete="SET NULL",
+    )
 
     def to_domain(self) -> Strategy:
         """Convert database model to domain entity.
@@ -533,6 +550,13 @@ class BacktestRunModel(SQLModel, table=True):
         default=None, max_digits=15, decimal_places=4
     )
     total_trades: int | None = Field(default=None)
+    # Phase H2: see TransactionModel.api_key_id for the full doc. Null for
+    # Clerk Bearer rows; activity-feed aggregator joins to api_keys.label.
+    api_key_id: UUID | None = Field(
+        default=None,
+        foreign_key="api_keys.id",
+        ondelete="SET NULL",
+    )
 
     def to_domain(self) -> BacktestRun:
         """Convert database model to domain entity.
@@ -699,6 +723,13 @@ class StrategyActivationModel(SQLModel, table=True):
     last_error: str | None = Field(default=None, max_length=500)
     created_at: datetime
     updated_at: datetime
+    # Phase H2: see TransactionModel.api_key_id for the full doc. Null for
+    # Clerk Bearer rows; activity-feed aggregator joins to api_keys.label.
+    api_key_id: UUID | None = Field(
+        default=None,
+        foreign_key="api_keys.id",
+        ondelete="SET NULL",
+    )
 
     def to_domain(self) -> StrategyActivation:
         """Convert database model to domain entity.
@@ -953,6 +984,13 @@ class ExplorationTaskModel(SQLModel, table=True):
     )
     created_at: datetime
     updated_at: datetime
+    # Phase H2: see TransactionModel.api_key_id for the full doc. Null for
+    # Clerk Bearer rows; activity-feed aggregator joins to api_keys.label.
+    api_key_id: UUID | None = Field(
+        default=None,
+        foreign_key="api_keys.id",
+        ondelete="SET NULL",
+    )
 
     def to_domain(self) -> ExplorationTask:
         """Convert database model to domain entity.

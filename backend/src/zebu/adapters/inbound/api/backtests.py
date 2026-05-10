@@ -17,6 +17,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from zebu.adapters.inbound.api.dependencies import (
+    ActiveApiKeyIdDep,
     CurrentUserDep,
     MarketDataDep,
 )
@@ -180,6 +181,7 @@ def _build_executor(
 async def run_backtest(
     request: RunBacktestRequest,
     current_user: CurrentUserDep,
+    api_key_id: ActiveApiKeyIdDep,
     session: SessionDep,
     market_data: MarketDataDep,
 ) -> BacktestRunResponse:
@@ -187,6 +189,10 @@ async def run_backtest(
 
     Validates the request, runs the full simulation pipeline, and returns
     the completed BacktestRun with performance metrics.
+
+    Phase H2: ``api_key_id`` is captured at command construction so every
+    write the pipeline performs (BacktestRun, synthetic portfolio's deposit,
+    trade transactions) is stamped with the originating credential.
 
     Raises:
         HTTPException: 404 if strategy not found
@@ -199,6 +205,7 @@ async def run_backtest(
         start_date=request.start_date,
         end_date=request.end_date,
         initial_cash=request.initial_cash,
+        api_key_id=api_key_id,
     )
 
     executor = _build_executor(session=session, market_data=market_data)

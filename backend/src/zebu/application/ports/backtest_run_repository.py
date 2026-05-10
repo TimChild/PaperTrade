@@ -46,11 +46,21 @@ class BacktestRunRepository(Protocol):
         """
         ...
 
-    async def save(self, backtest_run: BacktestRun) -> None:
+    async def save(
+        self,
+        backtest_run: BacktestRun,
+        *,
+        api_key_id: UUID | None = None,
+    ) -> None:
         """Persist a backtest run (create if new, update if exists).
 
         Args:
-            backtest_run: BacktestRun entity to persist
+            backtest_run: BacktestRun entity to persist.
+            api_key_id: Phase H2 — ID of the API key that authenticated the
+                writing request, or None for Clerk Bearer (human via UI).
+                Stamped only on insert so lifecycle updates (PENDING ->
+                RUNNING -> COMPLETED) leave the original creator's
+                credential reference intact.
         """
         ...
 

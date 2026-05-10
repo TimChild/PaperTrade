@@ -15,7 +15,11 @@ import structlog
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
-from zebu.adapters.inbound.api.dependencies import CurrentUserDep, MarketDataDep
+from zebu.adapters.inbound.api.dependencies import (
+    ActiveApiKeyIdDep,
+    CurrentUserDep,
+    MarketDataDep,
+)
 from zebu.adapters.inbound.api.schemas import (
     DEFAULT_PAGE_LIMIT,
     MAX_PAGE_LIMIT,
@@ -100,10 +104,15 @@ def _to_strategy_response(strategy: Strategy) -> StrategyResponse:
 async def create_strategy(
     request: CreateStrategyRequest,
     current_user: CurrentUserDep,
+    api_key_id: ActiveApiKeyIdDep,
     session: SessionDep,
     market_data: MarketDataDep,
 ) -> StrategyResponse:
-    """Create a new trading strategy template."""
+    """Create a new trading strategy template.
+
+    Phase H2: ``api_key_id`` is captured at write time so the recent-activity
+    feed can surface the originating credential's label as the actor.
+    """
     try:
         strategy_type = StrategyType(request.strategy_type)
     except ValueError:
@@ -141,7 +150,7 @@ async def create_strategy(
     )
 
     repo = SQLModelStrategyRepository(session)
-    await repo.save(strategy)
+    await repo.save(strategy, api_key_id=api_key_id)
 
     logger.info(
         "Strategy created",

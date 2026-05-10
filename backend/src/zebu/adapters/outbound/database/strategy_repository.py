@@ -60,16 +60,28 @@ class SQLModelStrategyRepository:
         models = result.all()
         return [model.to_domain() for model in models]
 
-    async def save(self, strategy: Strategy) -> None:
+    async def save(
+        self,
+        strategy: Strategy,
+        *,
+        api_key_id: UUID | None = None,
+    ) -> None:
         """Persist a strategy (create if new, update if exists).
 
         Args:
-            strategy: Strategy entity to persist
+            strategy: Strategy entity to persist.
+            api_key_id: Phase H2 — ID of the API key that authenticated the
+                writing request, or None for Clerk Bearer (human via UI).
+                Stamped onto the row only on insert; updates leave the
+                original creator's credential reference untouched. The
+                activity-feed aggregator joins on this column to surface the
+                API-key label as the actor identity.
         """
         existing = await self._session.get(StrategyModel, strategy.id)
 
         if existing is None:
             model = StrategyModel.from_domain(strategy)
+            model.api_key_id = api_key_id
             self._session.add(model)
         else:
             existing.name = strategy.name
