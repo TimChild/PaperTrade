@@ -1,0 +1,27 @@
+# Gitleaks configuration for Zebu / PaperTrade
+#
+# Default rules are inherited; this file only ADDS allowlist entries
+# for known-fake test fixtures.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Test fixtures with obviously-fake credentials"
+
+# Test files that intentionally contain placeholder API keys / tokens
+# for unit-test purposes. These are not real secrets.
+paths = [
+  '''mcp/tests/.*''',
+  '''backend/tests/.*''',
+  '''frontend/tests/.*''',
+]
+
+# Known-fake placeholder strings used across tests
+regexes = [
+  '''NOT-A-REAL-API-KEY''',
+  '''zk_test_abcdef0123456789''',
+  '''sk_test_dummy''',
+  '''test-api-key''',
+  '''demo-api-key''',
+]
