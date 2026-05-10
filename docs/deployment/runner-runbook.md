@@ -1,7 +1,7 @@
 # Self-Hosted Runner Runbook (`papertrade-proxmox`)
 
-**Last Updated**: 2026-05-09
-**Audience**: Anyone with shell access to the Proxmox VM that hosts the GitHub Actions runner.
+**Last Updated**: 2026-05-09  
+**Audience**: Anyone with shell access to the Proxmox VM that hosts the GitHub Actions runner.  
 **Scope**: Day-to-day operation, recovery, and credential rotation for the `papertrade-proxmox` self-hosted runner that drives `cd.yml`.
 
 This runbook complements [Proxmox VM Deployment](./proxmox-vm-deployment.md) (which covers the application). Workflow-side hardening — Docker prune, cache caps, structured log markers, disk-floor enforcement — lives in `.github/workflows/_runner-prep.yml` and is applied automatically before every deploy. The pieces that can only be configured **on the host** are documented here.

@@ -1,8 +1,8 @@
 # React Patterns Audit & Refactoring
 
-**Status**: Backlog
-**Priority**: Low (Tech Debt / Quality)
-**Estimated Effort**: 2-3 days spread across multiple PRs
+**Status**: Backlog  
+**Priority**: Low (Tech Debt / Quality)  
+**Estimated Effort**: 2-3 days spread across multiple PRs  
 **Created**: 2026-01-08
 
 ## Context

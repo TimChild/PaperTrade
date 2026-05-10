@@ -1,8 +1,8 @@
 # Phase 3b: User Authentication with Clerk
 
-**Duration**: 2-3 days
-**Priority**: CRITICAL (blocks production deployment)
-**Approach**: Third-party authentication (Clerk)
+**Duration**: 2-3 days  
+**Priority**: CRITICAL (blocks production deployment)  
+**Approach**: Third-party authentication (Clerk)  
 **Last Updated**: 2026-01-04
 
 ## Decision Summary

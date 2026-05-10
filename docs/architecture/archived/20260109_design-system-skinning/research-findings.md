@@ -524,6 +524,6 @@ await page.getByTestId('portfolio-card-123').click()
 | **Testing** | Playwright + axe-core | E2E + automated a11y, skip visual regression for MVP |
 | **Bundle Analysis** | Vite rollup-plugin-visualizer | Monitor bundle size |
 
-**Total Bundle Impact**: +15-20KB (well within <50KB budget)
-**Timeline**: 12-15 days (includes design exploration + implementation)
+**Total Bundle Impact**: +15-20KB (well within <50KB budget)  
+**Timeline**: 12-15 days (includes design exploration + implementation)  
 **Risk Level**: Low (incremental migration with feature flags)

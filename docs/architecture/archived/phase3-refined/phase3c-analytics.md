@@ -1,7 +1,7 @@
 # Phase 3c: Portfolio Analytics & Simple Backtesting
 
-**Duration**: 3-4 weeks
-**Priority**: MEDIUM (enhances user experience)
+**Duration**: 3-4 weeks  
+**Priority**: MEDIUM (enhances user experience)  
 **Dependencies**: Phase 3a (SELL orders) recommended
 
 ## Objective

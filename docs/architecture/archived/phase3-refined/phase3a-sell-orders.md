@@ -1,7 +1,7 @@
 # Phase 3a: SELL Order Functionality
 
-**Duration**: 2-3 weeks
-**Priority**: HIGH
+**Duration**: 2-3 weeks  
+**Priority**: HIGH  
 **Dependencies**: None (builds on Phase 2)
 
 ## Objective

@@ -1,8 +1,8 @@
 # Proposal: Agent Platform — From "Plumbing Works" to "Daily Loop is Pleasant"
 
-**Status**: Draft (proposal) — picks up from [`agent-platform-completed.md`](agent-platform-completed.md)
-**Author**: Tim Child (with Claude Opus 4.7)
-**Created**: 2026-05-10
+**Status**: Draft (proposal) — picks up from [`agent-platform-completed.md`](agent-platform-completed.md)  
+**Author**: Tim Child (with Claude Opus 4.7)  
+**Created**: 2026-05-10  
 **Supersedes**: [`archive/agent-platform-proposal-2026-05-09.md`](archive/agent-platform-proposal-2026-05-09.md) (the original A→G plan)
 
 ---

@@ -225,7 +225,7 @@ async def get_portfolio_value(
     return calculate_valuation(holdings, prices)
 ```
 
-**Live Mode**: `as_of=None` uses wall-clock time and live API.
+**Live Mode**: `as_of=None` uses wall-clock time and live API.  
 **Backtest Mode**: `as_of=past_date` uses historical data.
 
 ---

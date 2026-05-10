@@ -1,8 +1,8 @@
 # Proposal: Agent Platform — Modernizing Zebu for Agent-Driven Trading (ARCHIVED 2026-05-10)
 
-**Status**: ARCHIVED — superseded by [`agent-platform-completed.md`](../agent-platform-completed.md) (what shipped) + [`agent-platform-proposal.md`](../agent-platform-proposal.md) (what's next)
-**Author**: Tim Child (with Claude Opus 4.7)
-**Created**: 2026-05-09 — preserved here as the original framing of the seven-phase A→G plan. Phases A–D Wave 2 shipped between 2026-05-09 and 2026-05-10; the new proposal picks up from there.
+**Status**: ARCHIVED — superseded by [`agent-platform-completed.md`](../agent-platform-completed.md) (what shipped) + [`agent-platform-proposal.md`](../agent-platform-proposal.md) (what's next)  
+**Author**: Tim Child (with Claude Opus 4.7)  
+**Created**: 2026-05-09 — preserved here as the original framing of the seven-phase A→G plan. Phases A–D Wave 2 shipped between 2026-05-09 and 2026-05-10; the new proposal picks up from there.  
 **Supersedes**: `roadmap.md` § "Phase 5: Automation & Advanced Analytics" (loose sketch)
 
 > **Status update — 2026-05-09**: Phase A (Claude infra modernization) has shipped in this same session.
@@ -155,7 +155,7 @@ Phases A–G. **A is done; B is foundational; C–G build the agent platform.** 
 
 Shipped 2026-05-09. See top-of-doc status callout for the file-by-file list. Bootstrapped `CLAUDE.md`, migrated 7 specialist agents to `.claude/agents/`, created 6 procedural skills under `.claude/skills/`, promoted Clean Architecture rules to a published doc, removed Copilot-flavored duplication, fixed staleness markers, bootstrapped project memory.
 
-**Effort**: ~4 hours, one session.
+**Effort**: ~4 hours, one session.  
 **Risk**: Low — additive; nothing broken.
 
 ### Phase B — Codebase health audit & foundation refactor (NEW)
@@ -238,10 +238,10 @@ C4. **`ExplorationTask` entity & queue** (the new thing this proposal adds beyon
 - Endpoints: `POST/GET/DELETE /exploration-tasks`, `POST /exploration-tasks/{id}/claim`, `POST /exploration-tasks/{id}/findings`.
 - This is **the** key new abstraction — without it, agents have no input from the human.
 
-**Effort**: ~1–2 weeks (Task #210 alone is multi-day; C2/C4 add ~3–4 days).
-**Owner**: Backend SWE agent (parallel sub-tasks: #210 in flight, C2 + C4 as new sibling tasks).
-**Risk**: Medium — touches auth and adds a new domain concept.
-**Depends on**: Phase B critical/foundation fixes — don't build write-side auth on a foundation we know has gaps.
+**Effort**: ~1–2 weeks (Task #210 alone is multi-day; C2/C4 add ~3–4 days).  
+**Owner**: Backend SWE agent (parallel sub-tasks: #210 in flight, C2 + C4 as new sibling tasks).  
+**Risk**: Medium — touches auth and adds a new domain concept.  
+**Depends on**: Phase B critical/foundation fixes — don't build write-side auth on a foundation we know has gaps.  
 **Parallelizable with**: Phase D once C2 lands.
 
 ### Phase D — MCP server
@@ -295,9 +295,9 @@ D3. **Build it with the `claude-api` skill** patterns and document the auth flow
 
 D4. **Integration test** — a smoke test that runs the MCP server locally, connects from Claude Code, lists supported tickers, runs one backtest end-to-end.
 
-**Effort**: 3–4 days for the trading-data MCP. Broader research tools add ~1–2 days each but can ship incrementally.
-**Owner**: Claude Code (you + me) — interactive iteration.
-**Risk**: Low — additive, behind an API key, doesn't affect production traffic.
+**Effort**: 3–4 days for the trading-data MCP. Broader research tools add ~1–2 days each but can ship incrementally.  
+**Owner**: Claude Code (you + me) — interactive iteration.  
+**Risk**: Low — additive, behind an API key, doesn't affect production traffic.  
 **Parallelizable with**: tail end of Phase C (read-only tools can be built before Phase C's write capabilities ship).
 
 ### Phase E — Agent-authored strategies (parameter sweeps + new types via PR)
@@ -312,9 +312,9 @@ E2. **Structured `submit_exploration_finding` payload** — agents return a type
 
 E3. **"New strategy type via PR" workflow** — when an agent wants to try a fundamentally new strategy type, it drafts a PR (using `backend-swe`) adding a new `StrategyType` enum value + handler + tests. Goes through the normal review pipeline. Naturally bounds agent capability: parameters / agent-in-loop conditions are free; new strategy types get human review. **Depends on Phase B foundation** so the agent isn't extending a shaky base.
 
-**Effort**: 1 week of agent-loop time (mostly running, not coding).
-**Owner**: Looped Claude Code agent.
-**Risk**: Low — bounded by existing strategy types and backtest engine.
+**Effort**: 1 week of agent-loop time (mostly running, not coding).  
+**Owner**: Looped Claude Code agent.  
+**Risk**: Low — bounded by existing strategy types and backtest engine.  
 **Depends on**: Phase B (audit done), Phase C (Task #210 + ExplorationTask), Phase D (MCP).
 
 ### Phase F — Long-running agent harness + agent-in-the-loop strategies
@@ -351,9 +351,9 @@ F5. **Concurrency / safety guardrails**:
 - "Kill switch" env var or admin endpoint that disables `claim_exploration_task` and trigger-based agent invocation
 - All agent-initiated transactions tagged with `agent_id` and `exploration_task_id` / `trigger_id` for full audit trail
 
-**Effort**: 1–2 weeks. F1+F2 are quick (2–3 days). F3+F4 are the substantive new feature (~1 week). F5 is woven through.
-**Owner**: Claude Code (orchestrator) + `backend-swe` for F3 + `frontend-swe` for F4.
-**Risk**: Medium-High — first time non-interactive agents make real (paper) trading decisions. Mitigations: full audit trail, kill switch, per-portfolio caps, paper-trading-only.
+**Effort**: 1–2 weeks. F1+F2 are quick (2–3 days). F3+F4 are the substantive new feature (~1 week). F5 is woven through.  
+**Owner**: Claude Code (orchestrator) + `backend-swe` for F3 + `frontend-swe` for F4.  
+**Risk**: Medium-High — first time non-interactive agents make real (paper) trading decisions. Mitigations: full audit trail, kill switch, per-portfolio caps, paper-trading-only.  
 **Depends on**: Phases C, D, E.
 
 ### Phase G — GUI for agent observability
@@ -372,8 +372,8 @@ G4. **Manual "ask an agent" button** — file an `ExplorationTask` directly from
 
 G5. **Trigger-fire log view** — show every time an agent-in-loop trigger fired, what the agent decided, why, and what trade (if any) resulted. The audit-trail surface that makes agent-in-loop trustworthy.
 
-**Effort**: 1–2 weeks of frontend work.
-**Owner**: Frontend SWE agent.
+**Effort**: 1–2 weeks of frontend work.  
+**Owner**: Frontend SWE agent.  
 **Depends on**: Phases C + E + F for data; Phase A for the `frontend-swe` definition.
 
 ---

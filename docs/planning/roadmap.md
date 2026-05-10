@@ -1,6 +1,6 @@
 # Zebu Product Roadmap
 
-**Last Updated**: May 9, 2026
+**Last Updated**: May 9, 2026  
 **Version**: v1.0.0 - Production Deployed (Phase 4 Complete)
 
 ## What is this document?
@@ -399,5 +399,5 @@ We're building Zebu because we believe everyone should have access to investment
 
 **Questions? Suggestions?** Open an issue on GitHub or visit [zebutrader.com](https://zebutrader.com)
 
-**Last Updated**: January 26, 2026
+**Last Updated**: January 26, 2026  
 **Next Update**: April 2026 (post-Phase 4a)

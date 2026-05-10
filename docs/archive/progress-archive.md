@@ -4,7 +4,7 @@
 
 ## Current Status
 
-**Phase**: Phase 1 "The Ledger" ✅ **COMPLETE** - Production-ready with 436+ tests!
+**Phase**: Phase 1 "The Ledger" ✅ **COMPLETE** - Production-ready with 436+ tests!  
 **Phase**: Phase 2a "Current Prices" ✅ **COMPLETE** - Real market data fully integrated!
 
 ### Active Work
@@ -129,15 +129,15 @@
 
 ## Phase 2: Reality Injection
 
-**Status**: Phase 2a ✅ **COMPLETE** - Phase 2b 📋 **READY TO START**
-**Start Date**: December 26, 2025
-**Phase 2a Completion**: December 29, 2025 (4 days, ahead of schedule!)
+**Status**: Phase 2a ✅ **COMPLETE** - Phase 2b 📋 **READY TO START**  
+**Start Date**: December 26, 2025  
+**Phase 2a Completion**: December 29, 2025 (4 days, ahead of schedule!)  
 **Architecture**: Comprehensive design with 5,500+ lines of specifications
 
 ### Architecture Completed ✅ (Task 014 - PR #21, merged Dec 28)
 
-**Delivered**: 10 architecture documents + 4 ADRs + 3 config templates + task breakdown
-**Agent**: Architect
+**Delivered**: 10 architecture documents + 4 ADRs + 3 config templates + task breakdown  
+**Agent**: Architect  
 **Review Score**: Exceptional - comprehensive Phase 2 design
 
 See full architecture in `docs/architecture/20251228_phase2-market-data/`
@@ -168,8 +168,8 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 
 ### Phase 2a: Current Prices ✅ COMPLETE
 
-**Goal**: Portfolio displays real market values
-**Duration**: 4 days (Dec 26-29) - Ahead of 7-day estimate!
+**Goal**: Portfolio displays real market values  
+**Duration**: 4 days (Dec 26-29) - Ahead of 7-day estimate!  
 **Status**: ✅ All tasks complete, Phase 2a finished!
 
 #### Completed Tasks (018-026)
@@ -187,8 +187,8 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 
 ### Phase 2b: Historical Data (Week 2)
 
-**Goal**: Price charts and historical queries
-**Duration**: ~25 hours across 5 tasks
+**Goal**: Price charts and historical queries  
+**Duration**: ~25 hours across 5 tasks  
 **Status**: 📋 Ready to start (awaiting Phase 2a quality fixes)
 
 #### Tasks 029-033 (Planned)
@@ -204,13 +204,13 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 ## Current Quality Fixes (In Progress)
 
 ### 🔄 Fix CI Workflow Trigger (Task 027 - PR #37)
-**Started**: December 29, 2025
-**Status**: quality-infra agent working
-**Priority**: P2 IMPORTANT
+**Started**: December 29, 2025  
+**Status**: quality-infra agent working  
+**Priority**: P2 IMPORTANT  
 **Estimated**: 1-2 hours
 
-**Problem**: CI workflows don't run when marking PRs as ready for review (draft → ready transition)
-**Current Behavior**: Only GitGuardian runs, full CI (lint, test, build) doesn't trigger
+**Problem**: CI workflows don't run when marking PRs as ready for review (draft → ready transition)  
+**Current Behavior**: Only GitGuardian runs, full CI (lint, test, build) doesn't trigger  
 **Solution**: Add `ready_for_review` event type to workflow triggers in `.github/workflows/ci.yml`
 
 **Success Criteria**:
@@ -222,12 +222,12 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 ---
 
 ### 🔄 Fix Test Isolation (Task 028 - PR #38)
-**Started**: December 29, 2025
-**Status**: backend-swe agent working
-**Priority**: P2 IMPORTANT
+**Started**: December 29, 2025  
+**Status**: backend-swe agent working  
+**Priority**: P2 IMPORTANT  
 **Estimated**: 1-2 hours
 
-**Problem**: `test_buy_and_sell_updates_holdings_correctly` fails in full suite, passes individually
+**Problem**: `test_buy_and_sell_updates_holdings_correctly` fails in full suite, passes individually  
 **Root Cause**: Global singletons in `dependencies.py` persist state across tests
 
 - `_redis_client`, `_http_client`, `_market_data_adapter` not reset between tests
@@ -247,7 +247,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 ### Phase 2a: Market Data Integration ✅
 
 ### ✅ PostgreSQL Price Repository (Task 021 - PR #33)
-**Merged**: December 28, 2025
+**Merged**: December 28, 2025  
 **Score**: 9/10 - Excellent Tier 2 caching implementation
 
 **Delivered**:
@@ -277,7 +277,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 ---
 
 ### ✅ Portfolio Use Cases Integration (Task 024 - PR #34)
-**Merged**: December 28, 2025
+**Merged**: December 28, 2025  
 **Score**: 9/10 - Excellent real-time valuation integration
 
 **Delivered**:
@@ -305,7 +305,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 ---
 
 ### ✅ Backend Test Fixes (Task 025 - PR #35)
-**Merged**: December 29, 2025
+**Merged**: December 29, 2025  
 **Score**: 9.5/10 - Perfect bug fix
 
 **Delivered**:
@@ -326,7 +326,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 ---
 
 ### ✅ E2E Test Configuration (Task 026 - PR #36)
-**Merged**: December 29, 2025
+**Merged**: December 29, 2025  
 **Score**: 9.5/10 - Perfect test infrastructure fix
 
 **Delivered**:
@@ -350,7 +350,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 ### Phase 1: The Ledger ✅
 
 ### ✅ Domain Layer (Task 007 - PR #12)
-**Merged**: December 28, 2025
+**Merged**: December 28, 2025  
 **Score**: 9/10 - Excellent foundation
 
 **Delivered**:
@@ -379,7 +379,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 ---
 
 ### ✅ Application Layer (Task 007b - PR #14)
-**Merged**: December 28, 2025
+**Merged**: December 28, 2025  
 **Score**: Excellent implementation
 
 **Delivered**:
@@ -410,7 +410,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 ---
 
 ### ✅ Adapters Layer (Task 007c - PR #15)
-**Merged**: December 28, 2025
+**Merged**: December 28, 2025  
 **Score**: 9.3/10 - Excellent architecture
 
 **Delivered**:
@@ -435,7 +435,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 ---
 
 ### ✅ Frontend-Backend Integration (Task 009 - PR #16)
-**Merged**: December 28, 2025
+**Merged**: December 28, 2025  
 **Score**: 9.3/10 - Excellent work
 
 **Delivered**:
@@ -462,7 +462,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 ---
 
 ### ✅ Fix Frontend Tests with MSW (Task 011 - PR #18)
-**Merged**: December 28, 2025
+**Merged**: December 28, 2025  
 **Score**: 9.8/10 - Perfect implementation
 
 **Delivered**:
@@ -489,7 +489,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 ---
 
 ### ✅ Upgrade Frontend Dependencies (Task 012 - PR #19)
-**Merged**: December 28, 2025
+**Merged**: December 28, 2025  
 **Score**: 9.5/10 - Excellent security fix
 
 **Delivered**:
@@ -519,7 +519,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 ---
 
 ### ✅ Post-Integration Quality Assessment (Task 010 - PR #17)
-**Merged**: December 28, 2025
+**Merged**: December 28, 2025  
 **Score**: 9.0/10 - Excellent quality
 
 **Delivered**:
@@ -546,9 +546,9 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 - Task 012 (P2): Upgrade frontend dependencies
 
 **ProgrFix Frontend Tests with MSW (Task 011 - PR #18)
-**Started**: December 28, 2025
-**Status**: Frontend-SWE agent working
-**Priority**: P1 CRITICAL
+**Started**: December 28, 2025  
+**Status**: Frontend-SWE agent working  
+**Priority**: P1 CRITICAL  
 **Estimated**: 2-3 hours
 
 **Scope**:
@@ -569,9 +569,9 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 ---
 
 ### 🔄 Upgrade Frontend Dependencies (Task 012 - PR #19)
-**Started**: December 28, 2025
-**Status**: Frontend-SWE agent working
-**Priority**: P2 IMPORTANT
+**Started**: December 28, 2025  
+**Status**: Frontend-SWE agent working  
+**Priority**: P2 IMPORTANT  
 **Estimated**: 1-2 hours
 
 **Scope**:
@@ -593,7 +593,7 @@ get_price_history(ticker, start, end) → List[PricePoint]  # Phase 2b
 ## Next Steps
 
 ### 📋 Phase 2: Market Data Integration
-**Status**: Ready to start!
+**Status**: Ready to start!  
 **Priority**: Next major milestone
 
 **Goal**: Connect to real market data (Alpha Vantage API)

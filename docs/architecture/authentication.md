@@ -1,6 +1,6 @@
 # Authentication Implementation Guide
 
-**Last Updated**: 2026-05-09
+**Last Updated**: 2026-05-09  
 **Status**: Working implementation with E2E tests. Phase C2 added the API-key path for machine identities.
 
 ---

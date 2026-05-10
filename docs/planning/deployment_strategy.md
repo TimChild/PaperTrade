@@ -1,7 +1,7 @@
 # Zebu Deployment Strategy
 
-**Version**: 1.0
-**Last Updated**: January 9, 2026
+**Version**: 1.0  
+**Last Updated**: January 9, 2026  
 **Status**: Planning Phase
 
 ## Overview
@@ -17,7 +17,7 @@ This approach allows us to validate the application in a real production environ
 
 ## Stage 1: Proxmox Local Deployment
 
-**Timeline**: 1-2 days
+**Timeline**: 1-2 days  
 **Goal**: Deploy fully functional app on local network for initial users and real-world testing
 
 ### Infrastructure Requirements
@@ -222,7 +222,7 @@ These limitations are acceptable for Stage 1 validation phase.
 
 ## Stage 2: AWS Production Deployment
 
-**Timeline**: 3-5 days
+**Timeline**: 3-5 days  
 **Goal**: Public-facing, scalable, production-grade deployment
 
 ### Infrastructure Architecture

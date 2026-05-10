@@ -1,7 +1,7 @@
 # Phase 2 Market Data Integration - Architecture Overview
 
-**Created**: 2025-12-28
-**Status**: Approved
+**Created**: 2025-12-28  
+**Status**: Approved  
 **Phase**: Phase 2 "Reality Injection"
 
 ## Executive Summary
@@ -236,8 +236,8 @@ Scheduler triggers daily refresh
 ## Risk Analysis
 
 ### Risk 1: API Rate Limits Exhausted
-**Likelihood**: Medium
-**Impact**: High (no new prices)
+**Likelihood**: Medium  
+**Impact**: High (no new prices)  
 **Mitigation**:
 
 - Pre-populate common stocks
@@ -246,8 +246,8 @@ Scheduler triggers daily refresh
 - Upgrade to premium tier when needed (configurable)
 
 ### Risk 2: Alpha Vantage API Changes
-**Likelihood**: Low
-**Impact**: High (adapter breaks)
+**Likelihood**: Low  
+**Impact**: High (adapter breaks)  
 **Mitigation**:
 
 - VCR cassettes detect format changes
@@ -255,8 +255,8 @@ Scheduler triggers daily refresh
 - Monitor API health and error rates
 
 ### Risk 3: Redis/PostgreSQL Operational Complexity
-**Likelihood**: Low
-**Impact**: Medium (deployment complexity)
+**Likelihood**: Low  
+**Impact**: Medium (deployment complexity)  
 **Mitigation**:
 
 - Docker Compose for local development
@@ -264,8 +264,8 @@ Scheduler triggers daily refresh
 - Fallback to API-only mode if cache unavailable
 
 ### Risk 4: Stale Price Data
-**Likelihood**: Medium
-**Impact**: Low (user sees old prices)
+**Likelihood**: Medium  
+**Impact**: Low (user sees old prices)  
 **Mitigation**:
 
 - Display timestamp with prices ("as of 2:30 PM")
@@ -273,8 +273,8 @@ Scheduler triggers daily refresh
 - Frontend polling for updates (configurable interval)
 
 ### Risk 5: Time Zone Handling
-**Likelihood**: Medium
-**Impact**: Medium (incorrect price matching)
+**Likelihood**: Medium  
+**Impact**: Medium (incorrect price matching)  
 **Mitigation**:
 
 - Store all timestamps in UTC

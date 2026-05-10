@@ -1,6 +1,6 @@
 # Phase 2 Market Data Integration - Testing Strategy
 
-**Created**: 2025-12-28
+**Created**: 2025-12-28  
 **Status**: Approved
 
 ## Overview
@@ -42,7 +42,7 @@ This document outlines the comprehensive testing strategy for Phase 2 Market Dat
 ✅ OHLCV data validation (low ≤ high, etc.)
 ```
 
-**Test Count**: ~15 tests
+**Test Count**: ~15 tests  
 **Execution Time**: <10ms
 
 #### Application Layer Tests
@@ -59,7 +59,7 @@ This document outlines the comprehensive testing strategy for Phase 2 Market Dat
 ✅ get_supported_tickers() returns all tickers
 ```
 
-**Test Count**: ~12 tests
+**Test Count**: ~12 tests  
 **Execution Time**: <50ms
 
 **Updated Use Cases**:
@@ -72,7 +72,7 @@ This document outlines the comprehensive testing strategy for Phase 2 Market Dat
 ✅ GetHoldings handles missing ticker (price = $0)
 ```
 
-**Test Count**: ~10 tests
+**Test Count**: ~10 tests  
 **Execution Time**: <100ms
 
 #### Infrastructure Layer Tests
@@ -89,8 +89,8 @@ This document outlines the comprehensive testing strategy for Phase 2 Market Dat
 ✅ Thread safety (concurrent requests don't over-consume)
 ```
 
-**Test Count**: ~15 tests
-**Execution Time**: <100ms
+**Test Count**: ~15 tests  
+**Execution Time**: <100ms  
 **Tools**: fakeredis (in-memory Redis mock)
 
 **PriceCache** (Unit Tests with fakeredis):
@@ -105,8 +105,8 @@ This document outlines the comprehensive testing strategy for Phase 2 Market Dat
 ✅ TTL expiration (price removed after timeout)
 ```
 
-**Test Count**: ~10 tests
-**Execution Time**: <100ms
+**Test Count**: ~10 tests  
+**Execution Time**: <100ms  
 **Tools**: fakeredis
 
 ### 2. Integration Tests (Moderate Speed, Real Dependencies)
@@ -145,8 +145,8 @@ async def test_get_current_price_success():
 ✅ Error mapping (API errors → PaperTrade exceptions)
 ```
 
-**Test Count**: ~15 tests
-**Execution Time**: <500ms (replaying cassettes)
+**Test Count**: ~15 tests  
+**Execution Time**: <500ms (replaying cassettes)  
 **Tools**: pytest-recording
 
 **Recording Cassettes** (one-time setup):
@@ -201,8 +201,8 @@ async def test_db():
 ✅ Index usage (EXPLAIN query plan)
 ```
 
-**Test Count**: ~15 tests
-**Execution Time**: <1s (SQLite fast)
+**Test Count**: ~15 tests  
+**Execution Time**: <1s (SQLite fast)  
 **Tools**: SQLite (in-memory), Alembic (migrations)
 
 #### WatchlistManager (With Test Database)
@@ -218,7 +218,7 @@ async def test_db():
 ✅ Common stocks pre-populated after migration
 ```
 
-**Test Count**: ~8 tests
+**Test Count**: ~8 tests  
 **Execution Time**: <500ms
 
 ### 3. End-to-End Tests (Slow, Full Stack)

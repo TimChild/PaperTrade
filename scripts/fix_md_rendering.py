@@ -1,23 +1,42 @@
 #!/usr/bin/env python3
-"""Fix missing blank lines around lists and tables in Markdown files.
+"""Fix common Markdown rendering issues that affect MkDocs / CommonMark output.
 
-Many CommonMark/MkDocs renderers won't recognize a list or table that starts
-immediately after a paragraph or ends without a blank line before the next
-paragraph; the block renders as run-on text. This script enforces:
+Currently fixes two patterns:
 
-- A blank line BEFORE the first item of every list/table block
-- A blank line AFTER the last item of every list/table block
+1. **Missing blank lines around lists/tables.** CommonMark won't recognize a
+   list or table that starts immediately after a paragraph or ends without
+   a blank line before the next paragraph; the block renders as run-on text.
+   We insert blank lines before the first and after the last item of each
+   such block.
+
+2. **Adjacent bold-label metadata lines collapsing into one paragraph.**
+   When you write a block like:
+
+       **Status**: Draft
+       **Author**: Tim
+       **Created**: 2026-05-10
+
+   CommonMark treats the line breaks as soft wraps and renders the block as
+   one paragraph. The fix is to append two trailing spaces (the explicit
+   hard-break marker) to all but the last line. We auto-detect runs of two
+   or more adjacent ``**Label**:`` lines and apply the fix.
+
+   IMPORTANT: the project's pre-commit ``trailing-whitespace`` hook is
+   configured with ``--markdown-linebreak-ext=md,markdown`` so these
+   intentional two-space breaks are preserved — see
+   ``.pre-commit-config.yaml``. If the hook ever loses that flag, this
+   fix will be silently undone on push.
 
 Code blocks (fenced with ``` or ~~~) are preserved verbatim. The script is
 idempotent — running it twice produces the same output as running it once.
 
 Usage:
-    uv run scripts/fix_md_blank_lines.py PATH [PATH ...]
+    uv run scripts/fix_md_rendering.py PATH [PATH ...]
     # PATH can be a file or directory; directories are walked recursively.
 
-    uv run scripts/fix_md_blank_lines.py docs/                # rewrite in place
-    uv run scripts/fix_md_blank_lines.py --check docs/        # exit 1 if changes needed
-    uv run scripts/fix_md_blank_lines.py --diff docs/         # show diffs without writing
+    uv run scripts/fix_md_rendering.py docs/              # rewrite in place
+    uv run scripts/fix_md_rendering.py --check docs/      # exit 1 if changes needed
+    uv run scripts/fix_md_rendering.py --diff docs/       # show diffs without writing
 
 Limitations:
 - Multi-line list items (continuation lines indented under a list marker) are
@@ -25,6 +44,9 @@ Limitations:
   if a continuation line has no list marker and is followed by a non-list
   paragraph, a blank line will get inserted between them. In practice this is
   rare in our docs.
+- The metadata-block hard-break fix only triggers on bold-label syntax
+  (``**Label**: value``). Other metadata-shaped patterns (plain ``Label:``)
+  are left alone to avoid false positives in prose.
 """
 
 from __future__ import annotations
@@ -38,6 +60,7 @@ from pathlib import Path
 LIST_RE = re.compile(r"^\s*([-*+]|\d+\.)\s")
 TABLE_RE = re.compile(r"^\s*\|.*\|\s*$")
 FENCE_RE = re.compile(r"^\s*(```|~~~)")
+META_RE = re.compile(r"^\s*\*\*[^*]+\*\*:")
 
 
 def classify(lines: list[str]) -> tuple[list[bool], list[bool]]:
@@ -60,16 +83,8 @@ def classify(lines: list[str]) -> tuple[list[bool], list[bool]]:
     return is_list, is_table
 
 
-def fix(text: str) -> str:
-    """Return ``text`` with blank lines inserted around list/table blocks."""
-    if not text:
-        return text
-    # Preserve trailing newline behavior. Split keeping no trailing empty string.
-    had_trailing_nl = text.endswith("\n")
-    lines = text.split("\n")
-    if had_trailing_nl:
-        lines.pop()  # the empty after the final \n
-
+def fix_block_blank_lines(lines: list[str]) -> list[str]:
+    """Insert blank lines before/after every list or table block."""
     is_list, is_table = classify(lines)
     is_block = [a or b for a, b in zip(is_list, is_table)]
 
@@ -82,12 +97,9 @@ def fix(text: str) -> str:
             i += 1
             continue
 
-        # Start of a block (list or table). Ensure prev output line is blank.
         if out and out[-1].strip() != "":
             out.append("")
 
-        # Walk forward across contiguous block lines, allowing blank lines that
-        # are immediately followed by another block line (between-items blanks).
         k = i
         while k < n:
             if is_block[k]:
@@ -100,12 +112,66 @@ def fix(text: str) -> str:
 
         out.extend(lines[i:k])
 
-        # Ensure the line after the block is blank (or EOF).
         if k < n and lines[k].strip() != "":
             out.append("")
         i = k
+    return out
 
-    result = "\n".join(out)
+
+def fix_metadata_hard_breaks(lines: list[str]) -> list[str]:
+    """Append two-space hard breaks to all-but-last line of bold-label metadata runs.
+
+    A "run" is two or more consecutive lines all matching ``**Label**:`` shape
+    (outside of fenced code blocks). The trailing two spaces force a ``<br>``
+    in CommonMark output without breaking the paragraph.
+    """
+    in_fence = False
+    out: list[str] = []
+    i = 0
+    n = len(lines)
+    while i < n:
+        line = lines[i]
+        if FENCE_RE.match(line):
+            in_fence = not in_fence
+            out.append(line)
+            i += 1
+            continue
+        if in_fence:
+            out.append(line)
+            i += 1
+            continue
+        if META_RE.match(line):
+            j = i
+            while j < n and META_RE.match(lines[j]):
+                j += 1
+            run_len = j - i
+            if run_len >= 2:
+                for k in range(i, j - 1):
+                    # Idempotent: strip any existing trailing whitespace, then add exactly "  ".
+                    out.append(lines[k].rstrip() + "  ")
+                out.append(lines[j - 1])
+            else:
+                out.append(line)
+            i = j
+            continue
+        out.append(line)
+        i += 1
+    return out
+
+
+def fix(text: str) -> str:
+    """Apply all fixers in order."""
+    if not text:
+        return text
+    had_trailing_nl = text.endswith("\n")
+    lines = text.split("\n")
+    if had_trailing_nl:
+        lines.pop()
+
+    lines = fix_block_blank_lines(lines)
+    lines = fix_metadata_hard_breaks(lines)
+
+    result = "\n".join(lines)
     if had_trailing_nl:
         result += "\n"
     return result

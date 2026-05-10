@@ -1,8 +1,8 @@
 # ADR 004: Configuration Management (TOML-Based)
 
-**Status**: Approved
-**Date**: 2025-12-28
-**Deciders**: Architecture Team
+**Status**: Approved  
+**Date**: 2025-12-28  
+**Deciders**: Architecture Team  
 **Context**: Phase 2 Market Data Integration
 
 ## Context

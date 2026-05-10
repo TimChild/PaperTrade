@@ -1,6 +1,6 @@
 # Phase 2 Market Data Integration - Interface Specifications
 
-**Created**: 2025-12-28
+**Created**: 2025-12-28  
 **Status**: Approved
 
 ## Overview

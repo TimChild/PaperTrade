@@ -9,7 +9,7 @@
 - **Team Plan**: $26/month (pay-as-you-go from $20-60/month) - 50K errors, unlimited users, 90-day retention
 - **Business Plan**: $80/month - 100K errors, performance monitoring included
 
-**Pros**: Best-in-class error tracking, source maps, release tracking, excellent React integration
+**Pros**: Best-in-class error tracking, source maps, release tracking, excellent React integration  
 **Cons**: Can get expensive at scale, alerts can be noisy without tuning
 
 ### Rollbar
@@ -19,12 +19,12 @@
 - **Starter**: $19/month - 25K events
 - **Small**: $49/month - 62.5K events
 
-**Pros**: Cheaper than Sentry, good error grouping
+**Pros**: Cheaper than Sentry, good error grouping  
 **Cons**: Less polished UI, smaller ecosystem
 
 ### Self-Hosted (Glitchtip)
-**Pricing**: **FREE** (infrastructure costs only ~$5-10/mo for small VM)
-**Pros**: Complete control, no event limits, Sentry-compatible API
+**Pricing**: **FREE** (infrastructure costs only ~$5-10/mo for small VM)  
+**Pros**: Complete control, no event limits, Sentry-compatible API  
 **Cons**: Requires maintenance, setup time
 
 ## Application Performance Monitoring (APM)
@@ -36,7 +36,7 @@
 - **Pro**: $29/month - 100GB logs, 10K metrics series
 - **Advanced**: Custom pricing
 
-**Pros**: Industry standard, great for infrastructure + application monitoring, generous free tier
+**Pros**: Industry standard, great for infrastructure + application monitoring, generous free tier  
 **Cons**: Steeper learning curve, requires instrumentation
 
 ### New Relic
@@ -46,12 +46,12 @@
 - **Standard**: $49/user/month (consumption-based)
 - **Pro**: $99/user/month
 
-**Pros**: All-in-one (errors + APM + logs), great insights
+**Pros**: All-in-one (errors + APM + logs), great insights  
 **Cons**: Expensive for teams, complex pricing
 
 ### Self-Hosted (Prometheus + Grafana)
-**Pricing**: **FREE** (infrastructure only)
-**Pros**: Complete control, industry standard, rich ecosystem
+**Pricing**: **FREE** (infrastructure only)  
+**Pros**: Complete control, industry standard, rich ecosystem  
 **Cons**: Setup and maintenance burden
 
 ## User Analytics
@@ -62,7 +62,7 @@
 - **Growth**: $9/month - 10K pageviews
 - **Business**: $19/month - 100K pageviews
 
-**Pros**: Privacy-focused (GDPR compliant), simple, no cookie banner needed
+**Pros**: Privacy-focused (GDPR compliant), simple, no cookie banner needed  
 **Cons**: Less detailed than Google Analytics
 
 ### PostHog (Product analytics + feature flags)
@@ -72,12 +72,12 @@
 - **Growth**: Pay-as-you-go (~$0.00031/event after free tier)
 - Typically **$10-50/month** for small apps
 
-**Pros**: Self-hostable, feature flags, A/B testing, generous free tier
+**Pros**: Self-hostable, feature flags, A/B testing, generous free tier  
 **Cons**: Can get expensive at scale
 
 ### Umami (Self-hosted)
-**Pricing**: **FREE** (infrastructure only)
-**Pros**: Simple, privacy-focused, easy to self-host
+**Pricing**: **FREE** (infrastructure only)  
+**Pros**: Simple, privacy-focused, easy to self-host  
 **Cons**: Basic features compared to commercial options
 
 ## Recommended Stack for Zebu

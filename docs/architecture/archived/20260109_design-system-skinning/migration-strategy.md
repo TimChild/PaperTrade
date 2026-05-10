@@ -567,10 +567,10 @@ After migration complete, document lessons learned:
 
 ## Summary
 
-**Migration Approach**: Incremental with feature flags
-**Rollback Time**: 5-10 minutes (toggle flag, redeploy)
-**Test Continuity**: E2E tests run on both old and new designs
-**Deployment Risk**: Low (instant rollback capability)
+**Migration Approach**: Incremental with feature flags  
+**Rollback Time**: 5-10 minutes (toggle flag, redeploy)  
+**Test Continuity**: E2E tests run on both old and new designs  
+**Deployment Risk**: Low (instant rollback capability)  
 **Timeline**: 3-4 weeks (design to cleanup)
 
 **Key Principles**:

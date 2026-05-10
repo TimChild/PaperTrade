@@ -1,8 +1,8 @@
 # Design Decisions: Visual Direction & Design Tokens
 
-**Date**: January 10, 2026
-**Author**: Orchestrator (based on frontend-swe prototypes)
-**Status**: Approved
+**Date**: January 10, 2026  
+**Author**: Orchestrator (based on frontend-swe prototypes)  
+**Status**: Approved  
 **Related Task**: Task 089 (Dashboard Prototyping)
 
 ---
@@ -337,6 +337,6 @@ Detailed implementation notes:
 
 ---
 
-**Approved by**: Orchestrator
-**Date**: January 10, 2026
+**Approved by**: Orchestrator  
+**Date**: January 10, 2026  
 **Status**: Ready for Phase 2 Implementation

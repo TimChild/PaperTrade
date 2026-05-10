@@ -1,7 +1,7 @@
 # Proxmox VM Deployment Guide
 
-**Last Updated**: January 11, 2026
-**Agent**: quality-infra
+**Last Updated**: January 11, 2026  
+**Agent**: quality-infra  
 **Deployment Method**: VM-based Docker using community script
 
 ---

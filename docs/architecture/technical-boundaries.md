@@ -1,6 +1,6 @@
 # Zebu: Technical Boundaries & Limitations
 
-**Last Updated**: March 7, 2026
+**Last Updated**: March 7, 2026  
 **Version**: Phase 3 Complete
 
 ## Overview
@@ -49,8 +49,8 @@ Non-blocking toast notifications replaced `window.alert()`.
 
 ### 1. API Rate Limiting (Alpha Vantage)
 
-**Status**: ⚠️ Active Limitation
-**Impact**: HIGH — Affects all market data operations
+**Status**: ⚠️ Active Limitation  
+**Impact**: HIGH — Affects all market data operations  
 **Limits**: 5 API calls/minute, 500 calls/day (free tier)
 
 **Mitigation**:
@@ -73,42 +73,42 @@ Non-blocking toast notifications replaced `window.alert()`.
 
 ### 2. Market Orders Only
 
-**Status**: ❌ Not Available
+**Status**: ❌ Not Available  
 **Impact**: MEDIUM
 
 Trades execute immediately at current market price. No limit orders, stop orders, or stop-limit orders.
 
 ### 3. Whole Shares Only (No Fractional Shares)
 
-**Status**: ❌ Not Supported
+**Status**: ❌ Not Supported  
 **Impact**: MEDIUM
 
 Must buy/sell integer quantities. Domain model uses `int` for quantity.
 
 ### 4. No Short Selling
 
-**Status**: ❌ Not Supported
+**Status**: ❌ Not Supported  
 **Impact**: LOW
 
 Cannot sell stocks you don't own. No margin accounts.
 
 ### 5. USD Currency Only
 
-**Status**: ⚠️ Single Currency
+**Status**: ⚠️ Single Currency  
 **Impact**: MEDIUM
 
 All prices in USD. International stocks show USD-equivalent via Alpha Vantage conversion.
 
 ### 6. No Real-Time Updates (WebSockets)
 
-**Status**: ❌ Polling-Based
+**Status**: ❌ Polling-Based  
 **Impact**: MEDIUM
 
 Prices don't auto-update. React Query refetches on window focus; background scheduler updates the cache.
 
 ### 7. Alpha Vantage Single Point of Failure
 
-**Status**: ⚠️ No Fallback
+**Status**: ⚠️ No Fallback  
 **Impact**: HIGH
 
 If Alpha Vantage is down, all trades fail and no price updates occur. The `MarketDataPort` abstraction exists to support future multi-provider fallback.

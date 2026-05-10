@@ -1,7 +1,7 @@
 # Agent Platform — What Shipped (Phases A–D Wave 2)
 
-**Status**: Historical record — what landed between 2026-05-09 and 2026-05-10.
-**Picks up from**: [`archive/agent-platform-proposal-2026-05-09.md`](archive/agent-platform-proposal-2026-05-09.md) — the original seven-phase plan (A→G).
+**Status**: Historical record — what landed between 2026-05-09 and 2026-05-10.  
+**Picks up from**: [`archive/agent-platform-proposal-2026-05-09.md`](archive/agent-platform-proposal-2026-05-09.md) — the original seven-phase plan (A→G).  
 **Hands off to**: [`agent-platform-proposal.md`](agent-platform-proposal.md) — the forward plan from the current state.
 
 ---

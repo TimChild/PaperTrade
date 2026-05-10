@@ -1,7 +1,7 @@
 # Domain and SSL Setup Guide
 
-**Last Updated**: January 11, 2026
-**Agent**: quality-infra
+**Last Updated**: January 11, 2026  
+**Agent**: quality-infra  
 **Purpose**: Configure custom domain with HTTPS/SSL for production deployment
 
 ---
