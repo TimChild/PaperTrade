@@ -17,6 +17,8 @@ import { ExplorationTaskDetail } from '@/pages/ExplorationTaskDetail'
 import { Backtests } from '@/pages/Backtests'
 import { BacktestResult } from '@/pages/BacktestResult'
 import { CompareBacktests } from '@/pages/CompareBacktests'
+import { SettingsApiKeys } from '@/pages/SettingsApiKeys'
+import { SettingsLayout } from '@/components/SettingsLayout'
 import { NotFound } from '@/pages/NotFound'
 import { DashboardVariantA } from '@/pages/__prototypes__/DashboardVariantA'
 import { DashboardVariantB } from '@/pages/__prototypes__/DashboardVariantB'
@@ -124,6 +126,7 @@ function AuthenticatedApp() {
                     end: false,
                   },
                   { to: '/backtests', label: 'Backtests', end: false },
+                  { to: '/settings', label: 'Settings', end: false },
                 ].map(({ to, label, end }) => (
                   <NavLink
                     key={to}
@@ -165,6 +168,13 @@ function AuthenticatedApp() {
               <Route path="/backtests" element={<Backtests />} />
               <Route path="/backtests/:id" element={<BacktestResult />} />
               <Route path="/compare" element={<CompareBacktests />} />
+              <Route path="/settings" element={<SettingsLayout />}>
+                <Route
+                  index
+                  element={<Navigate to="/settings/api-keys" replace />}
+                />
+                <Route path="api-keys" element={<SettingsApiKeys />} />
+              </Route>
               {/* Prototype routes (dev only) */}
               {import.meta.env.DEV && (
                 <>
