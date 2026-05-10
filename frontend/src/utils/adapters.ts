@@ -29,6 +29,7 @@ export function adaptPortfolio(
       ? parseFloat(balance.daily_change_percent) / 100
       : 0,
     createdAt: dto.created_at,
+    balanceAsOf: balance?.as_of,
   }
 }
 

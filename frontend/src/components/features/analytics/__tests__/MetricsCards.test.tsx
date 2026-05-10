@@ -1,8 +1,15 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MetricsCards } from '@/components/features/analytics/MetricsCards'
 import * as analyticsApi from '@/services/api/analytics'
+import { portfoliosApi } from '@/services/api/portfolios'
+
+vi.mock('@/services/api/portfolios', () => ({
+  portfoliosApi: {
+    getBalance: vi.fn(),
+  },
+}))
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -17,6 +24,39 @@ function createWrapper() {
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   )
 }
+
+/**
+ * Build a fully-formed BalanceResponse with sensible defaults so individual
+ * tests only need to override the fields they care about. Mirrors the wire
+ * shape from `BalanceResponse` in `services/api/types.ts`.
+ */
+function balanceResponse(overrides: {
+  total_value?: string
+  cash_balance?: string
+  holdings_value?: string
+  daily_change?: string
+  daily_change_percent?: string
+}) {
+  return {
+    cash_balance: overrides.cash_balance ?? '0.00',
+    holdings_value: overrides.holdings_value ?? '0.00',
+    total_value: overrides.total_value ?? '0.00',
+    currency: 'USD',
+    as_of: '2026-05-09T15:30:00Z',
+    daily_change: overrides.daily_change ?? '0.00',
+    daily_change_percent: overrides.daily_change_percent ?? '0.00',
+  }
+}
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  // Default: live balance equals last snapshot's ending_value so existing
+  // tests behave the same as before the fix unless they explicitly set up
+  // a divergence.
+  vi.mocked(portfoliosApi.getBalance).mockResolvedValue(
+    balanceResponse({ total_value: '12500.00' })
+  )
+})
 
 describe('MetricsCards', () => {
   it('renders loading state', () => {
@@ -110,6 +150,9 @@ describe('MetricsCards', () => {
         lowest_value: 8500,
       },
     })
+    vi.mocked(portfoliosApi.getBalance).mockResolvedValue(
+      balanceResponse({ total_value: '8500.00' })
+    )
 
     const Wrapper = createWrapper()
     render(<MetricsCards portfolioId="test-id" />, { wrapper: Wrapper })
@@ -159,5 +202,55 @@ describe('MetricsCards', () => {
         screen.getByText(/No performance data available yet/)
       ).toBeInTheDocument()
     })
+  })
+
+  // Regression: detail card and analytics MUST agree on "current value".
+  // Before this fix the analytics view rendered the last snapshot's
+  // ending_value (e.g. $9,745.35), while the portfolio detail card rendered
+  // the live total — which diverges when prices have moved since the most
+  // recent snapshot.
+  it("'Current Value' uses the live balance, not the snapshot ending_value", async () => {
+    vi.spyOn(analyticsApi.analyticsApi, 'getPerformance').mockResolvedValue({
+      portfolio_id: 'test-id',
+      range: '1M',
+      data_points: [],
+      metrics: {
+        starting_value: 10000,
+        ending_value: 9745.35, // Last snapshot — stale
+        absolute_gain: -254.65,
+        percentage_gain: -2.55,
+        highest_value: 10500,
+        lowest_value: 9745.35,
+      },
+    })
+    vi.mocked(portfoliosApi.getBalance).mockResolvedValue(
+      balanceResponse({ total_value: '11676.69' }) // Live — what the detail card shows
+    )
+
+    const Wrapper = createWrapper()
+    render(<MetricsCards portfolioId="test-id" />, { wrapper: Wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('metric-current-value')).toHaveTextContent(
+        '$11,676.69'
+      )
+    })
+
+    // Total gain/loss is recomputed from the live current value, NOT the
+    // stale snapshot. 11676.69 - 10000 = 1676.69
+    expect(screen.getByTestId('metric-total-gain-loss')).toHaveTextContent(
+      '$1,676.69'
+    )
+
+    // Highest stretches to include the live value when it exceeds the
+    // snapshot peak — keeps the row consistent with current-value.
+    expect(screen.getByTestId('metric-highest-value')).toHaveTextContent(
+      '$11,676.69'
+    )
+
+    // Starting value remains the snapshot baseline (period start).
+    expect(screen.getByTestId('metric-starting-value')).toHaveTextContent(
+      '$10,000.00'
+    )
   })
 })
