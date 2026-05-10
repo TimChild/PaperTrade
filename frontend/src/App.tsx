@@ -12,6 +12,8 @@ import { PortfolioDetail } from '@/pages/PortfolioDetail'
 import { PortfolioAnalytics } from '@/pages/PortfolioAnalytics'
 import { Strategies } from '@/pages/Strategies'
 import { Activations } from '@/pages/Activations'
+import { ActivationDetail } from '@/pages/ActivationDetail'
+import { TriggerFireLog } from '@/pages/TriggerFireLog'
 import { ExplorationTasks } from '@/pages/ExplorationTasks'
 import { ExplorationTaskDetail } from '@/pages/ExplorationTaskDetail'
 import { Backtests } from '@/pages/Backtests'
@@ -160,6 +162,8 @@ function AuthenticatedApp() {
               />
               <Route path="/strategies" element={<Strategies />} />
               <Route path="/activations" element={<Activations />} />
+              <Route path="/activations/:id" element={<ActivationDetail />} />
+              <Route path="/triggers/:id/fires" element={<TriggerFireLog />} />
               <Route path="/exploration-tasks" element={<ExplorationTasks />} />
               <Route
                 path="/exploration-tasks/:id"
