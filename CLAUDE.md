@@ -58,6 +58,7 @@ For test runs and Docker management, see `.claude/skills/quality-checks/SKILL.md
 | `agent_docs/progress/` | Dated session reports |
 | `.claude/agents/` | Role-specialist agent definitions |
 | `.claude/skills/` | Project-local skills (procedural knowledge) |
+| `mcp/` | `zebu-mcp` MCP server — exposes Zebu read tools to Claude Code agents (Phase D, Wave 1). See `mcp/README.md` for install + Claude Code attach instructions. |
 
 ## Specialist agents (`.claude/agents/`)
 
