@@ -28,10 +28,13 @@ from zebu.domain.entities.portfolio_snapshot import (
 )
 from zebu.domain.entities.strategy import Strategy
 from zebu.domain.entities.strategy_activation import StrategyActivation
+from zebu.domain.entities.strategy_condition_trigger import StrategyConditionTrigger
 from zebu.domain.entities.transaction import Transaction, TransactionType
+from zebu.domain.entities.trigger_fire_record import TriggerFireRecord
 from zebu.domain.exceptions import InvalidStrategyError
 from zebu.domain.value_objects.activation_frequency import ActivationFrequency
 from zebu.domain.value_objects.activation_status import ActivationStatus
+from zebu.domain.value_objects.agent_decision import AgentDecision
 from zebu.domain.value_objects.backtest_status import BacktestStatus
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.portfolio_type import PortfolioType
@@ -40,6 +43,11 @@ from zebu.domain.value_objects.strategy_parameters import parameters_from_dict
 from zebu.domain.value_objects.strategy_snapshot import StrategySnapshot
 from zebu.domain.value_objects.strategy_type import StrategyType
 from zebu.domain.value_objects.ticker import Ticker
+from zebu.domain.value_objects.trigger_condition import (
+    ConditionType,
+    params_from_dict,
+)
+from zebu.domain.value_objects.trigger_status import TriggerStatus
 
 _logger = logging.getLogger(__name__)
 
@@ -1238,4 +1246,371 @@ class ExplorationTaskModel(SQLModel, table=True):
             findings=_findings_to_dict(task.findings),
             created_at=created_at_naive,
             updated_at=updated_at_naive,
+        )
+
+
+def _strip_tz(value: datetime | None) -> datetime | None:
+    """Strip timezone from a datetime for naive PostgreSQL columns.
+
+    Mirrors the per-model helpers above; broken out so the trigger
+    models can share it. Returns ``None`` unchanged.
+    """
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        return value
+    return value.astimezone(UTC).replace(tzinfo=None)
+
+
+def _attach_utc(value: datetime | None) -> datetime | None:
+    """Reattach UTC tzinfo to a naive datetime read from the DB.
+
+    Mirrors the inline ``replace(tzinfo=UTC)`` calls used elsewhere in
+    this module — broken out for the trigger models since they have
+    several nullable timestamp fields.
+    """
+    if value is None:
+        return None
+    return value.replace(tzinfo=UTC)
+
+
+class StrategyConditionTriggerModel(SQLModel, table=True):
+    """Database model for :class:`StrategyConditionTrigger` (Phase F-1).
+
+    A trigger attaches to exactly one ``StrategyActivation``. Each
+    scheduler tick the evaluator (Phase F-2) walks evaluable triggers,
+    checks the condition, and on fire invokes the Anthropic agent.
+
+    Foreign keys:
+
+    * ``activation_id`` -> ``strategy_activations.id`` ON DELETE CASCADE
+      — a trigger has no purpose once its activation is gone.
+    * ``default_api_key_id`` -> ``api_keys.id`` ON DELETE SET NULL — the
+      key the woken agent should act under; revoking the key must not
+      erase the trigger configuration. The fallback path described in
+      the Phase F design §4.1 takes over when the column is null.
+
+    The ``user_id`` column has NO foreign key (users live in Clerk).
+
+    The ``condition_params`` column is a JSONB-style JSON column. The
+    domain-side discriminated union (:mod:`zebu.domain.value_objects.trigger_condition`)
+    rebuilds the typed VO via :func:`params_from_dict`.
+
+    Indexes:
+
+    * ``(activation_id, status)`` — fast trigger lookup per activation
+      (frontend trigger-list view + per-activation evaluator scan).
+    * ``(status, last_fired_at)`` — evaluator scan: filters
+      ``status='ACTIVE'`` then orders by ``last_fired_at`` to surface
+      cooldown-expired triggers first. Helps the (priority DESC,
+      created_at ASC) sort path used by ``list_evaluable``.
+    * ``(user_id, status)`` — backs ``list_for_user`` (the dashboard's
+      "my triggers" view).
+
+    Attributes:
+        id: Primary key (UUID).
+        activation_id: FK to ``strategy_activations.id``.
+        user_id: Owner UUID (no FK — Clerk-managed).
+        condition_type: Discriminator string (matches
+            :class:`ConditionType`).
+        condition_params: JSON object form of the typed condition VO.
+            Stored as ``dict[str, object]`` for SQLAlchemy / SQLite
+            compatibility; the domain reconstructs the typed VO via
+            :func:`params_from_dict`.
+        agent_prompt: Free-form trigger-fire instruction (10–4000 chars).
+        cooldown_seconds: Minimum seconds between successive fires.
+        last_fired_at: Last fire timestamp (naive UTC, nullable).
+        status: :class:`TriggerStatus` value (string).
+        priority: Integer in [-100, 100]; tiebreaker for evaluation order.
+        default_api_key_id: FK to ``api_keys.id`` (nullable, SET NULL).
+        expires_at: Natural expiry timestamp (naive UTC, nullable).
+        created_at: Creation timestamp (naive UTC).
+        created_by: User / API-key-derived UUID that created the trigger.
+        updated_at: Last-mutation timestamp (naive UTC).
+    """
+
+    __tablename__ = "strategy_condition_triggers"  # type: ignore[assignment]
+    __table_args__ = (
+        Index(
+            "idx_trigger_activation_status",
+            "activation_id",
+            "status",
+        ),
+        Index(
+            "idx_trigger_status_last_fired",
+            "status",
+            "last_fired_at",
+        ),
+        Index(
+            "idx_trigger_user_status",
+            "user_id",
+            "status",
+        ),
+    )
+
+    id: UUID = Field(primary_key=True)
+    # FK to strategy_activations.id with ON DELETE CASCADE — a trigger has
+    # no purpose without its activation.
+    activation_id: UUID = Field(
+        foreign_key="strategy_activations.id",
+        ondelete="CASCADE",
+    )
+    # NOTE: user_id intentionally has NO foreign key — users live in Clerk.
+    user_id: UUID
+    condition_type: str = Field(max_length=40)
+    # JSON column for the discriminated-union condition params. Pyright's
+    # strict mode flags the SQLModel + JSON pattern; the # type: ignore
+    # mirrors the existing ``tickers`` / ``parameters`` columns elsewhere
+    # in this module.
+    condition_params: dict[str, object] = Field(  # type: ignore[assignment]
+        sa_column=Column(JSON, nullable=False)
+    )
+    agent_prompt: str = Field(max_length=4000)
+    cooldown_seconds: int = Field(default=21600)
+    last_fired_at: datetime | None = Field(default=None)
+    status: str = Field(max_length=30)
+    priority: int = Field(default=0)
+    # FK to api_keys.id with ON DELETE SET NULL — revoking the key must
+    # not delete the trigger; the fallback path resolves to the user's
+    # most-recently-used trade-scoped key.
+    default_api_key_id: UUID | None = Field(
+        default=None,
+        foreign_key="api_keys.id",
+        ondelete="SET NULL",
+    )
+    expires_at: datetime | None = Field(default=None)
+    created_at: datetime
+    created_by: UUID
+    updated_at: datetime
+
+    def to_domain(self) -> StrategyConditionTrigger:
+        """Convert database model to domain entity.
+
+        Raises:
+            InvalidTriggerError: If a stored ``condition_type`` /
+                ``status`` value drifts from the enum, or
+                ``condition_params`` JSON cannot be reconstructed into
+                the typed VO.
+        """
+        # Reattach UTC tzinfo to the naive timestamps.
+        created_at_utc = self.created_at.replace(tzinfo=UTC)
+        updated_at_utc = self.updated_at.replace(tzinfo=UTC)
+        last_fired_at_utc = _attach_utc(self.last_fired_at)
+        expires_at_utc = _attach_utc(self.expires_at)
+
+        condition_type = ConditionType(self.condition_type)
+        # Defensive copy — entity __post_init__ rebinds anyway, but a
+        # fresh dict insulates the domain from any in-place mutation
+        # before the entity sees it.
+        condition_params = params_from_dict(condition_type, dict(self.condition_params))
+        status = TriggerStatus(self.status)
+
+        return StrategyConditionTrigger(
+            id=self.id,
+            activation_id=self.activation_id,
+            user_id=self.user_id,
+            condition_type=condition_type,
+            condition_params=condition_params,
+            agent_prompt=self.agent_prompt,
+            cooldown_seconds=self.cooldown_seconds,
+            last_fired_at=last_fired_at_utc,
+            status=status,
+            priority=self.priority,
+            default_api_key_id=self.default_api_key_id,
+            expires_at=expires_at_utc,
+            created_at=created_at_utc,
+            created_by=self.created_by,
+            updated_at=updated_at_utc,
+        )
+
+    @classmethod
+    def from_domain(
+        cls, trigger: StrategyConditionTrigger
+    ) -> "StrategyConditionTriggerModel":
+        """Convert domain entity to database model."""
+        return cls(
+            id=trigger.id,
+            activation_id=trigger.activation_id,
+            user_id=trigger.user_id,
+            condition_type=trigger.condition_type.value,
+            condition_params=dict(trigger.condition_params.to_dict()),
+            agent_prompt=trigger.agent_prompt,
+            cooldown_seconds=trigger.cooldown_seconds,
+            last_fired_at=_strip_tz(trigger.last_fired_at),
+            status=trigger.status.value,
+            priority=trigger.priority,
+            default_api_key_id=trigger.default_api_key_id,
+            expires_at=_strip_tz(trigger.expires_at),
+            created_at=_strip_tz(trigger.created_at) or trigger.created_at,
+            created_by=trigger.created_by,
+            updated_at=_strip_tz(trigger.updated_at) or trigger.updated_at,
+        )
+
+
+class TriggerFireRecordModel(SQLModel, table=True):
+    """Database model for :class:`TriggerFireRecord` (Phase F-1).
+
+    Append-only audit row. One row per trigger fire; no update / delete
+    paths exposed by the repository.
+
+    Foreign keys:
+
+    * ``trigger_id`` -> ``strategy_condition_triggers.id`` ON DELETE
+      CASCADE — fires belong to their trigger.
+    * ``activation_id`` -> ``strategy_activations.id`` ON DELETE CASCADE
+      — denormalised join column; cascades together with
+      ``activation -> trigger -> fire``.
+    * ``resulting_trade_id`` -> ``transactions.id`` ON DELETE SET NULL —
+      a deleted transaction must not erase the audit row.
+    * ``resulting_exploration_task_id`` -> ``exploration_tasks.id`` ON
+      DELETE SET NULL — same rationale.
+    * ``api_key_id_used`` -> ``api_keys.id`` ON DELETE RESTRICT — never
+      lose attribution. A key with fire history can't be hard-deleted;
+      callers must revoke (which leaves the row with ``revoked_at``
+      set) instead.
+
+    Indexes:
+
+    * ``(trigger_id, fired_at)`` — backs ``list_for_trigger``.
+    * ``(activation_id, fired_at)`` — backs ``list_for_activation``.
+
+    Attributes:
+        id: Primary key (UUID).
+        trigger_id: FK to ``strategy_condition_triggers.id``.
+        activation_id: FK to ``strategy_activations.id`` (denormalised).
+        fired_at: When the evaluator decided to fire (naive UTC).
+        condition_evaluation_data: JSON snapshot of the inputs that made
+            the condition fire. Schema is per-condition-type; the
+            ``schema_version`` field is part of every payload.
+        agent_invocation_id: Anthropic message ID (nullable, ≤200 chars).
+        agent_response: :class:`AgentDecision` value (string).
+        agent_response_raw: Truncated free-text response (≤8000 chars).
+        resulting_trade_id: FK to ``transactions.id`` (nullable).
+        resulting_modify_payload: JSON object for MODIFY_STRATEGY
+            (nullable).
+        resulting_exploration_task_id: FK to ``exploration_tasks.id``
+            (nullable).
+        latency_ms: End-to-end latency in milliseconds.
+        api_key_id_used: FK to ``api_keys.id`` (NOT NULL, RESTRICT).
+    """
+
+    __tablename__ = "trigger_fire_records"  # type: ignore[assignment]
+    __table_args__ = (
+        Index(
+            "idx_trigger_fire_trigger_fired_at",
+            "trigger_id",
+            "fired_at",
+        ),
+        Index(
+            "idx_trigger_fire_activation_fired_at",
+            "activation_id",
+            "fired_at",
+        ),
+    )
+
+    id: UUID = Field(primary_key=True)
+    # FK to strategy_condition_triggers.id with ON DELETE CASCADE —
+    # fires belong to their trigger.
+    trigger_id: UUID = Field(
+        foreign_key="strategy_condition_triggers.id",
+        ondelete="CASCADE",
+    )
+    # FK to strategy_activations.id with ON DELETE CASCADE — denormalised
+    # for fast filtering by activation.
+    activation_id: UUID = Field(
+        foreign_key="strategy_activations.id",
+        ondelete="CASCADE",
+    )
+    fired_at: datetime
+    condition_evaluation_data: dict[str, object] = Field(  # type: ignore[assignment]
+        sa_column=Column(JSON, nullable=False)
+    )
+    agent_invocation_id: str | None = Field(default=None, max_length=200)
+    agent_response: str = Field(max_length=30)
+    agent_response_raw: str = Field(max_length=8000)
+    # FK to transactions.id with ON DELETE SET NULL — deleted transaction
+    # must not erase the audit row.
+    resulting_trade_id: UUID | None = Field(
+        default=None,
+        foreign_key="transactions.id",
+        ondelete="SET NULL",
+    )
+    resulting_modify_payload: dict[str, object] | None = Field(  # type: ignore[assignment]
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+    )
+    # FK to exploration_tasks.id with ON DELETE SET NULL — same rationale.
+    resulting_exploration_task_id: UUID | None = Field(
+        default=None,
+        foreign_key="exploration_tasks.id",
+        ondelete="SET NULL",
+    )
+    latency_ms: int
+    # FK to api_keys.id with ON DELETE RESTRICT — never lose attribution.
+    api_key_id_used: UUID = Field(
+        foreign_key="api_keys.id",
+        ondelete="RESTRICT",
+    )
+
+    def to_domain(self) -> TriggerFireRecord:
+        """Convert database model to domain entity.
+
+        Raises:
+            ValueError: If ``agent_response`` drifts from
+                :class:`AgentDecision`.
+        """
+        fired_at_utc = self.fired_at.replace(tzinfo=UTC)
+        agent_response = AgentDecision(self.agent_response)
+
+        # Defensive copies of the JSON columns insulate the domain from
+        # any in-place mutation before the entity sees them.
+        evaluation_data = dict(self.condition_evaluation_data)
+        modify_payload: dict[str, object] | None
+        if self.resulting_modify_payload is None:
+            modify_payload = None
+        else:
+            modify_payload = dict(self.resulting_modify_payload)
+
+        return TriggerFireRecord(
+            id=self.id,
+            trigger_id=self.trigger_id,
+            activation_id=self.activation_id,
+            fired_at=fired_at_utc,
+            condition_evaluation_data=evaluation_data,
+            agent_invocation_id=self.agent_invocation_id,
+            agent_response=agent_response,
+            agent_response_raw=self.agent_response_raw,
+            resulting_trade_id=self.resulting_trade_id,
+            resulting_modify_payload=modify_payload,
+            resulting_exploration_task_id=self.resulting_exploration_task_id,
+            latency_ms=self.latency_ms,
+            api_key_id_used=self.api_key_id_used,
+        )
+
+    @classmethod
+    def from_domain(cls, record: TriggerFireRecord) -> "TriggerFireRecordModel":
+        """Convert domain entity to database model."""
+        # condition_evaluation_data and resulting_modify_payload are
+        # JSON columns — wrap in dict() to materialise the Mapping into
+        # something SQLAlchemy can serialise.
+        modify_payload: dict[str, object] | None
+        if record.resulting_modify_payload is None:
+            modify_payload = None
+        else:
+            modify_payload = dict(record.resulting_modify_payload)
+
+        return cls(
+            id=record.id,
+            trigger_id=record.trigger_id,
+            activation_id=record.activation_id,
+            fired_at=_strip_tz(record.fired_at) or record.fired_at,
+            condition_evaluation_data=dict(record.condition_evaluation_data),
+            agent_invocation_id=record.agent_invocation_id,
+            agent_response=record.agent_response.value,
+            agent_response_raw=record.agent_response_raw,
+            resulting_trade_id=record.resulting_trade_id,
+            resulting_modify_payload=modify_payload,
+            resulting_exploration_task_id=record.resulting_exploration_task_id,
+            latency_ms=record.latency_ms,
+            api_key_id_used=record.api_key_id_used,
         )

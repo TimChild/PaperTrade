@@ -143,6 +143,12 @@ A negative result is a **valid finding** — explicitly say "nothing beat baseli
 
 If the finding is strong AND the task didn't say "don't activate live," call `activate_strategy(strategy_id, portfolio_id, frequency='daily')`. Note the activation in the finding. Otherwise wait for Tim.
 
+### 3.5.1 Agent-in-the-loop triggers (Phase F preview)
+
+Phase F is landing the **trigger system** in pieces (PRs F-1 through F-7). Once fully shipped, an active strategy can carry one or more `StrategyConditionTrigger` rows that wake the agent when a condition fires (drawdown threshold, volatility spike, earnings proximity). When woken, the agent reads context via the Zebu MCP read tools, then **terminates the conversation** by calling a virtual `record_decision` tool with one of: `BUY` / `SELL` (paper trade routed through the live executor), `HOLD` (no action; recorded for audit), `MODIFY_STRATEGY` (parameter override, validated; the asset-universe `tickers` list is **not** modifiable via this path — security boundary), or `NEEDS_HUMAN` (escalates to a `[TRIGGER FIRE]`-prefixed `ExplorationTask`).
+
+**Until F-7 lands, this is just storage + scaffolding** — the tables exist but no scheduler job evaluates them, and no `record_decision` virtual tool is exposed. **Agents shouldn't expect trigger-fire callbacks yet.** Full design at [`docs/architecture/phase-f-agent-in-the-loop.md`](../architecture/phase-f-agent-in-the-loop.md).
+
 ### 3.6 If the task is truly out of scope
 
 `abandon_exploration_task` is **creator-only** — you can't use it as a claiming agent. If you've claimed something you can't do:

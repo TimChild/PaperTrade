@@ -13,11 +13,14 @@ from zebu.adapters.outbound.database.api_key_model import (  # noqa: F401
 )
 from zebu.adapters.outbound.database.models import (  # noqa: F401
     BacktestRunModel,
+    ExplorationTaskModel,
     PortfolioModel,
     PortfolioSnapshotModel,
     StrategyActivationModel,
+    StrategyConditionTriggerModel,
     StrategyModel,
     TransactionModel,
+    TriggerFireRecordModel,
 )
 from zebu.adapters.outbound.models.price_history import (  # noqa: F401
     PriceHistoryModel,
