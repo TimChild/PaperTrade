@@ -7,7 +7,7 @@
  *
  * Editorial: hairline DataTable instead of the legacy gray-bordered table.
  */
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -31,6 +31,7 @@ function formatFrequency(freq: string): string {
 }
 
 export function Activations(): React.JSX.Element {
+  const navigate = useNavigate()
   const { data: activationsPage, isLoading, error } = useActivations()
   const { data: strategiesPage } = useStrategies()
   const { data: portfoliosPage } = usePortfolios()
@@ -117,7 +118,12 @@ export function Activations(): React.JSX.Element {
             </DataTableHead>
             <DataTableBody>
               {activations.map((a) => (
-                <DataRow key={a.id} testId={`activation-row-${a.id}`}>
+                <DataRow
+                  key={a.id}
+                  testId={`activation-row-${a.id}`}
+                  interactive
+                  onClick={() => void navigate(`/activations/${a.id}`)}
+                >
                   <DataCell emphasis="primary">
                     {strategyNames[a.strategy_id] ?? a.strategy_id.slice(0, 8)}
                   </DataCell>

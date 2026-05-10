@@ -13,6 +13,8 @@ import { PortfolioAnalytics } from '@/pages/PortfolioAnalytics'
 import { Strategies } from '@/pages/Strategies'
 import { StrategyDetail } from '@/pages/StrategyDetail'
 import { Activations } from '@/pages/Activations'
+import { ActivationDetail } from '@/pages/ActivationDetail'
+import { TriggerFireLog } from '@/pages/TriggerFireLog'
 import { ExplorationTasks } from '@/pages/ExplorationTasks'
 import { ExplorationTaskDetail } from '@/pages/ExplorationTaskDetail'
 import { Activity } from '@/pages/Activity'
@@ -163,6 +165,8 @@ function AuthenticatedApp() {
               <Route path="/strategies" element={<Strategies />} />
               <Route path="/strategies/:id" element={<StrategyDetail />} />
               <Route path="/activations" element={<Activations />} />
+              <Route path="/activations/:id" element={<ActivationDetail />} />
+              <Route path="/triggers/:id/fires" element={<TriggerFireLog />} />
               <Route path="/exploration-tasks" element={<ExplorationTasks />} />
               <Route
                 path="/exploration-tasks/:id"

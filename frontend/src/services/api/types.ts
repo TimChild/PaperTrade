@@ -548,3 +548,203 @@ export interface ListActivityParams {
   actor_label?: string
   event_type?: ActivityEventType[]
 }
+
+// Triggers (Phase F + G-1) ----------------------------------------------------
+
+/**
+ * Discriminator for the trigger's evaluation type.
+ *
+ * Mirrors `backend/src/zebu/domain/value_objects/trigger_condition.py:ConditionType`.
+ *
+ * - `DRAWDOWN_THRESHOLD` — fires when the activation's portfolio (or a single
+ *   ticker, depending on `metric`) is down >= `threshold_pct` from its
+ *   `lookback_days`-window peak.
+ * - `VOLATILITY_SPIKE` — fires when realised volatility of any covered ticker
+ *   over `over_days` exceeds `threshold_pct` (annualised).
+ * - `EARNINGS_PROXIMITY` — fires when any covered ticker's next earnings date
+ *   is within `days_before` trading days.
+ * - `CUSTOM_RULE` — reserved enum value; rejected at construction time per
+ *   Phase F design Q1. The UI surfaces this as a disabled option with a
+ *   tooltip explaining the deferral.
+ */
+export type ConditionType =
+  | 'DRAWDOWN_THRESHOLD'
+  | 'VOLATILITY_SPIKE'
+  | 'EARNINGS_PROXIMITY'
+  | 'CUSTOM_RULE'
+
+/**
+ * Drawdown metric variant.
+ *
+ * Mirrors `DrawdownMetric` in
+ * `backend/src/zebu/domain/value_objects/trigger_condition.py`.
+ */
+export type DrawdownMetric = 'PORTFOLIO_TOTAL' | 'PER_TICKER'
+
+/**
+ * Lifecycle state for a `StrategyConditionTrigger`.
+ *
+ * Mirrors `TriggerStatus` in
+ * `backend/src/zebu/domain/value_objects/trigger_status.py`.
+ *
+ * - `ACTIVE` — Evaluator will check this trigger each tick.
+ * - `PAUSED` — Temporarily disabled by the user; can resume.
+ * - `EXPIRED` — Terminal. Set by the evaluator when `expires_at` lapses, or
+ *   by a user-driven DELETE (soft-delete).
+ * - `MANUALLY_DISABLED` — Terminal. Set by the kill switch. Per Phase F Q3,
+ *   the lift path is "delete and recreate", not PATCH.
+ */
+export type TriggerStatus =
+  | 'ACTIVE'
+  | 'PAUSED'
+  | 'EXPIRED'
+  | 'MANUALLY_DISABLED'
+
+/**
+ * Discrete outcomes the woken agent (or the executor's downgrade path) can
+ * record on a `TriggerFireRecord`.
+ *
+ * Mirrors `AgentDecision` in
+ * `backend/src/zebu/domain/value_objects/agent_decision.py`.
+ *
+ * - `BUY` / `SELL` — trade was executed (see `resulting_trade_id`).
+ * - `HOLD` — no action (the most common no-op outcome).
+ * - `MODIFY` — strategy parameters were updated (`resulting_modify_payload`).
+ * - `NEEDS_HUMAN` — exploration task filed for follow-up
+ *   (`resulting_exploration_task_id`).
+ * - `INVOCATION_FAILED` — system-recorded when the agent invocation errored;
+ *   the fire is still in the audit log so the failure is visible.
+ */
+export type AgentDecision =
+  | 'BUY'
+  | 'SELL'
+  | 'HOLD'
+  | 'MODIFY'
+  | 'NEEDS_HUMAN'
+  | 'INVOCATION_FAILED'
+
+/**
+ * Per-condition params shapes. Discriminated by `ConditionType`. Wire format
+ * is a JSON object; the backend `params_from_dict(condition_type, raw)`
+ * factory reconstructs the typed VO server-side.
+ *
+ * Decimal-shaped fields ride the wire as strings (e.g. `"5.0"` for 5%) to
+ * preserve precision — same convention as backtest metrics.
+ */
+export interface DrawdownConditionParams {
+  threshold_pct: string // decimal as string (0, 100]
+  lookback_days: number // integer [1, 365]
+  metric: DrawdownMetric
+}
+
+export interface VolatilityConditionParams {
+  threshold_pct: string // decimal as string (0, 500]
+  over_days: number // integer [5, 90]
+  tickers: string[] | null // null = "all strategy tickers"
+}
+
+export interface EarningsConditionParams {
+  days_before: number // integer [1, 14]
+  tickers: string[] | null // null = "all strategy tickers"
+}
+
+/**
+ * Wire shape for a `StrategyConditionTrigger`.
+ *
+ * Mirrors `TriggerResponse` in
+ * `backend/src/zebu/adapters/inbound/api/schemas/triggers.py`.
+ *
+ * `condition_params` is kept as a structural `Record<string, unknown>` on the
+ * type to match the backend's wire format (JSON dict). Renderers narrow it
+ * via `condition_type` before accessing keyed fields.
+ */
+export interface TriggerResponse {
+  id: string
+  activation_id: string
+  user_id: string
+  condition_type: ConditionType
+  condition_params: Record<string, unknown>
+  agent_prompt: string
+  cooldown_seconds: number
+  last_fired_at: string | null
+  status: TriggerStatus
+  priority: number
+  default_api_key_id: string | null
+  expires_at: string | null
+  created_at: string
+  created_by: string
+  updated_at: string
+}
+
+/**
+ * Request body for `POST /activations/{id}/triggers`.
+ *
+ * Per Phase F design Q3, `status` is not in the create payload — new
+ * triggers always start `ACTIVE` on the backend. The `condition_params`
+ * shape depends on `condition_type` (use the discriminated `*ConditionParams`
+ * helpers above when constructing).
+ */
+export interface CreateTriggerRequest {
+  condition_type: ConditionType
+  condition_params: Record<string, unknown>
+  agent_prompt: string
+  cooldown_seconds?: number
+  priority?: number
+  default_api_key_id?: string | null
+  expires_at?: string | null
+}
+
+/**
+ * Request body for `PATCH /triggers/{id}`. All fields optional; only the
+ * supplied ones are mutated. Per Phase F design Q3, `status` accepts only
+ * `ACTIVE` (resume) or `PAUSED` (pause).
+ */
+export interface UpdateTriggerRequest {
+  agent_prompt?: string
+  cooldown_seconds?: number
+  priority?: number
+  condition_params?: Record<string, unknown>
+  status?: 'ACTIVE' | 'PAUSED'
+}
+
+/**
+ * Wire shape for a `TriggerFireRecord` row.
+ *
+ * Mirrors `TriggerFireResponse` in
+ * `backend/src/zebu/adapters/inbound/api/schemas/triggers.py`.
+ *
+ * `agent_response_raw` is truncated to 8000 chars server-side; the full
+ * body lives in observability. `condition_evaluation_data` is per-condition
+ * (see Phase F design §1.5).
+ */
+export interface TriggerFireResponse {
+  id: string
+  trigger_id: string
+  activation_id: string
+  fired_at: string
+  condition_evaluation_data: Record<string, unknown>
+  agent_invocation_id: string | null
+  agent_response: AgentDecision
+  agent_response_raw: string
+  resulting_trade_id: string | null
+  resulting_modify_payload: Record<string, unknown> | null
+  resulting_exploration_task_id: string | null
+  latency_ms: number
+  api_key_id_used: string
+}
+
+/** Pagination params for trigger fire log + trigger list endpoints. */
+export interface ListTriggerParams {
+  limit?: number
+  offset?: number
+}
+
+/**
+ * Response from `POST /triggers/disable-all` and its admin twin.
+ *
+ * Mirrors `DisableAllResponse` in
+ * `backend/src/zebu/adapters/inbound/api/schemas/triggers.py`.
+ */
+export interface DisableAllResponse {
+  disabled_count: number
+}

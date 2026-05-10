@@ -59,6 +59,37 @@ export function useActivations(
 }
 
 /**
+ * Single activation by id, looked up via the list endpoint.
+ *
+ * The backend currently exposes activations via the user-scoped list and
+ * the `/strategies/{id}/activation` shortcut. There's no
+ * `GET /activations/{id}` endpoint yet (it'd be a sensible add but is out
+ * of scope for G-1), so this hook fetches the full list and selects the
+ * matching id client-side. Returns `null` when the id isn't present in the
+ * page — typically a 404-equivalent state (deleted / never existed / not
+ * owned). Disabled when `activationId` is falsy.
+ *
+ * Server-side pagination defaults to 20; for users with more than 20
+ * activations we'd need a server-side lookup. Acceptable trade-off for
+ * G-1; a follow-up should add `GET /activations/{id}`.
+ */
+export function useActivationById(
+  activationId: string
+): UseQueryResult<StrategyActivationResponse | null> {
+  return useQuery<StrategyActivationResponse | null>({
+    queryKey: ['activations', 'by-id', activationId] as const,
+    queryFn: async () => {
+      // Request a generous page so a user with a dozen activations still
+      // finds the right one. 100 is the backend's MAX_PAGE_LIMIT.
+      const page = await strategyActivationsApi.list({ limit: 100 })
+      return page.items.find((a) => a.id === activationId) ?? null
+    },
+    staleTime: 30_000,
+    enabled: Boolean(activationId),
+  })
+}
+
+/**
  * Variables passed to the activate-strategy mutation.
  *
  * Combined into a single object so `mutate({...})` mirrors the call shape of
