@@ -17,7 +17,7 @@ from zebu_mcp.config import ZebuMcpConfig
 # Mirror the constant from conftest so tests don't depend on a
 # package-style ``from tests.conftest import …`` (pytest doesn't put the
 # tests dir on sys.path as a package by default).
-TEST_API_KEY = "zk_test_abcdef0123456789"
+TEST_API_KEY = "NOT-A-REAL-API-KEY"
 
 
 class TestRequiresContextManager:

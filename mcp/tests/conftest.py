@@ -13,7 +13,7 @@ from zebu_mcp.config import ZebuMcpConfig
 
 # All tests use the same fake config so the routed URLs are stable.
 TEST_BASE_URL = "https://zebu.test"
-TEST_API_KEY = "zk_test_abcdef0123456789"
+TEST_API_KEY = "NOT-A-REAL-API-KEY"
 
 
 @pytest.fixture
