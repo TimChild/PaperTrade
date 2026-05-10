@@ -180,6 +180,12 @@
    * Display headings — apply via .font-display utility. The Fraunces
    * optical-size axis lets large display sizes get the sharper "display"
    * cut without swapping fonts.
+   *
+   * Use this for *headings* (page titles, section titles, card names) where
+   * the high stroke contrast reads as editorial character. For *numeric
+   * values* (currency, percent, counts) reach for `.font-display-numeric`
+   * instead — high-contrast didone strokes punish tabular numbers (Phase
+   * I1, 2026-05-10 fix; see project memory `aesthetic-direction.md`).
    */
   .font-display {
     font-family: var(--font-display);
@@ -189,6 +195,53 @@
       'WONK' 0;
     letter-spacing: -0.02em;
     font-feature-settings: 'ss01';
+  }
+
+  /*
+   * Display *numeric* — softer optical-size cut tuned for tabular financial
+   * values. Pair with `.opsz-display-{hero,lg,md,sm}` to fine-tune the
+   * stroke contrast to the size; the default (32) suits most large numbers.
+   *
+   * Why it exists: Fraunces at `opsz: 144` (the heading cut) is a
+   * high-contrast didone — beautiful for editorial pull-quotes but the
+   * razor-thin verticals paired with thick horizontals hurt readability on
+   * numbers like `+24.44%`. Lowering `opsz` on the numeric variant moves
+   * Fraunces closer to a transitional serif: more even stroke weight, still
+   * recognisably Fraunces, but legible at a glance.
+   */
+  .font-display-numeric {
+    font-family: var(--font-display);
+    font-variation-settings:
+      'opsz' var(--display-opsz, 32),
+      'SOFT' 0,
+      'WONK' 0;
+    letter-spacing: -0.018em;
+    font-feature-settings: 'ss01';
+  }
+
+  /*
+   * Per-size opsz tuning. These set the `--display-opsz` CSS custom
+   * property which `.font-display-numeric` reads. Composes cleanly with
+   * Tailwind responsive variants so a hero metric can scale opsz across
+   * breakpoints, e.g.
+   *
+   *     class="font-display-numeric opsz-display-lg sm:opsz-display-hero
+   *            text-display-lg sm:text-display-xl"
+   *
+   * Roughly: bigger size → slightly higher opsz so strokes still feel
+   * intentional; smaller size → lower opsz for cleaner verticals.
+   */
+  .opsz-display-hero {
+    --display-opsz: 36;
+  }
+  .opsz-display-lg {
+    --display-opsz: 32;
+  }
+  .opsz-display-md {
+    --display-opsz: 28;
+  }
+  .opsz-display-sm {
+    --display-opsz: 24;
   }
 
   /*

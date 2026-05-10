@@ -30,27 +30,38 @@ interface MetricStatProps {
   className?: string
 }
 
+/**
+ * Per-size class bundles. The `value` class drives both the *type scale*
+ * (`text-display-*`) and the *optical-size axis* (`opsz-display-*`). The
+ * `font-display-numeric` utility consumes the `--display-opsz` set by the
+ * `opsz-display-*` class to render Fraunces with a softer stroke contrast
+ * than the heading cut — see the rationale in `index.css`.
+ *
+ * Hero scales up at `sm:` so on phones we step the opsz too (the hero size
+ * shrinks to `display-lg` on narrow viewports).
+ */
 const SIZE_CLASSES: Record<
   MetricSize,
   { value: string; delta: string; gap: string }
 > = {
   hero: {
-    value: 'text-display-lg sm:text-display-xl',
+    value:
+      'text-display-lg sm:text-display-xl opsz-display-lg sm:opsz-display-hero',
     delta: 'text-body-md sm:text-body-lg',
     gap: 'gap-2 sm:gap-3',
   },
   lg: {
-    value: 'text-display-md',
+    value: 'text-display-md opsz-display-md',
     delta: 'text-body-sm sm:text-body-md',
     gap: 'gap-1.5 sm:gap-2',
   },
   md: {
-    value: 'text-display-sm',
+    value: 'text-display-sm opsz-display-sm',
     delta: 'text-body-sm',
     gap: 'gap-1.5',
   },
   sm: {
-    value: 'text-2xl tracking-tightish font-display',
+    value: 'text-2xl tracking-tightish opsz-display-sm',
     delta: 'text-body-sm',
     gap: 'gap-1',
   },
@@ -75,8 +86,13 @@ const DELTA_TONE_CLASSES: Record<
 /**
  * Editorial big-number primitive. Pairs a small-caps label with a
  * display-serif numeric value, an optional muted delta, and an optional
- * caption. Numbers always render in tabular mono via `.font-tabular` so
- * they line up across stacked stats.
+ * caption. The numeric value uses `.font-display-numeric` (a softer cut of
+ * Fraunces tuned for tabular numbers — see Phase I1 / 2026-05-10) instead
+ * of the heading-weight `.font-display`; this preserves Fraunces character
+ * while keeping `+24.44%` actually readable at a glance.
+ *
+ * Numbers always render with `tabular-nums` so they line up across stacked
+ * stats.
  */
 export function MetricStat({
   label,
@@ -98,7 +114,7 @@ export function MetricStat({
       <Eyebrow>{label}</Eyebrow>
       <div
         className={cn(
-          'font-display tabular-nums',
+          'font-display-numeric tabular-nums',
           sizes.value,
           TONE_CLASSES[tone]
         )}

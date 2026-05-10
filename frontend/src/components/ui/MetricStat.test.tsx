@@ -9,14 +9,26 @@ describe('MetricStat', () => {
     expect(screen.getByText('$156,750.00')).toBeInTheDocument()
   })
 
-  it('applies the editorial display font class to the value', () => {
+  it('applies the editorial display-numeric font class to the value', () => {
     // Verifies our design tokens are wired through — the value must be
-    // rendered with `font-display` (Fraunces) and `tabular-nums` so
-    // numeric data lines up across stacked stats.
-    render(<MetricStat label="Total Value" value="$156,750.00" testId="hero" />)
+    // rendered with `font-display-numeric` (Fraunces, softer opsz cut tuned
+    // for tabular numbers — Phase I1 fix) and `tabular-nums` so numeric
+    // data lines up across stacked stats. The full-strength `.font-display`
+    // utility is reserved for headings; numbers get the legibility-tuned
+    // variant. Every size also stamps an `opsz-display-*` class to set the
+    // optical-size axis appropriate to the visual scale.
+    render(
+      <MetricStat
+        label="Total Value"
+        value="$156,750.00"
+        size="hero"
+        testId="hero"
+      />
+    )
     const valueEl = screen.getByTestId('hero-value')
-    expect(valueEl).toHaveClass('font-display')
+    expect(valueEl).toHaveClass('font-display-numeric')
     expect(valueEl).toHaveClass('tabular-nums')
+    expect(valueEl.className).toMatch(/opsz-display-(lg|hero)/)
   })
 
   it('renders a positive delta with the gain tone', () => {
