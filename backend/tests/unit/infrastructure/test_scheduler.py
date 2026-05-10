@@ -2,6 +2,7 @@
 
 from zebu.infrastructure.scheduler import (
     SchedulerConfig,
+    execute_active_strategies,
     start_scheduler,
     stop_scheduler,
 )
@@ -22,6 +23,9 @@ class TestSchedulerConfiguration:
         assert config.batch_delay_seconds == 60
         assert config.max_age_hours == 24
         assert config.active_stock_days == 30
+        # Phase C1.2 — live strategy execution job defaults
+        assert config.strategy_execution_cron == "30 0 * * 1-5"
+        assert config.strategy_execution_enabled is True
 
     def test_scheduler_config_custom_values(self) -> None:
         """Test that SchedulerConfig accepts custom values."""
@@ -106,3 +110,51 @@ class TestSchedulerLifecycle:
         finally:
             # Cleanup
             await stop_scheduler()
+
+
+class TestStrategyExecutionJob:
+    """Phase C1.2 — live strategy execution job registration."""
+
+    async def test_strategy_execution_job_registered_by_default(self) -> None:
+        """Default config registers the live execution job alongside refresh."""
+        config = SchedulerConfig(enabled=True)
+        try:
+            await start_scheduler(config)
+            from zebu.infrastructure.scheduler import get_scheduler
+
+            scheduler = get_scheduler()
+            assert scheduler is not None
+            ids = {j.id for j in scheduler.get_jobs()}
+            assert "execute_active_strategies" in ids
+            # Don't double-register on a second start.
+            await start_scheduler(config)
+            jobs = scheduler.get_jobs()
+            execution_jobs = [j for j in jobs if j.id == "execute_active_strategies"]
+            assert len(execution_jobs) == 1
+        finally:
+            await stop_scheduler()
+
+    async def test_strategy_execution_job_disabled_by_config(self) -> None:
+        """``strategy_execution_enabled=False`` skips the registration."""
+        config = SchedulerConfig(enabled=True, strategy_execution_enabled=False)
+        try:
+            await start_scheduler(config)
+            from zebu.infrastructure.scheduler import get_scheduler
+
+            scheduler = get_scheduler()
+            assert scheduler is not None
+            ids = {j.id for j in scheduler.get_jobs()}
+            assert "execute_active_strategies" not in ids
+            # Other jobs are unaffected.
+            assert "refresh_prices" in ids
+        finally:
+            await stop_scheduler()
+
+    def test_execute_active_strategies_is_callable(self) -> None:
+        """The job function exposed for APScheduler must be a coroutine fn."""
+        # The scheduler registers ``execute_active_strategies`` directly;
+        # it must be importable and async-callable. Pin this so a bad
+        # rename refactor surfaces here, not at first cron fire.
+        import inspect
+
+        assert inspect.iscoroutinefunction(execute_active_strategies)
