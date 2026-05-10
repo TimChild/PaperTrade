@@ -9,6 +9,13 @@ export interface Portfolio {
   dailyChange: number
   dailyChangePercent: number
   createdAt: string
+  /**
+   * Wall-clock timestamp the balance was computed at (ISO 8601). Sourced
+   * from the `as_of` field on the balance response. Used to render a
+   * "Last updated" caption so the user can tell when the live value was
+   * last refreshed.
+   */
+  balanceAsOf?: string
 }
 
 export interface Holding {

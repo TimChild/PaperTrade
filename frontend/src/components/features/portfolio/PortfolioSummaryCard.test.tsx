@@ -112,4 +112,28 @@ describe('PortfolioSummaryCard', () => {
     })
     expect(screen.getByText(/-\$1,500\.00/)).toBeInTheDocument()
   })
+
+  it('renders a "Last updated" caption when balanceAsOf is provided', () => {
+    const Wrapper = createWrapper()
+    const portfolioWithAsOf = {
+      ...mockPortfolio,
+      balanceAsOf: '2026-05-09T15:30:45Z',
+    }
+    render(<PortfolioSummaryCard portfolio={portfolioWithAsOf} />, {
+      wrapper: Wrapper,
+    })
+    const caption = screen.getByTestId('portfolio-last-updated')
+    expect(caption).toBeInTheDocument()
+    expect(caption.textContent).toMatch(/^Last updated: /)
+  })
+
+  it('omits the "Last updated" caption when balanceAsOf is missing', () => {
+    const Wrapper = createWrapper()
+    render(<PortfolioSummaryCard portfolio={mockPortfolio} />, {
+      wrapper: Wrapper,
+    })
+    expect(
+      screen.queryByTestId('portfolio-last-updated')
+    ).not.toBeInTheDocument()
+  })
 })

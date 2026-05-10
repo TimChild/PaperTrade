@@ -8,6 +8,22 @@ interface PortfolioSummaryCardProps {
   isLoading?: boolean
 }
 
+/**
+ * Format the `balanceAsOf` ISO timestamp for the "Last updated" caption.
+ * Returns `null` when no timestamp is available (don't render the caption).
+ */
+function formatLastUpdated(isoString: string | undefined): string | null {
+  if (!isoString) return null
+  const parsed = new Date(isoString)
+  if (Number.isNaN(parsed.getTime())) return null
+  return new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  }).format(parsed)
+}
+
 export function PortfolioSummaryCard({
   portfolio,
   isLoading = false,
@@ -15,6 +31,7 @@ export function PortfolioSummaryCard({
   // Use backend-calculated total value (already accounts for weekends/holidays)
   const totalValue = portfolio.totalValue
   const holdingsValue = portfolio.totalValue - portfolio.cashBalance
+  const lastUpdated = formatLastUpdated(portfolio.balanceAsOf)
 
   if (isLoading) {
     return (
@@ -50,6 +67,14 @@ export function PortfolioSummaryCard({
           >
             {formatCurrency(totalValue)}
           </p>
+          {lastUpdated && (
+            <p
+              className="text-xs text-foreground-tertiary mt-1"
+              data-testid="portfolio-last-updated"
+            >
+              Last updated: {lastUpdated}
+            </p>
+          )}
         </div>
 
         <div>
