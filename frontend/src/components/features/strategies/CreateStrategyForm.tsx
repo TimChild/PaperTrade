@@ -1,11 +1,13 @@
 /**
- * Form for creating a new trading strategy
+ * Editorial form for creating a new trading strategy. Lives in a flush
+ * Panel inside the Strategies page.
  */
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Panel } from '@/components/ui/Panel'
+import { Eyebrow } from '@/components/ui/Eyebrow'
 import { useCreateStrategy } from '@/hooks/useStrategies'
 import type { StrategyType } from '@/services/api/types'
 import toast from 'react-hot-toast'
@@ -20,6 +22,9 @@ const STRATEGY_TYPE_OPTIONS: { value: StrategyType; label: string }[] = [
   { value: 'DOLLAR_COST_AVERAGING', label: 'Dollar Cost Averaging' },
   { value: 'MOVING_AVERAGE_CROSSOVER', label: 'Moving Average Crossover' },
 ]
+
+const SELECT_CLASSES =
+  'flex h-10 w-full rounded-input border border-hairline bg-canvas-raised/40 px-3 py-2 text-body-sm text-ink focus-visible:outline-none focus-visible:border-amber focus-visible:ring-1 focus-visible:ring-amber/40 disabled:cursor-not-allowed disabled:opacity-50'
 
 export function CreateStrategyForm({
   onSuccess,
@@ -135,7 +140,7 @@ export function CreateStrategyForm({
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault()
     if (!validate()) return
 
@@ -158,7 +163,7 @@ export function CreateStrategyForm({
     )
   }
 
-  const handleAllocationChange = (ticker: string, value: string) => {
+  const handleAllocationChange = (ticker: string, value: string): void => {
     setAllocations((prev) => ({ ...prev, [ticker]: value }))
   }
 
@@ -168,249 +173,242 @@ export function CreateStrategyForm({
   }, 0)
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Create Strategy</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form
-          onSubmit={handleSubmit}
-          data-testid="create-strategy-form"
-          className="space-y-4"
-        >
-          {/* Name */}
-          <div className="space-y-1">
-            <Label htmlFor="strategy-name">Strategy Name</Label>
-            <Input
-              id="strategy-name"
-              data-testid="strategy-name-input"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="My Strategy"
-            />
-            {errors.name && (
-              <p className="text-sm text-red-600 dark:text-red-400">
-                {errors.name}
-              </p>
-            )}
-          </div>
+    <Panel>
+      <header className="mb-5">
+        <Eyebrow>New strategy</Eyebrow>
+        <h2 className="mt-1.5 font-display text-display-sm tracking-tight text-ink">
+          Create strategy
+        </h2>
+      </header>
+      <form
+        onSubmit={handleSubmit}
+        data-testid="create-strategy-form"
+        className="space-y-4"
+      >
+        {/* Name */}
+        <div className="space-y-1.5">
+          <Label htmlFor="strategy-name">Strategy name</Label>
+          <Input
+            id="strategy-name"
+            data-testid="strategy-name-input"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="My strategy"
+          />
+          {errors.name && (
+            <p className="text-body-sm text-loss">{errors.name}</p>
+          )}
+        </div>
 
-          {/* Strategy type */}
-          <div className="space-y-1">
-            <Label htmlFor="strategy-type">Strategy Type</Label>
-            <select
-              id="strategy-type"
-              data-testid="strategy-type-select"
-              value={strategyType}
-              onChange={(e) => setStrategyType(e.target.value as StrategyType)}
-              className="flex h-10 w-full rounded-input border border-gray-300 bg-white px-3 py-2 text-sm text-foreground-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900"
-            >
-              {STRATEGY_TYPE_OPTIONS.map(({ value, label }) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
+        {/* Strategy type */}
+        <div className="space-y-1.5">
+          <Label htmlFor="strategy-type">Strategy type</Label>
+          <select
+            id="strategy-type"
+            data-testid="strategy-type-select"
+            value={strategyType}
+            onChange={(e) => setStrategyType(e.target.value as StrategyType)}
+            className={SELECT_CLASSES}
+          >
+            {STRATEGY_TYPE_OPTIONS.map(({ value, label }) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
 
-          {/* Tickers */}
-          <div className="space-y-1">
-            <Label htmlFor="strategy-tickers">
-              Tickers{' '}
-              <span className="text-xs text-gray-500">(comma-separated)</span>
-            </Label>
-            <Input
-              id="strategy-tickers"
-              data-testid="strategy-tickers-input"
-              value={tickersInput}
-              onChange={(e) => setTickersInput(e.target.value)}
-              placeholder="AAPL, MSFT, GOOG"
-            />
-            {errors.tickers && (
-              <p className="text-sm text-red-600 dark:text-red-400">
-                {errors.tickers}
-              </p>
-            )}
-            {tickers.length > 0 && (
-              <div className="mt-1 flex flex-wrap gap-1">
-                {tickers.map((t) => (
-                  <span
-                    key={t}
-                    className="rounded bg-gray-100 px-2 py-0.5 font-mono text-xs dark:bg-gray-700 dark:text-gray-200"
-                  >
-                    {t}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Parameters: allocation-based strategies */}
-          {(strategyType === 'BUY_AND_HOLD' ||
-            strategyType === 'DOLLAR_COST_AVERAGING') &&
-            tickers.length > 0 && (
-              <div className="space-y-2">
-                <Label>
-                  Allocation per Ticker{' '}
-                  <span className="text-xs text-gray-500">
-                    (must sum to 1.0)
-                  </span>
-                </Label>
-                {tickers.map((ticker) => (
-                  <div key={ticker} className="flex items-center gap-2">
-                    <span className="w-20 font-mono text-sm">{ticker}</span>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="1"
-                      data-testid={`allocation-${ticker}`}
-                      value={allocations[ticker] ?? ''}
-                      onChange={(e) =>
-                        handleAllocationChange(ticker, e.target.value)
-                      }
-                      placeholder="0.50"
-                      className="w-28"
-                    />
-                  </div>
-                ))}
-                <p
-                  className={`text-xs ${Math.abs(allocationTotal - 1.0) < 0.01 ? 'text-green-600 dark:text-green-400' : 'text-gray-500'}`}
+        {/* Tickers */}
+        <div className="space-y-1.5">
+          <Label htmlFor="strategy-tickers">
+            Tickers{' '}
+            <span className="text-ink-subtle font-tabular normal-case tracking-normal">
+              (comma-separated)
+            </span>
+          </Label>
+          <Input
+            id="strategy-tickers"
+            data-testid="strategy-tickers-input"
+            value={tickersInput}
+            onChange={(e) => setTickersInput(e.target.value)}
+            placeholder="AAPL, MSFT, GOOG"
+          />
+          {errors.tickers && (
+            <p className="text-body-sm text-loss">{errors.tickers}</p>
+          )}
+          {tickers.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {tickers.map((t) => (
+                <span
+                  key={t}
+                  className="rounded-editorial bg-canvas-sunken border border-hairline px-2 py-0.5 font-tabular text-body-sm text-ink"
                 >
-                  Total: {allocationTotal.toFixed(2)}
+                  {t}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Parameters: allocation-based strategies */}
+        {(strategyType === 'BUY_AND_HOLD' ||
+          strategyType === 'DOLLAR_COST_AVERAGING') &&
+          tickers.length > 0 && (
+            <div className="space-y-2">
+              <Label>
+                Allocation per ticker{' '}
+                <span className="text-ink-subtle font-tabular normal-case tracking-normal">
+                  (must sum to 1.0)
+                </span>
+              </Label>
+              {tickers.map((ticker) => (
+                <div key={ticker} className="flex items-center gap-2">
+                  <span className="w-20 font-tabular text-body-sm text-ink">
+                    {ticker}
+                  </span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="1"
+                    data-testid={`allocation-${ticker}`}
+                    value={allocations[ticker] ?? ''}
+                    onChange={(e) =>
+                      handleAllocationChange(ticker, e.target.value)
+                    }
+                    placeholder="0.50"
+                    className="w-28"
+                  />
+                </div>
+              ))}
+              <p
+                className={`font-tabular text-body-sm ${Math.abs(allocationTotal - 1.0) < 0.01 ? 'text-gain' : 'text-ink-subtle'}`}
+              >
+                Total: {allocationTotal.toFixed(2)}
+              </p>
+              {errors.allocations && (
+                <p className="text-body-sm text-loss">{errors.allocations}</p>
+              )}
+            </div>
+          )}
+
+        {/* Parameters: DCA-specific */}
+        {strategyType === 'DOLLAR_COST_AVERAGING' && (
+          <>
+            <div className="space-y-1.5">
+              <Label htmlFor="frequency-days">Frequency (days)</Label>
+              <Input
+                id="frequency-days"
+                data-testid="frequency-days-input"
+                type="number"
+                min="1"
+                value={frequencyDays}
+                onChange={(e) => setFrequencyDays(e.target.value)}
+                placeholder="30"
+              />
+              {errors.frequencyDays && (
+                <p className="text-body-sm text-loss">{errors.frequencyDays}</p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="amount-per-period">Amount per period ($)</Label>
+              <Input
+                id="amount-per-period"
+                data-testid="amount-per-period-input"
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={amountPerPeriod}
+                onChange={(e) => setAmountPerPeriod(e.target.value)}
+                placeholder="100"
+              />
+              {errors.amountPerPeriod && (
+                <p className="text-body-sm text-loss">
+                  {errors.amountPerPeriod}
                 </p>
-                {errors.allocations && (
-                  <p className="text-sm text-red-600 dark:text-red-400">
-                    {errors.allocations}
-                  </p>
-                )}
-              </div>
-            )}
+              )}
+            </div>
+          </>
+        )}
 
-          {/* Parameters: DCA-specific */}
-          {strategyType === 'DOLLAR_COST_AVERAGING' && (
-            <>
-              <div className="space-y-1">
-                <Label htmlFor="frequency-days">Frequency (days)</Label>
-                <Input
-                  id="frequency-days"
-                  data-testid="frequency-days-input"
-                  type="number"
-                  min="1"
-                  value={frequencyDays}
-                  onChange={(e) => setFrequencyDays(e.target.value)}
-                  placeholder="30"
-                />
-                {errors.frequencyDays && (
-                  <p className="text-sm text-red-600 dark:text-red-400">
-                    {errors.frequencyDays}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="amount-per-period">Amount per Period ($)</Label>
-                <Input
-                  id="amount-per-period"
-                  data-testid="amount-per-period-input"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={amountPerPeriod}
-                  onChange={(e) => setAmountPerPeriod(e.target.value)}
-                  placeholder="100"
-                />
-                {errors.amountPerPeriod && (
-                  <p className="text-sm text-red-600 dark:text-red-400">
-                    {errors.amountPerPeriod}
-                  </p>
-                )}
-              </div>
-            </>
-          )}
+        {/* Parameters: Moving Average Crossover */}
+        {strategyType === 'MOVING_AVERAGE_CROSSOVER' && (
+          <>
+            <div className="space-y-1.5">
+              <Label htmlFor="fast-window">Fast window (2–200)</Label>
+              <Input
+                id="fast-window"
+                data-testid="fast-window-input"
+                type="number"
+                min="2"
+                max="200"
+                value={fastWindow}
+                onChange={(e) => setFastWindow(e.target.value)}
+                placeholder="10"
+              />
+              {errors.fastWindow && (
+                <p className="text-body-sm text-loss">{errors.fastWindow}</p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="slow-window">
+                Slow window (must be &gt; fast)
+              </Label>
+              <Input
+                id="slow-window"
+                data-testid="slow-window-input"
+                type="number"
+                min="3"
+                max="500"
+                value={slowWindow}
+                onChange={(e) => setSlowWindow(e.target.value)}
+                placeholder="50"
+              />
+              {errors.slowWindow && (
+                <p className="text-body-sm text-loss">{errors.slowWindow}</p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="invest-fraction">Invest fraction (0–1)</Label>
+              <Input
+                id="invest-fraction"
+                data-testid="invest-fraction-input"
+                type="number"
+                min="0.01"
+                max="1"
+                step="0.01"
+                value={investFraction}
+                onChange={(e) => setInvestFraction(e.target.value)}
+                placeholder="0.9"
+              />
+              {errors.investFraction && (
+                <p className="text-body-sm text-loss">
+                  {errors.investFraction}
+                </p>
+              )}
+            </div>
+          </>
+        )}
 
-          {/* Parameters: Moving Average Crossover */}
-          {strategyType === 'MOVING_AVERAGE_CROSSOVER' && (
-            <>
-              <div className="space-y-1">
-                <Label htmlFor="fast-window">Fast Window (2–200)</Label>
-                <Input
-                  id="fast-window"
-                  data-testid="fast-window-input"
-                  type="number"
-                  min="2"
-                  max="200"
-                  value={fastWindow}
-                  onChange={(e) => setFastWindow(e.target.value)}
-                  placeholder="10"
-                />
-                {errors.fastWindow && (
-                  <p className="text-sm text-red-600 dark:text-red-400">
-                    {errors.fastWindow}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="slow-window">
-                  Slow Window (must be &gt; fast)
-                </Label>
-                <Input
-                  id="slow-window"
-                  data-testid="slow-window-input"
-                  type="number"
-                  min="3"
-                  max="500"
-                  value={slowWindow}
-                  onChange={(e) => setSlowWindow(e.target.value)}
-                  placeholder="50"
-                />
-                {errors.slowWindow && (
-                  <p className="text-sm text-red-600 dark:text-red-400">
-                    {errors.slowWindow}
-                  </p>
-                )}
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="invest-fraction">Invest Fraction (0–1)</Label>
-                <Input
-                  id="invest-fraction"
-                  data-testid="invest-fraction-input"
-                  type="number"
-                  min="0.01"
-                  max="1"
-                  step="0.01"
-                  value={investFraction}
-                  onChange={(e) => setInvestFraction(e.target.value)}
-                  placeholder="0.9"
-                />
-                {errors.investFraction && (
-                  <p className="text-sm text-red-600 dark:text-red-400">
-                    {errors.investFraction}
-                  </p>
-                )}
-              </div>
-            </>
-          )}
-
-          {/* Actions */}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={onCancel}
-              data-testid="create-strategy-cancel"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              data-testid="create-strategy-submit"
-              disabled={createStrategy.isPending}
-            >
-              {createStrategy.isPending ? 'Creating...' : 'Create Strategy'}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+        {/* Actions */}
+        <div className="flex justify-end gap-2 pt-2">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onCancel}
+            data-testid="create-strategy-cancel"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            data-testid="create-strategy-submit"
+            disabled={createStrategy.isPending}
+          >
+            {createStrategy.isPending ? 'Creating...' : 'Create strategy'}
+          </Button>
+        </div>
+      </form>
+    </Panel>
   )
 }

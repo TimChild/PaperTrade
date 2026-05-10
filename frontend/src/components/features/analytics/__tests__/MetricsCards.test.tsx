@@ -111,7 +111,7 @@ describe('MetricsCards', () => {
     expect(screen.getByText('$9,800.00')).toBeInTheDocument()
   })
 
-  it('shows positive gains in green', async () => {
+  it('shows positive gains in the editorial gain tone', async () => {
     vi.spyOn(analyticsApi.analyticsApi, 'getPerformance').mockResolvedValue({
       portfolio_id: 'test-id',
       range: '1M',
@@ -130,13 +130,14 @@ describe('MetricsCards', () => {
     render(<MetricsCards portfolioId="test-id" />, { wrapper: Wrapper })
 
     await waitFor(() => {
+      // Editorial muted gain tone. Was `.text-green-600` pre-revamp.
       const gainCard = screen.getByTestId('metric-total-gain-loss')
-      const valueElement = gainCard.querySelector('.text-green-600')
+      const valueElement = gainCard.querySelector('.text-gain')
       expect(valueElement).toBeInTheDocument()
     })
   })
 
-  it('shows negative gains in red', async () => {
+  it('shows negative gains in the editorial loss tone', async () => {
     vi.spyOn(analyticsApi.analyticsApi, 'getPerformance').mockResolvedValue({
       portfolio_id: 'test-id',
       range: '1M',
@@ -158,8 +159,9 @@ describe('MetricsCards', () => {
     render(<MetricsCards portfolioId="test-id" />, { wrapper: Wrapper })
 
     await waitFor(() => {
+      // Editorial muted loss tone. Was `.text-red-600` pre-revamp.
       const gainCard = screen.getByTestId('metric-total-gain-loss')
-      const valueElement = gainCard.querySelector('.text-red-600')
+      const valueElement = gainCard.querySelector('.text-loss')
       expect(valueElement).toBeInTheDocument()
     })
 

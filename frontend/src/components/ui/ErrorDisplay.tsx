@@ -1,47 +1,36 @@
 /**
- * Error display component
+ * Editorial error display — restrained loss-tone hairline panel with an
+ * eyebrow ("Error") and the formatted error message. No bright red splash —
+ * the loss tone is muted brick to keep with the editorial mood.
  */
 import { AxiosError } from 'axios'
 import type { ErrorResponse } from '@/services/api/types'
 import { formatTradeError } from '@/utils/errorFormatters'
+import { Eyebrow } from './Eyebrow'
 
 interface ErrorDisplayProps {
   error: Error | AxiosError<ErrorResponse> | null
   className?: string
 }
 
-export function ErrorDisplay({ error, className = '' }: ErrorDisplayProps) {
+export function ErrorDisplay({
+  error,
+  className = '',
+}: ErrorDisplayProps): React.JSX.Element | null {
   if (!error) return null
 
-  // Use formatTradeError to handle both structured and simple errors
   const message = formatTradeError(error)
 
   return (
     <div
-      className={`rounded-lg border border-red-200 bg-red-50 p-4 ${className}`}
+      className={`rounded-editorial border border-hairline bg-loss-soft/40 p-4 ${className}`}
       role="alert"
+      data-testid="error-display"
     >
-      <div className="flex items-start">
-        <div className="flex-shrink-0">
-          <svg
-            className="h-5 w-5 text-red-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-        </div>
-        <div className="ml-3">
-          <h3 className="text-sm font-semibold text-red-800">Error</h3>
-          <p className="mt-1 text-sm text-red-600">{message}</p>
-        </div>
-      </div>
+      <Eyebrow tone="accent" className="text-loss">
+        Error
+      </Eyebrow>
+      <p className="mt-2 text-body-sm text-ink">{message}</p>
     </div>
   )
 }

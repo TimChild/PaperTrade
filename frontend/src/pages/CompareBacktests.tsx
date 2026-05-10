@@ -1,11 +1,13 @@
 /**
- * Compare backtests page — overlay normalized % return chart + metrics table
+ * Compare backtests page — overlay normalized % return chart + metrics
+ * comparison table. Editorial layout: section headers (no card chrome)
+ * separate the chart from the table.
  */
 import { Link, useSearchParams } from 'react-router-dom'
 import { useQueries } from '@tanstack/react-query'
-import { Button } from '@/components/ui/button'
+import { ArrowLeft } from 'lucide-react'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { SectionHeader } from '@/components/ui/SectionHeader'
 import { ComparisonChart } from '@/components/features/backtests/ComparisonChart'
 import { ComparisonTable } from '@/components/features/backtests/ComparisonTable'
 import { useStrategies } from '@/hooks/useStrategies'
@@ -28,7 +30,6 @@ export function CompareBacktests(): React.JSX.Element {
     strategyNames[s.id] = s.name
   })
 
-  // Load all backtests in parallel using useQueries
   const backtestQueries = useQueries({
     queries: ids.map((id) => ({
       queryKey: ['backtests', id],
@@ -42,7 +43,6 @@ export function CompareBacktests(): React.JSX.Element {
     .map((q) => q.data)
     .filter((b) => b !== undefined)
 
-  // Load performance data for all loaded backtests in parallel
   const performanceQueries = useQueries({
     queries: loadedBacktests.map((b) => ({
       queryKey: ['performance', b.portfolio_id, 'ALL'],
@@ -80,79 +80,106 @@ export function CompareBacktests(): React.JSX.Element {
 
   if (ids.length === 0) {
     return (
-      <div
-        className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"
-        data-testid="compare-backtests-page"
-      >
-        <div className="mb-4">
-          <Link to="/backtests">
-            <Button variant="secondary" size="sm">
-              ← Back to Backtests
-            </Button>
-          </Link>
-        </div>
-        <p className="text-gray-500 dark:text-gray-400">
+      <PageFrame>
+        <BackLink />
+        <p className="mt-8 text-body-md text-ink-muted">
           No backtest IDs provided. Please select backtests to compare.
         </p>
-      </div>
+      </PageFrame>
     )
   }
 
   return (
-    <div
-      className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"
-      data-testid="compare-backtests-page"
-    >
-      {/* Back link */}
-      <div className="mb-4">
-        <Link to="/backtests">
-          <Button variant="secondary" size="sm" data-testid="back-to-backtests">
-            ← Back to Backtests
-          </Button>
-        </Link>
+    <PageFrame>
+      <div
+        className="reveal"
+        style={{ ['--reveal-delay' as string]: '0ms' }}
+        data-testid="compare-backtests-page"
+      >
+        <BackLink />
       </div>
 
-      <h2 className="mb-6 text-2xl font-bold text-gray-900 dark:text-white">
-        Compare Backtests
-      </h2>
+      <header
+        className="mt-6 sm:mt-8 reveal"
+        style={{ ['--reveal-delay' as string]: '60ms' }}
+      >
+        <SectionHeader
+          eyebrow="Comparison"
+          title="Compare backtests"
+          as="h1"
+          description={`Side-by-side analysis of ${ids.length} backtest run${ids.length === 1 ? '' : 's'}.`}
+          withRule
+        />
+      </header>
 
-      {/* Loading state */}
       {isLoading && (
         <div data-testid="compare-loading" className="py-12">
           <LoadingSpinner size="lg" />
-          <p className="mt-4 text-center text-sm text-gray-500 dark:text-gray-400">
+          <p className="mt-4 text-center text-body-sm text-ink-muted">
             Loading backtest data…
           </p>
         </div>
       )}
 
-      {/* Content once loaded */}
       {!isLoading && (
         <>
-          {/* Normalized performance chart */}
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle>Normalized Performance (%)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ComparisonChart series={performanceSeries} />
-            </CardContent>
-          </Card>
+          <section
+            className="mt-8 sm:mt-10 reveal"
+            style={{ ['--reveal-delay' as string]: '120ms' }}
+          >
+            <SectionHeader
+              eyebrow="Trajectory"
+              title="Normalized performance"
+              size="sm"
+              description="Each series rebased to 0% at its first data point."
+            />
+            <ComparisonChart series={performanceSeries} />
+          </section>
 
-          {/* Metrics comparison table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Metrics Comparison</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ComparisonTable
-                backtests={loadedBacktests}
-                strategyNames={strategyNames}
-              />
-            </CardContent>
-          </Card>
+          <section
+            className="mt-12 sm:mt-16 reveal"
+            style={{ ['--reveal-delay' as string]: '180ms' }}
+          >
+            <SectionHeader
+              eyebrow="Metrics"
+              title="Comparison table"
+              size="sm"
+              description="Best value highlighted in muted gain; worst in muted loss."
+            />
+            <ComparisonTable
+              backtests={loadedBacktests}
+              strategyNames={strategyNames}
+            />
+          </section>
         </>
       )}
+    </PageFrame>
+  )
+}
+
+function BackLink(): React.JSX.Element {
+  return (
+    <Link
+      to="/backtests"
+      data-testid="back-to-backtests"
+      className="inline-flex items-center gap-1.5 text-ink-muted hover:text-ink text-body-sm transition-colors"
+      style={{ minHeight: 'auto' }}
+    >
+      <ArrowLeft className="h-3.5 w-3.5" /> Backtests
+    </Link>
+  )
+}
+
+function PageFrame({
+  children,
+}: {
+  children: React.ReactNode
+}): React.JSX.Element {
+  return (
+    <div className="min-h-screen bg-canvas">
+      <div className="mx-auto max-w-[1240px] px-5 sm:px-8 lg:px-12 py-8 sm:py-12 lg:py-16">
+        {children}
+      </div>
     </div>
   )
 }

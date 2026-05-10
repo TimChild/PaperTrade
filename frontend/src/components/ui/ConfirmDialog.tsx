@@ -1,7 +1,15 @@
 /**
- * Confirmation Dialog component
- * Used for destructive actions to prevent accidental operations
+ * Editorial confirmation dialog — canvas-raised panel with hairline border,
+ * eyebrow + serif heading, body copy, and a button row that swaps tone with
+ * the confirm `variant`.
+ *
+ * - `danger`   → loss-tone confirm (uses the destructive Button variant).
+ * - `warning`  → amber-leaning confirm (uses the default Button variant —
+ *                amber on canvas).
+ * - `info`     → amber confirm (default Button).
  */
+import { Eyebrow } from './Eyebrow'
+import { Button } from './button'
 
 interface ConfirmDialogProps {
   isOpen: boolean
@@ -12,6 +20,15 @@ interface ConfirmDialogProps {
   onCancel: () => void
   variant?: 'danger' | 'warning' | 'info'
   isLoading?: boolean
+}
+
+const VARIANT_EYEBROW: Record<
+  NonNullable<ConfirmDialogProps['variant']>,
+  string
+> = {
+  danger: 'Confirm action',
+  warning: 'Heads up',
+  info: 'Confirm',
 }
 
 export function ConfirmDialog({
@@ -26,45 +43,50 @@ export function ConfirmDialog({
 }: ConfirmDialogProps): React.JSX.Element | null {
   if (!isOpen) return null
 
-  const variantStyles = {
-    danger: 'bg-red-600 hover:bg-red-700 disabled:bg-red-400',
-    warning: 'bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-400',
-    info: 'bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400',
-  }
+  const confirmVariant = variant === 'danger' ? 'destructive' : 'default'
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-canvas-sunken/80 backdrop-blur-sm"
       data-testid="confirm-dialog-backdrop"
+      role="presentation"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isLoading) onCancel()
+      }}
     >
       <div
-        className="mx-4 max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800"
+        className="mx-4 max-w-md rounded-editorial border border-hairline bg-canvas-raised p-6 shadow-elevated"
         data-testid="confirm-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-dialog-title"
       >
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <Eyebrow>{VARIANT_EYEBROW[variant]}</Eyebrow>
+        <h3
+          id="confirm-dialog-title"
+          className="mt-2 font-display text-display-sm tracking-tight text-ink"
+        >
           {title}
         </h3>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-          {message}
-        </p>
+        <p className="mt-3 text-body-sm text-ink-muted">{message}</p>
 
         <div className="mt-6 flex justify-end gap-3">
-          <button
+          <Button
+            variant="ghost"
             onClick={onCancel}
             disabled={isLoading}
-            className="rounded-md px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50 dark:text-gray-300 dark:hover:bg-gray-700"
             data-testid="confirm-dialog-cancel"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            variant={confirmVariant}
             onClick={onConfirm}
             disabled={isLoading}
-            className={`rounded-md px-4 py-2 text-sm font-medium text-white ${variantStyles[variant]}`}
             data-testid="confirm-dialog-confirm"
           >
             {isLoading ? 'Processing...' : confirmLabel}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -1,7 +1,8 @@
 import type { Portfolio } from '@/types/portfolio'
 import { formatCurrency, formatPercent } from '@/utils/formatters'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Eyebrow } from '@/components/ui/Eyebrow'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 
 interface PortfolioSummaryCardProps {
   portfolio: Portfolio
@@ -24,73 +25,76 @@ function formatLastUpdated(isoString: string | undefined): string | null {
   }).format(parsed)
 }
 
+/**
+ * Editorial portfolio summary card — flush hairline panel pairing a
+ * display-serif total value with day-change delta and a cash/holdings row.
+ *
+ * Lives in any context that benefits from a self-contained portfolio
+ * summary (currently retained as a building block; the Dashboard now uses
+ * `PortfolioCard` directly).
+ */
 export function PortfolioSummaryCard({
   portfolio,
   isLoading = false,
 }: PortfolioSummaryCardProps): React.JSX.Element {
-  // Use backend-calculated total value (already accounts for weekends/holidays)
   const totalValue = portfolio.totalValue
   const holdingsValue = portfolio.totalValue - portfolio.cashBalance
   const lastUpdated = formatLastUpdated(portfolio.balanceAsOf)
 
   if (isLoading) {
     return (
-      <Card>
-        <CardContent className="space-y-4 pt-6">
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-10 w-64" />
-          <Skeleton className="h-6 w-32" />
-        </CardContent>
-      </Card>
+      <div className="rounded-editorial border border-hairline bg-canvas-raised/40 p-6 space-y-4">
+        <Skeleton className="h-6 w-48" />
+        <Skeleton className="h-10 w-64" />
+        <Skeleton className="h-6 w-32" />
+      </div>
     )
   }
 
   const isPositiveChange = portfolio.dailyChange >= 0
-  const changeColorClass = isPositiveChange ? 'text-positive' : 'text-negative'
+  const changeColorClass = isPositiveChange ? 'text-gain' : 'text-loss'
+  const sign = isPositiveChange ? '+' : ''
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg sm:text-xl lg:text-heading-md">
+    <article className="rounded-editorial border border-hairline bg-canvas-raised/40 p-6">
+      <header className="mb-4">
+        <Eyebrow>Portfolio</Eyebrow>
+        <h3 className="mt-1.5 font-display text-display-sm tracking-tight text-ink">
           {portfolio.name}
-        </CardTitle>
-      </CardHeader>
+        </h3>
+      </header>
 
-      <CardContent className="space-y-3 sm:space-y-4">
+      <div className="space-y-4">
         <div>
-          <p className="text-xs sm:text-sm text-foreground-secondary">
-            Total Value
-          </p>
+          <Eyebrow>Total value</Eyebrow>
           <p
-            className="text-xl sm:text-2xl lg:text-value-primary text-foreground-primary"
+            className="mt-1 font-display tabular-nums text-display-md text-ink"
             data-testid="portfolio-total-value"
           >
             {formatCurrency(totalValue)}
           </p>
           {lastUpdated && (
             <p
-              className="text-xs text-foreground-tertiary mt-1"
+              className="font-caption mt-2"
               data-testid="portfolio-last-updated"
             >
-              Last updated: {lastUpdated}
+              Last updated · {lastUpdated}
             </p>
           )}
         </div>
 
         <div>
-          <p className="text-xs sm:text-sm text-foreground-secondary">
-            Daily Change
-          </p>
-          <div className="flex items-baseline gap-2">
+          <Eyebrow>Daily change</Eyebrow>
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-2 font-tabular text-body-md">
             <p
-              className={`text-base sm:text-lg lg:text-value-secondary ${changeColorClass}`}
+              className={cn(changeColorClass)}
               data-testid="portfolio-daily-change"
             >
-              {isPositiveChange ? '+' : ''}
+              {sign}
               {formatCurrency(portfolio.dailyChange)}
             </p>
             <p
-              className={`text-base sm:text-lg font-medium ${changeColorClass}`}
+              className={cn(changeColorClass, 'text-body-sm')}
               data-testid="portfolio-daily-change-percent"
             >
               ({formatPercent(portfolio.dailyChangePercent)})
@@ -98,30 +102,25 @@ export function PortfolioSummaryCard({
           </div>
         </div>
 
-        <div className="border-t border-gray-200 pt-3 sm:pt-4 dark:border-gray-700">
-          <div className="flex justify-between">
-            <p className="text-xs sm:text-sm text-foreground-secondary">
-              Cash Balance
-            </p>
-            <p
-              className="text-xs sm:text-sm font-medium text-foreground-primary"
-              data-testid="portfolio-cash-balance"
-            >
+        <div className="border-t border-hairline pt-4 space-y-2">
+          <div className="flex justify-between font-tabular text-body-sm">
+            <span className="font-eyebrow text-ink-muted not-italic tracking-eyebrow">
+              Cash balance
+            </span>
+            <span className="text-ink" data-testid="portfolio-cash-balance">
               {formatCurrency(portfolio.cashBalance)}
-            </p>
+            </span>
           </div>
           {holdingsValue > 0 && (
-            <div className="mt-2 flex justify-between">
-              <p className="text-xs sm:text-sm text-foreground-secondary">
-                Holdings Value
-              </p>
-              <p className="text-xs sm:text-sm font-medium text-foreground-primary">
-                {formatCurrency(holdingsValue)}
-              </p>
+            <div className="flex justify-between font-tabular text-body-sm">
+              <span className="font-eyebrow text-ink-muted not-italic tracking-eyebrow">
+                Holdings value
+              </span>
+              <span className="text-ink">{formatCurrency(holdingsValue)}</span>
             </div>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </article>
   )
 }

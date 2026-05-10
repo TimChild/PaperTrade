@@ -1,5 +1,7 @@
 /**
- * Normalized % return overlay chart for comparing multiple backtest series
+ * Editorial normalized % return overlay chart for comparing multiple
+ * backtest series. Uses the cool chart palette (slate / teal) — distinct
+ * from the warm amber accent used for active states.
  */
 import {
   LineChart,
@@ -14,12 +16,12 @@ import {
 import { formatDate } from '@/utils/formatters'
 
 const CHART_COLORS = [
-  '#3b82f6',
-  '#ef4444',
-  '#10b981',
-  '#f59e0b',
-  '#8b5cf6',
-  '#ec4899',
+  'hsl(var(--chart-line-1))',
+  'hsl(var(--chart-line-2))',
+  'hsl(var(--chart-line-3))',
+  'hsl(var(--chart-line-4))',
+  'hsl(var(--accent-amber))',
+  'hsl(var(--ink-muted))',
 ]
 
 interface SeriesData {
@@ -43,7 +45,7 @@ export function ComparisonChart({
     return (
       <div
         data-testid="comparison-chart-empty"
-        className="flex h-64 items-center justify-center text-gray-500 dark:text-gray-400"
+        className="flex h-64 items-center justify-center text-body-sm text-ink-muted"
       >
         No performance data available to compare
       </div>
@@ -87,40 +89,49 @@ export function ComparisonChart({
           margin={{ top: 5, right: 20, bottom: 5, left: 10 }}
         >
           <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="hsl(var(--foreground) / 0.1)"
+            strokeDasharray="2 4"
+            stroke="hsl(var(--chart-grid))"
           />
           <XAxis
             dataKey="date"
             tickFormatter={(date: string) => formatDate(date, 'short')}
-            stroke="hsl(var(--foreground) / 0.5)"
-            style={{ fontSize: '12px' }}
+            stroke="hsl(var(--chart-axis))"
+            style={{ fontSize: '11px', fontFamily: 'var(--font-mono)' }}
           />
           <YAxis
             tickFormatter={(value: number) =>
               `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`
             }
-            stroke="hsl(var(--foreground) / 0.5)"
-            style={{ fontSize: '12px' }}
+            stroke="hsl(var(--chart-axis))"
+            style={{ fontSize: '11px', fontFamily: 'var(--font-mono)' }}
           />
           <Tooltip
             contentStyle={{
-              backgroundColor: 'hsl(var(--background))',
-              border: '1px solid hsl(var(--foreground) / 0.2)',
-              borderRadius: '8px',
-              color: 'hsl(var(--foreground))',
+              backgroundColor: 'hsl(var(--canvas-raised))',
+              border: '1px solid hsl(var(--hairline))',
+              borderRadius: '0.25rem',
+              color: 'hsl(var(--ink))',
+              fontFamily: 'var(--font-mono)',
+              fontSize: '12px',
             }}
+            cursor={{ stroke: 'hsl(var(--chart-crosshair))', strokeWidth: 1 }}
             formatter={formatTooltipValue}
             labelFormatter={(label: string) => formatDate(label, 'long')}
           />
-          <Legend />
+          <Legend
+            wrapperStyle={{
+              fontFamily: 'var(--font-sans)',
+              fontSize: '12px',
+              color: 'hsl(var(--ink-muted))',
+            }}
+          />
           {series.map((s, index) => (
             <Line
               key={s.name}
               type="monotone"
               dataKey={s.name}
               stroke={CHART_COLORS[index % CHART_COLORS.length]}
-              strokeWidth={2}
+              strokeWidth={1.5}
               dot={false}
               connectNulls
             />

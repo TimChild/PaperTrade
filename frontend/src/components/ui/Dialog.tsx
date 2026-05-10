@@ -1,13 +1,17 @@
 /**
- * Dialog/Modal component
- * Simple modal dialog with backdrop
+ * Editorial dialog — canvas-raised panel with hairline border, eyebrow +
+ * display-serif heading. Uses the native `<dialog>` element with
+ * `showModal()` for keyboard / focus-trap / ESC-close mechanics.
  */
 import { useEffect, useRef } from 'react'
+import { Eyebrow } from './Eyebrow'
 
 interface DialogProps {
   isOpen: boolean
   onClose: () => void
   title?: string
+  /** Optional eyebrow above the title (defaults to "Edit"). */
+  eyebrow?: string
   children: React.ReactNode
   className?: string
 }
@@ -16,9 +20,10 @@ export function Dialog({
   isOpen,
   onClose,
   title,
+  eyebrow = 'Edit',
   children,
   className = '',
-}: DialogProps) {
+}: DialogProps): React.JSX.Element {
   const dialogRef = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -36,11 +41,11 @@ export function Dialog({
     const dialog = dialogRef.current
     if (!dialog) return
 
-    const handleClose = () => {
+    const handleClose = (): void => {
       onClose()
     }
 
-    const handleEscape = (e: KeyboardEvent) => {
+    const handleEscape = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
         onClose()
       }
@@ -55,7 +60,9 @@ export function Dialog({
     }
   }, [onClose])
 
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDialogElement>) => {
+  const handleBackdropClick = (
+    e: React.MouseEvent<HTMLDialogElement>
+  ): void => {
     const dialog = dialogRef.current
     if (!dialog) return
 
@@ -75,12 +82,16 @@ export function Dialog({
     <dialog
       ref={dialogRef}
       onClick={handleBackdropClick}
-      className={`rounded-lg border-0 bg-white p-6 shadow-xl backdrop:bg-black backdrop:bg-opacity-50 dark:bg-gray-800 ${className}`}
+      data-testid="dialog"
+      className={`rounded-editorial border border-hairline bg-canvas-raised text-ink p-6 shadow-elevated backdrop:bg-canvas-sunken/80 backdrop:backdrop-blur-sm ${className}`}
     >
       {title && (
-        <h2 className="mb-4 text-xl font-semibold text-gray-900 dark:text-white">
-          {title}
-        </h2>
+        <header className="mb-5">
+          <Eyebrow>{eyebrow}</Eyebrow>
+          <h2 className="mt-1.5 font-display text-display-sm tracking-tight text-ink">
+            {title}
+          </h2>
+        </header>
       )}
       <div>{children}</div>
     </dialog>

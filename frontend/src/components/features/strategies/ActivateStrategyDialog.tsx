@@ -12,6 +12,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { Eyebrow } from '@/components/ui/Eyebrow'
 import { useActivateStrategy } from '@/hooks/useStrategyActivation'
 import { usePortfolios } from '@/hooks/usePortfolio'
 import type { PortfolioDTO, StrategyResponse } from '@/services/api/types'
@@ -80,26 +81,28 @@ export function ActivateStrategyDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-canvas-sunken/80 backdrop-blur-sm"
       data-testid="activate-strategy-dialog-backdrop"
+      role="presentation"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose()
       }}
     >
       <div
-        className="mx-4 w-full max-w-md rounded-lg bg-white p-6 shadow-xl dark:bg-gray-800"
+        className="mx-4 w-full max-w-md rounded-editorial border border-hairline bg-canvas-raised p-6 shadow-elevated"
         data-testid="activate-strategy-dialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="activate-strategy-dialog-title"
       >
+        <Eyebrow>Activate</Eyebrow>
         <h3
           id="activate-strategy-dialog-title"
-          className="text-lg font-semibold text-gray-900 dark:text-white"
+          className="mt-1.5 font-display text-display-sm tracking-tight text-ink"
         >
-          Activate Strategy
+          Activate strategy
         </h3>
-        <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+        <p className="mt-2 text-body-sm text-ink-muted">
           Choose a paper-trading portfolio for &ldquo;{strategy.name}&rdquo; to
           trade into. The strategy runs daily after market close.
         </p>
@@ -107,15 +110,15 @@ export function ActivateStrategyDialog({
         <form
           onSubmit={handleSubmit}
           data-testid="activate-strategy-form"
-          className="mt-4 space-y-4"
+          className="mt-5 space-y-4"
         >
-          <div className="space-y-1">
-            <Label htmlFor="activate-portfolio-select">Target Portfolio</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="activate-portfolio-select">Target portfolio</Label>
             {portfoliosLoading ? (
               <LoadingSpinner size="sm" />
             ) : portfolios.length === 0 ? (
               <p
-                className="text-sm text-gray-500 dark:text-gray-400"
+                className="text-body-sm text-ink-muted"
                 data-testid="activate-strategy-no-portfolios"
               >
                 You don&apos;t have any paper-trading portfolios yet. Create one
@@ -130,7 +133,7 @@ export function ActivateStrategyDialog({
                   setPortfolioId(e.target.value)
                   setError(null)
                 }}
-                className="flex h-10 w-full rounded-input border border-gray-300 bg-white px-3 py-2 text-sm text-foreground-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900"
+                className="flex h-10 w-full rounded-input border border-hairline bg-canvas-raised/40 px-3 py-2 text-body-sm text-ink focus-visible:outline-none focus-visible:border-amber focus-visible:ring-1 focus-visible:ring-amber/40 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <option value="">Select a portfolio...</option>
                 {portfolios.map((p) => (
@@ -142,7 +145,7 @@ export function ActivateStrategyDialog({
             )}
             {error && (
               <p
-                className="text-sm text-red-600 dark:text-red-400"
+                className="text-body-sm text-loss"
                 data-testid="activate-strategy-error"
               >
                 {error}
@@ -153,7 +156,7 @@ export function ActivateStrategyDialog({
           <div className="flex justify-end gap-2 pt-2">
             <Button
               type="button"
-              variant="secondary"
+              variant="ghost"
               onClick={onClose}
               data-testid="activate-strategy-cancel"
             >

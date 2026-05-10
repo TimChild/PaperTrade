@@ -16,6 +16,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { Eyebrow } from '@/components/ui/Eyebrow'
 import { ActivateStrategyDialog } from './ActivateStrategyDialog'
 import { ActivationStatusBadge } from './ActivationStatusBadge'
 import {
@@ -103,7 +104,7 @@ export function StrategyActivationPanel({
     return (
       <div
         data-testid={`strategy-activation-error-${strategy.id}`}
-        className="text-xs text-red-600 dark:text-red-400"
+        className="text-body-sm text-loss"
       >
         Failed to load activation status
       </div>
@@ -144,9 +145,9 @@ export function StrategyActivationPanel({
     <>
       <div
         data-testid={`strategy-activation-panel-${strategy.id}`}
-        className="space-y-2 rounded-md border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/50"
+        className="space-y-3 rounded-editorial border border-hairline bg-canvas-sunken/60 p-4"
       >
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <ActivationStatusBadge status={activation.status} />
           <div className="flex gap-2">
             <Button
@@ -160,11 +161,12 @@ export function StrategyActivationPanel({
             </Button>
             {canDeactivate && (
               <Button
-                variant="destructive"
+                variant="ghost"
                 size="sm"
                 data-testid={`strategy-deactivate-button-${strategy.id}`}
                 disabled={deactivate.isPending}
                 onClick={() => setShowDeactivateConfirm(true)}
+                className="text-ink-muted hover:text-loss"
               >
                 Deactivate
               </Button>
@@ -173,22 +175,22 @@ export function StrategyActivationPanel({
         </div>
 
         <dl
-          className="grid grid-cols-1 gap-x-3 gap-y-1 text-xs sm:grid-cols-2"
+          className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2"
           data-testid={`strategy-activation-details-${strategy.id}`}
         >
           <div>
-            <dt className="text-gray-500 dark:text-gray-400">Portfolio</dt>
+            <Eyebrow>Portfolio</Eyebrow>
             <dd
-              className="font-medium text-gray-900 dark:text-gray-100"
+              className="mt-1 text-body-sm text-ink"
               data-testid={`strategy-activation-portfolio-${strategy.id}`}
             >
               {portfolioName ?? activation.portfolio_id.slice(0, 8)}
             </dd>
           </div>
           <div>
-            <dt className="text-gray-500 dark:text-gray-400">Last Run</dt>
+            <Eyebrow>Last run</Eyebrow>
             <dd
-              className="font-medium text-gray-900 dark:text-gray-100"
+              className="mt-1 text-body-sm text-ink font-tabular"
               data-testid={`strategy-activation-last-run-${strategy.id}`}
             >
               {activation.last_executed_at
@@ -200,7 +202,7 @@ export function StrategyActivationPanel({
 
         {activation.status === 'ERROR' && activation.last_error && (
           <p
-            className="rounded border border-red-200 bg-red-50 p-2 text-xs text-red-800 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300"
+            className="rounded-editorial border border-hairline bg-loss-soft/40 p-2.5 text-body-sm text-ink"
             data-testid={`strategy-activation-last-error-${strategy.id}`}
           >
             {activation.last_error}
@@ -210,9 +212,9 @@ export function StrategyActivationPanel({
 
       <ConfirmDialog
         isOpen={showRunNowConfirm}
-        title="Run Strategy Now"
-        message={`This will execute "${strategy.name}" against the linked portfolio immediately, generating signals from current market prices. Continue?`}
-        confirmLabel="Run Now"
+        title="Run strategy now?"
+        message={`This will execute "${strategy.name}" against the linked portfolio immediately, generating signals from current market prices.`}
+        confirmLabel="Run now"
         variant="info"
         onConfirm={handleRunNow}
         onCancel={() => setShowRunNowConfirm(false)}
@@ -221,8 +223,8 @@ export function StrategyActivationPanel({
 
       <ConfirmDialog
         isOpen={showDeactivateConfirm}
-        title="Pause Activation"
-        message={`Pause live execution of "${strategy.name}"? The scheduler will stop running this strategy. You can re-activate it later.`}
+        title="Pause activation?"
+        message={`Pause live execution of "${strategy.name}". The scheduler will stop running this strategy. You can re-activate it later.`}
         confirmLabel="Pause"
         variant="warning"
         onConfirm={handleDeactivate}

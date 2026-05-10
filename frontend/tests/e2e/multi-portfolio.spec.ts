@@ -65,8 +65,11 @@ test.describe('Multi-Portfolio Display', () => {
     await page.goto('/dashboard')
     await page.waitForLoadState('networkidle')
 
-    // Verify "Your Portfolios" section is visible (don't check exact count due to test retries)
-    await expect(page.getByText('Your Portfolios')).toBeVisible()
+    // Verify "Portfolios" page heading is visible. Was "Your Portfolios"
+    // pre-Wave-2 — the editorial header is now just the page title.
+    await expect(
+      page.getByRole('heading', { name: /^Portfolios$/, level: 1 })
+    ).toBeVisible()
 
     // Verify portfolio grid exists
     const portfolioGrid = page.getByTestId('portfolio-grid')

@@ -57,12 +57,12 @@ describe('ComparisonTable', () => {
     )
 
     expect(screen.getByText('Strategy')).toBeInTheDocument()
-    expect(screen.getByText('Date Range')).toBeInTheDocument()
-    expect(screen.getByText('Initial Cash')).toBeInTheDocument()
-    expect(screen.getByText('Total Return')).toBeInTheDocument()
-    expect(screen.getByText('Annualized Return')).toBeInTheDocument()
-    expect(screen.getByText('Max Drawdown')).toBeInTheDocument()
-    expect(screen.getByText('Total Trades')).toBeInTheDocument()
+    expect(screen.getByText(/date range/i)).toBeInTheDocument()
+    expect(screen.getByText(/initial cash/i)).toBeInTheDocument()
+    expect(screen.getByText(/total return/i)).toBeInTheDocument()
+    expect(screen.getByText(/annualized return/i)).toBeInTheDocument()
+    expect(screen.getByText(/max drawdown/i)).toBeInTheDocument()
+    expect(screen.getByText(/total trades/i)).toBeInTheDocument()
   })
 
   it('renders strategy name from strategyNames lookup', () => {
@@ -94,8 +94,9 @@ describe('ComparisonTable', () => {
     const bestCell = screen.getByTestId('total-return-bt-2')
     const worstCell = screen.getByTestId('total-return-bt-1')
 
-    expect(bestCell.className).toContain('bg-green-50')
-    expect(worstCell.className).toContain('bg-red-50')
+    // Editorial muted gain/loss tones. Was `bg-green-50`/`bg-red-50` pre-revamp.
+    expect(bestCell.className).toContain('bg-gain-soft')
+    expect(worstCell.className).toContain('bg-loss-soft')
   })
 
   it('applies best coloring for max drawdown (closest to 0 is best)', () => {
@@ -118,8 +119,8 @@ describe('ComparisonTable', () => {
     const bestCell = screen.getByTestId('max-drawdown-bt-1')
     const worstCell = screen.getByTestId('max-drawdown-bt-2')
 
-    expect(bestCell.className).toContain('bg-green-50')
-    expect(worstCell.className).toContain('bg-red-50')
+    expect(bestCell.className).toContain('bg-gain-soft')
+    expect(worstCell.className).toContain('bg-loss-soft')
   })
 
   it('shows --- for null metric values', () => {

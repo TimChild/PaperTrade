@@ -1,16 +1,17 @@
 /**
  * ActivationStatusBadge — small UI element rendering an ActivationStatus.
  *
- * Color-coded per the design rule:
+ * Editorial palette:
  *
- * - ACTIVE  → green
- * - PAUSED  → yellow
- * - STOPPED → gray
- * - ERROR   → red
+ * - ACTIVE  → muted gain
+ * - PAUSED  → amber soft (in-flight, action required)
+ * - STOPPED → ink-faint (terminal, low emphasis)
+ * - ERROR   → muted loss
  *
  * The wrapper element carries `data-testid="activation-status-{status}"` so
  * tests can assert state without scraping classnames.
  */
+import { cn } from '@/lib/utils'
 import type { ActivationStatus } from '@/services/api/types'
 
 const STATUS_LABELS: Record<ActivationStatus, string> = {
@@ -21,12 +22,10 @@ const STATUS_LABELS: Record<ActivationStatus, string> = {
 }
 
 const STATUS_STYLES: Record<ActivationStatus, string> = {
-  ACTIVE:
-    'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-  PAUSED:
-    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-  STOPPED: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
-  ERROR: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+  ACTIVE: 'bg-gain-soft text-gain',
+  PAUSED: 'bg-amber-soft text-amber',
+  STOPPED: 'bg-canvas-raised text-ink-subtle border border-hairline',
+  ERROR: 'bg-loss-soft text-loss',
 }
 
 interface ActivationStatusBadgeProps {
@@ -36,7 +35,7 @@ interface ActivationStatusBadgeProps {
 
 export function ActivationStatusBadge({
   status,
-  className = '',
+  className,
 }: ActivationStatusBadgeProps): React.JSX.Element {
   const label = STATUS_LABELS[status]
   return (
@@ -44,7 +43,11 @@ export function ActivationStatusBadge({
       data-testid={`activation-status-${status}`}
       role="status"
       aria-label={`Activation status: ${label}`}
-      className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${STATUS_STYLES[status]} ${className}`}
+      className={cn(
+        'inline-flex items-center font-eyebrow rounded-editorial px-2 py-1',
+        STATUS_STYLES[status],
+        className
+      )}
     >
       {label}
     </span>

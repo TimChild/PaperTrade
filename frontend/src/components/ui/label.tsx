@@ -4,8 +4,13 @@ import { cva, type VariantProps } from 'class-variance-authority'
 
 import { cn } from '@/lib/utils'
 
+/**
+ * Editorial form label — small-caps tracked label that lives above an
+ * input, mirroring the eyebrow on a section header. Slightly heavier
+ * (font-medium) for legibility at the form scale.
+ */
 const labelVariants = cva(
-  'text-sm font-medium text-foreground-primary leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
+  'font-eyebrow text-ink-muted leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70'
 )
 
 const Label = React.forwardRef<

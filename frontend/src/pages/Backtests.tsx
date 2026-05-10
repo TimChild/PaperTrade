@@ -1,5 +1,12 @@
 /**
- * Backtests page — list, run and compare backtests
+ * Backtests page — editorial library of backtest runs.
+ *
+ * Layout:
+ *   - SectionHeader (eyebrow + serif title) + trailing CTAs ("Compare
+ *     Selected" appears once 2+ are checked, plus "Run backtest").
+ *   - Form drops in below the header when toggled.
+ *   - Backtests render in a hairline DataTable. Row click navigates to
+ *     the detail page; the checkbox cell + delete cell stop propagation.
  */
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -7,22 +14,22 @@ import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { SectionHeader } from '@/components/ui/SectionHeader'
+import {
+  DataTable,
+  DataTableHead,
+  DataTableBody,
+  DataRow,
+  DataCell,
+  DataHeaderCell,
+} from '@/components/ui/DataRow'
+import { BacktestStatusBadge } from '@/components/features/backtests/BacktestMetrics'
 import { RunBacktestForm } from '@/components/features/backtests/RunBacktestForm'
 import { useBacktests, useDeleteBacktest } from '@/hooks/useBacktests'
 import { useStrategies } from '@/hooks/useStrategies'
 import { formatCurrency, formatPercent, formatDate } from '@/utils/formatters'
-import type { BacktestRunResponse, BacktestStatus } from '@/services/api/types'
+import type { BacktestRunResponse } from '@/services/api/types'
 import toast from 'react-hot-toast'
-
-const STATUS_STYLES: Record<BacktestStatus, string> = {
-  COMPLETED:
-    'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-  PENDING:
-    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-  RUNNING:
-    'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-  FAILED: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-}
 
 export function Backtests(): React.JSX.Element {
   const navigate = useNavigate()
@@ -43,7 +50,7 @@ export function Backtests(): React.JSX.Element {
     strategyNames[s.id] = s.name
   })
 
-  const toggleSelected = (id: string, completed: boolean) => {
+  const toggleSelected = (id: string, completed: boolean): void => {
     if (!completed) return
     setSelectedIds((prev) => {
       const next = new Set(prev)
@@ -56,12 +63,12 @@ export function Backtests(): React.JSX.Element {
     })
   }
 
-  const handleCompare = () => {
+  const handleCompare = (): void => {
     const ids = Array.from(selectedIds).join(',')
     void navigate(`/compare?ids=${ids}`)
   }
 
-  const handleDelete = () => {
+  const handleDelete = (): void => {
     if (!deleteTarget) return
     deleteBacktest.mutate(deleteTarget.id, {
       onSuccess: () => {
@@ -80,44 +87,48 @@ export function Backtests(): React.JSX.Element {
   }
 
   return (
-    <div
-      className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8"
-      data-testid="backtests-page"
-    >
-      {/* Page header */}
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Backtests
-          </h2>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Run and compare strategy backtests
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {selectedIds.size >= 2 && (
-            <Button
-              data-testid="compare-selected-button"
-              variant="secondary"
-              onClick={handleCompare}
-            >
-              Compare Selected ({selectedIds.size})
-            </Button>
-          )}
-          {!showForm && (
-            <Button
-              data-testid="run-backtest-button"
-              onClick={() => setShowForm(true)}
-            >
-              Run Backtest
-            </Button>
-          )}
-        </div>
+    <PageFrame>
+      <div
+        className="reveal"
+        style={{ ['--reveal-delay' as string]: '0ms' }}
+        data-testid="backtests-page"
+      >
+        <SectionHeader
+          eyebrow="Research"
+          title="Backtests"
+          as="h1"
+          description="Evaluate strategies against historical market data, then compare runs side-by-side."
+          trailing={
+            <div className="flex flex-wrap gap-2">
+              {selectedIds.size >= 2 && (
+                <Button
+                  data-testid="compare-selected-button"
+                  variant="secondary"
+                  onClick={handleCompare}
+                >
+                  Compare selected ({selectedIds.size})
+                </Button>
+              )}
+              {!showForm && (
+                <Button
+                  data-testid="run-backtest-button"
+                  onClick={() => setShowForm(true)}
+                >
+                  Run backtest
+                </Button>
+              )}
+            </div>
+          }
+          withRule
+        />
       </div>
 
-      {/* Run backtest form */}
       {showForm && (
-        <div className="mb-8" data-testid="run-backtest-section">
+        <div
+          className="mt-8 sm:mt-10 reveal"
+          style={{ ['--reveal-delay' as string]: '60ms' }}
+          data-testid="run-backtest-section"
+        >
           <RunBacktestForm
             onSuccess={() => setShowForm(false)}
             onCancel={() => setShowForm(false)}
@@ -125,76 +136,62 @@ export function Backtests(): React.JSX.Element {
         </div>
       )}
 
-      {/* Loading */}
-      {isLoading && (
-        <div data-testid="backtests-loading" className="py-12">
-          <LoadingSpinner size="lg" />
-        </div>
-      )}
+      <section
+        className="mt-8 sm:mt-10 reveal"
+        style={{ ['--reveal-delay' as string]: '120ms' }}
+      >
+        {isLoading && (
+          <div data-testid="backtests-loading" className="py-12">
+            <LoadingSpinner size="lg" />
+          </div>
+        )}
 
-      {/* Error */}
-      {error && !isLoading && (
-        <div
-          data-testid="backtests-error"
-          className="rounded-lg border border-red-200 bg-red-50 p-6 text-center dark:border-red-800 dark:bg-red-900/20"
-        >
-          <p className="text-red-600 dark:text-red-400">
-            Failed to load backtests. Please try again.
-          </p>
-        </div>
-      )}
+        {error && !isLoading && (
+          <div
+            data-testid="backtests-error"
+            className="rounded-editorial border border-hairline bg-loss-soft/40 p-6 text-center"
+          >
+            <p className="text-body-md text-ink">
+              Failed to load backtests. Please try again.
+            </p>
+          </div>
+        )}
 
-      {/* Empty state */}
-      {!isLoading && !error && backtests?.length === 0 && (
-        <EmptyState
-          data-testid="backtests-empty"
-          message="No backtests yet. Run one to evaluate your strategies."
-          action={
-            !showForm ? (
-              <Button onClick={() => setShowForm(true)}>
-                Run Your First Backtest
-              </Button>
-            ) : undefined
-          }
-        />
-      )}
+        {!isLoading && !error && backtests?.length === 0 && (
+          <EmptyState
+            data-testid="backtests-empty"
+            eyebrow="No backtests yet"
+            title="Run your first backtest"
+            description="A backtest replays a strategy over historical data so you can evaluate its return, drawdown, and trade behaviour before committing real capital."
+            action={
+              !showForm ? (
+                <Button onClick={() => setShowForm(true)}>
+                  Run your first backtest
+                </Button>
+              ) : undefined
+            }
+          />
+        )}
 
-      {/* Backtests table */}
-      {!isLoading && !error && backtests && backtests.length > 0 && (
-        <div
-          className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700"
-          data-testid="backtests-table"
-        >
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
-                <th className="px-4 py-3 text-left">
-                  <span className="sr-only">Select</span>
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">
-                  Name
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">
-                  Strategy
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">
-                  Status
-                </th>
-                <th className="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-300">
-                  Total Return
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">
-                  Date Range
-                </th>
-                <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-300">
-                  Initial Cash
-                </th>
-                <th className="px-4 py-3 text-right font-medium text-gray-600 dark:text-gray-300">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
+        {!isLoading && !error && backtests && backtests.length > 0 && (
+          <DataTable testId="backtests-table">
+            <DataTableHead>
+              <DataHeaderCell>
+                <span className="sr-only">Select</span>
+              </DataHeaderCell>
+              <DataHeaderCell>Name</DataHeaderCell>
+              <DataHeaderCell hideOnMobile>Strategy</DataHeaderCell>
+              <DataHeaderCell>Status</DataHeaderCell>
+              <DataHeaderCell align="right">Total return</DataHeaderCell>
+              <DataHeaderCell hideUntilMd>Date range</DataHeaderCell>
+              <DataHeaderCell align="right" hideUntilMd>
+                Initial cash
+              </DataHeaderCell>
+              <DataHeaderCell align="right">
+                <span className="sr-only">Actions</span>
+              </DataHeaderCell>
+            </DataTableHead>
+            <DataTableBody>
               {backtests.map((bt) => {
                 const isCompleted = bt.status === 'COMPLETED'
                 const isSelected = selectedIds.has(bt.id)
@@ -202,18 +199,24 @@ export function Backtests(): React.JSX.Element {
                   bt.total_return_pct !== null
                     ? parseFloat(bt.total_return_pct) / 100
                     : null
+                const returnTone =
+                  returnPct !== null
+                    ? returnPct >= 0
+                      ? 'gain'
+                      : 'loss'
+                    : 'muted'
 
                 return (
-                  <tr
+                  <DataRow
                     key={bt.id}
-                    data-testid={`backtest-row-${bt.id}`}
+                    testId={`backtest-row-${bt.id}`}
                     onClick={() => void navigate(`/backtests/${bt.id}`)}
-                    className="cursor-pointer border-b border-gray-100 transition-colors hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/50"
                   >
-                    {/* Checkbox */}
-                    <td
-                      className="px-4 py-3"
+                    {/* Checkbox cell — stops propagation to keep the
+                        checkbox toggle separate from row navigation. */}
+                    <DataCell
                       onClick={(e) => e.stopPropagation()}
+                      className="w-12"
                     >
                       {isCompleted && (
                         <input
@@ -221,85 +224,85 @@ export function Backtests(): React.JSX.Element {
                           data-testid={`backtest-checkbox-${bt.id}`}
                           checked={isSelected}
                           onChange={() => toggleSelected(bt.id, isCompleted)}
-                          className="h-4 w-4 rounded border-gray-300 text-blue-600"
+                          className="h-4 w-4 rounded-editorial border border-hairline-strong bg-canvas-raised accent-amber"
                           aria-label={`Select ${bt.backtest_name}`}
                         />
                       )}
-                    </td>
+                    </DataCell>
 
-                    {/* Name */}
-                    <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
-                      {bt.backtest_name}
-                    </td>
+                    <DataCell emphasis="primary">{bt.backtest_name}</DataCell>
 
-                    {/* Strategy */}
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
+                    <DataCell tone="muted" hideOnMobile>
                       {bt.strategy_id !== null
                         ? (strategyNames[bt.strategy_id] ?? '—')
                         : '—'}
-                    </td>
+                    </DataCell>
 
-                    {/* Status badge */}
-                    <td className="px-4 py-3">
-                      <span
-                        className={`rounded-full px-2 py-1 text-xs font-medium ${STATUS_STYLES[bt.status]}`}
-                        data-testid={`backtest-status-${bt.id}`}
-                      >
-                        {bt.status}
-                      </span>
-                    </td>
+                    <DataCell>
+                      <BacktestStatusBadge status={bt.status} />
+                    </DataCell>
 
-                    {/* Total Return */}
-                    <td
-                      className={`px-4 py-3 text-right ${returnPct !== null ? (returnPct >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400') : 'text-gray-400'}`}
-                    >
+                    <DataCell align="right" numeric tone={returnTone}>
                       {returnPct !== null ? formatPercent(returnPct) : '---'}
-                    </td>
+                    </DataCell>
 
-                    {/* Date range */}
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
+                    <DataCell tone="muted" numeric hideUntilMd>
                       {formatDate(bt.start_date, false)} –{' '}
                       {formatDate(bt.end_date, false)}
-                    </td>
+                    </DataCell>
 
-                    {/* Initial cash */}
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
+                    <DataCell align="right" tone="muted" numeric hideUntilMd>
                       {formatCurrency(parseFloat(bt.initial_cash))}
-                    </td>
+                    </DataCell>
 
-                    {/* Actions */}
-                    <td
-                      className="px-4 py-3 text-right"
+                    {/* Actions cell — stops propagation to keep delete
+                        from also navigating. */}
+                    <DataCell
+                      align="right"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <Button
-                        variant="destructive"
+                        variant="ghost"
                         size="sm"
                         data-testid={`backtest-delete-${bt.id}`}
                         onClick={() => setDeleteTarget(bt)}
+                        className="text-ink-muted hover:text-loss"
                       >
                         Delete
                       </Button>
-                    </td>
-                  </tr>
+                    </DataCell>
+                  </DataRow>
                 )
               })}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </DataTableBody>
+          </DataTable>
+        )}
+      </section>
 
-      {/* Delete confirmation */}
       <ConfirmDialog
         isOpen={deleteTarget !== null}
-        title="Delete Backtest"
-        message={`Are you sure you want to delete "${deleteTarget?.backtest_name ?? ''}"? This action cannot be undone.`}
+        title="Delete backtest?"
+        message={`This permanently removes "${deleteTarget?.backtest_name ?? ''}". This action cannot be undone.`}
         confirmLabel="Delete"
         variant="danger"
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
         isLoading={deleteBacktest.isPending}
       />
+    </PageFrame>
+  )
+}
+
+function PageFrame({
+  children,
+}: {
+  children: React.ReactNode
+}): React.JSX.Element {
+  return (
+    <div className="min-h-screen bg-canvas">
+      <div className="mx-auto max-w-[1240px] px-5 sm:px-8 lg:px-12 py-8 sm:py-12 lg:py-16">
+        {children}
+      </div>
     </div>
   )
 }

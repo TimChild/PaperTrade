@@ -17,6 +17,13 @@ interface DataCellProps {
   children: React.ReactNode
   /** Optional data-testid for stable test selection. */
   testId?: string
+  /**
+   * Optional cell-level click handler. Useful for cells that should
+   * propagate to a row click (the navigation cells) or, with
+   * `e.stopPropagation()`, for cells that need to absorb the event so
+   * the row click does not fire (the checkbox / actions columns).
+   */
+  onClick?: (e: React.MouseEvent<HTMLTableCellElement>) => void
 }
 
 interface DataRowProps {
@@ -26,6 +33,12 @@ interface DataRowProps {
   testId?: string
   /** If true, the row will respond to hover with a subtle backplate. */
   interactive?: boolean
+  /**
+   * Optional row-level click handler. When provided, the `<tr>` becomes
+   * keyboard-focusable and clickable; pair with `interactive` for the
+   * hover backplate.
+   */
+  onClick?: (e: React.MouseEvent<HTMLTableRowElement>) => void
 }
 
 interface DataTableProps {
@@ -164,16 +177,19 @@ export function DataRow({
   children,
   testId,
   interactive = false,
+  onClick,
 }: DataRowProps): React.JSX.Element {
   return (
     <tr
       className={cn(
         'group',
-        interactive &&
+        (interactive || onClick) &&
           'transition-colors duration-quick ease-editorial hover:bg-canvas-raised/50',
+        onClick && 'cursor-pointer',
         className
       )}
       data-testid={testId}
+      onClick={onClick}
     >
       {children}
     </tr>
@@ -194,6 +210,7 @@ export function DataCell({
   className,
   children,
   testId,
+  onClick,
 }: DataCellProps): React.JSX.Element {
   return (
     <td
@@ -207,6 +224,7 @@ export function DataCell({
         className
       )}
       data-testid={testId}
+      onClick={onClick}
     >
       {children}
     </td>

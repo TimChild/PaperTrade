@@ -1,10 +1,12 @@
 /**
- * Strategy card component displaying strategy info with delete button
+ * Strategy card — editorial flush panel pairing the strategy name (display
+ * serif) with a small-caps type tag, ticker chips, the live activation
+ * surface, and a creation timestamp + delete control.
  */
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { Eyebrow } from '@/components/ui/Eyebrow'
 import { StrategyActivationPanel } from './StrategyActivationPanel'
 import { useDeleteStrategy } from '@/hooks/useStrategies'
 import { formatDate } from '@/utils/formatters'
@@ -17,14 +19,6 @@ const STRATEGY_TYPE_LABELS: Record<StrategyType, string> = {
   MOVING_AVERAGE_CROSSOVER: 'Moving Average Crossover',
 }
 
-const STRATEGY_TYPE_COLORS: Record<StrategyType, string> = {
-  BUY_AND_HOLD: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  DOLLAR_COST_AVERAGING:
-    'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  MOVING_AVERAGE_CROSSOVER:
-    'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-}
-
 interface StrategyCardProps {
   strategy: StrategyResponse
 }
@@ -35,7 +29,7 @@ export function StrategyCard({
   const [showConfirm, setShowConfirm] = useState(false)
   const deleteStrategy = useDeleteStrategy()
 
-  const handleDelete = () => {
+  const handleDelete = (): void => {
     deleteStrategy.mutate(strategy.id, {
       onSuccess: () => {
         toast.success('Strategy deleted')
@@ -49,57 +43,62 @@ export function StrategyCard({
 
   return (
     <>
-      <Card
+      <article
         data-testid={`strategy-card-${strategy.id}`}
-        className="flex flex-col"
+        className="flex flex-col gap-5 rounded-editorial border border-hairline bg-canvas-raised/40 p-6"
       >
-        <CardHeader className="pb-2">
-          <div className="flex items-start justify-between gap-2">
-            <CardTitle className="text-lg">{strategy.name}</CardTitle>
-            <span
-              className={`shrink-0 rounded-full px-2 py-1 text-xs font-medium ${STRATEGY_TYPE_COLORS[strategy.strategy_type]}`}
-              data-testid="strategy-type-badge"
-            >
-              {STRATEGY_TYPE_LABELS[strategy.strategy_type]}
-            </span>
+        <header className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <Eyebrow>Strategy</Eyebrow>
+            <h3 className="mt-1.5 font-display text-display-sm tracking-tight text-ink line-clamp-2">
+              {strategy.name}
+            </h3>
           </div>
-        </CardHeader>
-        <CardContent className="flex flex-1 flex-col justify-between gap-4">
-          <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Tickers</p>
-            <div className="mt-1 flex flex-wrap gap-1">
-              {strategy.tickers.map((ticker) => (
-                <span
-                  key={ticker}
-                  className="rounded bg-gray-100 px-2 py-0.5 font-mono text-xs dark:bg-gray-700 dark:text-gray-200"
-                >
-                  {ticker}
-                </span>
-              ))}
-            </div>
+          <span
+            className="shrink-0 inline-flex items-center font-eyebrow rounded-editorial bg-canvas-raised border border-hairline px-2 py-1 text-ink-muted"
+            data-testid="strategy-type-badge"
+          >
+            {STRATEGY_TYPE_LABELS[strategy.strategy_type]}
+          </span>
+        </header>
+
+        <div>
+          <Eyebrow>Tickers</Eyebrow>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {strategy.tickers.map((ticker) => (
+              <span
+                key={ticker}
+                className="rounded-editorial bg-canvas-sunken border border-hairline px-2 py-0.5 font-tabular text-body-sm text-ink"
+              >
+                {ticker}
+              </span>
+            ))}
           </div>
-          {/* Live activation surface — shows status + Activate/Run Now/Deactivate. */}
-          <StrategyActivationPanel strategy={strategy} />
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-gray-400 dark:text-gray-500">
-              Created {formatDate(strategy.created_at, false)}
-            </p>
-            <Button
-              variant="destructive"
-              size="sm"
-              data-testid="strategy-delete-button"
-              onClick={() => setShowConfirm(true)}
-            >
-              Delete
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Live activation surface — status badge + Activate / Run Now / Deactivate. */}
+        <StrategyActivationPanel strategy={strategy} />
+
+        <div className="flex items-center justify-between gap-3 pt-4 border-t border-hairline">
+          <p className="font-eyebrow text-ink-subtle">
+            Created {formatDate(strategy.created_at, false)}
+          </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            data-testid="strategy-delete-button"
+            onClick={() => setShowConfirm(true)}
+            className="text-ink-muted hover:text-loss"
+          >
+            Delete
+          </Button>
+        </div>
+      </article>
 
       <ConfirmDialog
         isOpen={showConfirm}
-        title="Delete Strategy"
-        message={`Are you sure you want to delete "${strategy.name}"? This action cannot be undone.`}
+        title="Delete strategy?"
+        message={`This permanently removes "${strategy.name}". Any backtests already produced are preserved, but the strategy itself can no longer be edited or activated.`}
         confirmLabel="Delete"
         variant="danger"
         onConfirm={handleDelete}

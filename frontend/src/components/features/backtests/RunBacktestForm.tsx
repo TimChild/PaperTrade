@@ -1,11 +1,13 @@
 /**
- * Form to run a backtest for a strategy
+ * Editorial form for running a backtest. Lives in a flush Panel inside
+ * the Backtests page.
  */
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Panel } from '@/components/ui/Panel'
+import { Eyebrow } from '@/components/ui/Eyebrow'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { useRunBacktest } from '@/hooks/useBacktests'
 import { useStrategies } from '@/hooks/useStrategies'
@@ -15,6 +17,9 @@ interface RunBacktestFormProps {
   onSuccess: () => void
   onCancel: () => void
 }
+
+const SELECT_CLASSES =
+  'flex h-10 w-full rounded-input border border-hairline bg-canvas-raised/40 px-3 py-2 text-body-sm text-ink focus-visible:outline-none focus-visible:border-amber focus-visible:ring-1 focus-visible:ring-amber/40 disabled:cursor-not-allowed disabled:opacity-50'
 
 export function RunBacktestForm({
   onSuccess,
@@ -87,7 +92,7 @@ export function RunBacktestForm({
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent): void => {
     e.preventDefault()
     if (!validate()) return
 
@@ -112,137 +117,128 @@ export function RunBacktestForm({
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Run Backtest</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form
-          onSubmit={handleSubmit}
-          data-testid="run-backtest-form"
-          className="space-y-4"
-        >
-          {/* Strategy */}
-          <div className="space-y-1">
-            <Label htmlFor="backtest-strategy">Strategy</Label>
-            {loadingStrategies ? (
-              <LoadingSpinner size="sm" />
-            ) : (
-              <select
-                id="backtest-strategy"
-                data-testid="backtest-strategy-select"
-                value={strategyId}
-                onChange={(e) => setStrategyId(e.target.value)}
-                className="flex h-10 w-full rounded-input border border-gray-300 bg-white px-3 py-2 text-sm text-foreground-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900"
-              >
-                <option value="">Select a strategy...</option>
-                {strategies?.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            )}
-            {errors.strategyId && (
-              <p className="text-sm text-red-600 dark:text-red-400">
-                {errors.strategyId}
-              </p>
-            )}
-          </div>
-
-          {/* Backtest name */}
-          <div className="space-y-1">
-            <Label htmlFor="backtest-name">Backtest Name</Label>
-            <Input
-              id="backtest-name"
-              data-testid="backtest-name-input"
-              value={backtestName}
-              onChange={(e) => setBacktestName(e.target.value)}
-              placeholder="My Backtest Run"
-            />
-            {errors.backtestName && (
-              <p className="text-sm text-red-600 dark:text-red-400">
-                {errors.backtestName}
-              </p>
-            )}
-          </div>
-
-          {/* Date range */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <Label htmlFor="backtest-start-date">Start Date</Label>
-              <Input
-                id="backtest-start-date"
-                data-testid="backtest-start-date-input"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                max={today}
-              />
-              {errors.startDate && (
-                <p className="text-sm text-red-600 dark:text-red-400">
-                  {errors.startDate}
-                </p>
-              )}
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="backtest-end-date">End Date</Label>
-              <Input
-                id="backtest-end-date"
-                data-testid="backtest-end-date-input"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                max={today}
-              />
-              {errors.endDate && (
-                <p className="text-sm text-red-600 dark:text-red-400">
-                  {errors.endDate}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Initial cash */}
-          <div className="space-y-1">
-            <Label htmlFor="backtest-initial-cash">Initial Cash ($)</Label>
-            <Input
-              id="backtest-initial-cash"
-              data-testid="backtest-initial-cash-input"
-              type="number"
-              min="1"
-              step="0.01"
-              value={initialCash}
-              onChange={(e) => setInitialCash(e.target.value)}
-              placeholder="10000"
-            />
-            {errors.initialCash && (
-              <p className="text-sm text-red-600 dark:text-red-400">
-                {errors.initialCash}
-              </p>
-            )}
-          </div>
-
-          {/* Actions */}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={onCancel}
-              data-testid="run-backtest-cancel"
+    <Panel>
+      <header className="mb-5">
+        <Eyebrow>New backtest</Eyebrow>
+        <h2 className="mt-1.5 font-display text-display-sm tracking-tight text-ink">
+          Run backtest
+        </h2>
+      </header>
+      <form
+        onSubmit={handleSubmit}
+        data-testid="run-backtest-form"
+        className="space-y-4"
+      >
+        {/* Strategy */}
+        <div className="space-y-1.5">
+          <Label htmlFor="backtest-strategy">Strategy</Label>
+          {loadingStrategies ? (
+            <LoadingSpinner size="sm" />
+          ) : (
+            <select
+              id="backtest-strategy"
+              data-testid="backtest-strategy-select"
+              value={strategyId}
+              onChange={(e) => setStrategyId(e.target.value)}
+              className={SELECT_CLASSES}
             >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              data-testid="run-backtest-submit"
-              disabled={runBacktest.isPending}
-            >
-              {runBacktest.isPending ? 'Running...' : 'Run Backtest'}
-            </Button>
+              <option value="">Select a strategy...</option>
+              {strategies?.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          )}
+          {errors.strategyId && (
+            <p className="text-body-sm text-loss">{errors.strategyId}</p>
+          )}
+        </div>
+
+        {/* Backtest name */}
+        <div className="space-y-1.5">
+          <Label htmlFor="backtest-name">Backtest name</Label>
+          <Input
+            id="backtest-name"
+            data-testid="backtest-name-input"
+            value={backtestName}
+            onChange={(e) => setBacktestName(e.target.value)}
+            placeholder="My backtest run"
+          />
+          {errors.backtestName && (
+            <p className="text-body-sm text-loss">{errors.backtestName}</p>
+          )}
+        </div>
+
+        {/* Date range */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="backtest-start-date">Start date</Label>
+            <Input
+              id="backtest-start-date"
+              data-testid="backtest-start-date-input"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              max={today}
+            />
+            {errors.startDate && (
+              <p className="text-body-sm text-loss">{errors.startDate}</p>
+            )}
           </div>
-        </form>
-      </CardContent>
-    </Card>
+          <div className="space-y-1.5">
+            <Label htmlFor="backtest-end-date">End date</Label>
+            <Input
+              id="backtest-end-date"
+              data-testid="backtest-end-date-input"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              max={today}
+            />
+            {errors.endDate && (
+              <p className="text-body-sm text-loss">{errors.endDate}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Initial cash */}
+        <div className="space-y-1.5">
+          <Label htmlFor="backtest-initial-cash">Initial cash ($)</Label>
+          <Input
+            id="backtest-initial-cash"
+            data-testid="backtest-initial-cash-input"
+            type="number"
+            min="1"
+            step="0.01"
+            value={initialCash}
+            onChange={(e) => setInitialCash(e.target.value)}
+            placeholder="10000"
+          />
+          {errors.initialCash && (
+            <p className="text-body-sm text-loss">{errors.initialCash}</p>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex justify-end gap-2 pt-2">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onCancel}
+            data-testid="run-backtest-cancel"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            data-testid="run-backtest-submit"
+            disabled={runBacktest.isPending}
+          >
+            {runBacktest.isPending ? 'Running...' : 'Run backtest'}
+          </Button>
+        </div>
+      </form>
+    </Panel>
   )
 }
