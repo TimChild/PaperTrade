@@ -196,3 +196,62 @@ class TestReset:
         limiter.reset()
         refreshed = await limiter.check_and_consume(api_key_id=api_key_id)
         assert refreshed.allowed is True
+
+
+class TestRefund:
+    """``refund`` pops the most-recently-consumed token from each bucket.
+
+    Routes call this when the work the rate-limit token authorised fails
+    before completing (e.g. ``TickerNotFoundError`` from the backtest
+    engine). Without a refund, failed requests still count against the
+    cap and an agent retrying after a transient error exhausts its
+    quota on errors.
+    """
+
+    async def test_refund_restores_capacity(self) -> None:
+        limiter = InMemoryInboundRateLimiter(minute_limit=2, day_limit=10)
+        api_key_id = uuid4()
+
+        # Burn the minute bucket.
+        await limiter.check_and_consume(api_key_id=api_key_id)
+        await limiter.check_and_consume(api_key_id=api_key_id)
+        denied = await limiter.check_and_consume(api_key_id=api_key_id)
+        assert denied.allowed is False
+
+        # Refund one — capacity returns.
+        await limiter.refund(api_key_id=api_key_id)
+        allowed = await limiter.check_and_consume(api_key_id=api_key_id)
+        assert allowed.allowed is True
+        assert allowed.minute_used == 2
+
+    async def test_refund_is_noop_for_clerk_bypass(self) -> None:
+        limiter = InMemoryInboundRateLimiter(minute_limit=1, day_limit=1)
+        # No state for None; refund is a silent no-op.
+        await limiter.refund(api_key_id=None)
+        # Bucket state for a real key remains usable.
+        api_key_id = uuid4()
+        result = await limiter.check_and_consume(api_key_id=api_key_id)
+        assert result.allowed is True
+
+    async def test_refund_is_idempotent_when_buckets_empty(self) -> None:
+        limiter = InMemoryInboundRateLimiter(minute_limit=2, day_limit=10)
+        api_key_id = uuid4()
+        # No prior consume — refund should be a silent no-op.
+        await limiter.refund(api_key_id=api_key_id)
+        # Subsequent normal use still works.
+        result = await limiter.check_and_consume(api_key_id=api_key_id)
+        assert result.allowed is True
+        assert result.minute_used == 1
+
+    async def test_refund_per_key_isolation(self) -> None:
+        limiter = InMemoryInboundRateLimiter(minute_limit=1, day_limit=10)
+        a = uuid4()
+        b = uuid4()
+        await limiter.check_and_consume(api_key_id=a)
+        await limiter.check_and_consume(api_key_id=b)
+        # Refund a; b's bucket should be untouched.
+        await limiter.refund(api_key_id=a)
+        denied_b = await limiter.check_and_consume(api_key_id=b)
+        assert denied_b.allowed is False
+        allowed_a = await limiter.check_and_consume(api_key_id=a)
+        assert allowed_a.allowed is True

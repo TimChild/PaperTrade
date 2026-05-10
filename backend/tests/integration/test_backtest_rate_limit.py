@@ -177,3 +177,88 @@ class TestEnvelopeAccuracy:
         assert fields["minute_used"] == "5"
         # day_used is at least 5 (we have not crossed the day cap).
         assert int(fields["day_used"]) >= 5
+
+
+class TestRefundOnFailure:
+    """Failed backtests refund the rate-limit token they consumed.
+
+    Without refund, an agent retrying after a transient failure
+    (e.g. ``TickerNotFoundError``, ``InsufficientHistoricalDataError``)
+    burns through its per-minute cap on errors it never benefited from.
+    This bit the Phase H4-era smoke test on prod (PR #266 onward) before
+    the refund-on-failure patch landed — five 500s pushed the agent to
+    5/5 per minute with zero successful runs.
+    """
+
+    def test_data_unavailable_inside_pipeline_does_not_refund(
+        self,
+        client: TestClient,
+        low_limit_override: None,
+    ) -> None:
+        """Pipeline-internal failures persist a FAILED BacktestRun.
+
+        When the data preparer raises ``InsufficientHistoricalDataError``
+        inside ``BacktestExecutor._run_pipeline``, the executor catches
+        it, writes a FAILED ``BacktestRun`` row, and returns the row
+        with HTTP 201. The user got billed against the rate limit but
+        also got a durable audit row — that's an OK outcome, refund
+        not needed.
+
+        This test pins that behaviour so future refactors don't break it.
+        """
+        api_key_headers = {"Authorization": "ApiKey test-token-default"}
+        strategy_id = _create_strategy(client, api_key_headers)
+
+        # 1990-era range — no in-memory seed for this window.
+        ancient_body = {
+            "strategy_id": strategy_id,
+            "backtest_name": "AncientDataGap",
+            "start_date": "1990-01-01",
+            "end_date": "1990-02-01",
+            "initial_cash": "10000.00",
+        }
+        failed = client.post(
+            "/api/v1/backtests",
+            headers=api_key_headers,
+            json=ancient_body,
+        )
+        # 201 with FAILED status — the executor wrapped the pipeline
+        # exception into a persisted BacktestRun.
+        assert failed.status_code == 201, failed.text
+        body = failed.json()
+        assert body["status"] == "FAILED"
+        assert "historical" in body["error_message"].lower()
+
+    def test_invalid_strategy_returns_404_and_refunds(
+        self,
+        client: TestClient,
+        low_limit_override: None,
+    ) -> None:
+        """Bad strategy id → 404 + token refunded."""
+        api_key_headers = {"Authorization": "ApiKey test-token-default"}
+
+        bogus = client.post(
+            "/api/v1/backtests",
+            headers=api_key_headers,
+            json={
+                "strategy_id": "00000000-0000-0000-0000-000000000000",
+                "backtest_name": "BogusStrategy",
+                "start_date": "2025-01-01",
+                "end_date": "2025-01-10",
+                "initial_cash": "10000.00",
+            },
+        )
+        assert bogus.status_code == 404
+
+        # Cap=2, refunded failure leaves us with full headroom.
+        good_strategy_id = _create_strategy(client, api_key_headers)
+        for i in range(2):
+            ok = client.post(
+                "/api/v1/backtests",
+                headers=api_key_headers,
+                json={
+                    **_backtest_body(good_strategy_id),
+                    "backtest_name": f"AfterRefund #{i}",
+                },
+            )
+            assert ok.status_code == 201, ok.text
