@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from zebu.adapters.inbound.api.activity import router as activity_router
+from zebu.adapters.inbound.api.admin_triggers import router as admin_triggers_router
 from zebu.adapters.inbound.api.analytics import (
     admin_router as analytics_admin_router,
 )
@@ -30,6 +31,10 @@ from zebu.adapters.inbound.api.strategy_activations import (
     strategies_router as strategy_activation_strategies_router,
 )
 from zebu.adapters.inbound.api.transactions import router as transactions_router
+from zebu.adapters.inbound.api.triggers import (
+    activations_triggers_router,
+    triggers_router,
+)
 from zebu.infrastructure.database import init_db
 from zebu.infrastructure.logging import setup_structlog
 from zebu.infrastructure.middleware import LoggingContextMiddleware
@@ -168,6 +173,12 @@ app.include_router(backtests_router, prefix="/api/v1")
 app.include_router(exploration_tasks_router, prefix="/api/v1")
 app.include_router(api_keys_router, prefix="/api/v1")
 app.include_router(activity_router, prefix="/api/v1")
+# Phase F-5 — trigger CRUD + fire log + per-user kill switch.
+# Admin-wide kill switch is mounted under /api/v1/admin/triggers via its
+# own router so admin operations form a visible URL family.
+app.include_router(activations_triggers_router, prefix="/api/v1")
+app.include_router(triggers_router, prefix="/api/v1")
+app.include_router(admin_triggers_router, prefix="/api/v1")
 
 
 @app.get("/health")

@@ -160,6 +160,17 @@ class TransactionModel(SQLModel, table=True):
         Index("idx_transaction_portfolio_id", "portfolio_id"),
         Index("idx_transaction_timestamp", "timestamp"),
         Index("idx_transaction_portfolio_timestamp", "portfolio_id", "timestamp"),
+        # Phase F-5: per-trigger fire-log lookup. The simple index covers
+        # ``WHERE trigger_id = ?`` joins from a TriggerFireRecord back to the
+        # canonical transaction; the composite (trigger_id, created_at) backs
+        # the activity feed's "latest trades by this trigger" query without a
+        # sort step.
+        Index("idx_transaction_trigger_id", "trigger_id"),
+        Index(
+            "idx_transaction_trigger_created_at",
+            "trigger_id",
+            "created_at",
+        ),
     )
 
     id: UUID = Field(primary_key=True)
@@ -190,6 +201,18 @@ class TransactionModel(SQLModel, table=True):
     api_key_id: UUID | None = Field(
         default=None,
         foreign_key="api_keys.id",
+        ondelete="SET NULL",
+    )
+    # Phase F-5: stamps the trigger fire that produced this transaction
+    # (when the transaction was caused by a woken-agent BUY/SELL decision).
+    # Null for trades that did NOT come from a trigger fire — direct
+    # human-initiated trades, daily-strategy execution-loop trades, deposit
+    # / withdrawal / adjust transactions. FK is ON DELETE SET NULL — the
+    # trigger's lifecycle is independent of the trades it caused; deleting
+    # a trigger should not erase historical trades.
+    trigger_id: UUID | None = Field(
+        default=None,
+        foreign_key="strategy_condition_triggers.id",
         ondelete="SET NULL",
     )
 

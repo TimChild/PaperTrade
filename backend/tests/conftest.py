@@ -12,7 +12,11 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-# Import all models to ensure they're registered with SQLModel metadata
+# Import all models to ensure they're registered with SQLModel metadata.
+# The trigger models must be imported *before* tables are created because
+# the F-5 migration adds a FK ``transactions.trigger_id`` ->
+# ``strategy_condition_triggers.id`` — table creation requires the
+# target table to be present in the metadata.
 from zebu.adapters.outbound.database.api_key_model import (  # noqa: F401
     ApiKeyModel,
 )
@@ -22,8 +26,10 @@ from zebu.adapters.outbound.database.models import (  # noqa: F401
     PortfolioModel,
     PortfolioSnapshotModel,
     StrategyActivationModel,
+    StrategyConditionTriggerModel,
     StrategyModel,
     TransactionModel,
+    TriggerFireRecordModel,
 )
 from zebu.adapters.outbound.models.price_history import (  # noqa: F401
     PriceHistoryModel,

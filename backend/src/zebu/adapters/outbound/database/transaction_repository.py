@@ -126,6 +126,7 @@ class SQLModelTransactionRepository:
         transaction: Transaction,
         *,
         api_key_id: UUID | None = None,
+        trigger_id: UUID | None = None,
     ) -> None:
         """Persist a new transaction (append-only, no updates).
 
@@ -135,6 +136,9 @@ class SQLModelTransactionRepository:
                 writing request, or None for Clerk Bearer (human via UI).
                 Activity feed joins on this column to surface the API-key
                 label as the actor identity.
+            trigger_id: Phase F-5 — ID of the StrategyConditionTrigger that
+                produced this transaction (when the trade came from a woken-
+                agent BUY/SELL decision). None for non-trigger-driven trades.
 
         Raises:
             DuplicateTransactionError: If transaction ID already exists
@@ -149,6 +153,7 @@ class SQLModelTransactionRepository:
         # Create new transaction model
         model = TransactionModel.from_domain(transaction)
         model.api_key_id = api_key_id
+        model.trigger_id = trigger_id
         self._session.add(model)
 
         # Try to flush to catch any integrity errors
@@ -164,6 +169,7 @@ class SQLModelTransactionRepository:
         transactions: list[Transaction],
         *,
         api_key_id: UUID | None = None,
+        trigger_id: UUID | None = None,
     ) -> None:
         """Bulk-persist multiple transactions in a single round-trip.
 
@@ -181,6 +187,9 @@ class SQLModelTransactionRepository:
             api_key_id: Phase H2 — stamped onto every row in the batch
                 (uniform credential, since the request itself only has one
                 auth context). None for Clerk Bearer / human-via-UI.
+            trigger_id: Phase F-5 — stamped uniformly onto every row in the
+                batch when the trades all originate from one trigger fire.
+                None for non-trigger-driven trades.
 
         Raises:
             DuplicateTransactionError: If any transaction ID already exists.
@@ -192,6 +201,7 @@ class SQLModelTransactionRepository:
         for t in transactions:
             model = TransactionModel.from_domain(t)
             model.api_key_id = api_key_id
+            model.trigger_id = trigger_id
             models.append(model)
         self._session.add_all(models)
         try:
