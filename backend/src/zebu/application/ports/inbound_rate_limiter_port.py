@@ -97,6 +97,31 @@ class InboundRateLimiterPort(Protocol):
         """
         ...
 
+    async def refund(
+        self,
+        *,
+        api_key_id: UUID | None,
+    ) -> None:
+        """Refund the most recently consumed token in each bucket.
+
+        Call this after :meth:`check_and_consume` returned ``allowed=True``
+        and the work the request authorised then failed before completing
+        (e.g. the backtest engine raised ``TickerNotFoundError`` or
+        ``InsufficientHistoricalDataError``). Without a refund, failed
+        requests still count against the per-minute / per-day cap, so an
+        agent retrying after a transient failure can exhaust its quota on
+        errors it never benefited from.
+
+        Idempotent: calling ``refund`` when there's nothing to refund is
+        a no-op. When ``api_key_id`` is ``None`` (Clerk bypass), refund
+        is also a no-op (the request never consumed anything).
+
+        Args:
+            api_key_id: The API-key identity that originally consumed,
+                or ``None`` for Clerk Bearer (no-op).
+        """
+        ...
+
 
 __all__ = [
     "InboundRateLimiterPort",

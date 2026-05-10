@@ -174,6 +174,31 @@ class InMemoryInboundRateLimiter:
                 retry_after_seconds=max(retry_after, 0.0),
             )
 
+    async def refund(
+        self,
+        *,
+        api_key_id: UUID | None,
+    ) -> None:
+        """Refund the most recently consumed token in each bucket.
+
+        Implementation notes: pops the **most recent** (right-end) entry
+        from each bucket. We don't try to identify the exact consumed
+        token (we don't track per-request ids) — the LIFO discipline is
+        correct in the typical case where refund is called immediately
+        after the consume that's being undone.
+        """
+        if api_key_id is None:
+            return
+
+        lock = self._get_lock(api_key_id)
+        with lock:
+            minute_q = self._minute_bucket[api_key_id]
+            day_q = self._day_bucket[api_key_id]
+            if minute_q:
+                minute_q.pop()
+            if day_q:
+                day_q.pop()
+
     def reset(self) -> None:
         """Clear all bucket state.
 

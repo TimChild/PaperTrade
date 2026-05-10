@@ -45,6 +45,7 @@ from zebu.adapters.outbound.database.transaction_repository import (
     SQLModelTransactionRepository,
 )
 from zebu.application.commands.run_backtest import RunBacktestCommand
+from zebu.application.exceptions import TickerNotFoundError
 from zebu.application.services.backtest_executor import BacktestExecutor
 from zebu.application.services.historical_data_preparer import HistoricalDataPreparer
 from zebu.application.services.snapshot_job import SnapshotJobService
@@ -258,15 +259,45 @@ async def run_backtest(
     try:
         backtest_run = await executor.execute(command)
     except InvalidStrategyError as exc:
+        # Strategy lookup failed — request never reached the engine.
+        # Refund the rate-limit token so a corrected retry isn't penalised.
+        await rate_limiter.refund(api_key_id=api_key_id)
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
-    except InsufficientHistoricalDataError as exc:
+    except (InsufficientHistoricalDataError, TickerNotFoundError) as exc:
+        # Market-data gap — neither error is the agent's fault; refund
+        # the rate-limit token. ``TickerNotFoundError`` was previously
+        # propagating to FastAPI's default handler → 500 with empty
+        # body, which is what the smoke-test agent observed against
+        # AAPL 2024 on prod. Surface it as 503 with a clear message
+        # so agents can backoff intelligently.
+        await rate_limiter.refund(api_key_id=api_key_id)
+        logger.info(
+            "Backtest rejected — historical data unavailable",
+            strategy_id=str(request.strategy_id),
+            start_date=request.start_date.isoformat(),
+            end_date=request.end_date.isoformat(),
+            reason=str(exc),
+        )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(exc),
         ) from exc
+    except Exception as exc:
+        # Catch-all: refund the rate-limit token AND log the stack
+        # before re-raising. Without this, unhandled errors silently
+        # consumed tokens *and* presented as 500 with no body — the
+        # agent had no way to diagnose what was happening.
+        await rate_limiter.refund(api_key_id=api_key_id)
+        logger.exception(
+            "Backtest run failed unexpectedly",
+            strategy_id=str(request.strategy_id),
+            start_date=request.start_date.isoformat(),
+            end_date=request.end_date.isoformat(),
+        )
+        raise
 
     logger.info(
         "Backtest run completed",
