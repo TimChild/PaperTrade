@@ -56,13 +56,9 @@ class DailyTradeVolumeCap:
     def __post_init__(self) -> None:
         """Validate invariants on construction."""
         if self.cap_count < 1:
-            raise ValueError(
-                f"cap_count must be >= 1; got {self.cap_count}"
-            )
+            raise ValueError(f"cap_count must be >= 1; got {self.cap_count}")
         if self.cap_value_usd <= Decimal("0"):
-            raise ValueError(
-                f"cap_value_usd must be > 0; got {self.cap_value_usd}"
-            )
+            raise ValueError(f"cap_value_usd must be > 0; got {self.cap_value_usd}")
 
 
 __all__ = ["DailyTradeVolumeCap"]

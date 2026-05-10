@@ -105,7 +105,74 @@ This checklist ensures your Zebu deployment is production-ready. Complete all it
 - [ ] **Phase F-3 trigger-fire agent (added F-3, gated off by default)**
   - [ ] `ANTHROPIC_API_KEY` set in `.env` if `ZEBU_TRIGGER_FIRES_ENABLED=true`. The trigger-fire orchestrator calls the Anthropic Messages API; without a key, all fires record `INVOCATION_FAILED`. Required only when fires are enabled.
   - [ ] `ZEBU_AGENT_MODEL` (optional). Defaults to `claude-haiku-4-5-20251001` — Haiku 4.5 is the right cost tier for the trigger-fire context (small prompt, single decision call). Override to a Sonnet/Opus model only if the latency-vs-quality trade-off justifies it.
-  - [ ] `ZEBU_TRIGGER_FIRES_ENABLED` (default `false`). Feature flag for the F-3 fire path. While `false`, the F-2 evaluator detects fires but does **not** invoke the agent or write `TriggerFireRecord` rows (matches F-2 behaviour). Flip to `true` (`yes` / `1` also accepted) only after F-7's smoke test against staging passes.
+  - [ ] `ZEBU_TRIGGER_FIRES_ENABLED` (default `false`). Feature flag for the F-3 fire path. While `false`, the F-2 evaluator detects fires but does **not** invoke the agent or write `TriggerFireRecord` rows (matches F-2 behaviour). Flip to `true` (`yes` / `1` also accepted) only after the F-7 smoke procedure (next section) passes.
+
+### Phase F-7: Enabling `ZEBU_TRIGGER_FIRES_ENABLED=true` in production
+
+The smoke test at `scripts/trigger_smoke_test.py` is the gate before flipping the feature flag on the production VM. Run it once, capture the output, then bump the env var.
+
+#### Pre-flight: dry-run the smoke locally (free)
+
+This verifies the orchestration logic without burning Anthropic credits or touching any production state.
+
+```bash
+uv run python scripts/trigger_smoke_test.py --mode local --mock
+```
+
+Expected output ends with `=== PASS ===` and one audit row written. If this fails locally, fix the local checkout before running anything against production.
+
+#### Step 1: run the smoke against production with a real Anthropic call
+
+The script makes **one** Anthropic Messages API call per run. With the default Haiku 4.5 model the per-run cost is under $0.01.
+
+```bash
+# Mint a trade-scoped API key for the smoke (via the UI or POST /api/v1/api-keys)
+# and export it. ZEBU_API_KEY is the env var name the script reads when
+# --api-key is omitted.
+export ZEBU_API_KEY="zk_..."
+
+# Local mode against a real Anthropic key — the cheapest authentic check.
+export ANTHROPIC_API_KEY="sk-ant-..."
+uv run python scripts/trigger_smoke_test.py --mode local
+```
+
+Or, exercise the deployed API surface as well (creates a `f7-smoke-test-portfolio` against the live DB):
+
+```bash
+uv run python scripts/trigger_smoke_test.py \
+    --mode api \
+    --base-url https://zebutrader.com \
+    --api-key "$ZEBU_API_KEY"
+```
+
+The `api` mode is idempotent — re-running reuses the same test portfolio.
+
+#### Step 2: verify expected fire-log row
+
+- [ ] Open `https://zebutrader.com/api/v1/triggers/{trigger_id}/fires` (with your API key) and confirm an audit row exists for the trigger the script created. Decision should be one of `BUY` / `SELL` / `HOLD` / `MODIFY_STRATEGY` / `NEEDS_HUMAN` (or `INVOCATION_FAILED` if the Anthropic call errored — in which case fix the cause and re-run).
+- [ ] Check `latency_ms` is > 100 ms — under that suggests a cached or mocked call rather than a real Anthropic round-trip.
+- [ ] Read the operating manual at `docs/agents/operating-manual.md` §3.5 to confirm it's current (last updated when F-3 landed).
+
+#### Step 3: verify the production env
+
+- [ ] `ANTHROPIC_API_KEY` is set on the production VM (and rotates per policy — Zebu is a personal project, no formal rotation cadence, but document the value's source).
+- [ ] `ZEBU_AGENT_MODEL` is unset OR set to a known-good model identifier.
+
+#### Step 4: flip the flag
+
+```bash
+# On the production VM
+sudo nano /srv/zebu/.env       # set ZEBU_TRIGGER_FIRES_ENABLED=true
+sudo systemctl restart zebu-backend  # or `task proxmox-vm:restart`
+```
+
+Triggers fire on the next scheduler tick (every 15 min during US market hours, every 6 h off-hours).
+
+#### Step 5: observe the first real fire
+
+- [ ] Watch the structured logs (`task proxmox-vm:logs`) for `trigger_evaluation_completed` events.
+- [ ] Confirm the first `TriggerFireRecord` row appears via the fire-log API.
+- [ ] If anything looks wrong, flip the flag back to `false` and restart. The kill switch is also available: `POST /api/v1/triggers/disable-all` disables all triggers per-user; `POST /api/v1/admin/triggers/disable-all` is the org-wide nuclear option.
 
 - [ ] **Docker Configuration**
   - [ ] Production Docker Compose file used (`docker-compose.prod.yml`)

@@ -100,8 +100,7 @@ class PortfolioCapRepositoryAdapter:
             return CapCheckResult(
                 allowed=True,
                 reason=(
-                    "cap does not apply to "
-                    f"{attempted_decision.value}; only BUY/SELL"
+                    f"cap does not apply to {attempted_decision.value}; only BUY/SELL"
                 ),
                 cap_count=self.cap_count,
                 cap_value_usd=self.cap_value_usd,
@@ -147,9 +146,7 @@ class PortfolioCapRepositoryAdapter:
             current_value_usd=current_value_usd,
         )
 
-    async def _fetch_today_state(
-        self, *, portfolio_id: UUID
-    ) -> tuple[int, Decimal]:
+    async def _fetch_today_state(self, *, portfolio_id: UUID) -> tuple[int, Decimal]:
         """Return (count, |sum cash_change|) for today's agent-driven trades."""
         now = datetime.now(UTC)
         day_start_utc = datetime.combine(now.date(), time.min, tzinfo=UTC)

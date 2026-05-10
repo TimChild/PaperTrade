@@ -1,5 +1,7 @@
 """Integration tests for background scheduler."""
 
+import pytest
+
 from zebu.infrastructure.scheduler import (
     SchedulerConfig,
     evaluate_triggers,
@@ -266,3 +268,107 @@ class TestTriggerEvaluationJob:
         import inspect
 
         assert inspect.iscoroutinefunction(evaluate_triggers)
+
+
+class TestTryBuildOrchestrator:
+    """Phase F-7 — orchestrator wiring inside ``evaluate_triggers``.
+
+    The orchestrator is constructed lazily on every cycle. When the
+    Anthropic adapter can't be built (no API key) the helper returns
+    ``None`` and the evaluator falls back to "would fire" parity with
+    F-2 behavior. When the adapter is constructable, the helper returns
+    a fully-wired orchestrator that the service can hand off to.
+    """
+
+    async def test_returns_none_when_anthropic_key_missing(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """No ``ANTHROPIC_API_KEY`` → orchestrator is ``None`` (safe fallback)."""
+        # Wipe the env so the adapter's construction-time check raises.
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+        # Build minimal session + repo collaborators. The helper doesn't
+        # touch them when the adapter fails, so the placeholders are fine.
+        from unittest.mock import MagicMock
+
+        from zebu.infrastructure.scheduler import _try_build_orchestrator
+
+        session = MagicMock()
+        result = _try_build_orchestrator(
+            session=session,
+            trigger_repo=MagicMock(),
+            activation_repo=MagicMock(),
+            strategy_repo=MagicMock(),
+            portfolio_repo=MagicMock(),
+            transaction_repo=MagicMock(),
+            market_data=MagicMock(),
+        )
+        assert result is None
+
+    async def test_returns_orchestrator_when_anthropic_key_set(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """With ``ANTHROPIC_API_KEY`` set, the helper returns a wired orchestrator.
+
+        Wires SQL repo objects to the same session and confirms the
+        orchestrator is returned (we don't exercise ``fire`` — the
+        orchestrator's own tests cover that).
+        """
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key-for-construction-only")
+
+        from unittest.mock import MagicMock
+
+        from zebu.application.services.trigger_invocation_orchestrator import (
+            TriggerInvocationOrchestrator,
+        )
+        from zebu.infrastructure.scheduler import _try_build_orchestrator
+
+        result = _try_build_orchestrator(
+            session=MagicMock(),
+            trigger_repo=MagicMock(),
+            activation_repo=MagicMock(),
+            strategy_repo=MagicMock(),
+            portfolio_repo=MagicMock(),
+            transaction_repo=MagicMock(),
+            market_data=MagicMock(),
+        )
+        assert isinstance(result, TriggerInvocationOrchestrator)
+
+    async def test_reads_cap_settings_from_env(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Env vars ``AGENT_TRADE_DAILY_CAP_*`` flow into the cap adapter."""
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "test-key-for-construction-only")
+        monkeypatch.setenv("AGENT_TRADE_DAILY_CAP_COUNT", "25")
+        monkeypatch.setenv("AGENT_TRADE_DAILY_CAP_USD", "12500")
+
+        from decimal import Decimal
+        from unittest.mock import MagicMock
+
+        from zebu.adapters.outbound.database.portfolio_cap_adapter import (
+            PortfolioCapRepositoryAdapter,
+        )
+        from zebu.infrastructure.scheduler import _try_build_orchestrator
+
+        result = _try_build_orchestrator(
+            session=MagicMock(),
+            trigger_repo=MagicMock(),
+            activation_repo=MagicMock(),
+            strategy_repo=MagicMock(),
+            portfolio_repo=MagicMock(),
+            transaction_repo=MagicMock(),
+            market_data=MagicMock(),
+        )
+        assert result is not None
+        # The cap adapter is held privately on the orchestrator; reach
+        # in via the mangled attribute name. Brittle but acceptable —
+        # this test exists to document that env -> cap wiring works.
+        # ``isinstance`` narrows from the ``PortfolioCapPort`` protocol
+        # to the concrete adapter where ``cap_count`` is visible.
+        cap_adapter = result._portfolio_cap  # type: ignore[attr-defined]
+        assert isinstance(cap_adapter, PortfolioCapRepositoryAdapter)
+        assert cap_adapter.cap_count == 25
+        assert cap_adapter.cap_value_usd == Decimal("12500")

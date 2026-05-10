@@ -132,9 +132,7 @@ class TestTokenConsumption:
         # binds) — assert it's >> 60s.
         assert denied.retry_after_seconds > 60.0
 
-    async def test_per_key_isolation(
-        self, fake_clock: Callable[[float], None]
-    ) -> None:
+    async def test_per_key_isolation(self, fake_clock: Callable[[float], None]) -> None:
         """One noisy API key doesn't starve another."""
         fake_clock(1000.0)
         limiter = InMemoryInboundRateLimiter(minute_limit=2, day_limit=10)
