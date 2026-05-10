@@ -74,9 +74,7 @@ class InMemoryInboundRateLimiter:
             ValueError: If either limit is non-positive.
         """
         if minute_limit < 1:
-            raise ValueError(
-                f"minute_limit must be >= 1; got {minute_limit}"
-            )
+            raise ValueError(f"minute_limit must be >= 1; got {minute_limit}")
         if day_limit < 1:
             raise ValueError(f"day_limit must be >= 1; got {day_limit}")
         self.minute_limit = minute_limit

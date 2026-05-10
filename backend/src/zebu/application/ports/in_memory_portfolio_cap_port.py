@@ -86,9 +86,7 @@ class InMemoryPortfolioCapPort:
             count: BUY/SELL transactions executed today.
             value_usd: Cumulative ``|cash_change|`` so far today.
         """
-        self._state[portfolio_id] = _PortfolioState(
-            count=count, value_usd=value_usd
-        )
+        self._state[portfolio_id] = _PortfolioState(count=count, value_usd=value_usd)
 
     def _cap_for(self, portfolio_id: UUID) -> tuple[int, Decimal]:
         """Resolve the cap pair for a portfolio (override → default)."""
@@ -118,8 +116,7 @@ class InMemoryPortfolioCapPort:
             return CapCheckResult(
                 allowed=True,
                 reason=(
-                    "cap does not apply to "
-                    f"{attempted_decision.value}; only BUY/SELL"
+                    f"cap does not apply to {attempted_decision.value}; only BUY/SELL"
                 ),
                 cap_count=cap_count,
                 cap_value_usd=cap_value_usd,

@@ -147,7 +147,7 @@ If the finding is strong AND the task didn't say "don't activate live," call `ac
 
 Phase F is the **trigger system**: an active strategy can carry one or more `StrategyConditionTrigger` rows that wake an agent (you) when a condition fires (drawdown threshold, volatility spike, earnings proximity). The trigger evaluator runs on a cron inside the API process; when a condition fires, the orchestrator builds a structured prompt, calls the Anthropic Messages API with you on the other end, and persists your decision as a `TriggerFireRecord` audit row.
 
-#### Status (as of F-3)
+#### Status (as of F-7)
 
 | Phase | Ships | Status |
 |---|---|---|
@@ -156,8 +156,8 @@ Phase F is the **trigger system**: an active strategy can carry one or more `Str
 | F-3 | `AgentInvocationPort` + Anthropic adapter + decision-execution flow | ✅ Merged |
 | F-4 | VOLATILITY_SPIKE + EARNINGS_PROXIMITY conditions | ✅ Merged |
 | F-5 | Trigger fire log API + kill-switch endpoints + audit columns | ✅ Merged |
-| **F-6** | **Per-key rate limit on `run_backtest` + per-portfolio agent-trade caps + F-5 wire-up** | **✅ This PR** |
-| F-7 | End-to-end smoke against real Anthropic API on staging | Pending |
+| F-6 | Per-key rate limit on `run_backtest` + per-portfolio agent-trade caps | ✅ Merged |
+| **F-7** | **Smoke-test script + production procedure (concludes Phase F)** | **✅ This PR** |
 
 **F-3 ships the actual fire path** — the orchestrator wakes the agent and acts on its decision. **The scheduler job is gated behind a feature flag (`ZEBU_TRIGGER_FIRES_ENABLED`, default `false`)** until Tim opts in. With the flag off, the evaluator runs and detects fires but doesn't invoke an agent (this is the F-2 behavior).
 
@@ -356,6 +356,40 @@ The other endpoints follow the same shape:
 - `POST   /api/v1/triggers/disable-all` — per-user kill switch.
 
 **Important behavioural rule:** `MANUALLY_DISABLED` is terminal. `PATCH` cannot lift a disabled trigger; the documented path is "delete and recreate." This keeps the audit story clean: a `MANUALLY_DISABLED` row in the database always means "the kill switch ran here," never "the user re-enabled this."
+
+### 3.5.3 Smoke-testing the trigger pipeline
+
+`scripts/trigger_smoke_test.py` (Phase F-7) is the operator-facing harness that proves the trigger-fire pipeline works end-to-end. It builds a portfolio + strategy + activation + trigger, fires the trigger, calls the Anthropic Messages API, and verifies a `TriggerFireRecord` audit row landed with a plausible latency.
+
+When to run:
+
+- Before flipping `ZEBU_TRIGGER_FIRES_ENABLED=true` on production for the first time.
+- After bumping the `ANTHROPIC_API_KEY` or `ZEBU_AGENT_MODEL` env vars.
+- After any change to the orchestrator, the Anthropic adapter, or the trigger evaluator.
+- Whenever you suspect the pipeline isn't working ("triggers aren't firing on production" → run the smoke against staging or local to isolate where the chain breaks).
+
+Three run modes:
+
+```bash
+# 1. Mocked end-to-end — no Anthropic credits burned. Verifies the
+#    orchestration logic (evaluator -> orchestrator -> audit row).
+uv run python scripts/trigger_smoke_test.py --mode local --mock
+
+# 2. Local mode + real Anthropic call — actually invokes the API.
+#    Cost: ~$0.01 per run with Haiku 4.5.
+export ANTHROPIC_API_KEY=sk-ant-...
+uv run python scripts/trigger_smoke_test.py --mode local
+
+# 3. API mode against a deployed backend.
+uv run python scripts/trigger_smoke_test.py \
+    --mode api \
+    --base-url https://zebutrader.com \
+    --api-key "$ZEBU_API_KEY"
+```
+
+Exit code `0` means the pipeline is healthy; `1` means at least one assertion failed (diagnostics print to stderr).
+
+The full operator procedure (when to run, what to verify, how to flip the production flag) is in [`docs/deployment/production-checklist.md`](../deployment/production-checklist.md#phase-f-7-enabling-zebutriggerfires_enabledtrue-in-production) under "Phase F-7: Enabling `ZEBU_TRIGGER_FIRES_ENABLED=true` in production".
 
 ### 3.6 If the task is truly out of scope
 

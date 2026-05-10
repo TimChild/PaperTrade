@@ -10,12 +10,27 @@ automatically with the application.
 
 import asyncio
 import logging
+import os
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from zebu.adapters.inbound.api.dependencies import get_market_data
+from zebu.adapters.outbound.anthropic.agent_invocation_adapter import (
+    AnthropicAgentInvocationAdapter,
+)
+from zebu.adapters.outbound.database.api_key_repository import (
+    SQLModelApiKeyRepository,
+)
+from zebu.adapters.outbound.database.exploration_task_repository import (
+    SQLModelExplorationTaskRepository,
+)
+from zebu.adapters.outbound.database.portfolio_cap_adapter import (
+    PortfolioCapRepositoryAdapter,
+)
 from zebu.adapters.outbound.database.portfolio_repository import (
     SQLModelPortfolioRepository,
 )
@@ -34,12 +49,16 @@ from zebu.adapters.outbound.database.strategy_repository import (
 from zebu.adapters.outbound.database.transaction_repository import (
     SQLModelTransactionRepository,
 )
+from zebu.adapters.outbound.database.trigger_fire_repository import (
+    SQLModelTriggerFireRepository,
+)
 from zebu.adapters.outbound.earnings.stub_calendar_adapter import (
     StubEarningsCalendarAdapter,
 )
 from zebu.adapters.outbound.repositories.watchlist_manager import (
     WatchlistManager,
 )
+from zebu.application.ports.market_data_port import MarketDataPort
 from zebu.application.queries.get_active_tickers import (
     GetActiveTickersHandler,
     GetActiveTickersQuery,
@@ -51,6 +70,10 @@ from zebu.application.services.strategy_execution_service import (
 from zebu.application.services.trigger_evaluation_service import (
     TriggerEvaluationService,
 )
+from zebu.application.services.trigger_invocation_orchestrator import (
+    TriggerInvocationOrchestrator,
+)
+from zebu.domain.exceptions import AgentInvocationError
 from zebu.infrastructure.database import async_session_maker
 
 logger = logging.getLogger("uvicorn.error")  # Use uvicorn's configured logger
@@ -370,17 +393,27 @@ async def execute_active_strategies() -> None:
 
 
 async def evaluate_triggers() -> None:
-    """Background job to run one trigger-evaluation cycle (Phase F-2).
+    """Background job to run one trigger-evaluation cycle.
 
     Loads every ACTIVE :class:`StrategyConditionTrigger` whose cooldown
-    has expired, evaluates each one's condition (currently only
-    DRAWDOWN_THRESHOLD), and logs the per-cycle counts. F-2 stops at
-    "would fire" results — F-3 will wire the agent invocation and
-    persist :class:`TriggerFireRecord` rows for each fire.
+    has expired, evaluates each one's condition (DRAWDOWN_THRESHOLD,
+    VOLATILITY_SPIKE, or EARNINGS_PROXIMITY), and on fire hands off to
+    the :class:`TriggerInvocationOrchestrator` which calls the
+    Anthropic Messages API and persists a :class:`TriggerFireRecord`
+    audit row.
+
+    The fire handoff is gated behind two safety mechanisms:
+
+    * ``ZEBU_TRIGGER_FIRES_ENABLED`` env var (default ``false``) — the
+      service ignores the orchestrator unless this is ``true``. When
+      ``false``, the evaluator detects fires but takes no action.
+    * Missing ``ANTHROPIC_API_KEY`` — the Anthropic adapter refuses to
+      construct, so the service is built with ``orchestrator=None``
+      and falls back to "would fire" behavior.
 
     The actual work lives in :class:`TriggerEvaluationService`; this
-    function is just the request-scoped wiring + DB transaction
-    boundary. Mirrors :func:`execute_active_strategies`.
+    function is the request-scoped wiring + DB transaction boundary.
+    Mirrors :func:`execute_active_strategies`.
 
     Design notes:
 
@@ -390,6 +423,16 @@ async def evaluate_triggers() -> None:
     * Errors at the batch level (DB connection drop, market data
       outage) propagate so APScheduler logs them and the scheduler
       surfaces the failure.
+    * The orchestrator owns its own catch-all (it converts every
+      failure into an INVOCATION_FAILED audit row), so an Anthropic
+      outage does not crash the cycle.
+
+    References:
+
+    * ``docs/architecture/phase-f-agent-in-the-loop.md`` §3 (agent
+      decision flow), §5 (scheduler runtime model).
+    * ``docs/deployment/production-checklist.md`` — the F-7 procedure
+      for enabling fires in production.
     """
     logger.info("Starting trigger evaluation job")
     start_time = datetime.now(UTC)
@@ -409,6 +452,20 @@ async def evaluate_triggers() -> None:
             # row's ``source`` field.
             earnings_calendar = StubEarningsCalendarAdapter()
 
+            # F-7 wiring: construct the orchestrator if (a) Anthropic
+            # is configured and (b) the feature flag is on. When either
+            # check fails, ``orchestrator=None`` and the service stops
+            # at "would fire" results (no audit rows, no API calls).
+            orchestrator = _try_build_orchestrator(
+                session=session,
+                trigger_repo=trigger_repo,
+                activation_repo=activation_repo,
+                strategy_repo=strategy_repo,
+                portfolio_repo=portfolio_repo,
+                transaction_repo=transaction_repo,
+                market_data=market_data,
+            )
+
             service = TriggerEvaluationService(
                 trigger_repo=trigger_repo,
                 activation_repo=activation_repo,
@@ -418,6 +475,7 @@ async def evaluate_triggers() -> None:
                 market_data=market_data,
                 earnings_calendar=earnings_calendar,
                 earnings_calendar_label="stub",
+                orchestrator=orchestrator,
             )
 
             summary = await service.evaluate_all()
@@ -430,6 +488,7 @@ async def evaluate_triggers() -> None:
                     "fired": summary["fired"],
                     "failed": summary["failed"],
                     "skipped": summary["skipped"],
+                    "orchestrator_wired": orchestrator is not None,
                 },
             )
 
@@ -442,6 +501,92 @@ async def evaluate_triggers() -> None:
     finally:
         duration = datetime.now(UTC) - start_time
         logger.info(f"Trigger evaluation job duration: {duration.total_seconds():.1f}s")
+
+
+def _try_build_orchestrator(
+    *,
+    session: AsyncSession,
+    trigger_repo: SQLModelTriggerRepository,
+    activation_repo: SQLModelStrategyActivationRepository,
+    strategy_repo: SQLModelStrategyRepository,
+    portfolio_repo: SQLModelPortfolioRepository,
+    transaction_repo: SQLModelTransactionRepository,
+    market_data: MarketDataPort,
+) -> TriggerInvocationOrchestrator | None:
+    """Construct the orchestrator if Anthropic is configured.
+
+    The orchestrator depends on a live Anthropic client. Constructing
+    the adapter raises :class:`AgentInvocationError` if
+    ``ANTHROPIC_API_KEY`` is missing — when that happens we log a
+    one-line warning and return ``None`` so the service falls back to
+    "would fire" behavior. The evaluator job still runs; it just won't
+    invoke an agent.
+
+    The feature flag check is delegated to the service (which already
+    reads ``ZEBU_TRIGGER_FIRES_ENABLED``) — we always build the
+    orchestrator if Anthropic is configured, and let the service decide
+    whether to hand off to it. This way "the flag is on but Anthropic
+    isn't configured" produces a clear log line rather than a silent
+    no-op deep inside the per-trigger loop.
+
+    Caps for the F-6 per-portfolio per-UTC-day guardrail come from env:
+
+    * ``AGENT_TRADE_DAILY_CAP_COUNT`` (default 10)
+    * ``AGENT_TRADE_DAILY_CAP_USD`` (default 5000)
+
+    Args:
+        session: Async DB session — shared with the rest of the
+            request-scoped repos so the unit of work is consistent.
+        trigger_repo: Already-constructed SQL trigger repo.
+        activation_repo: Activation repo for the same session.
+        strategy_repo: Strategy repo for the same session.
+        portfolio_repo: Portfolio repo for the same session.
+        transaction_repo: Transaction repo for the same session.
+        market_data: Market data port (current-price reads only).
+
+    Returns:
+        The orchestrator, or ``None`` if Anthropic isn't configured.
+    """
+    try:
+        agent_adapter = AnthropicAgentInvocationAdapter()
+    except AgentInvocationError as exc:
+        logger.warning(
+            "Trigger orchestrator not wired — Anthropic adapter "
+            "construction failed: %s. Triggers will detect fires but "
+            "take no action.",
+            exc,
+        )
+        return None
+
+    # F-6 cap: read defaults from env with same names as the docs.
+    cap_count = int(os.environ.get("AGENT_TRADE_DAILY_CAP_COUNT", "10"))
+    cap_value_usd = Decimal(os.environ.get("AGENT_TRADE_DAILY_CAP_USD", "5000"))
+
+    # The remaining SQL repos (api keys, fire records, exploration tasks,
+    # portfolio cap) share the session with the others — single unit of
+    # work per cycle.
+    fire_repo = SQLModelTriggerFireRepository(session)
+    api_key_repo = SQLModelApiKeyRepository(session)
+    task_repo = SQLModelExplorationTaskRepository(session)
+    portfolio_cap = PortfolioCapRepositoryAdapter(
+        session,
+        cap_count=cap_count,
+        cap_value_usd=cap_value_usd,
+    )
+
+    return TriggerInvocationOrchestrator(
+        agent_invocation=agent_adapter,
+        trigger_repo=trigger_repo,
+        trigger_fire_repo=fire_repo,
+        activation_repo=activation_repo,
+        strategy_repo=strategy_repo,
+        portfolio_repo=portfolio_repo,
+        transaction_repo=transaction_repo,
+        market_data=market_data,
+        api_key_repo=api_key_repo,
+        exploration_task_repo=task_repo,
+        portfolio_cap=portfolio_cap,
+    )
 
 
 async def start_scheduler(config: SchedulerConfig | None = None) -> None:
