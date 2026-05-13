@@ -36,6 +36,8 @@ from zebu.domain.value_objects.activation_frequency import ActivationFrequency
 from zebu.domain.value_objects.activation_status import ActivationStatus
 from zebu.domain.value_objects.agent_decision import AgentDecision
 from zebu.domain.value_objects.backtest_status import BacktestStatus
+from zebu.domain.value_objects.job_execution import JobExecution
+from zebu.domain.value_objects.job_execution_status import JobExecutionStatus
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.portfolio_type import PortfolioType
 from zebu.domain.value_objects.quantity import Quantity
@@ -1636,4 +1638,108 @@ class TriggerFireRecordModel(SQLModel, table=True):
             resulting_exploration_task_id=record.resulting_exploration_task_id,
             latency_ms=record.latency_ms,
             api_key_id_used=record.api_key_id_used,
+        )
+
+
+class JobExecutionModel(SQLModel, table=True):
+    """Database model for :class:`JobExecution` (Phase J — Task #212 Layer 1).
+
+    Append-only-ish audit row for scheduled-job invocations. Rows are
+    inserted in ``RUNNING`` state by ``@with_job_audit`` and updated in
+    place to ``SUCCEEDED`` / ``FAILED`` at the end of the run. There is
+    no delete path — operators reason about history; the per-job
+    ``latest`` lookup is the hot path.
+
+    The ``metadata`` column is a JSON object of ``str -> str``. Per-job
+    schemas (e.g. ``{"duration_seconds": "47"}``,
+    ``{"tickers_refreshed": "12"}``) are treated as opaque here — the
+    domain entity does the same.
+
+    Indexes:
+
+    * ``(job_name, started_at DESC)`` — backs the per-job ``latest``
+      lookup the health endpoint uses on every call.
+
+    Attributes:
+        id: Primary key (UUID).
+        job_name: Stable scheduler-handler name (≤ 100 chars).
+        started_at: Naive UTC timestamp when ``record_start`` ran.
+        finished_at: Naive UTC timestamp when ``record_finish`` ran;
+            ``None`` while ``status=RUNNING``.
+        status: Lifecycle stage as a string (mirrors
+            :class:`JobExecutionStatus`).
+        error_message: Truncated exception message (≤ 500 chars) for
+            ``FAILED`` rows.
+        metadata_json: JSON payload — column name avoids the SQLModel
+            ``metadata`` keyword conflict; the domain field name is
+            ``metadata``.
+    """
+
+    __tablename__ = "job_executions"  # type: ignore[assignment]
+    __table_args__ = (
+        Index(
+            "idx_job_executions_job_name_started_at",
+            "job_name",
+            "started_at",
+        ),
+    )
+
+    id: UUID = Field(primary_key=True)
+    job_name: str = Field(max_length=100, index=True)
+    started_at: datetime
+    finished_at: datetime | None = Field(default=None)
+    status: str = Field(max_length=30)
+    error_message: str | None = Field(default=None, max_length=500)
+    metadata_json: dict[str, str] = Field(  # type: ignore[assignment]
+        sa_column=Column("metadata", JSON, nullable=False),
+    )
+
+    def to_domain(self) -> JobExecution:
+        """Convert database model to domain entity.
+
+        Raises:
+            ValueError: If ``status`` drifts from :class:`JobExecutionStatus`.
+        """
+        started_at_utc = self.started_at.replace(tzinfo=UTC)
+        finished_at_utc = (
+            self.finished_at.replace(tzinfo=UTC)
+            if self.finished_at is not None
+            else None
+        )
+        status = JobExecutionStatus(self.status)
+
+        # Defensive copy of the JSON column.
+        metadata_copy: dict[str, str] = {
+            str(k): str(v) for k, v in self.metadata_json.items()
+        }
+
+        return JobExecution(
+            id=self.id,
+            job_name=self.job_name,
+            started_at=started_at_utc,
+            finished_at=finished_at_utc,
+            status=status,
+            error_message=self.error_message,
+            metadata=metadata_copy,
+        )
+
+    @classmethod
+    def from_domain(cls, execution: JobExecution) -> "JobExecutionModel":
+        """Convert domain entity to database model."""
+        started_at_naive = _strip_tz(execution.started_at) or execution.started_at
+        finished_at_naive = _strip_tz(execution.finished_at)
+
+        # Materialise the metadata mapping into a fresh dict[str, str].
+        metadata_copy: dict[str, str] = {
+            str(k): str(v) for k, v in execution.metadata.items()
+        }
+
+        return cls(
+            id=execution.id,
+            job_name=execution.job_name,
+            started_at=started_at_naive,
+            finished_at=finished_at_naive,
+            status=execution.status.value,
+            error_message=execution.error_message,
+            metadata_json=metadata_copy,
         )

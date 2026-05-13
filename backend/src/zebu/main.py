@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from zebu.adapters.inbound.api.activity import router as activity_router
+from zebu.adapters.inbound.api.admin_jobs import router as admin_jobs_router
 from zebu.adapters.inbound.api.admin_triggers import router as admin_triggers_router
 from zebu.adapters.inbound.api.analytics import (
     admin_router as analytics_admin_router,
@@ -179,6 +180,8 @@ app.include_router(activity_router, prefix="/api/v1")
 app.include_router(activations_triggers_router, prefix="/api/v1")
 app.include_router(triggers_router, prefix="/api/v1")
 app.include_router(admin_triggers_router, prefix="/api/v1")
+# Phase J (Task #212 Layer 1) — admin job-health observability.
+app.include_router(admin_jobs_router, prefix="/api/v1")
 
 
 @app.get("/health")

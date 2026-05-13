@@ -315,6 +315,48 @@ async def get_strategy_activation(
 
 
 @activations_router.get(
+    "/{activation_id}",
+    response_model=StrategyActivationResponse,
+)
+async def get_activation(
+    activation_id: UUID,
+    current_user: CurrentUserDep,
+    session: SessionDep,
+) -> StrategyActivationResponse:
+    """Fetch a single activation by id.
+
+    Per ``docs/planning/agent-platform-next-steps.md`` §1.3 — replaces
+    the previous "fetch the full list and filter client-side" flow used
+    by the frontend's ``ActivationDetail.tsx``. The list endpoint is
+    fine for sub-100 activations but doesn't scale, so we surface a
+    dedicated read.
+
+    Auth: Both Clerk Bearer JWT (humans) and API key (agents) — uses
+    ``CurrentUserDep`` (which is fed by the unified
+    :func:`get_current_user` resolver in
+    :mod:`zebu.adapters.inbound.api.dependencies`). Both schemes resolve
+    to the same ``AuthenticatedUser`` shape — the route handler doesn't
+    need to know which path the request came in on.
+
+    Returns 404 if no activation exists with that id. Returns 403 if an
+    activation exists but is owned by a different user.
+    """
+    repo = SQLModelStrategyActivationRepository(session)
+    activation = await repo.get(activation_id)
+    if activation is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Activation not found: {activation_id}",
+        )
+    if activation.user_id != current_user:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to access this activation",
+        )
+    return _to_response(activation)
+
+
+@activations_router.get(
     "",
     response_model=PaginatedResponse[StrategyActivationResponse],
 )
