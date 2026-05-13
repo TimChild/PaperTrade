@@ -285,7 +285,7 @@ async def run_backtest(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(exc),
         ) from exc
-    except Exception as exc:
+    except Exception:
         # Catch-all: refund the rate-limit token AND log the stack
         # before re-raising. Without this, unhandled errors silently
         # consumed tokens *and* presented as 500 with no body — the

@@ -75,6 +75,7 @@ from zebu.application.services.trigger_invocation_orchestrator import (
 )
 from zebu.domain.exceptions import AgentInvocationError
 from zebu.infrastructure.database import async_session_maker
+from zebu.infrastructure.job_audit import with_job_audit
 
 logger = logging.getLogger("uvicorn.error")  # Use uvicorn's configured logger
 
@@ -159,6 +160,7 @@ class SchedulerConfig:
         self.trigger_evaluation_enabled = trigger_evaluation_enabled
 
 
+@with_job_audit("refresh_active_stocks")
 async def refresh_active_stocks(config: SchedulerConfig) -> None:
     """Background job to refresh prices for active stocks.
 
@@ -169,6 +171,9 @@ async def refresh_active_stocks(config: SchedulerConfig) -> None:
     4. Respects rate limits with delays between batches
 
     The job is designed to be idempotent and can be safely re-run.
+
+    Wrapped with :func:`with_job_audit` so each invocation writes one
+    ``JobExecution`` audit row visible at ``GET /admin/jobs/health``.
 
     Args:
         config: Scheduler configuration with batch settings
@@ -275,6 +280,7 @@ async def refresh_active_stocks(config: SchedulerConfig) -> None:
         )
 
 
+@with_job_audit("calculate_daily_snapshots")
 async def calculate_daily_snapshots() -> None:
     """Background job to calculate daily portfolio snapshots.
 
@@ -285,6 +291,9 @@ async def calculate_daily_snapshots() -> None:
 
     The job is designed to be idempotent and can be safely re-run.
     Snapshots are upserted (updated if already exist for the date).
+
+    Wrapped with :func:`with_job_audit` so each invocation writes one
+    ``JobExecution`` audit row visible at ``GET /admin/jobs/health``.
     """
     logger.info("Starting daily snapshot calculation job")
     start_time = datetime.now(UTC)
@@ -330,6 +339,7 @@ async def calculate_daily_snapshots() -> None:
         logger.info(f"Daily snapshot job completed in {duration.total_seconds():.1f}s")
 
 
+@with_job_audit("execute_active_strategies")
 async def execute_active_strategies() -> None:
     """Background job to run every active live strategy once.
 
@@ -392,6 +402,7 @@ async def execute_active_strategies() -> None:
         logger.info(f"Strategy execution job duration: {duration.total_seconds():.1f}s")
 
 
+@with_job_audit("evaluate_triggers")
 async def evaluate_triggers() -> None:
     """Background job to run one trigger-evaluation cycle.
 

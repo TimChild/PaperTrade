@@ -548,6 +548,120 @@ class TestList:
 
 
 # ---------------------------------------------------------------------------
+# Get activation by id — Phase J fix to ActivationDetail.tsx scaling
+# ---------------------------------------------------------------------------
+
+
+class TestGetActivationById:
+    """``GET /activations/{id}`` — direct read, replacing client-side filter."""
+
+    def test_get_activation_happy_path(
+        self,
+        client: "TestClient",
+        auth_headers: dict[str, str],
+    ) -> None:
+        portfolio_id = _create_portfolio(client, auth_headers)
+        strategy_id = _create_strategy(client, auth_headers)
+        activation = _activate(
+            client,
+            auth_headers,
+            strategy_id=strategy_id,
+            portfolio_id=portfolio_id,
+        )
+
+        response = client.get(
+            f"/api/v1/activations/{activation['id']}",
+            headers=auth_headers,
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["id"] == activation["id"]
+        assert body["strategy_id"] == strategy_id
+        assert body["portfolio_id"] == portfolio_id
+        assert body["status"] == "ACTIVE"
+
+    def test_get_activation_not_found_returns_404(
+        self,
+        client: "TestClient",
+        auth_headers: dict[str, str],
+    ) -> None:
+        response = client.get(
+            f"/api/v1/activations/{uuid4()}",
+            headers=auth_headers,
+        )
+        assert response.status_code == 404
+
+    def test_get_other_users_activation_returns_403(
+        self,
+        client: "TestClient",
+        auth_headers: dict[str, str],
+    ) -> None:
+        # Default user creates the activation.
+        portfolio_id = _create_portfolio(client, auth_headers)
+        strategy_id = _create_strategy(client, auth_headers)
+        activation = _activate(
+            client,
+            auth_headers,
+            strategy_id=strategy_id,
+            portfolio_id=portfolio_id,
+        )
+
+        # Other user attempts to read it.
+        from zebu.adapters.auth.in_memory_adapter import InMemoryAuthAdapter
+        from zebu.adapters.inbound.api.dependencies import get_auth_port
+        from zebu.application.ports.auth_port import AuthenticatedUser
+
+        override = client.app.dependency_overrides[get_auth_port]
+        adapter = override()
+        assert isinstance(adapter, InMemoryAuthAdapter)
+        adapter.add_user(
+            AuthenticatedUser(id="other-user", email="other@example.com"),
+            "other-token",
+        )
+
+        response = client.get(
+            f"/api/v1/activations/{activation['id']}",
+            headers={"Authorization": "Bearer other-token"},
+        )
+        assert response.status_code == 403
+
+    def test_get_activation_unauthenticated_rejects(
+        self,
+        client: "TestClient",
+    ) -> None:
+        response = client.get(f"/api/v1/activations/{uuid4()}")
+        assert response.status_code in (401, 403)
+
+    def test_get_activation_via_api_key_succeeds(
+        self,
+        client: "TestClient",
+        auth_headers: dict[str, str],
+    ) -> None:
+        """API-key auth resolves to the same user identity as Bearer JWT.
+
+        Activation created via Bearer (the conftest seeds both auth
+        paths against the same test-user), then read via the API-key
+        ``Authorization: ApiKey ...`` scheme. Must return 200, not 401.
+        """
+        portfolio_id = _create_portfolio(client, auth_headers)
+        strategy_id = _create_strategy(client, auth_headers)
+        activation = _activate(
+            client,
+            auth_headers,
+            strategy_id=strategy_id,
+            portfolio_id=portfolio_id,
+        )
+
+        response = client.get(
+            f"/api/v1/activations/{activation['id']}",
+            headers={"Authorization": "ApiKey test-token-default"},
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["id"] == activation["id"]
+
+
+# ---------------------------------------------------------------------------
 # Run now — exercises BOTH Bearer JWT and API-key auth (Phase C3)
 # ---------------------------------------------------------------------------
 
