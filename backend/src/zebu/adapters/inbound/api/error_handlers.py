@@ -21,6 +21,7 @@ from zebu.adapters.inbound.api.schemas.errors import ErrorCode, ErrorResponse
 from zebu.application.exceptions import (
     IncompleteHistoricalDataError,
     MarketDataUnavailableError,
+    PartialPricingError,
     TickerNotFoundError,
 )
 from zebu.domain.entities.exploration_task import InvalidExplorationTaskError
@@ -244,6 +245,43 @@ def register_exception_handlers(app: FastAPI) -> None:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             content=body,
             headers={"Retry-After": str(retry_after_seconds)},
+        )
+
+    @app.exception_handler(PartialPricingError)
+    async def handle_partial_pricing(  # pyright: ignore[reportUnusedFunction]
+        request: Request, exc: PartialPricingError
+    ) -> JSONResponse:
+        """Handle PartialPricingError -> 503 with structured body.
+
+        Phase J / Task #214. Symmetric to ``handle_incomplete_historical_data``
+        but for current-price (and previous-close) fetches. The body shape
+        differs from the standard ``{detail, code, fields}`` envelope —
+        callers distinguish a "fetching" 503 from any other 503 by
+        inspecting the literal ``status: "fetching"`` discriminator at
+        the top level. The ``Retry-After`` HTTP header mirrors the body's
+        ``retry_after_seconds``.
+
+        Body shape::
+
+            {
+                "status": "fetching",
+                "missing_tickers": ["AAPL", "MSFT"],
+                "failed_reason": {"AAPL": "market_data_unavailable", ...},
+                "retry_after_seconds": 5
+            }
+        """
+        body: dict[str, Any] = {
+            "status": "fetching",
+            "missing_tickers": [t.symbol for t in exc.missing_tickers],
+            "failed_reason": {
+                t.symbol: reason for t, reason in exc.failed_reason.items()
+            },
+            "retry_after_seconds": exc.retry_after_seconds,
+        }
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content=body,
+            headers={"Retry-After": str(exc.retry_after_seconds)},
         )
 
     @app.exception_handler(HTTPException)

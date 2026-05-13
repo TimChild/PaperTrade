@@ -1,6 +1,6 @@
 """Tests for GetPortfolioBalances batch query handler."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from uuid import uuid4
 
@@ -166,7 +166,26 @@ class TestGetPortfolioBalancesHandler:
             )
         )
 
-        # Seed market prices
+        # Seed market prices — current AND previous-close per Task #214.
+        prev_ts = datetime.now(UTC) - timedelta(days=5)
+        market_data.seed_price(
+            PricePoint(
+                ticker=Ticker("AAPL"),
+                price=Money(Decimal("170.00"), "USD"),
+                timestamp=prev_ts,
+                source="alpha_vantage",
+                interval="1day",
+            )
+        )
+        market_data.seed_price(
+            PricePoint(
+                ticker=Ticker("GOOGL"),
+                price=Money(Decimal("115.00"), "USD"),
+                timestamp=prev_ts,
+                source="alpha_vantage",
+                interval="1day",
+            )
+        )
         market_data.seed_price(
             PricePoint(
                 ticker=Ticker("AAPL"),
@@ -245,3 +264,217 @@ class TestGetPortfolioBalancesHandler:
         assert len(result.balances) == 3
         for i, balance in enumerate(result.balances):
             assert balance.portfolio_id == ids[i]
+
+
+class TestGetPortfolioBalancesPartialPricing:
+    """Phase J / Task #214 — per-portfolio gating on partial pricing.
+
+    The handler must refuse to compute a balance for any portfolio whose
+    holdings include a ticker with an unresolved current OR previous-close
+    price. A cash-only portfolio (no holdings) is unaffected. A portfolio
+    whose tickers are all resolved still gets a normal ``ok`` entry even
+    when *another* portfolio in the batch is loading.
+    """
+
+    async def test_missing_current_price_marks_portfolio_loading(
+        self, handler, portfolio_repo, transaction_repo, market_data
+    ):
+        """A portfolio holding a ticker with no current price is loading."""
+        portfolio = await make_portfolio(portfolio_repo)
+        await transaction_repo.save(
+            Transaction(
+                id=uuid4(),
+                portfolio_id=portfolio.id,
+                transaction_type=TransactionType.DEPOSIT,
+                timestamp=datetime.now(UTC),
+                cash_change=Money(Decimal("10000.00"), "USD"),
+            )
+        )
+        await transaction_repo.save(
+            Transaction(
+                id=uuid4(),
+                portfolio_id=portfolio.id,
+                transaction_type=TransactionType.BUY,
+                timestamp=datetime.now(UTC),
+                cash_change=Money(Decimal("-5000.00"), "USD"),
+                ticker=Ticker("AAPL"),
+                quantity=Quantity(Decimal("100")),
+                price_per_share=Money(Decimal("50.00"), "USD"),
+            )
+        )
+        # Don't seed any price for AAPL.
+
+        query = GetPortfolioBalancesQuery(portfolio_ids=[portfolio.id])
+        result = await handler.execute(query)
+
+        assert len(result.entries) == 1
+        entry = result.entries[0]
+        assert entry.pricing_status == "loading"
+        assert entry.balance is None
+        assert entry.missing_tickers == [Ticker("AAPL")]
+        assert entry.failed_reason[Ticker("AAPL")] == "ticker_not_found"
+        assert entry.retry_after_seconds == 5
+        # Cash is always populated (transactions-only).
+        assert entry.cash_balance.amount == Decimal("5000.00")
+        # The legacy `balances` property hides loading entries.
+        assert result.balances == []
+
+    async def test_missing_previous_price_marks_portfolio_loading(
+        self, handler, portfolio_repo, transaction_repo, market_data
+    ):
+        """A portfolio with current-only data (no previous close) is loading."""
+        portfolio = await make_portfolio(portfolio_repo)
+        await transaction_repo.save(
+            Transaction(
+                id=uuid4(),
+                portfolio_id=portfolio.id,
+                transaction_type=TransactionType.DEPOSIT,
+                timestamp=datetime.now(UTC),
+                cash_change=Money(Decimal("20000.00"), "USD"),
+            )
+        )
+        await transaction_repo.save(
+            Transaction(
+                id=uuid4(),
+                portfolio_id=portfolio.id,
+                transaction_type=TransactionType.BUY,
+                timestamp=datetime.now(UTC),
+                cash_change=Money(Decimal("-15000.00"), "USD"),
+                ticker=Ticker("AAPL"),
+                quantity=Quantity(Decimal("100")),
+                price_per_share=Money(Decimal("150.00"), "USD"),
+            )
+        )
+        # Seed ONLY current price (no previous-close observation).
+        market_data.seed_price(
+            PricePoint(
+                ticker=Ticker("AAPL"),
+                price=Money(Decimal("175.00"), "USD"),
+                timestamp=datetime.now(UTC),
+                source="alpha_vantage",
+                interval="1day",
+            )
+        )
+
+        query = GetPortfolioBalancesQuery(portfolio_ids=[portfolio.id])
+        result = await handler.execute(query)
+
+        assert len(result.entries) == 1
+        entry = result.entries[0]
+        assert entry.pricing_status == "loading"
+        assert entry.missing_tickers == [Ticker("AAPL")]
+
+    async def test_mixed_success_some_ok_some_loading(
+        self, handler, portfolio_repo, transaction_repo, market_data
+    ):
+        """One portfolio with full pricing, one with missing — per-portfolio."""
+        portfolio_ok = await make_portfolio(portfolio_repo)
+        portfolio_loading = await make_portfolio(portfolio_repo)
+
+        # OK portfolio: holds AAPL; we seed both current + previous.
+        await transaction_repo.save(
+            Transaction(
+                id=uuid4(),
+                portfolio_id=portfolio_ok.id,
+                transaction_type=TransactionType.DEPOSIT,
+                timestamp=datetime.now(UTC),
+                cash_change=Money(Decimal("20000.00"), "USD"),
+            )
+        )
+        await transaction_repo.save(
+            Transaction(
+                id=uuid4(),
+                portfolio_id=portfolio_ok.id,
+                transaction_type=TransactionType.BUY,
+                timestamp=datetime.now(UTC),
+                cash_change=Money(Decimal("-15000.00"), "USD"),
+                ticker=Ticker("AAPL"),
+                quantity=Quantity(Decimal("100")),
+                price_per_share=Money(Decimal("150.00"), "USD"),
+            )
+        )
+        # Loading portfolio: holds GOOGL with NO price seeded.
+        await transaction_repo.save(
+            Transaction(
+                id=uuid4(),
+                portfolio_id=portfolio_loading.id,
+                transaction_type=TransactionType.DEPOSIT,
+                timestamp=datetime.now(UTC),
+                cash_change=Money(Decimal("30000.00"), "USD"),
+            )
+        )
+        await transaction_repo.save(
+            Transaction(
+                id=uuid4(),
+                portfolio_id=portfolio_loading.id,
+                transaction_type=TransactionType.BUY,
+                timestamp=datetime.now(UTC),
+                cash_change=Money(Decimal("-20000.00"), "USD"),
+                ticker=Ticker("GOOGL"),
+                quantity=Quantity(Decimal("200")),
+                price_per_share=Money(Decimal("100.00"), "USD"),
+            )
+        )
+
+        prev_ts = datetime.now(UTC) - timedelta(days=5)
+        market_data.seed_price(
+            PricePoint(
+                ticker=Ticker("AAPL"),
+                price=Money(Decimal("170.00"), "USD"),
+                timestamp=prev_ts,
+                source="alpha_vantage",
+                interval="1day",
+            )
+        )
+        market_data.seed_price(
+            PricePoint(
+                ticker=Ticker("AAPL"),
+                price=Money(Decimal("175.00"), "USD"),
+                timestamp=datetime.now(UTC),
+                source="alpha_vantage",
+                interval="1day",
+            )
+        )
+
+        query = GetPortfolioBalancesQuery(
+            portfolio_ids=[portfolio_ok.id, portfolio_loading.id]
+        )
+        result = await handler.execute(query)
+
+        ok_entry = next(e for e in result.entries if e.portfolio_id == portfolio_ok.id)
+        loading_entry = next(
+            e for e in result.entries if e.portfolio_id == portfolio_loading.id
+        )
+        assert ok_entry.pricing_status == "ok"
+        assert ok_entry.balance is not None
+        assert ok_entry.balance.holdings_value.amount == Decimal("17500.00")
+        assert loading_entry.pricing_status == "loading"
+        assert loading_entry.missing_tickers == [Ticker("GOOGL")]
+        # Cash on loading portfolio is still correct.
+        assert loading_entry.cash_balance.amount == Decimal("10000.00")
+
+    async def test_cash_only_portfolio_unaffected_by_partial_pricing(
+        self, handler, portfolio_repo, transaction_repo, market_data
+    ):
+        """A portfolio with no holdings stays `ok` even with no prices."""
+        portfolio = await make_portfolio(portfolio_repo)
+        await transaction_repo.save(
+            Transaction(
+                id=uuid4(),
+                portfolio_id=portfolio.id,
+                transaction_type=TransactionType.DEPOSIT,
+                timestamp=datetime.now(UTC),
+                cash_change=Money(Decimal("5000.00"), "USD"),
+            )
+        )
+
+        query = GetPortfolioBalancesQuery(portfolio_ids=[portfolio.id])
+        result = await handler.execute(query)
+
+        assert len(result.entries) == 1
+        entry = result.entries[0]
+        assert entry.pricing_status == "ok"
+        assert entry.balance is not None
+        assert entry.balance.cash_balance.amount == Decimal("5000.00")
+        assert entry.balance.holdings_value.amount == Decimal("0")
+        assert entry.missing_tickers == []

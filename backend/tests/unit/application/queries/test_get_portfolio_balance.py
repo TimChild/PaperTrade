@@ -1,6 +1,6 @@
 """Tests for GetPortfolioBalance query with market data integration."""
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from uuid import uuid4
 
@@ -125,15 +125,27 @@ class TestGetPortfolioBalance:
         )
         await transaction_repo.save(buy_aapl)
 
-        # Seed market data with current AAPL price
-        current_price = PricePoint(
-            ticker=Ticker("AAPL"),
-            price=Money(Decimal("175.00"), "USD"),
-            timestamp=datetime.now(UTC),
-            source="alpha_vantage",
-            interval="1day",
+        # Seed market data with current AND previous-close AAPL price.
+        # Phase J / Task #214 — the handler requires both legs to be
+        # present; missing either now raises PartialPricingError.
+        market_data.seed_price(
+            PricePoint(
+                ticker=Ticker("AAPL"),
+                price=Money(Decimal("170.00"), "USD"),
+                timestamp=datetime.now(UTC) - timedelta(days=5),
+                source="alpha_vantage",
+                interval="1day",
+            )
         )
-        market_data.seed_price(current_price)
+        market_data.seed_price(
+            PricePoint(
+                ticker=Ticker("AAPL"),
+                price=Money(Decimal("175.00"), "USD"),
+                timestamp=datetime.now(UTC),
+                source="alpha_vantage",
+                interval="1day",
+            )
+        )
 
         query = GetPortfolioBalanceQuery(portfolio_id=sample_portfolio.id)
 
@@ -188,7 +200,26 @@ class TestGetPortfolioBalance:
         )
         await transaction_repo.save(buy_googl)
 
-        # Seed market data
+        # Seed market data — current AND previous-close per Task #214.
+        prev_ts = datetime.now(UTC) - timedelta(days=5)
+        market_data.seed_price(
+            PricePoint(
+                ticker=Ticker("AAPL"),
+                price=Money(Decimal("170.00"), "USD"),
+                timestamp=prev_ts,
+                source="alpha_vantage",
+                interval="1day",
+            )
+        )
+        market_data.seed_price(
+            PricePoint(
+                ticker=Ticker("GOOGL"),
+                price=Money(Decimal("115.00"), "USD"),
+                timestamp=prev_ts,
+                source="alpha_vantage",
+                interval="1day",
+            )
+        )
         market_data.seed_price(
             PricePoint(
                 ticker=Ticker("AAPL"),
@@ -220,10 +251,19 @@ class TestGetPortfolioBalance:
         assert result.holdings_value.amount == Decimal("41500.00")
         assert result.total_value.amount == Decimal("56500.00")  # 15000 + 41500
 
-    async def test_handles_ticker_not_found_gracefully(
+    async def test_missing_ticker_raises_partial_pricing_error(
         self, handler, sample_portfolio, transaction_repo, market_data
     ):
-        """Test graceful handling when ticker price is not found."""
+        """Phase J / Task #214 — missing prices raise PartialPricingError.
+
+        Previously this test asserted "silently skip the holding" — that
+        behaviour was the root cause of the dashboard's jumping-totals
+        bug. The handler now refuses to return a number when any
+        required price is missing; the API layer surfaces this as a
+        503 + Retry-After with a structured ``status: "fetching"`` body.
+        """
+        from zebu.application.exceptions import PartialPricingError
+
         # Arrange
         deposit = Transaction(
             id=uuid4(),
@@ -253,13 +293,12 @@ class TestGetPortfolioBalance:
 
         query = GetPortfolioBalanceQuery(portfolio_id=sample_portfolio.id)
 
-        # Act
-        result = await handler.execute(query)
-
-        # Assert - Should not raise error, just skip the holding
-        assert result.cash_balance.amount == Decimal("5000.00")
-        assert result.holdings_value.amount == Decimal("0")  # Unknown ticker value = 0
-        assert result.total_value.amount == Decimal("5000.00")
+        # Act + Assert
+        with pytest.raises(PartialPricingError) as excinfo:
+            await handler.execute(query)
+        assert excinfo.value.missing_tickers == [Ticker("UNKN")]
+        assert excinfo.value.failed_reason[Ticker("UNKN")] == "ticker_not_found"
+        assert excinfo.value.retry_after_seconds == 5
 
     async def test_portfolio_not_found_raises_error(self, handler):
         """Test that querying non-existent portfolio raises error."""

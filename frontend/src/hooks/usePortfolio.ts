@@ -1,11 +1,33 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { AxiosError } from 'axios'
 import { portfoliosApi } from '@/services/api/portfolios'
 import type {
   CreatePortfolioRequest,
   DepositRequest,
   WithdrawRequest,
   TradeRequest,
+  BalanceResponse,
+  PartialPricingFetchingBody,
 } from '@/services/api/types'
+
+/**
+ * Phase J / Task #214 — maximum consecutive 503 "fetching" retries the
+ * single-portfolio balance hook performs before surfacing a hard error.
+ * Backend's ``retry_after_seconds`` default is 5; five retries ~ 25s
+ * total which matches the spec's "stuck > 30s → bail out" budget.
+ */
+const MAX_PRICING_RETRIES = 5
+
+function isPartialPricingFetchingBody(
+  value: unknown
+): value is PartialPricingFetchingBody {
+  if (!value || typeof value !== 'object') return false
+  const obj = value as Record<string, unknown>
+  if (obj.status !== 'fetching') return false
+  if (!Array.isArray(obj.missing_tickers)) return false
+  if (typeof obj.retry_after_seconds !== 'number') return false
+  return true
+}
 
 /**
  * Hook to fetch all portfolios
@@ -31,15 +53,152 @@ export function usePortfolio(portfolioId: string) {
 }
 
 /**
- * Hook to fetch portfolio cash balance
+ * Result returned by :func:`usePortfolioBalance` — extends a successful
+ * balance with the Phase J / Task #214 ``pricingStatus`` discriminator
+ * so consumers can render a loading skeleton instead of stale or
+ * computed-against-partial-data numbers.
  */
-export function usePortfolioBalance(portfolioId: string) {
-  return useQuery({
+export interface UsePortfolioBalanceResult {
+  data: BalanceResponse | null
+  isLoading: boolean
+  isError: boolean
+  error: unknown
+  /**
+   * - `ok` — every required price resolved; numeric fields on `data` are
+   *   correct.
+   * - `loading` — at least one held ticker's price could not be
+   *   resolved. `data` may still carry `cash_balance` (always accurate)
+   *   but the holdings/total/day-change fields are placeholders the UI
+   *   must NOT render. The hook auto-retries up to
+   *   :data:`MAX_PRICING_RETRIES` times.
+   * - `unavailable` — retry budget exhausted; the user has been waiting
+   *   ~30s+ with no resolution. UI should switch to a hard error block.
+   */
+  pricingStatus: 'ok' | 'loading' | 'unavailable'
+  /** Tickers whose price could not be resolved (loading / unavailable). */
+  missingTickers: string[]
+  /** Retry budget remaining; useful for callers that want their own UX. */
+  retriesRemaining: number
+}
+
+/**
+ * Hook to fetch portfolio balance with Phase J / Task #214 pricing-state
+ * awareness. Auto-retries the 503 ``fetching`` response shape using the
+ * server-supplied ``retry_after_seconds`` cadence, up to
+ * :data:`MAX_PRICING_RETRIES` consecutive attempts. After the retry
+ * budget is exhausted the hook surfaces ``pricingStatus: "unavailable"``
+ * with the list of stuck tickers so the UI can render the bail-out
+ * affordance.
+ *
+ * Note: the balance response itself also carries ``pricing_status`` (the
+ * list-endpoint convention), but for the single-portfolio endpoint the
+ * server returns a 503 + ``Retry-After`` instead — those are caught here
+ * and surfaced via ``pricingStatus`` so consumers have one API surface.
+ */
+export function usePortfolioBalance(
+  portfolioId: string
+): UsePortfolioBalanceResult {
+  const query = useQuery<
+    | { ok: true; balance: BalanceResponse }
+    | {
+        ok: false
+        kind: 'loading' | 'unavailable'
+        missingTickers: string[]
+        retriesRemaining: number
+        cashFallback: BalanceResponse | null
+      },
+    AxiosError
+  >({
     queryKey: ['portfolio', portfolioId, 'balance'],
-    queryFn: () => portfoliosApi.getBalance(portfolioId),
+    queryFn: async () => {
+      // Auto-retry the 503-fetching shape up to MAX_PRICING_RETRIES
+      // times before bubbling. Outside that, any other error
+      // propagates to react-query's normal error path.
+      let attempt = 0
+      let lastMissing: string[] = []
+      while (true) {
+        try {
+          const balance = await portfoliosApi.getBalance(portfolioId)
+          // Server also returns 200 with pricing_status="loading" on the
+          // batch endpoint; this branch handles the singleton case
+          // defensively in case the API ever returns 200 with that flag.
+          if (balance.pricing_status === 'loading') {
+            return {
+              ok: false as const,
+              kind: 'loading' as const,
+              missingTickers: balance.missing_tickers ?? [],
+              retriesRemaining: Math.max(0, MAX_PRICING_RETRIES - attempt),
+              cashFallback: balance,
+            }
+          }
+          return { ok: true as const, balance }
+        } catch (err) {
+          if (
+            err instanceof AxiosError &&
+            err.response?.status === 503 &&
+            isPartialPricingFetchingBody(err.response.data)
+          ) {
+            const body = err.response.data
+            lastMissing = body.missing_tickers
+            if (attempt >= MAX_PRICING_RETRIES) {
+              return {
+                ok: false as const,
+                kind: 'unavailable' as const,
+                missingTickers: lastMissing,
+                retriesRemaining: 0,
+                cashFallback: null,
+              }
+            }
+            await new Promise<void>((resolve) =>
+              setTimeout(resolve, body.retry_after_seconds * 1000)
+            )
+            attempt += 1
+            continue
+          }
+          throw err
+        }
+      }
+    },
     enabled: Boolean(portfolioId),
     refetchInterval: 30_000, // Refetch every 30 seconds
+    // The retry loop above handles 503-fetching; disable react-query's
+    // own retry so we don't double up.
+    retry: false,
   })
+
+  if (query.data?.ok === true) {
+    return {
+      data: query.data.balance,
+      isLoading: query.isLoading,
+      isError: query.isError,
+      error: query.error,
+      pricingStatus: 'ok',
+      missingTickers: [],
+      retriesRemaining: MAX_PRICING_RETRIES,
+    }
+  }
+
+  if (query.data?.ok === false) {
+    return {
+      data: query.data.cashFallback,
+      isLoading: query.isLoading,
+      isError: false,
+      error: null,
+      pricingStatus: query.data.kind,
+      missingTickers: query.data.missingTickers,
+      retriesRemaining: query.data.retriesRemaining,
+    }
+  }
+
+  return {
+    data: null,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    error: query.error,
+    pricingStatus: 'ok',
+    missingTickers: [],
+    retriesRemaining: MAX_PRICING_RETRIES,
+  }
 }
 
 /**

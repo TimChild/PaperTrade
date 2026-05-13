@@ -153,15 +153,38 @@ class TransactionResponse(BaseModel):
 
 
 class BalanceResponse(BaseModel):
-    """Portfolio balance response with cash, holdings, and total value."""
+    """Portfolio balance response with cash, holdings, and total value.
+
+    Phase J / Task #214 — per-portfolio ``pricing_status`` discriminator.
+
+    When ``pricing_status == "ok"`` (the common case) the numeric fields
+    (``holdings_value``, ``total_value``, ``daily_change``,
+    ``daily_change_percent``) are populated and correct.
+
+    When ``pricing_status == "loading"`` at least one held ticker's current
+    or previous-close price could not be resolved. The numeric fields fall
+    back to ``"0.00"`` placeholders and ``missing_tickers`` enumerates the
+    affected symbols so the UI can render a skeleton + caption referencing
+    those tickers. ``cash_balance`` is always accurate regardless of
+    pricing state (it's computed from transactions, no market data needed).
+
+    The list endpoint ``GET /portfolios/balances`` always emits 200 — each
+    entry carries its own ``pricing_status``. The single-portfolio endpoint
+    ``GET /portfolios/{id}/balance`` returns 503 + ``Retry-After`` when the
+    portfolio's pricing is partial; see ``handle_partial_pricing`` in
+    ``error_handlers.py`` for the structured-503 body shape.
+    """
 
     cash_balance: str
     holdings_value: str
     total_value: str
     currency: str
     as_of: str  # ISO 8601 timestamp
-    daily_change: str  # NEW - e.g., "45.32" or "-23.10"
-    daily_change_percent: str  # NEW - e.g., "2.14" or "-1.05"
+    daily_change: str  # e.g., "45.32" or "-23.10"
+    daily_change_percent: str  # e.g., "2.14" or "-1.05"
+    pricing_status: str = "ok"  # "ok" | "loading"
+    missing_tickers: list[str] = Field(default_factory=list)
+    retry_after_seconds: int | None = None
 
 
 class HoldingResponse(BaseModel):
@@ -325,18 +348,47 @@ async def get_all_balances(
     handler = GetPortfolioBalancesHandler(portfolio_repo, transaction_repo, market_data)
     result = await handler.execute(query)
 
-    items = [
-        BalanceResponse(
-            cash_balance=f"{b.cash_balance.amount:.2f}",
-            holdings_value=f"{b.holdings_value.amount:.2f}",
-            total_value=f"{b.total_value.amount:.2f}",
-            currency=b.cash_balance.currency,
-            as_of=b.as_of.isoformat(),
-            daily_change=f"{b.daily_change.amount:.2f}",
-            daily_change_percent=f"{b.daily_change_percent:.2f}",
+    # Phase J / Task #214 — the batch endpoint surfaces per-portfolio
+    # ``pricing_status`` rather than 503'ing the whole call. The dashboard
+    # can render some cards fully and others as loading skeletons.
+    items: list[BalanceResponse] = []
+    for entry in result.entries:
+        if entry.balance is not None:
+            b = entry.balance
+            items.append(
+                BalanceResponse(
+                    cash_balance=f"{b.cash_balance.amount:.2f}",
+                    holdings_value=f"{b.holdings_value.amount:.2f}",
+                    total_value=f"{b.total_value.amount:.2f}",
+                    currency=b.cash_balance.currency,
+                    as_of=b.as_of.isoformat(),
+                    daily_change=f"{b.daily_change.amount:.2f}",
+                    daily_change_percent=f"{b.daily_change_percent:.2f}",
+                    pricing_status="ok",
+                    missing_tickers=[],
+                    retry_after_seconds=None,
+                )
+            )
+            continue
+
+        # Loading entry — cash is always accurate (transactions-only);
+        # the holdings/total/day-change fields are placeholders the
+        # client must NOT render. The ``pricing_status="loading"``
+        # discriminator + ``missing_tickers`` drive the FE skeleton.
+        items.append(
+            BalanceResponse(
+                cash_balance=f"{entry.cash_balance.amount:.2f}",
+                holdings_value="0.00",
+                total_value="0.00",
+                currency=entry.cash_balance.currency,
+                as_of=entry.as_of.isoformat(),
+                daily_change="0.00",
+                daily_change_percent="0.00",
+                pricing_status="loading",
+                missing_tickers=[t.symbol for t in entry.missing_tickers],
+                retry_after_seconds=entry.retry_after_seconds,
+            )
         )
-        for b in result.balances
-    ]
     return build_paginated_response(
         items=items,
         total=total,
