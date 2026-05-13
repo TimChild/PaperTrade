@@ -89,7 +89,7 @@ export function PortfolioCard({
             <div className="mb-5">
               <Eyebrow>Total value</Eyebrow>
               <p
-                className="mt-1.5 font-display tabular-nums text-display-sm text-ink"
+                className="mt-1.5 font-display-numeric tabular-nums text-display-sm text-ink"
                 data-testid={`portfolio-card-value-${portfolio.id}`}
               >
                 {formatCurrency(portfolio.totalValue)}

@@ -149,14 +149,17 @@ describe('AskAnAgentButton', () => {
 
   it('does not open the dialog by default', () => {
     renderButton({ triggerContext: 'portfolio' })
-    // The Dialog (and its form children) is conditionally rendered —
-    // mounted only when isOpen=true. This keeps the form's hidden
-    // <option> rows out of DOM when closed (otherwise they break
-    // unrelated E2E tests that locate trade-history "BUY" rows by
-    // text). Verify nothing is in DOM until the button is clicked.
-    expect(document.querySelector('dialog')).toBeNull()
+    // The Dialog component conditionally renders its children when
+    // closed (the wrapper <dialog> element stays mounted so focus-trap
+    // and a11y semantics persist, but the subtree is gated on isOpen).
+    // This keeps the form's hidden <option> rows out of DOM when
+    // closed — otherwise they break unrelated E2E tests that locate
+    // trade-history "BUY" rows by text.
     expect(
       screen.queryByTestId('ask-an-agent-dialog-portfolio')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId('exploration-task-create-form')
     ).not.toBeInTheDocument()
   })
 
@@ -280,14 +283,17 @@ describe('AskAnAgentButton', () => {
 
     await user.click(screen.getByTestId('exploration-task-create-cancel-btn'))
 
-    // After Cancel, the dialog tree unmounts (conditional render) so
-    // the dialog element disappears from DOM along with its form
-    // children — see the comment in AskAnAgentButton.tsx.
+    // After Cancel, the Dialog conditionally unmounts its children — the
+    // form (and the host wrapper that surfaces the dialog testid) is no
+    // longer in DOM. The wrapper <dialog> element itself remains
+    // mounted; we only assert the children went away.
     await waitFor(() => {
-      expect(document.querySelector('dialog')).toBeNull()
+      expect(
+        screen.queryByTestId('ask-an-agent-dialog-portfolio')
+      ).not.toBeInTheDocument()
     })
     expect(
-      screen.queryByTestId('ask-an-agent-dialog-portfolio')
+      screen.queryByTestId('exploration-task-create-form')
     ).not.toBeInTheDocument()
   })
 })

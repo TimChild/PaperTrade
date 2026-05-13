@@ -31,7 +31,7 @@ export function PriceStats({
   if (!hasValidData) {
     return (
       <div className="mb-4">
-        <div className="font-display text-display-sm tabular-nums text-ink">
+        <div className="font-display-numeric text-display-sm tabular-nums text-ink">
           —
         </div>
         <div className="mt-1 text-body-sm text-ink-subtle">
@@ -64,7 +64,7 @@ export function PriceStats({
 
   return (
     <div className="mb-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-      <div className="font-display tabular-nums text-display-sm text-ink">
+      <div className="font-display-numeric tabular-nums text-display-sm text-ink">
         {formatCurrency(currentPrice)}
       </div>
       <div className={`font-tabular text-body-md ${colorClass}`}>

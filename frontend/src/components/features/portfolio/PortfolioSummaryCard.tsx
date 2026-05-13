@@ -68,7 +68,7 @@ export function PortfolioSummaryCard({
         <div>
           <Eyebrow>Total value</Eyebrow>
           <p
-            className="mt-1 font-display tabular-nums text-display-md text-ink"
+            className="mt-1 font-display-numeric tabular-nums text-display-md text-ink"
             data-testid="portfolio-total-value"
           >
             {formatCurrency(totalValue)}
