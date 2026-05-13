@@ -211,13 +211,21 @@ class TestPortfolioCapAdapter:
         portfolio, api_key, _ = await _seed_chain(session)
         txn_repo = SQLModelTransactionRepository(session)
 
+        # Anchor trade timestamps to today's UTC midnight + 12h so the
+        # test is deterministic regardless of the wall-clock hour (a
+        # bare ``datetime.now(UTC) - timedelta(hours=3)`` lands in
+        # yesterday's UTC window when CI runs between 00:00 and 04:00).
+        today_noon_utc = datetime.now(UTC).replace(
+            hour=12, minute=0, second=0, microsecond=0
+        )
+
         # Two agent-driven trades earlier today, $1500 + $2000 = $3500
         # consumed.
         for cash, hours_ago in ((-1500, 3), (-2000, 1)):
             buy = _make_buy(
                 portfolio_id=portfolio.id,
                 cash_change=str(cash),
-                timestamp=datetime.now(UTC) - timedelta(hours=hours_ago),
+                timestamp=today_noon_utc - timedelta(hours=hours_ago),
             )
             await txn_repo.save(buy, api_key_id=api_key.id)
         await session.flush()
@@ -246,12 +254,19 @@ class TestPortfolioCapAdapter:
         portfolio, api_key, _ = await _seed_chain(session)
         txn_repo = SQLModelTransactionRepository(session)
 
+        # See test_sums_agent_trade_volume_for_today — anchor to today's
+        # UTC noon so the timestamps stay inside today's window regardless
+        # of when CI runs.
+        today_noon_utc = datetime.now(UTC).replace(
+            hour=12, minute=0, second=0, microsecond=0
+        )
+
         # Existing $4500 spent today.
         for cash, hours_ago in ((-2500, 4), (-2000, 2)):
             buy = _make_buy(
                 portfolio_id=portfolio.id,
                 cash_change=str(cash),
-                timestamp=datetime.now(UTC) - timedelta(hours=hours_ago),
+                timestamp=today_noon_utc - timedelta(hours=hours_ago),
             )
             await txn_repo.save(buy, api_key_id=api_key.id)
         await session.flush()
