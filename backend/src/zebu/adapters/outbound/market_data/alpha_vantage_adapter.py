@@ -10,17 +10,25 @@ stale cached data if available rather than failing completely.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from typing import TYPE_CHECKING
+from uuid import uuid4
 
 import httpx
 import structlog
 
 from zebu.application.exceptions import (
+    IncompleteHistoricalDataError,
     InvalidPriceDataError,
     MarketDataUnavailableError,
     TickerNotFoundError,
+)
+from zebu.domain.entities.backfill_task import BackfillTask
+from zebu.domain.value_objects.backfill_priority import BackfillPriority
+from zebu.domain.value_objects.backfill_task_status import (
+    NON_TERMINAL_STATUSES,
+    BackfillTaskStatus,
 )
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.price_point import PricePoint
@@ -32,6 +40,9 @@ from zebu.infrastructure.rate_limiter import RateLimiter
 if TYPE_CHECKING:
     from zebu.adapters.outbound.repositories.price_repository import (
         PriceRepository,
+    )
+    from zebu.application.ports.backfill_task_repository import (
+        BackfillTaskRepositoryPort,
     )
 
 logger = structlog.get_logger(__name__)
@@ -89,6 +100,7 @@ class AlphaVantageAdapter:
         timeout: float = 5.0,
         max_retries: int = 3,
         price_repository: PriceRepository | None = None,
+        backfill_task_repository: BackfillTaskRepositoryPort | None = None,
     ) -> None:
         """Initialize Alpha Vantage adapter.
 
@@ -101,6 +113,13 @@ class AlphaVantageAdapter:
             timeout: Request timeout in seconds (default: 5.0)
             max_retries: Maximum retry attempts (default: 3)
             price_repository: Optional price repository for Tier 2 caching
+            backfill_task_repository: Optional Phase J / Task #212 Layer 3
+                queue port. When supplied, ``get_price_history`` enqueues
+                a high-priority backfill before raising
+                :class:`IncompleteHistoricalDataError` on a partial-coverage
+                response. When ``None`` (the default — keeps existing tests
+                that didn't pass the port working unchanged), the same
+                exception is raised without an enqueue side-effect.
         """
         self.rate_limiter = rate_limiter
         self.price_cache = price_cache
@@ -110,6 +129,7 @@ class AlphaVantageAdapter:
         self.timeout = timeout
         self.max_retries = max_retries
         self.price_repository = price_repository
+        self.backfill_task_repository = backfill_task_repository
 
     async def get_current_price(self, ticker: Ticker) -> PricePoint:
         """Get the most recent available price for a ticker.
@@ -862,7 +882,20 @@ class AlphaVantageAdapter:
                 ]
                 # Deduplicate daily prices before returning
                 deduplicated = self._deduplicate_daily_prices(filtered)
-                return sorted(deduplicated, key=lambda p: p.timestamp)
+                sorted_deduplicated = sorted(deduplicated, key=lambda p: p.timestamp)
+                # Phase J / Task #212 Layer 3: detect strict-subset coverage
+                # AFTER consulting all three tiers. If we got *some* data
+                # back (ticker is valid) but it doesn't cover the requested
+                # range, enqueue a backfill + raise so the caller can wait
+                # and retry rather than silently receiving a partial slice.
+                await self._raise_if_incomplete_coverage(
+                    ticker=ticker,
+                    prices=sorted_deduplicated,
+                    start=start,
+                    end=end,
+                    log=log,
+                )
+                return sorted_deduplicated
 
             except MarketDataUnavailableError as e:
                 # Transient API failure - log and return partial data if we
@@ -885,6 +918,232 @@ class AlphaVantageAdapter:
         # For other intervals (non-1day), we don't support API fetching
         # Return empty list if data is incomplete
         return []
+
+    async def _raise_if_incomplete_coverage(
+        self,
+        *,
+        ticker: Ticker,
+        prices: list[PricePoint],
+        start: datetime,
+        end: datetime,
+        log: structlog.stdlib.BoundLogger,
+    ) -> None:
+        """Detect partial-coverage results post-Tier-3 and enqueue + raise.
+
+        Phase J / Task #212 Layer 3 — lazy backfill at the API boundary.
+
+        Called once at the end of ``get_price_history`` for the 1-day
+        interval. If ``prices`` is a strict subset of the requested
+        ``[start, end]`` range AND we have at least one data point (the
+        ticker is therefore valid — an invalid ticker would have raised
+        :class:`TickerNotFoundError` upstream), this:
+
+        1. Computes the contiguous missing window (or first-and-last-
+           missing-day envelope if multiple gaps exist).
+        2. Enqueues a high-priority :class:`BackfillTask` via the
+           injected port (if any). Idempotent — duplicates of a still-
+           pending or running task for the same range are skipped via
+           the port's ``find_existing`` API.
+        3. Raises :class:`IncompleteHistoricalDataError` so the API
+           layer surfaces a structured 503 + ``Retry-After`` to clients.
+
+        If ``prices`` already covers the range, returns silently. If
+        ``prices`` is empty, returns silently too — the upstream caller
+        already has its own empty-list / not-found handling for that
+        case.
+
+        Args:
+            ticker: Ticker being queried.
+            prices: Deduplicated, chronologically sorted price points
+                produced post-Tier-3.
+            start: Requested range start (UTC aware).
+            end: Requested range end (UTC aware).
+            log: Bound structlog logger from the caller.
+        """
+        # Empty results aren't "incomplete" for our purposes — the empty
+        # set could mean "no data yet for this ticker" (handled by the
+        # caller's existing empty-list contract) OR "no data in the
+        # requested window for a valid ticker" (covered by the
+        # incomplete-coverage signal below when we know about prior data).
+        # In practice the only way to land here with len(prices)==0 is
+        # the API genuinely returned nothing — let the caller's existing
+        # empty-list path handle it. A future iteration can tighten this.
+        if not prices:
+            return
+
+        req_start = start.date()
+        req_end = end.date()
+        available_start, available_end = self._coverage_bounds(prices)
+        missing_days = self._missing_calendar_days(
+            requested_start=req_start,
+            requested_end=req_end,
+            available_start=available_start,
+            available_end=available_end,
+        )
+        if missing_days <= 0:
+            return
+
+        missing_window = self._missing_window(
+            requested_start=req_start,
+            requested_end=req_end,
+            available_start=available_start,
+            available_end=available_end,
+        )
+        log.info(
+            "Incomplete historical data — partial subset of requested range",
+            requested_start=req_start.isoformat(),
+            requested_end=req_end.isoformat(),
+            available_start=available_start.isoformat(),
+            available_end=available_end.isoformat(),
+            missing_start=missing_window[0].isoformat(),
+            missing_end=missing_window[1].isoformat(),
+            missing_days=missing_days,
+        )
+
+        # Enqueue a high-priority backfill so the next retry has the
+        # data. Failure of the enqueue is logged but does NOT suppress
+        # the IncompleteHistoricalDataError — the caller still needs to
+        # know coverage is incomplete.
+        if self.backfill_task_repository is not None:
+            await self._enqueue_backfill(
+                ticker=ticker,
+                missing_start=missing_window[0],
+                missing_end=missing_window[1],
+                log=log,
+            )
+
+        raise IncompleteHistoricalDataError(
+            ticker=ticker,
+            requested_range=(req_start, req_end),
+            available_range=(available_start, available_end),
+            missing_days_count=missing_days,
+        )
+
+    @staticmethod
+    def _coverage_bounds(prices: list[PricePoint]) -> tuple[date, date]:
+        """Return ``(first_date, last_date)`` of the data we have.
+
+        Caller must ensure ``prices`` is non-empty.
+        """
+        first = prices[0].timestamp.date()
+        last = prices[-1].timestamp.date()
+        # Defensive: prices may not be sorted if the caller mutated the
+        # list, so take the min/max explicitly.
+        for p in prices:
+            d = p.timestamp.date()
+            if d < first:
+                first = d
+            if d > last:
+                last = d
+        return first, last
+
+    @staticmethod
+    def _missing_calendar_days(
+        *,
+        requested_start: date,
+        requested_end: date,
+        available_start: date,
+        available_end: date,
+    ) -> int:
+        """Calendar-day count of the missing slice(s).
+
+        Calendar days (not trading days) — chosen because:
+
+        * The caller mostly cares about order of magnitude, not exact
+          trading-day arithmetic.
+        * Trading-day math requires a market calendar lookup; the
+          enqueue path runs on every miss and we want it cheap.
+
+        Missing days are computed as the union of the head gap
+        (``requested_start .. available_start - 1``) and the tail gap
+        (``available_end + 1 .. requested_end``). Internal gaps are not
+        counted separately — the spec calls for "the contiguous missing
+        segment — or use first-and-last-missing-day if multiple gaps".
+        """
+        head_gap = max(0, (available_start - requested_start).days)
+        tail_gap = max(0, (requested_end - available_end).days)
+        return head_gap + tail_gap
+
+    @staticmethod
+    def _missing_window(
+        *,
+        requested_start: date,
+        requested_end: date,
+        available_start: date,
+        available_end: date,
+    ) -> tuple[date, date]:
+        """Compute the contiguous missing-window envelope.
+
+        If the head gap dominates, return that. If the tail gap
+        dominates, return that. If both exist, return the union envelope
+        (first missing day to last missing day). The backfill consumer
+        only needs an outer-bound window — internal gaps are handled by
+        the same fetch (it pulls everything in the range).
+        """
+        head_missing = available_start > requested_start
+        tail_missing = available_end < requested_end
+        if head_missing and tail_missing:
+            return requested_start, requested_end
+        if head_missing:
+            return requested_start, available_start - timedelta(days=1)
+        # tail-only by construction (we wouldn't be called with no gap)
+        return available_end + timedelta(days=1), requested_end
+
+    async def _enqueue_backfill(
+        self,
+        *,
+        ticker: Ticker,
+        missing_start: date,
+        missing_end: date,
+        log: structlog.stdlib.BoundLogger,
+    ) -> None:
+        """Enqueue a HIGH-priority backfill, idempotent on (ticker, range).
+
+        The L2 port's ``find_existing`` collapses duplicate requests for
+        the same window when an earlier prewarm is still pending or
+        running. Errors are logged + swallowed so the caller still
+        raises :class:`IncompleteHistoricalDataError` — the enqueue is
+        an audit / self-healing side-effect, not the source of truth.
+        """
+        if self.backfill_task_repository is None:
+            return
+        try:
+            existing = await self.backfill_task_repository.find_existing(
+                ticker,
+                missing_start,
+                missing_end,
+                status_in=NON_TERMINAL_STATUSES,
+            )
+            if existing is not None:
+                log.info(
+                    "Backfill task already queued for missing range; skipping enqueue",
+                    existing_task_id=str(existing.id),
+                    missing_start=missing_start.isoformat(),
+                    missing_end=missing_end.isoformat(),
+                )
+                return
+            task = BackfillTask(
+                id=uuid4(),
+                ticker=ticker,
+                start_date=missing_start,
+                end_date=missing_end,
+                priority=BackfillPriority.HIGH,
+                status=BackfillTaskStatus.PENDING,
+                created_at=datetime.now(UTC),
+            )
+            await self.backfill_task_repository.create(task)
+            log.info(
+                "Enqueued high-priority backfill for missing range",
+                task_id=str(task.id),
+                missing_start=missing_start.isoformat(),
+                missing_end=missing_end.isoformat(),
+            )
+        except Exception:  # noqa: BLE001 — best-effort side-effect
+            log.exception(
+                "Failed to enqueue backfill task; raising incomplete-coverage anyway",
+                missing_start=missing_start.isoformat(),
+                missing_end=missing_end.isoformat(),
+            )
 
     def _get_last_trading_day(self, from_date: datetime) -> datetime:
         """Calculate the most recent trading day from a given date.
@@ -985,8 +1244,6 @@ class AlphaVantageAdapter:
             >>> result = self._deduplicate_daily_prices(prices)
             >>> # Returns only the 21:00:00 entry
         """
-        from datetime import date
-
         # Early return for empty list
         if not prices:
             return []

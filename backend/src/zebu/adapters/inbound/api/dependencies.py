@@ -22,6 +22,9 @@ from zebu.adapters.auth.in_memory_adapter import InMemoryAuthAdapter
 from zebu.adapters.outbound.database.api_key_repository import (
     SQLModelApiKeyRepository,
 )
+from zebu.adapters.outbound.database.backfill_task_repository import (
+    SQLModelBackfillTaskRepository,
+)
 from zebu.adapters.outbound.database.portfolio_repository import (
     SQLModelPortfolioRepository,
 )
@@ -617,6 +620,11 @@ async def get_market_data(session: SessionDep) -> MarketDataPort:
     # Create price repository (per-request, uses session)
     price_repository = PriceRepository(session)
 
+    # Phase J / Task #212 Layer 3: wire the L2 backfill-task port into the
+    # market-data adapter so partial-coverage results enqueue a high-
+    # priority backfill before raising IncompleteHistoricalDataError.
+    backfill_task_repository = SQLModelBackfillTaskRepository(session)
+
     # Create adapter (per-request to include fresh repository)
     return AlphaVantageAdapter(
         rate_limiter=rate_limiter,
@@ -624,6 +632,7 @@ async def get_market_data(session: SessionDep) -> MarketDataPort:
         http_client=_http_client,
         api_key=alpha_vantage_api_key,
         price_repository=price_repository,
+        backfill_task_repository=backfill_task_repository,
     )
 
 

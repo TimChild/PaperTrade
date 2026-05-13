@@ -14,10 +14,16 @@ from zebu.adapters.outbound.market_data.alpha_vantage_adapter import (
     AlphaVantageAdapter,
 )
 from zebu.application.exceptions import (
+    IncompleteHistoricalDataError,
     InvalidPriceDataError,
     MarketDataUnavailableError,
     TickerNotFoundError,
 )
+from zebu.application.ports.in_memory_backfill_task_repository import (
+    InMemoryBackfillTaskRepository,
+)
+from zebu.domain.value_objects.backfill_priority import BackfillPriority
+from zebu.domain.value_objects.backfill_task_status import BackfillTaskStatus
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.price_point import PricePoint
 from zebu.domain.value_objects.ticker import Ticker
@@ -273,7 +279,9 @@ class TestCacheCompletenessIncomplete:
         # Cache is empty
         mock_price_repository.get_price_history = AsyncMock(return_value=[])
 
-        # Mock API response
+        # Mock API response covering the full requested range so the
+        # Phase J / Task #212 Layer 3 incomplete-coverage check stays
+        # silent (head_date = 2026-01-10, tail_date = 2026-01-17).
         api_response_data = {
             "Meta Data": {"2. Symbol": "AAPL"},
             "Time Series (Daily)": {
@@ -289,6 +297,13 @@ class TestCacheCompletenessIncomplete:
                     "2. high": "151.00",
                     "3. low": "147.00",
                     "4. close": "150.00",
+                    "5. volume": "1000000",
+                },
+                "2026-01-10": {
+                    "1. open": "145.00",
+                    "2. high": "147.00",
+                    "3. low": "143.00",
+                    "4. close": "146.00",
                     "5. volume": "1000000",
                 },
             },
@@ -899,7 +914,8 @@ class TestRedisCachingIntegration:
         mock_price_repository.get_price_history = AsyncMock(return_value=[])
         mock_price_repository.upsert_price = AsyncMock()  # Mock database storage
 
-        # Mock API response
+        # Mock API response covering the full requested range so the
+        # Phase J / Task #212 Layer 3 incomplete-coverage check stays silent.
         api_response_data = {
             "Meta Data": {"2. Symbol": "AAPL"},
             "Time Series (Daily)": {
@@ -915,6 +931,13 @@ class TestRedisCachingIntegration:
                     "2. high": "151.00",
                     "3. low": "147.00",
                     "4. close": "150.00",
+                    "5. volume": "1000000",
+                },
+                "2026-01-10": {
+                    "1. open": "145.00",
+                    "2. high": "147.00",
+                    "3. low": "143.00",
+                    "4. close": "146.00",
                     "5. volume": "1000000",
                 },
             },
@@ -1561,3 +1584,224 @@ class TestGetPriceHistoryErrorHandling:
         # Act / Assert
         with pytest.raises(KeyError):
             await alpha_vantage_adapter.get_price_history(ticker, start, end, "1day")
+
+
+class TestIncompleteHistoricalCoverage:
+    """Phase J / Task #212 Layer 3 — partial-coverage detection + backfill enqueue.
+
+    Behavior under test:
+
+    * A request whose post-Tier-3 result strictly subsets the requested
+      range raises :class:`IncompleteHistoricalDataError`.
+    * The same adapter wired with a :class:`BackfillTaskRepositoryPort`
+      enqueues a high-priority backfill for the missing window before
+      raising.
+    * Without a port (legacy callers), the exception still raises — only
+      the enqueue side-effect is skipped.
+    """
+
+    @pytest.fixture
+    def backfill_repo(self) -> InMemoryBackfillTaskRepository:
+        """In-memory backfill task repository fixture."""
+        return InMemoryBackfillTaskRepository()
+
+    @pytest.fixture
+    def adapter_with_backfill(
+        self,
+        mock_rate_limiter: MagicMock,
+        mock_price_repository: MagicMock,
+        mock_price_cache: MagicMock,
+        mock_http_client: MagicMock,
+        backfill_repo: InMemoryBackfillTaskRepository,
+    ) -> AlphaVantageAdapter:
+        """Adapter wired with the in-memory backfill repository."""
+        return AlphaVantageAdapter(
+            rate_limiter=mock_rate_limiter,
+            price_repository=mock_price_repository,
+            price_cache=mock_price_cache,
+            http_client=mock_http_client,
+            api_key="test_key",
+            backfill_task_repository=backfill_repo,
+        )
+
+    @staticmethod
+    def _api_response(dates: list[str]) -> dict[str, object]:
+        """Construct a TIME_SERIES_DAILY JSON response covering ``dates``."""
+        ts: dict[str, object] = {}
+        for d in dates:
+            ts[d] = {
+                "1. open": "150.00",
+                "2. high": "152.00",
+                "3. low": "148.00",
+                "4. close": "151.00",
+                "5. volume": "1000000",
+            }
+        return {"Meta Data": {"2. Symbol": "AAPL"}, "Time Series (Daily)": ts}
+
+    async def test_partial_post_api_coverage_raises_incomplete_error(
+        self,
+        adapter_with_backfill: AlphaVantageAdapter,
+        mock_price_repository: MagicMock,
+        mock_price_cache: MagicMock,
+        mock_http_client: MagicMock,
+    ) -> None:
+        """Ticker valid, but API returns only the tail of the requested range."""
+        ticker = Ticker("AAPL")
+        start = datetime(2026, 1, 5, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 1, 17, 23, 59, 59, tzinfo=UTC)
+
+        # Empty cache + empty DB → straight to API.
+        mock_price_cache.get_history = AsyncMock(return_value=None)
+        mock_price_repository.get_price_history = AsyncMock(return_value=[])
+
+        # API returns only Jan 15-17 — head gap of 10 days (Jan 5-14).
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = self._api_response(
+            ["2026-01-15", "2026-01-16", "2026-01-17"]
+        )
+        mock_http_client.get = AsyncMock(return_value=mock_response)
+
+        with pytest.raises(IncompleteHistoricalDataError) as exc_info:
+            await adapter_with_backfill.get_price_history(ticker, start, end, "1day")
+
+        from datetime import date as _d
+
+        assert exc_info.value.ticker == ticker
+        assert exc_info.value.requested_range == (_d(2026, 1, 5), _d(2026, 1, 17))
+        assert exc_info.value.available_range == (
+            _d(2026, 1, 15),
+            _d(2026, 1, 17),
+        )
+        assert exc_info.value.missing_days_count == 10
+
+    async def test_partial_post_api_coverage_enqueues_backfill_task(
+        self,
+        adapter_with_backfill: AlphaVantageAdapter,
+        mock_price_repository: MagicMock,
+        mock_price_cache: MagicMock,
+        mock_http_client: MagicMock,
+        backfill_repo: InMemoryBackfillTaskRepository,
+    ) -> None:
+        """Adapter creates exactly one high-priority backfill task for the gap."""
+        ticker = Ticker("AAPL")
+        start = datetime(2026, 1, 5, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 1, 17, 23, 59, 59, tzinfo=UTC)
+
+        mock_price_cache.get_history = AsyncMock(return_value=None)
+        mock_price_repository.get_price_history = AsyncMock(return_value=[])
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = self._api_response(
+            ["2026-01-15", "2026-01-16", "2026-01-17"]
+        )
+        mock_http_client.get = AsyncMock(return_value=mock_response)
+
+        with pytest.raises(IncompleteHistoricalDataError):
+            await adapter_with_backfill.get_price_history(ticker, start, end, "1day")
+
+        pending = await backfill_repo.list_pending(limit=10)
+        assert len(pending) == 1
+        task = pending[0]
+        assert task.ticker == ticker
+        from datetime import date as _d
+
+        assert task.start_date == _d(2026, 1, 5)
+        assert task.end_date == _d(2026, 1, 14)
+        assert task.priority is BackfillPriority.HIGH
+        assert task.status is BackfillTaskStatus.PENDING
+
+    async def test_complete_coverage_does_not_raise(
+        self,
+        adapter_with_backfill: AlphaVantageAdapter,
+        mock_price_repository: MagicMock,
+        mock_price_cache: MagicMock,
+        mock_http_client: MagicMock,
+        backfill_repo: InMemoryBackfillTaskRepository,
+    ) -> None:
+        """Full coverage of the requested range returns normally — no enqueue."""
+        ticker = Ticker("AAPL")
+        start = datetime(2026, 1, 10, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 1, 17, 23, 59, 59, tzinfo=UTC)
+
+        mock_price_cache.get_history = AsyncMock(return_value=None)
+        mock_price_repository.get_price_history = AsyncMock(return_value=[])
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        # Include both head (Jan 10) and tail (Jan 17) so coverage spans
+        # the requested range.
+        mock_response.json.return_value = self._api_response(
+            ["2026-01-10", "2026-01-13", "2026-01-15", "2026-01-17"]
+        )
+        mock_http_client.get = AsyncMock(return_value=mock_response)
+
+        result = await adapter_with_backfill.get_price_history(
+            ticker, start, end, "1day"
+        )
+        assert result  # non-empty
+        # No backfill was enqueued
+        assert await backfill_repo.list_pending(limit=10) == []
+
+    async def test_raises_without_backfill_port_does_not_crash(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_price_repository: MagicMock,
+        mock_price_cache: MagicMock,
+        mock_http_client: MagicMock,
+    ) -> None:
+        """When no backfill port is wired, raise without enqueueing.
+
+        Default constructor case — preserves backwards-compat for tests
+        and legacy call sites that haven't wired the L2 port yet.
+        """
+        ticker = Ticker("AAPL")
+        start = datetime(2026, 1, 5, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 1, 17, 23, 59, 59, tzinfo=UTC)
+
+        mock_price_cache.get_history = AsyncMock(return_value=None)
+        mock_price_repository.get_price_history = AsyncMock(return_value=[])
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = self._api_response(
+            ["2026-01-15", "2026-01-16", "2026-01-17"]
+        )
+        mock_http_client.get = AsyncMock(return_value=mock_response)
+
+        with pytest.raises(IncompleteHistoricalDataError):
+            await alpha_vantage_adapter.get_price_history(ticker, start, end, "1day")
+
+    async def test_duplicate_partial_does_not_enqueue_twice(
+        self,
+        adapter_with_backfill: AlphaVantageAdapter,
+        mock_price_repository: MagicMock,
+        mock_price_cache: MagicMock,
+        mock_http_client: MagicMock,
+        backfill_repo: InMemoryBackfillTaskRepository,
+    ) -> None:
+        """Two calls with the same incomplete result enqueue only one task."""
+        ticker = Ticker("AAPL")
+        start = datetime(2026, 1, 5, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 1, 17, 23, 59, 59, tzinfo=UTC)
+
+        mock_price_cache.get_history = AsyncMock(return_value=None)
+        mock_price_repository.get_price_history = AsyncMock(return_value=[])
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = self._api_response(
+            ["2026-01-15", "2026-01-16", "2026-01-17"]
+        )
+        mock_http_client.get = AsyncMock(return_value=mock_response)
+
+        for _ in range(2):
+            with pytest.raises(IncompleteHistoricalDataError):
+                await adapter_with_backfill.get_price_history(
+                    ticker, start, end, "1day"
+                )
+
+        # find_existing collapsed the second insert
+        pending = await backfill_repo.list_pending(limit=10)
+        assert len(pending) == 1
