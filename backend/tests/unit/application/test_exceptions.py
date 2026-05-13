@@ -9,6 +9,7 @@ from zebu.application.exceptions import (
     InvalidPriceDataError,
     MarketDataError,
     MarketDataUnavailableError,
+    PartialPricingError,
     TickerNotFoundError,
 )
 from zebu.domain.value_objects.ticker import Ticker
@@ -234,3 +235,41 @@ class TestExceptionHierarchy:
 
         with pytest.raises(MarketDataError):
             raise_any_market_data_error()
+
+
+class TestPartialPricingError:
+    """Phase J / Task #214 — PartialPricingError construction + introspection."""
+
+    def test_construction_with_defaults(self) -> None:
+        """Default ``retry_after_seconds`` is 5; message includes symbols."""
+        aapl, msft = Ticker("AAPL"), Ticker("MSFT")
+        error = PartialPricingError(
+            missing_tickers=[aapl, msft],
+            failed_reason={
+                aapl: "ticker_not_found",
+                msft: "market_data_unavailable",
+            },
+        )
+        assert error.missing_tickers == [aapl, msft]
+        assert error.failed_reason[aapl] == "ticker_not_found"
+        assert error.failed_reason[msft] == "market_data_unavailable"
+        assert error.retry_after_seconds == 5
+        assert "AAPL" in error.message
+        assert "MSFT" in error.message
+
+    def test_custom_retry_after(self) -> None:
+        """``retry_after_seconds`` is configurable."""
+        error = PartialPricingError(
+            missing_tickers=[Ticker("AAPL")],
+            failed_reason={Ticker("AAPL"): "market_data_unavailable"},
+            retry_after_seconds=30,
+        )
+        assert error.retry_after_seconds == 30
+
+    def test_inheritance(self) -> None:
+        """Inherits from MarketDataError for broad-except blocks."""
+        error = PartialPricingError(
+            missing_tickers=[Ticker("AAPL")],
+            failed_reason={Ticker("AAPL"): "ticker_not_found"},
+        )
+        assert isinstance(error, MarketDataError)

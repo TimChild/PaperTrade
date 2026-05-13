@@ -32,10 +32,22 @@ function PortfolioCardWithBalance({
 }: {
   portfolioDTO: PortfolioDTO
 }): React.JSX.Element {
-  const { data: balanceData } = usePortfolioBalance(portfolioDTO.id)
+  const { data: balanceData, pricingStatus, missingTickers } =
+    usePortfolioBalance(portfolioDTO.id)
   const portfolio = adaptPortfolio(portfolioDTO, balanceData || null)
-
-  return <PortfolioCard portfolio={portfolio} isLoading={!balanceData} />
+  // Phase J / Task #214 — distinguish the pre-first-fetch skeleton
+  // (`isLoading`) from the "pricing partial" skeleton
+  // (`pricingStatus === "loading"`). The card renders a skeleton in
+  // both states; the latter additionally surfaces the missing tickers
+  // when the retry budget exhausts ("unavailable").
+  return (
+    <PortfolioCard
+      portfolio={portfolio}
+      isLoading={!balanceData && pricingStatus !== 'unavailable'}
+      pricingStatus={pricingStatus}
+      missingTickers={missingTickers}
+    />
+  )
 }
 
 export function Dashboard(): React.JSX.Element {

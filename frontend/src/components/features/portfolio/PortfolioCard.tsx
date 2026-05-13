@@ -4,6 +4,7 @@ import type { Portfolio } from '@/types/portfolio'
 import { formatCurrency, formatPercent } from '@/utils/formatters'
 import { toasts } from '@/utils/toast'
 import { useDeletePortfolio } from '@/hooks/usePortfolio'
+import { useExtendedLoadingFlag } from '@/hooks/useExtendedLoadingFlag'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Eyebrow } from '@/components/ui/Eyebrow'
@@ -13,7 +14,20 @@ interface PortfolioCardProps {
   portfolio: Portfolio
   isLoading?: boolean
   onDelete?: (portfolioId: string) => void
+  /**
+   * Phase J / Task #214 — pricing availability discriminator. When
+   * ``"loading"`` the total-value + day-change rows render a skeleton
+   * (and a "Fetching market data…" caption appears after ~10s — handled
+   * by an internal timer); cash remains visible because it doesn't
+   * depend on market data. When ``"unavailable"`` the retry budget has
+   * been exhausted and the card switches to a hard error block listing
+   * the specific stuck tickers.
+   */
+  pricingStatus?: 'ok' | 'loading' | 'unavailable'
+  /** Tickers whose price could not be resolved (loading / unavailable). */
+  missingTickers?: string[]
 }
+
 
 /**
  * Editorial portfolio card — flush hairline panel with the portfolio name as
@@ -28,9 +42,19 @@ export function PortfolioCard({
   portfolio,
   isLoading = false,
   onDelete,
+  pricingStatus = 'ok',
+  missingTickers = [],
 }: PortfolioCardProps): React.JSX.Element {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const deleteMutation = useDeletePortfolio()
+
+  // Phase J / Task #214 — when pricing is loading, show a quiet skeleton
+  // for the first ~10s; after that surface a "Fetching market data…"
+  // caption so the user knows the wait is intentional. The caption flag
+  // is gated on a single ``setTimeout`` whose teardown resets the
+  // visibility when the loading state goes away.
+  const isPricingLoading = pricingStatus === 'loading'
+  const showExtendedCaption = useExtendedLoadingFlag(isPricingLoading)
 
   if (isLoading) {
     return (
@@ -69,6 +93,8 @@ export function PortfolioCard({
   const sign = isPositiveChange ? '+' : ''
   const deltaTone = isPositiveChange ? 'text-gain' : 'text-loss'
 
+  const isUnavailable = pricingStatus === 'unavailable'
+
   return (
     <>
       <div className="relative">
@@ -85,36 +111,77 @@ export function PortfolioCard({
               {portfolio.name}
             </h2>
 
-            {/* Total value — primary number */}
+            {/* Total value — primary number. Switches to a skeleton
+                when pricing is loading; a hard error block when the
+                retry budget is exhausted. Cash row below is always
+                rendered (it doesn't depend on market data). */}
             <div className="mb-5">
               <Eyebrow>Total value</Eyebrow>
-              <p
-                className="mt-1.5 font-display-numeric tabular-nums text-display-sm text-ink"
-                data-testid={`portfolio-card-value-${portfolio.id}`}
-              >
-                {formatCurrency(portfolio.totalValue)}
-              </p>
+              {isPricingLoading ? (
+                <div
+                  className="mt-1.5 space-y-2"
+                  data-testid={`portfolio-card-value-loading-${portfolio.id}`}
+                >
+                  <Skeleton className="h-9 w-32" />
+                  {showExtendedCaption && (
+                    <p
+                      className="font-caption text-ink-muted"
+                      data-testid={`portfolio-card-loading-caption-${portfolio.id}`}
+                    >
+                      Fetching market data…
+                    </p>
+                  )}
+                </div>
+              ) : isUnavailable ? (
+                <div
+                  className="mt-1.5 rounded-editorial border border-hairline bg-loss-soft/30 p-3 text-body-sm text-ink"
+                  data-testid={`portfolio-card-pricing-unavailable-${portfolio.id}`}
+                >
+                  <p className="font-tabular">Market data unavailable</p>
+                  {missingTickers.length > 0 && (
+                    <p className="font-caption mt-1 text-ink-muted">
+                      {missingTickers.join(', ')}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p
+                  className="mt-1.5 font-display-numeric tabular-nums text-display-sm text-ink"
+                  data-testid={`portfolio-card-value-${portfolio.id}`}
+                >
+                  {formatCurrency(portfolio.totalValue)}
+                </p>
+              )}
             </div>
 
             {/* Day change + cash row */}
             <dl className="grid grid-cols-2 gap-4 pt-4 border-t border-hairline">
               <div>
                 <dt className="font-eyebrow text-ink-muted">Day</dt>
-                <dd
-                  className={cn(
-                    'mt-1 font-tabular text-body-sm flex flex-wrap items-baseline gap-x-1.5',
-                    deltaTone
-                  )}
-                  data-testid={`portfolio-card-day-change-${portfolio.id}`}
-                >
-                  <span>
-                    {sign}
-                    {formatCurrency(portfolio.dailyChange)}
-                  </span>
-                  <span className="text-ink-muted">
-                    {formatPercent(portfolio.dailyChangePercent)}
-                  </span>
-                </dd>
+                {isPricingLoading || isUnavailable ? (
+                  <dd
+                    className="mt-1"
+                    data-testid={`portfolio-card-day-change-loading-${portfolio.id}`}
+                  >
+                    <Skeleton className="h-4 w-24" />
+                  </dd>
+                ) : (
+                  <dd
+                    className={cn(
+                      'mt-1 font-tabular text-body-sm flex flex-wrap items-baseline gap-x-1.5',
+                      deltaTone
+                    )}
+                    data-testid={`portfolio-card-day-change-${portfolio.id}`}
+                  >
+                    <span>
+                      {sign}
+                      {formatCurrency(portfolio.dailyChange)}
+                    </span>
+                    <span className="text-ink-muted">
+                      {formatPercent(portfolio.dailyChangePercent)}
+                    </span>
+                  </dd>
+                )}
               </div>
               <div>
                 <dt className="font-eyebrow text-ink-muted">Cash</dt>

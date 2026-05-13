@@ -120,9 +120,23 @@ def client(test_engine: AsyncEngine) -> TestClient:
         # Seed prices 1 minute in the past so queries for "now" will find them
         # This works with the "at or before" semantics of get_price_at()
         seed_time = datetime.now(UTC) - timedelta(minutes=1)
+        # Phase J / Task #214 — the portfolio-balance query also fetches
+        # the previous trading day's close to compute daily change. The
+        # handler now refuses to return a partial result, so without a
+        # historical observation seeded the integration tests would all
+        # see 503-fetching instead of 200 with concrete numbers. Seed a
+        # second price point ~10 days back to cover that fetch.
+        prev_seed_time = datetime.now(UTC) - timedelta(days=10)
 
         # Seed with default test prices
         test_prices = [
+            PricePoint(
+                ticker=Ticker("AAPL"),
+                price=Money(Decimal("148.00"), "USD"),
+                timestamp=prev_seed_time,
+                source="database",
+                interval="real-time",
+            ),
             PricePoint(
                 ticker=Ticker("AAPL"),
                 price=Money(Decimal("150.00"), "USD"),
@@ -132,8 +146,22 @@ def client(test_engine: AsyncEngine) -> TestClient:
             ),
             PricePoint(
                 ticker=Ticker("GOOGL"),
+                price=Money(Decimal("2780.00"), "USD"),
+                timestamp=prev_seed_time,
+                source="database",
+                interval="real-time",
+            ),
+            PricePoint(
+                ticker=Ticker("GOOGL"),
                 price=Money(Decimal("2800.00"), "USD"),
                 timestamp=seed_time,
+                source="database",
+                interval="real-time",
+            ),
+            PricePoint(
+                ticker=Ticker("MSFT"),
+                price=Money(Decimal("377.00"), "USD"),
+                timestamp=prev_seed_time,
                 source="database",
                 interval="real-time",
             ),

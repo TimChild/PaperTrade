@@ -8,6 +8,8 @@ from uuid import UUID
 
 from zebu.application.exceptions import (
     MarketDataUnavailableError,
+    PartialPricingError,
+    PartialPricingReason,
     TickerNotFoundError,
 )
 from zebu.application.ports.market_data_port import MarketDataPort
@@ -188,31 +190,31 @@ class GetPortfolioBalanceHandler:
                 daily_change_percent=Decimal("0.00"),
             )
 
-        # Collect all unique tickers
-        tickers = [holding.ticker for holding in holdings]
+        # Collect all unique tickers (preserve order via dict)
+        tickers = list({holding.ticker: None for holding in holdings}.keys())
 
-        # Fetch current prices
+        # Fetch current prices. Phase J / Task #214 — record per-ticker
+        # failures by typed reason so we can raise a structured
+        # PartialPricingError instead of silently dropping the ticker
+        # from the holdings-value sum.
         current_prices_dict: dict[Ticker, Money] = {}
+        failed_reason: dict[Ticker, PartialPricingReason] = {}
         for ticker in tickers:
             try:
-                # TODO: This should ideally support as_of/temporal queries too
-                # if we want full history support, but for daily change calculation
-                # we just want "market price as known now".
-                # If doing a historical query, 'get_current_price' might be misleading
-                # if the adapter doesn't know about time travel.
-                # However, for the purpose of fixing the Sunday test bug, we assume
-                # the market data adapter is seeded appropriately for the 'current'
-                # time.
                 price_point = await self._market_data.get_current_price(ticker)
                 current_prices_dict[ticker] = price_point.price
-            except (TickerNotFoundError, MarketDataUnavailableError) as e:
+            except TickerNotFoundError as e:
                 logger.warning(
                     f"Failed to fetch current price for {ticker.symbol}: {e}"
                 )
-                # Skip ticker if price unavailable
-                continue
+                failed_reason[ticker] = "ticker_not_found"
+            except MarketDataUnavailableError as e:
+                logger.warning(
+                    f"Failed to fetch current price for {ticker.symbol}: {e}"
+                )
+                failed_reason[ticker] = "market_data_unavailable"
 
-        # Fetch previous close prices
+        # Fetch previous close prices.
         previous_date = get_previous_trading_day(current_time)
         previous_prices_dict: dict[Ticker, Money] = {}
         for ticker in tickers:
@@ -221,12 +223,37 @@ class GetPortfolioBalanceHandler:
                     ticker, previous_date
                 )
                 previous_prices_dict[ticker] = price_point.price
-            except (TickerNotFoundError, MarketDataUnavailableError) as e:
+            except TickerNotFoundError as e:
                 logger.warning(
                     f"Failed to fetch previous close price for {ticker.symbol}: {e}"
                 )
-                # Skip ticker if price unavailable
-                continue
+                # Only record reason if not already failed on the current
+                # leg — current-price miss is the more useful diagnostic.
+                if ticker not in failed_reason:
+                    failed_reason[ticker] = "ticker_not_found"
+            except MarketDataUnavailableError as e:
+                logger.warning(
+                    f"Failed to fetch previous close price for {ticker.symbol}: {e}"
+                )
+                if ticker not in failed_reason:
+                    failed_reason[ticker] = "market_data_unavailable"
+
+        # Per Task #214 — refuse to return numbers when any required
+        # price is missing. Order is stable (input order of holdings) so
+        # the UI's loading state renders the same list across re-polls.
+        missing_tickers = [
+            t
+            for t in tickers
+            if t not in current_prices_dict or t not in previous_prices_dict
+        ]
+        if missing_tickers:
+            raise PartialPricingError(
+                missing_tickers=missing_tickers,
+                failed_reason={
+                    t: failed_reason.get(t, "market_data_unavailable")
+                    for t in missing_tickers
+                },
+            )
 
         # Calculate holdings value using PortfolioCalculator
         holdings_value = PortfolioCalculator.calculate_portfolio_value(

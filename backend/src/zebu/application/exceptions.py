@@ -5,8 +5,18 @@ including issues with external data sources and integration failures.
 """
 
 from datetime import date
+from typing import Literal
 
 from zebu.domain.value_objects.ticker import Ticker
+
+# Reason taxonomy for a per-ticker pricing miss surfaced via
+# :class:`PartialPricingError`. ``ticker_not_found`` mirrors the domain
+# exception of the same name (ticker is invalid); ``market_data_unavailable``
+# covers transient adapter failures (rate limit / network / cache miss).
+PartialPricingReason = Literal[
+    "ticker_not_found",
+    "market_data_unavailable",
+]
 
 
 class MarketDataError(Exception):
@@ -156,6 +166,61 @@ class IncompleteHistoricalDataError(MarketDataError):
                     f"({missing_days_count} day(s) missing). "
                     "A backfill has been queued."
                 )
+        super().__init__(message)
+
+
+class PartialPricingError(MarketDataError):
+    """Raised when current/previous prices cannot be resolved for every required ticker.
+
+    Phase J (Task #214) — symmetric to :class:`IncompleteHistoricalDataError`
+    but for the current-price (and previous-close) fetches that power
+    portfolio balance queries. Previously, the
+    :class:`GetPortfolioBalancesHandler` would silently drop any ticker whose
+    price fetch raised :class:`TickerNotFoundError` /
+    :class:`MarketDataUnavailableError`. As background prewarm + lazy backfill
+    completed across successive polls, the dashboard saw the same portfolio's
+    total jump (e.g. $656 → $7,756 → $11,789 → $13,922).
+
+    The fix is to refuse to compute a balance when any required price is
+    missing, and surface that as a structured "data is loading" response at
+    the API boundary (503 + ``Retry-After``). Per Tim 2026-05-13: "prefer no
+    number over a wrong number."
+
+    Attributes:
+        missing_tickers: Tickers whose current (or previous-close) price
+            could not be resolved. Ordered for stable rendering.
+        failed_reason: Per-ticker reason string from the
+            :data:`PartialPricingReason` taxonomy.
+        retry_after_seconds: Recommended client retry delay. Mirrors
+            ``Retry-After`` at the HTTP layer.
+        message: Human-readable error description.
+    """
+
+    def __init__(
+        self,
+        missing_tickers: list[Ticker],
+        failed_reason: dict[Ticker, PartialPricingReason],
+        retry_after_seconds: int = 5,
+        message: str | None = None,
+    ) -> None:
+        """Initialize PartialPricingError.
+
+        Args:
+            missing_tickers: Tickers whose price could not be resolved.
+            failed_reason: Per-ticker reason mapping. Must cover every
+                entry in ``missing_tickers``.
+            retry_after_seconds: Recommended client retry delay (default 5).
+            message: Optional human-readable override.
+        """
+        self.missing_tickers = missing_tickers
+        self.failed_reason = failed_reason
+        self.retry_after_seconds = retry_after_seconds
+        if message is None:
+            symbols = ", ".join(t.symbol for t in missing_tickers)
+            message = (
+                f"Pricing unavailable for {symbols} — data is being fetched. "
+                f"Retry in {retry_after_seconds} seconds."
+            )
         super().__init__(message)
 
 

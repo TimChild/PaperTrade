@@ -76,14 +76,53 @@ export interface TradeRequest {
 }
 
 // Balance types
+/**
+ * Per-portfolio pricing-availability discriminator (Phase J / Task #214).
+ *
+ * - `ok` — current and previous-close prices for every held ticker were
+ *   resolved; numeric fields are correct.
+ * - `loading` — at least one held ticker's price could not be resolved.
+ *   `cash_balance` is still accurate (computed from transactions); all
+ *   other numeric fields are placeholder `"0.00"` and `missing_tickers`
+ *   enumerates the affected symbols. The UI must NOT render the
+ *   placeholder numbers — render a skeleton instead.
+ */
+export type PricingStatus = 'ok' | 'loading'
+
 export interface BalanceResponse {
   cash_balance: string // Decimal as string
   holdings_value: string // Decimal as string
   total_value: string // Decimal as string
   currency: string
   as_of: string // ISO 8601 timestamp
-  daily_change: string // Decimal as string - NEW
-  daily_change_percent: string // Decimal as string - NEW
+  daily_change: string // Decimal as string
+  daily_change_percent: string // Decimal as string
+  /**
+   * Phase J / Task #214 — pricing availability discriminator. Older
+   * server versions may omit the field; the hook defaults to `"ok"`
+   * for backwards compatibility.
+   */
+  pricing_status?: PricingStatus
+  /** Tickers whose price could not be resolved (only populated when loading). */
+  missing_tickers?: string[]
+  /** Recommended retry delay in seconds; mirrors `Retry-After`. */
+  retry_after_seconds?: number | null
+}
+
+/**
+ * Phase J / Task #214 — shape of the 503 body the single-portfolio
+ * balance endpoint returns when pricing is partial. Mirrors
+ * `handle_partial_pricing` in
+ * `backend/src/zebu/adapters/inbound/api/error_handlers.py`.
+ *
+ * Distinguishable from any other 503 by the literal `status: "fetching"`
+ * discriminator at the top level.
+ */
+export interface PartialPricingFetchingBody {
+  status: 'fetching'
+  missing_tickers: string[]
+  failed_reason: Record<string, string>
+  retry_after_seconds: number
 }
 
 // Holdings types
