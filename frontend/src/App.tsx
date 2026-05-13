@@ -23,6 +23,8 @@ import { BacktestResult } from '@/pages/BacktestResult'
 import { CompareBacktests } from '@/pages/CompareBacktests'
 import { SettingsApiKeys } from '@/pages/SettingsApiKeys'
 import { SettingsLayout } from '@/components/SettingsLayout'
+import { AdminLayout } from '@/components/AdminLayout'
+import { AdminDataCoverage } from '@/pages/AdminDataCoverage'
 import { NotFound } from '@/pages/NotFound'
 import { DashboardVariantA } from '@/pages/__prototypes__/DashboardVariantA'
 import { DashboardVariantB } from '@/pages/__prototypes__/DashboardVariantB'
@@ -130,6 +132,7 @@ function AuthenticatedApp() {
                     end: false,
                   },
                   { to: '/backtests', label: 'Backtests', end: false },
+                  { to: '/admin', label: 'Admin', end: false },
                   { to: '/settings', label: 'Settings', end: false },
                 ].map(({ to, label, end }) => (
                   <NavLink
@@ -182,6 +185,14 @@ function AuthenticatedApp() {
                   element={<Navigate to="/settings/api-keys" replace />}
                 />
                 <Route path="api-keys" element={<SettingsApiKeys />} />
+              </Route>
+              {/* Phase J / Task #212 Layer 4 — admin data-coverage UI. */}
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route
+                  index
+                  element={<Navigate to="/admin/data-coverage" replace />}
+                />
+                <Route path="data-coverage" element={<AdminDataCoverage />} />
               </Route>
               {/* Prototype routes (dev only) */}
               {import.meta.env.DEV && (

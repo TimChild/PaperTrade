@@ -773,3 +773,54 @@ export interface ListTriggerParams {
 export interface DisableAllResponse {
   disabled_count: number
 }
+
+// ---------------------------------------------------------------------------
+// Admin: data-coverage (Phase J — Task #212 Layer 4)
+//
+// Mirrors `TickerCoverageEntry` / `DataCoverageResponse` /
+// `BackfillRequest` / `BackfillResponse` in
+// `backend/src/zebu/adapters/inbound/api/admin_data_coverage.py`.
+// ---------------------------------------------------------------------------
+
+/** Priority ladder for a backfill task; mirrors the BackfillPriority enum. */
+export type BackfillPriority = 'low' | 'high'
+
+/** Status of a BackfillTask row; mirrors BackfillTaskStatus. */
+export type BackfillTaskStatus = 'pending' | 'running' | 'succeeded' | 'failed'
+
+/** Per-ticker data-coverage entry returned by GET /admin/data-coverage. */
+export interface TickerCoverageEntry {
+  ticker: string
+  /** ISO 8601 date (YYYY-MM-DD) or null when we have zero daily bars. */
+  coverage_start: string | null
+  /** ISO 8601 date (YYYY-MM-DD) or null when we have zero daily bars. */
+  coverage_end: string | null
+  /** ISO 8601 UTC timestamp; null when zero daily bars. */
+  last_refresh: string | null
+  /** Trading-day count inside [coverage_start, coverage_end] with no bar. */
+  gap_days_count: number
+  is_active: boolean
+}
+
+/** Response body of GET /admin/data-coverage. */
+export interface DataCoverageResponse {
+  tickers: TickerCoverageEntry[]
+}
+
+/** Request body of POST /admin/data-coverage/backfill. */
+export interface BackfillRequest {
+  ticker: string
+  /** YYYY-MM-DD. */
+  start_date: string
+  /** YYYY-MM-DD. */
+  end_date: string
+  priority?: BackfillPriority
+}
+
+/** Response body of POST /admin/data-coverage/backfill. */
+export interface BackfillResponse {
+  task_id: string
+  status: BackfillTaskStatus
+  /** True when the endpoint deduped on (ticker, start, end). */
+  existing: boolean
+}
