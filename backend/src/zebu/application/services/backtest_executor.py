@@ -128,6 +128,23 @@ class BacktestExecutor:
 
         initial_cash_money = Money(command.initial_cash, "USD")
 
+        # Create + persist the synthetic backtest portfolio FIRST. The
+        # BacktestRun row below has a FK on ``backtest_runs.portfolio_id
+        # → portfolios.id``; staging the run before its portfolio exists
+        # leaves a pending INSERT that fails the FK constraint as soon as
+        # any subsequent ``session.get`` (or other autoflush trigger)
+        # fires inside the pipeline. Saving the portfolio up-front
+        # ensures the FK target row is present in the DB before the run
+        # row references it.
+        portfolio = Portfolio(
+            id=portfolio_id,
+            user_id=command.user_id,
+            name=f"[Backtest] {command.backtest_name}",
+            created_at=now,
+            portfolio_type=PortfolioType.BACKTEST,
+        )
+        await self._portfolio_repo.save(portfolio)
+
         # Create the initial RUNNING BacktestRun
         backtest_run = BacktestRun(
             id=backtest_run_id,
@@ -235,17 +252,11 @@ class BacktestExecutor:
         Returns:
             COMPLETED BacktestRun with metrics
         """
-        now_utc = backtest_run.created_at
-
         # ── Phase 0: Setup ────────────────────────────────────────────────────
-        portfolio = Portfolio(
-            id=portfolio_id,
-            user_id=command.user_id,
-            name=f"[Backtest] {command.backtest_name}",
-            created_at=now_utc,
-            portfolio_type=PortfolioType.BACKTEST,
-        )
-        await self._portfolio_repo.save(portfolio)
+        # The synthetic portfolio is created + saved by ``execute()``
+        # before this pipeline runs, so the BacktestRun's FK to
+        # ``portfolios.id`` is satisfied before any pending INSERT is
+        # flushed. Re-loading is unnecessary here.
 
         start_ts = datetime(
             command.start_date.year,
