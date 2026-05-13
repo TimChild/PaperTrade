@@ -20,30 +20,31 @@ import { test, expect } from './fixtures'
 test.describe('Admin data-coverage', () => {
   test('renders the data-coverage page', async ({ page }) => {
     await page.goto('/admin/data-coverage')
-    await page.waitForLoadState('networkidle')
 
     // Page hero renders regardless of auth outcome.
     await expect(
       page.getByRole('heading', { name: /^Data coverage$/i, level: 1 })
     ).toBeVisible()
 
-    // One of: error block (non-admin user), empty state (no tickers
-    // seeded), or the table (tickers present). All three are valid
-    // smoke-test outcomes — we only assert the page rendered.
-    const errorVisible = await page
-      .getByTestId('admin-data-coverage-error')
-      .isVisible()
-      .catch(() => false)
-    const emptyVisible = await page
-      .getByTestId('admin-data-coverage-empty')
-      .isVisible()
-      .catch(() => false)
-    const tableVisible = await page
-      .getByTestId('admin-data-coverage-table')
-      .isVisible()
-      .catch(() => false)
-
-    expect(errorVisible || emptyVisible || tableVisible).toBe(true)
+    // Wait for one of the data states to settle. `networkidle` was not
+    // sufficient on CI — TanStack Query's retry chain keeps requests
+    // in flight just past the network-quiet window, so the page still
+    // shows the loading spinner when the assertion runs.
+    //
+    // Outcomes (all valid for a smoke test):
+    //   - `admin-data-coverage-error` — 403 or network error
+    //   - `admin-data-coverage-empty` — admin, but no tickers seeded
+    //   - `admin-data-coverage-table` — admin + tickers present
+    await page
+      .locator(
+        [
+          '[data-testid="admin-data-coverage-error"]',
+          '[data-testid="admin-data-coverage-empty"]',
+          '[data-testid="admin-data-coverage-table"]',
+        ].join(', ')
+      )
+      .first()
+      .waitFor({ state: 'visible', timeout: 10_000 })
   })
 
   test('opens the backfill modal when a row is present', async ({ page }) => {
