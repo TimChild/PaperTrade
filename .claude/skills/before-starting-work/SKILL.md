@@ -50,8 +50,8 @@ Skim:
 
 - `CLAUDE.md` — top-level conventions
 - `PROGRESS.md` — current phase, recent work
-- `docs/planning/agent-platform-proposal.md` — active forward plan
-- `agent_docs/tasks/` — open numbered task specs (the next is **211**)
+- `docs/planning/agent-platform-next-steps.md` — active forward plan (the original proposal in `agent-platform-proposal.md` has shipped end-to-end)
+- `agent_docs/tasks/` — open numbered task specs (the next is **214**)
 
 ## Quick-start one-liner
 

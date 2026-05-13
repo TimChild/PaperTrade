@@ -25,7 +25,7 @@ agent_docs/
 
 ## Task workflow
 
-1. Write a spec at `agent_docs/tasks/NNN_short_name.md` (next number is **211** — most recent is `210_live_strategy_execution.md`)
+1. Write a spec at `agent_docs/tasks/NNN_short_name.md` (next number is **214** — most recent is `213_queue_mode_triggers.md`, shipped in Phase J)
 2. Spec sections: Overview, Context, Architecture, Implementation Plan, Testing Strategy, Success Criteria, Agent Assignment, References
 3. After completion, write a progress report at `agent_docs/progress/YYYY-MM-DD_HH-MM-SS_short-description.md`
 

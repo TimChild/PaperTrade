@@ -1,10 +1,10 @@
 # Zebu — Project Conventions for Claude
 
-Zebu (repo: `TimChild/PaperTrade`) is a stock-market paper-trading platform — practice trading without real money. **Phase 4 complete, v1.0.0 deployed** to `https://zebutrader.com` (Proxmox VM, self-hosted CD pipeline). See `docs/planning/agent-platform-proposal.md` for the active forward plan (agent-driven trading, Phases A–F; Phase A done, Phase B in progress).
+Zebu (repo: `TimChild/PaperTrade`) is a stock-market paper-trading platform — practice trading without real money. **Phase J complete**, v1.0.0 deployed to `https://zebutrader.com` (Proxmox VM, self-hosted CD pipeline). The agent-platform plan has shipped end-to-end through Phase J — see `docs/planning/agent-platform-completed.md` (historical) and `docs/planning/agent-platform-next-steps.md` (active forward plan: multi-provider invocation + agent-driven backtests).
 
 ## Tech stack
 
-**Backend** — Python 3.13+, FastAPI, SQLModel, Pyright (strict), Ruff, Pytest. Postgres prod, SQLite dev. Redis cache. APScheduler. Clerk auth (Bearer JWT only — no API key path yet).
+**Backend** — Python 3.13+, FastAPI, SQLModel, Pyright (strict), Ruff, Pytest. Postgres prod, SQLite dev. Redis cache. APScheduler. Dual auth — Clerk Bearer JWT for humans, API key for machine identities (see the **Auth** entry under "Things to remember" for the full dual-auth pattern).
 
 **Frontend** — TypeScript strict, React + Vite, TanStack Query, Zustand, Tailwind. Vitest + Playwright.
 
@@ -85,28 +85,26 @@ Use the `Agent` tool with the matching `subagent_type` (or have the user invoke 
 | `docs-tidy` | BACKLOG / PROGRESS / README maintenance |
 | `orchestrate-zebu` | PR-review criteria, parallel-execution safety, task scoping |
 | `audit-mode` | "Audit mode" report format, P-tier calibration, multi-agent audit dispatch pattern |
-| `claude-infra-sync` | Detect drift in `CLAUDE.md`/`.claude/` against the actual repo (run end-of-Phase) |
+| `claude-infra-sync` | Detect drift in `CLAUDE.md`/`.claude/` against the actual repo (run at the end of every major Phase or Wave) |
 
 ## Task workflow
 
-For multi-step work, write a numbered task spec under `agent_docs/tasks/NNN_short_name.md` (the next number is **211** — most recent is `210_live_strategy_execution.md`, scoped but not started).
+For multi-step work, write a numbered task spec under `agent_docs/tasks/NNN_short_name.md` (the next number is **214** — most recent is `213_queue_mode_triggers.md`, shipped in Phase J).
 
 Task specs include: Overview, Context (what exists), Architecture (new domain concepts, flow, endpoints), Implementation Plan (phases), Testing Strategy, Success Criteria, Agent Assignment, References. After completion, write a progress doc to `agent_docs/progress/YYYY-MM-DD_HH-MM-SS_short-description.md`.
 
 ## Forward plan
 
-The active proposal is `docs/planning/agent-platform-proposal.md` — six phases (A–F) to evolve Zebu into an agent-driven trading platform with the app as human GUI and looped/scheduled agents executing strategies via API/MCP. **Read it before doing significant new work.**
-
-Status: Phase A (this Claude infra migration) is in progress as of 2026-05-09. Phase B is Task #210 + API-key auth + `ExplorationTask` queue.
+The agent-platform plan (Phases A–J) has shipped end-to-end. The historical record is in `docs/planning/agent-platform-completed.md`; the active forward plan is `docs/planning/agent-platform-next-steps.md` (multi-provider invocation, agent-driven backtests, plus a follow-up sweep). **Read the next-steps doc before scoping significant new work.**
 
 ## Things to remember
 
 - **Naming**: product is "Zebu", repo is `PaperTrade`, import path is `zebu`. All three refer to the same thing.
 - **Auth**: two paths coexist — Clerk Bearer JWT for humans, and API key (Phase C2) for machine identities (agents, scheduled tasks, MCP servers). Agents authenticate by minting a key at `POST /api/v1/api-keys` (Clerk-gated) and presenting it via `Authorization: ApiKey <key>` or `X-API-Key: <key>`. Both schemes resolve to the same `AuthenticatedUser` shape — route handlers don't care which path was used. Scope enforcement (`require_scope`) is wired but not applied broadly yet — that's a Phase D sweep.
-- **Hot paths**: `backend/src/zebu/application/services/backtest_executor.py` is the canonical "iterate over days, generate signals, execute trades" loop — Task #210's live executor will mirror its structure.
+- **Hot paths**: `backend/src/zebu/application/services/backtest_executor.py` (backtest loop) and `backend/src/zebu/application/services/strategy_execution_service.py` (live executor — mirrors the backtest loop's "iterate, generate signals, execute trades" shape). Both are canonical references for any new strategy-execution work.
 - **CD is live**: pushing to `main` deploys to production. Add `[skip deploy]` in the commit message to skip.
 - **Pre-commit runs on push**, not commit. So commits are fast; push is where formatters run.
-- **Run `claude-infra-sync` at the end of each Wave / Phase**: the skill at `.claude/skills/claude-infra-sync/SKILL.md` audits `CLAUDE.md` + `.claude/` for drift against the actual repo. Run it before the next agent dispatch cycle (or as the closeout of a Wave) and address BLOCKERs in the same PR.
+- **Run `claude-infra-sync` at the end of every major Phase or Wave**: the skill at `.claude/skills/claude-infra-sync/SKILL.md` audits `CLAUDE.md` + `.claude/` for drift against the actual repo. Run it before the next agent dispatch cycle (or as the closeout of a Wave) and address BLOCKERs in the same PR.
 
 ## Don't
 
