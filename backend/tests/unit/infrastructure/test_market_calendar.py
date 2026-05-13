@@ -423,3 +423,51 @@ class TestEdgeCases:
         assert len(holidays_2024) == 10
         assert len(holidays_2025) == 10
         assert len(holidays_2026) == 10
+
+
+class TestTradingDaysBetween:
+    """Tests for ``MarketCalendar.trading_days_between``.
+
+    Phase J (Task #212 Layer 4) — the data-coverage handler relies on
+    this method to compute "expected trading days in this window".
+    """
+
+    def test_single_trading_day(self) -> None:
+        """A range covering exactly one trading day returns that day."""
+        days = MarketCalendar.trading_days_between(date(2025, 1, 6), date(2025, 1, 6))
+        assert days == [date(2025, 1, 6)]
+
+    def test_single_weekend_day(self) -> None:
+        """A range covering exactly one weekend day returns empty."""
+        # 2025-01-04 is Saturday.
+        assert (
+            MarketCalendar.trading_days_between(date(2025, 1, 4), date(2025, 1, 4))
+            == []
+        )
+
+    def test_week_excludes_weekend(self) -> None:
+        """Mon-Sun returns five weekdays (no holidays in this stretch)."""
+        days = MarketCalendar.trading_days_between(date(2025, 1, 6), date(2025, 1, 12))
+        assert days == [
+            date(2025, 1, 6),
+            date(2025, 1, 7),
+            date(2025, 1, 8),
+            date(2025, 1, 9),
+            date(2025, 1, 10),
+        ]
+
+    def test_excludes_holidays(self) -> None:
+        """Independence Day 2024 (Thursday) is excluded from the range."""
+        # 2024-07-01 (Mon) through 2024-07-05 (Fri). 2024-07-04 (Thu) is the
+        # Independence Day holiday.
+        days = MarketCalendar.trading_days_between(date(2024, 7, 1), date(2024, 7, 5))
+        assert date(2024, 7, 4) not in days
+        assert date(2024, 7, 3) in days
+        assert date(2024, 7, 5) in days
+
+    def test_end_before_start_returns_empty(self) -> None:
+        """Empty list when ``end < start``."""
+        assert (
+            MarketCalendar.trading_days_between(date(2025, 1, 10), date(2025, 1, 6))
+            == []
+        )

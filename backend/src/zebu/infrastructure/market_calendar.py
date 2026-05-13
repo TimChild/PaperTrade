@@ -233,3 +233,40 @@ class MarketCalendar:
         # Check if holiday
         holidays = cls.get_market_holidays(check_date.year)
         return check_date not in holidays
+
+    @classmethod
+    def trading_days_between(cls, start: date, end: date) -> list[date]:
+        """List every trading day in the closed range ``[start, end]``.
+
+        Both endpoints are inclusive. Returns an empty list when ``end <
+        start``. Used by the data-coverage query handler (Phase J Task
+        #212 Layer 4) to compute "expected trading days in this window"
+        so it can subtract the covered set and yield ``gap_days_count``.
+
+        Args:
+            start: First date in the range (inclusive).
+            end: Last date in the range (inclusive).
+
+        Returns:
+            Trading days between ``start`` and ``end``, inclusive,
+            ordered chronologically.
+
+        Example:
+            >>> from datetime import date
+            >>> # 2024-07-01 (Mon) through 2024-07-08 (Mon)
+            >>> # Excludes 2024-07-04 (Thursday Independence Day),
+            >>> # 2024-07-06 (Sat), 2024-07-07 (Sun).
+            >>> MarketCalendar.trading_days_between(
+            ...     date(2024, 7, 1), date(2024, 7, 8)
+            ... )  # doctest: +ELLIPSIS
+            [datetime.date(2024, 7, 1), datetime.date(2024, 7, 2), ...]
+        """
+        if end < start:
+            return []
+        days: list[date] = []
+        cursor = start
+        while cursor <= end:
+            if cls.is_trading_day(cursor):
+                days.append(cursor)
+            cursor = cursor + timedelta(days=1)
+        return days
