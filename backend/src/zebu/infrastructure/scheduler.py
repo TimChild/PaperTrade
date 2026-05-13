@@ -11,8 +11,9 @@ automatically with the application.
 import asyncio
 import logging
 import os
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
+from uuid import UUID
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -24,6 +25,9 @@ from zebu.adapters.outbound.anthropic.agent_invocation_adapter import (
 )
 from zebu.adapters.outbound.database.api_key_repository import (
     SQLModelApiKeyRepository,
+)
+from zebu.adapters.outbound.database.backfill_task_repository import (
+    SQLModelBackfillTaskRepository,
 )
 from zebu.adapters.outbound.database.exploration_task_repository import (
     SQLModelExplorationTaskRepository,
@@ -74,6 +78,7 @@ from zebu.application.services.trigger_invocation_orchestrator import (
     TriggerInvocationOrchestrator,
 )
 from zebu.domain.exceptions import AgentInvocationError
+from zebu.domain.value_objects.ticker import Ticker
 from zebu.infrastructure.database import async_session_maker
 from zebu.infrastructure.job_audit import with_job_audit
 
@@ -160,6 +165,12 @@ class SchedulerConfig:
         self.trigger_evaluation_enabled = trigger_evaluation_enabled
 
 
+# Max pending BackfillTask rows the scheduler drains per cycle. Pinned
+# to a small ladder so a backlog can't starve the watchlist refresh of
+# AV calls; the next cycle picks up the rest.
+_BACKFILL_PICKUP_LIMIT: int = 20
+
+
 @with_job_audit("refresh_active_stocks")
 async def refresh_active_stocks(config: SchedulerConfig) -> None:
     """Background job to refresh prices for active stocks.
@@ -169,11 +180,17 @@ async def refresh_active_stocks(config: SchedulerConfig) -> None:
     2. Fetches current price for each ticker
     3. Updates cache via the normal MarketDataPort flow
     4. Respects rate limits with delays between batches
+    5. **(Phase J / Task #212 Layer 2)** Drains any ``PENDING``
+       :class:`BackfillTask` rows queued by activations / operator
+       backfill since the previous cycle.
 
     The job is designed to be idempotent and can be safely re-run.
 
     Wrapped with :func:`with_job_audit` so each invocation writes one
     ``JobExecution`` audit row visible at ``GET /admin/jobs/health``.
+    The single audit row covers both the primary refresh and the
+    prewarm-pickup loop — a fail-anywhere posture would over-report
+    failure if one prewarm errored.
 
     Args:
         config: Scheduler configuration with batch settings
@@ -205,67 +222,94 @@ async def refresh_active_stocks(config: SchedulerConfig) -> None:
                 f"transactions: {len(transaction_tickers)})"
             )
 
-            if not all_tickers:
-                logger.info("No active tickers to refresh")
-                return
-
-            # Get market data adapter (pass session)
+            # Get market data adapter (pass session) — needed for the
+            # prewarm-pickup loop even when there are no active tickers.
             market_data = await get_market_data(session)
 
-            # Process tickers in batches
-            for batch_num, i in enumerate(
-                range(0, len(all_tickers), config.batch_size), start=1
-            ):
-                batch = all_tickers[i : i + config.batch_size]
+            # Process tickers in batches (skipped silently when empty)
+            if all_tickers:
+                for batch_num, i in enumerate(
+                    range(0, len(all_tickers), config.batch_size), start=1
+                ):
+                    batch = all_tickers[i : i + config.batch_size]
 
-                logger.info(
-                    f"Processing batch {batch_num} "
-                    f"({len(batch)} tickers): {[t.symbol for t in batch]}"
-                )
+                    logger.info(
+                        f"Processing batch {batch_num} "
+                        f"({len(batch)} tickers): {[t.symbol for t in batch]}"
+                    )
 
-                # Refresh each ticker in the batch
-                for ticker in batch:
-                    try:
-                        # Fetch current price (this updates cache automatically)
-                        price_point = await market_data.get_current_price(ticker)
+                    # Refresh each ticker in the batch
+                    for ticker in batch:
+                        try:
+                            # Fetch current price (this updates cache automatically)
+                            price_point = await market_data.get_current_price(ticker)
 
-                        logger.debug(
-                            f"Refreshed {ticker.symbol}: {price_point.price} "
-                            f"(source: {price_point.source})"
-                        )
-
-                        # Update watchlist metadata if ticker is tracked
-                        if ticker in watchlist_tickers:
-                            now = datetime.now(UTC)
-                            next_refresh = now + timedelta(hours=config.max_age_hours)
-                            await watchlist_manager.update_refresh_metadata(
-                                ticker=ticker,
-                                last_refresh=now,
-                                next_refresh=next_refresh,
+                            logger.debug(
+                                f"Refreshed {ticker.symbol}: {price_point.price} "
+                                f"(source: {price_point.source})"
                             )
 
-                        success_count += 1
+                            # Update watchlist metadata if ticker is tracked
+                            if ticker in watchlist_tickers:
+                                now = datetime.now(UTC)
+                                next_refresh = now + timedelta(
+                                    hours=config.max_age_hours
+                                )
+                                await watchlist_manager.update_refresh_metadata(
+                                    ticker=ticker,
+                                    last_refresh=now,
+                                    next_refresh=next_refresh,
+                                )
 
-                    except Exception as e:
-                        logger.error(
-                            f"Failed to refresh {ticker.symbol}: {e}",
-                            exc_info=True,
+                            success_count += 1
+
+                        except Exception as e:
+                            logger.error(
+                                f"Failed to refresh {ticker.symbol}: {e}",
+                                exc_info=True,
+                            )
+                            error_count += 1
+                            # Continue to next ticker (don't stop entire batch)
+
+                    # Commit after each batch
+                    await session.commit()
+
+                    # Rate limiting: Sleep between batches (except last one)
+                    if i + config.batch_size < len(all_tickers):
+                        logger.debug(
+                            f"Batch {batch_num} complete. "
+                            f"Sleeping {config.batch_delay_seconds}s before next batch"
                         )
-                        error_count += 1
-                        # Continue to next ticker (don't stop entire batch)
+                        await asyncio.sleep(config.batch_delay_seconds)
+            else:
+                logger.info("No active tickers to refresh")
 
-                # Commit after each batch
-                await session.commit()
-
-                # Rate limiting: Sleep between batches (except last one)
-                if i + config.batch_size < len(all_tickers):
-                    import asyncio
-
-                    logger.debug(
-                        f"Batch {batch_num} complete. "
-                        f"Sleeping {config.batch_delay_seconds}s before next batch"
+            # Phase J / Task #212 Layer 2 — drain pending backfill tasks.
+            # Per-task errors are absorbed inside the drain helper; only a
+            # repository-level failure (e.g. DB connection lost) propagates,
+            # which is captured by the outer try/except and re-raised so
+            # the audit row records the failure.
+            backfill_repo = SQLModelBackfillTaskRepository(session)
+            pending = await backfill_repo.list_pending(limit=_BACKFILL_PICKUP_LIMIT)
+            if pending:
+                logger.info(f"Draining {len(pending)} pending backfill tasks")
+                for task in pending:
+                    # Prewarmer is idempotent — submitting the same range
+                    # for an existing PENDING task short-circuits via
+                    # find_existing. Here we want to RE-process the
+                    # already-PENDING row: the prewarmer queues a fresh
+                    # row via create(), so to avoid duplicating we
+                    # process the row directly through its own
+                    # transitions.
+                    await _drain_one_backfill(
+                        market_data=market_data,
+                        repo=backfill_repo,
+                        task_id=task.id,
+                        ticker=task.ticker,
+                        start_date=task.start_date,
+                        end_date=task.end_date,
                     )
-                    await asyncio.sleep(config.batch_delay_seconds)
+                await session.commit()
 
     except Exception as e:
         logger.error(f"Price refresh job failed: {e}", exc_info=True)
@@ -278,6 +322,63 @@ async def refresh_active_stocks(config: SchedulerConfig) -> None:
             f"Price refresh job completed in {duration.total_seconds():.1f}s: "
             f"{success_count} succeeded, {error_count} failed"
         )
+
+
+async def _drain_one_backfill(
+    *,
+    market_data: MarketDataPort,
+    repo: SQLModelBackfillTaskRepository,
+    task_id: UUID,
+    ticker: Ticker,
+    start_date: date,
+    end_date: date,
+) -> None:
+    """Process a single PENDING :class:`BackfillTask` row in place.
+
+    Flip PENDING -> RUNNING, fetch via the market-data port (lazy
+    fetches and caches in ``price_history``), then flip to SUCCEEDED.
+    On any failure, flip to FAILED with the truncated reason so the
+    audit log stays consistent.
+
+    Mirrors the per-ticker loop inside
+    :class:`HistoricalDataPrewarmer` but operates on an already-PENDING
+    row (skipping the create step) so the scheduler can drain the queue
+    without producing duplicate rows.
+    """
+    try:
+        await repo.mark_running(task_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"Backfill mark_running failed for task {task_id}: {exc}")
+        try:
+            await repo.mark_failed(task_id, error_message=str(exc)[:500])
+        except Exception as inner_exc:  # noqa: BLE001
+            logger.debug(
+                f"Backfill mark_failed (secondary) failed for {task_id}: {inner_exc}"
+            )
+        return
+
+    try:
+        start_dt = datetime(
+            start_date.year, start_date.month, start_date.day, tzinfo=UTC
+        )
+        end_dt = datetime(
+            end_date.year, end_date.month, end_date.day, 23, 59, 59, tzinfo=UTC
+        )
+        await market_data.get_price_history(ticker, start_dt, end_dt, interval="1day")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"Backfill fetch failed for {ticker.symbol} ({task_id}): {exc}")
+        try:
+            await repo.mark_failed(task_id, error_message=str(exc)[:500])
+        except Exception as inner_exc:  # noqa: BLE001
+            logger.debug(
+                f"Backfill mark_failed (secondary) failed for {task_id}: {inner_exc}"
+            )
+        return
+
+    try:
+        await repo.mark_succeeded(task_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"Backfill mark_succeeded failed for task {task_id}: {exc}")
 
 
 @with_job_audit("calculate_daily_snapshots")

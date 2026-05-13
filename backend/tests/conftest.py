@@ -21,6 +21,7 @@ from zebu.adapters.outbound.database.api_key_model import (  # noqa: F401
     ApiKeyModel,
 )
 from zebu.adapters.outbound.database.models import (  # noqa: F401
+    BackfillTaskModel,
     BacktestRunModel,
     ExplorationTaskModel,
     JobExecutionModel,

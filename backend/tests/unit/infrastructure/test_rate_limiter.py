@@ -19,24 +19,49 @@ class TestRateLimiterInitialization:
         assert limiter.key_prefix == "test:limit"
 
     async def test_invalid_calls_per_minute(self) -> None:
-        """Test that zero or negative calls_per_minute raises ValueError."""
+        """Test that negative calls_per_minute raises ValueError.
+
+        Phase J / Task #212 Layer 2: ``0`` is now valid — it means
+        "unbounded daily cap" for paid Alpha Vantage. Only strictly
+        negative values are rejected.
+        """
         redis = await fakeredis.FakeRedis()
 
-        with pytest.raises(ValueError, match="calls_per_minute must be positive"):
-            RateLimiter(redis, "test:limit", 0, 500)
-
-        with pytest.raises(ValueError, match="calls_per_minute must be positive"):
+        with pytest.raises(ValueError, match="calls_per_minute must be non-negative"):
             RateLimiter(redis, "test:limit", -1, 500)
 
     async def test_invalid_calls_per_day(self) -> None:
-        """Test that zero or negative calls_per_day raises ValueError."""
+        """Test that negative calls_per_day raises ValueError.
+
+        Phase J / Task #212 Layer 2: ``0`` is now valid (unbounded);
+        only strictly negative values are rejected.
+        """
         redis = await fakeredis.FakeRedis()
 
-        with pytest.raises(ValueError, match="calls_per_day must be positive"):
-            RateLimiter(redis, "test:limit", 5, 0)
-
-        with pytest.raises(ValueError, match="calls_per_day must be positive"):
+        with pytest.raises(ValueError, match="calls_per_day must be non-negative"):
             RateLimiter(redis, "test:limit", 5, -1)
+
+    async def test_zero_day_cap_is_unbounded(self) -> None:
+        """``calls_per_day=0`` means unbounded (paid AV mode).
+
+        Phase J / Task #212 Layer 2 — see ``ALPHA_VANTAGE_DAILY_CAP``
+        plumbing in ``dependencies.py``. The minute window is still
+        enforced; we only verify the day bucket isn't gating.
+        """
+        redis = await fakeredis.FakeRedis()
+        limiter = RateLimiter(redis, "test:limit:unbounded", 100, 0)
+        # Initial state — both windows are effectively full.
+        assert await limiter.can_make_request() is True
+        # Consume well past the legacy 25-cap; day window doesn't gate.
+        for _ in range(50):
+            assert await limiter.consume_token() is True
+
+    async def test_zero_minute_cap_is_unbounded(self) -> None:
+        """``calls_per_minute=0`` means unbounded (paired with zero day)."""
+        redis = await fakeredis.FakeRedis()
+        limiter = RateLimiter(redis, "test:limit:noburst", 0, 100)
+        for _ in range(20):
+            assert await limiter.consume_token() is True
 
 
 class TestRateLimiterTokenConsumption:

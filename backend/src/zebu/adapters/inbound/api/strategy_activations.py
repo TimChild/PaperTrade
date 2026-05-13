@@ -17,9 +17,18 @@ user that owns both the strategy and the portfolio. Cross-user
 references are caught at activation time (``activate``) and at every
 read/mutation by comparing the activation's ``user_id`` against the
 authenticated user.
+
+Phase J / Task #212 Layer 2 — the activate route fires a fire-and-
+forget :class:`HistoricalDataPrewarmer` task immediately after the
+activation is persisted. The activation returns 201 right away; the
+prewarm runs out-of-band so a slow market-data fetch doesn't gate the
+caller. Failures in the prewarm are logged via structlog but do NOT
+fail the request.
 """
 
-from datetime import UTC, datetime
+import asyncio
+import os
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID, uuid4
 
 import structlog
@@ -37,6 +46,9 @@ from zebu.adapters.inbound.api.schemas import (
     PaginatedResponse,
 )
 from zebu.adapters.inbound.api.schemas.pagination import build_paginated_response
+from zebu.adapters.outbound.database.backfill_task_repository import (
+    SQLModelBackfillTaskRepository,
+)
 from zebu.adapters.outbound.database.portfolio_repository import (
     SQLModelPortfolioRepository,
 )
@@ -49,13 +61,24 @@ from zebu.adapters.outbound.database.strategy_repository import (
 from zebu.adapters.outbound.database.transaction_repository import (
     SQLModelTransactionRepository,
 )
+from zebu.application.services.historical_data_prewarmer import (
+    HistoricalDataPrewarmer,
+)
 from zebu.application.services.strategy_execution_service import (
     StrategyExecutionService,
 )
+from zebu.domain.entities.strategy import Strategy
 from zebu.domain.entities.strategy_activation import StrategyActivation
 from zebu.domain.value_objects.activation_frequency import ActivationFrequency
 from zebu.domain.value_objects.activation_status import ActivationStatus
-from zebu.infrastructure.database import SessionDep
+from zebu.domain.value_objects.backfill_priority import BackfillPriority
+from zebu.domain.value_objects.strategy_parameters import (
+    BuyAndHoldParameters,
+    DcaParameters,
+    MaCrossoverParameters,
+)
+from zebu.domain.value_objects.ticker import Ticker
+from zebu.infrastructure.database import SessionDep, async_session_maker
 
 # Two routers — one mounted under ``/strategies`` (existing prefix) and
 # one under ``/activations`` — keep URL semantics consistent with the
@@ -169,6 +192,180 @@ def _parse_frequency(raw: str) -> ActivationFrequency:
         ) from exc
 
 
+# Phase J / Task #212 Layer 2 — activation-time pre-warm helpers.
+
+# Buffer to add to every computed window to absorb weekends, holidays,
+# and lookback rounding. The spec calls for "30 buffer days" on DCA / MA;
+# we apply it uniformly so all strategy types start with a safety margin.
+_PREWARM_BUFFER_DAYS: int = 30
+
+# Default pessimistic window when the strategy type doesn't expose a
+# clean lookback signal. Five years gives MA / longer-running studies
+# headroom while keeping the daily-bar payload tractable.
+_PREWARM_FALLBACK_YEARS: int = 5
+
+# Trading days per calendar year — used to back-convert a slow_window
+# (declared in trading days) into a wider calendar-day fetch.
+_TRADING_DAYS_PER_YEAR: int = 252
+
+
+def _required_warmup_window(strategy: Strategy) -> tuple[date, date]:
+    """Return the ``(start_date, end_date)`` historical window the strategy needs.
+
+    Per Phase J Task #212 spec §Layer 2:
+
+    * **DCA** — ``frequency_days`` is the natural backward lookback; the
+      executor reads bars one ``frequency_days`` window into the past
+      to decide whether the next contribution is due. We pull that
+      window plus the 30-day buffer.
+    * **MA crossover** — ``slow_window`` is the indicator span (in
+      trading days); we convert it to calendar days
+      (``slow_window * 365 / 252`` ≈ trading→calendar inflation) and
+      add the 30-day buffer.
+    * **Buy-and-hold** — no natural lookback signal; fall back to the
+      pessimistic 5-year default.
+
+    The end date is always ``today`` (UTC) — the executor decides every
+    cycle based on the freshest closing print.
+
+    Args:
+        strategy: The strategy whose tickers we're prewarming.
+
+    Returns:
+        ``(start_date, end_date)``. Both dates are UTC.
+    """
+    end_date = datetime.now(UTC).date()
+
+    params = strategy.parameters
+    if isinstance(params, DcaParameters):
+        lookback_days = params.frequency_days + _PREWARM_BUFFER_DAYS
+    elif isinstance(params, MaCrossoverParameters):
+        # Convert trading days to calendar days (slow_window covers the
+        # widest indicator). The integer cast rounds toward zero; add a
+        # full extra day so we don't lose a day to floor division.
+        calendar_indicator = int(params.slow_window * 365 / _TRADING_DAYS_PER_YEAR) + 1
+        lookback_days = calendar_indicator + _PREWARM_BUFFER_DAYS
+    else:
+        # BuyAndHoldParameters (the remaining union member) and any
+        # future strategy type without a known lookback fall back to
+        # the pessimistic 5-year window.
+        _: BuyAndHoldParameters = params  # exhaustiveness hint for the reader
+        lookback_days = _PREWARM_FALLBACK_YEARS * 365
+
+    start_date = end_date - timedelta(days=lookback_days)
+    return start_date, end_date
+
+
+def _resolve_prewarm_priority() -> BackfillPriority:
+    """Read ``PREWARM_DEFAULT_PRIORITY`` env (default ``low``).
+
+    Falls back to ``LOW`` if the env value is unrecognised so the
+    activation path never fails on a typo.
+    """
+    raw = os.environ.get("PREWARM_DEFAULT_PRIORITY", "low").strip().lower()
+    try:
+        return BackfillPriority(raw)
+    except ValueError:
+        logger.warning(
+            "Unknown PREWARM_DEFAULT_PRIORITY; falling back to LOW",
+            value=raw,
+        )
+        return BackfillPriority.LOW
+
+
+async def _run_prewarm_background(
+    tickers: tuple[Ticker, ...],
+    start_date: date,
+    end_date: date,
+    priority: BackfillPriority,
+    activation_id: UUID,
+) -> None:
+    """Background task: prewarm with a fresh session + market-data port.
+
+    The activation handler returns 201 before this task runs. We open a
+    fresh ``async_session_maker`` here because the request-scoped
+    session is closed once the response is sent. Any errors are logged
+    via structlog — they MUST NOT propagate because there's no caller
+    listening.
+    """
+    try:
+        async with async_session_maker() as session:
+            # Lazy import to avoid a circular import at module load
+            # (the dependencies module imports several adapters that
+            # would otherwise pull this module via __init__).
+            from zebu.adapters.inbound.api.dependencies import get_market_data
+
+            market_data = await get_market_data(session)
+            repo = SQLModelBackfillTaskRepository(session)
+            prewarmer = HistoricalDataPrewarmer(
+                market_data=market_data,
+                repository=repo,
+            )
+            result = await prewarmer.prewarm(
+                tickers,
+                start_date,
+                end_date,
+                priority=priority,
+            )
+            await session.commit()
+            logger.info(
+                "Prewarm completed",
+                activation_id=str(activation_id),
+                succeeded=len(result.succeeded),
+                failed=len(result.failed),
+                skipped=len(result.skipped),
+            )
+    except Exception as exc:  # noqa: BLE001 - background task; must not raise
+        logger.warning(
+            "Prewarm background task failed",
+            activation_id=str(activation_id),
+            error=str(exc)[:500],
+        )
+
+
+def _schedule_prewarm(
+    *,
+    strategy: Strategy,
+    activation_id: UUID,
+) -> None:
+    """Fire a fire-and-forget prewarm task for a strategy's tickers.
+
+    Called from the activation route after the activation is persisted.
+    The function never raises — any error is logged and discarded so
+    a misbehaving prewarm cannot fail the activation request.
+    """
+    try:
+        start_date, end_date = _required_warmup_window(strategy)
+        priority = _resolve_prewarm_priority()
+        tickers: tuple[Ticker, ...] = tuple(
+            Ticker(symbol) for symbol in strategy.tickers
+        )
+        loop = asyncio.get_running_loop()
+        loop.create_task(
+            _run_prewarm_background(
+                tickers=tickers,
+                start_date=start_date,
+                end_date=end_date,
+                priority=priority,
+                activation_id=activation_id,
+            )
+        )
+        logger.info(
+            "Prewarm scheduled",
+            activation_id=str(activation_id),
+            tickers=[t.symbol for t in tickers],
+            start_date=start_date.isoformat(),
+            end_date=end_date.isoformat(),
+            priority=priority.value,
+        )
+    except Exception as exc:  # noqa: BLE001 - never let scheduling block the response
+        logger.warning(
+            "Failed to schedule prewarm",
+            activation_id=str(activation_id),
+            error=str(exc)[:500],
+        )
+
+
 # ---------------------------------------------------------------------------
 # Routes — under /strategies
 # ---------------------------------------------------------------------------
@@ -262,6 +459,12 @@ async def activate_strategy(
         portfolio_id=str(request.portfolio_id),
         frequency=frequency.value,
     )
+
+    # Phase J / Task #212 Layer 2 — fire-and-forget prewarm of the
+    # strategy's historical bars so the first scheduled run doesn't
+    # 404 on missing OHLC data. Returns immediately; the task runs in
+    # the background. Failures are logged but never propagate.
+    _schedule_prewarm(strategy=strategy, activation_id=activation.id)
     return _to_response(activation)
 
 

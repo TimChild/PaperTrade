@@ -12,6 +12,7 @@ from uuid import UUID
 
 from sqlmodel import JSON, Column, Field, Index, SQLModel, UniqueConstraint
 
+from zebu.domain.entities.backfill_task import BackfillTask
 from zebu.domain.entities.backtest_run import BacktestRun
 from zebu.domain.entities.exploration_task import (
     ExplorationConstraints,
@@ -35,6 +36,8 @@ from zebu.domain.exceptions import InvalidStrategyError
 from zebu.domain.value_objects.activation_frequency import ActivationFrequency
 from zebu.domain.value_objects.activation_status import ActivationStatus
 from zebu.domain.value_objects.agent_decision import AgentDecision
+from zebu.domain.value_objects.backfill_priority import BackfillPriority
+from zebu.domain.value_objects.backfill_task_status import BackfillTaskStatus
 from zebu.domain.value_objects.backtest_status import BacktestStatus
 from zebu.domain.value_objects.job_execution import JobExecution
 from zebu.domain.value_objects.job_execution_status import JobExecutionStatus
@@ -1742,4 +1745,100 @@ class JobExecutionModel(SQLModel, table=True):
             status=execution.status.value,
             error_message=execution.error_message,
             metadata_json=metadata_copy,
+        )
+
+
+class BackfillTaskModel(SQLModel, table=True):
+    """Database model for :class:`BackfillTask` (Phase J — Task #212 Layer 2).
+
+    Queued historical-data fetch for one ticker over one date range.
+    The :class:`HistoricalDataPrewarmer` writes rows in ``PENDING`` state
+    after a strategy activation; the scheduler's pickup loop drains them
+    and the in-memory state machine flips ``PENDING -> RUNNING ->
+    SUCCEEDED`` / ``FAILED``.
+
+    Indexes:
+
+    * ``(status, created_at)`` — backs the scheduler's pending-pickup
+      query (``WHERE status = 'pending' ORDER BY created_at ASC``).
+
+    Attributes:
+        id: Primary key (UUID).
+        ticker: Stock symbol (≤ 10 chars — generous against the Ticker
+            VO's 1–5 constraint to absorb future format changes).
+        start_date: First trading day of the range (inclusive).
+        end_date: Last trading day of the range (inclusive).
+        priority: ``low`` (activation-driven) or ``high`` (operator).
+        status: Lifecycle stage as a string (mirrors
+            :class:`BackfillTaskStatus`).
+        created_at: Naive UTC timestamp when the row was inserted.
+        finished_at: Naive UTC timestamp when the task reached a
+            terminal status. ``None`` while PENDING / RUNNING.
+        error_message: Truncated reason for FAILED rows (≤ 500 chars).
+    """
+
+    __tablename__ = "backfill_tasks"  # type: ignore[assignment]
+    __table_args__ = (
+        Index(
+            "idx_backfill_tasks_status_created_at",
+            "status",
+            "created_at",
+        ),
+    )
+
+    id: UUID = Field(primary_key=True)
+    ticker: str = Field(max_length=10, index=True)
+    start_date: date
+    end_date: date
+    priority: str = Field(max_length=10)
+    status: str = Field(max_length=20)
+    created_at: datetime
+    finished_at: datetime | None = Field(default=None)
+    error_message: str | None = Field(default=None, max_length=500)
+
+    def to_domain(self) -> BackfillTask:
+        """Convert database model to domain entity.
+
+        Raises:
+            ValueError: If ``status`` or ``priority`` drift from their
+                respective enums, or if the ticker symbol is invalid.
+        """
+        created_at_utc = self.created_at.replace(tzinfo=UTC)
+        finished_at_utc = (
+            self.finished_at.replace(tzinfo=UTC)
+            if self.finished_at is not None
+            else None
+        )
+        status = BackfillTaskStatus(self.status)
+        priority = BackfillPriority(self.priority)
+        ticker = Ticker(self.ticker)
+
+        return BackfillTask(
+            id=self.id,
+            ticker=ticker,
+            start_date=self.start_date,
+            end_date=self.end_date,
+            priority=priority,
+            status=status,
+            created_at=created_at_utc,
+            finished_at=finished_at_utc,
+            error_message=self.error_message,
+        )
+
+    @classmethod
+    def from_domain(cls, task: BackfillTask) -> "BackfillTaskModel":
+        """Convert domain entity to database model."""
+        created_at_naive = _strip_tz(task.created_at) or task.created_at
+        finished_at_naive = _strip_tz(task.finished_at)
+
+        return cls(
+            id=task.id,
+            ticker=task.ticker.symbol,
+            start_date=task.start_date,
+            end_date=task.end_date,
+            priority=task.priority.value,
+            status=task.status.value,
+            created_at=created_at_naive,
+            finished_at=finished_at_naive,
+            error_message=task.error_message,
         )

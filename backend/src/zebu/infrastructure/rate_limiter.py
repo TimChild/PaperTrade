@@ -50,11 +50,18 @@ class RateLimiter:
 
     Both buckets must have tokens available for a request to proceed.
 
+    The day bucket can be disabled by passing ``calls_per_day=0``. This
+    is the "unbounded daily cap" mode the Phase J spec calls for on paid
+    Alpha Vantage tiers — the minute bucket still throttles burst rate,
+    but the day window doesn't gate. ``calls_per_minute=0`` is similarly
+    treated as "no per-minute cap" though in practice we always keep a
+    minute-level guard.
+
     Attributes:
         redis: Redis client for token storage
         key_prefix: Prefix for Redis keys (e.g., "papertrade:ratelimit")
-        calls_per_minute: Maximum calls allowed per minute
-        calls_per_day: Maximum calls allowed per day
+        calls_per_minute: Maximum calls allowed per minute (``0`` = unbounded)
+        calls_per_day: Maximum calls allowed per day (``0`` = unbounded)
 
     Example:
         >>> limiter = RateLimiter(redis, "api:limit", 5, 500)
@@ -115,16 +122,17 @@ class RateLimiter:
         Args:
             redis: Redis client (real or fake)
             key_prefix: Prefix for Redis keys (e.g., "papertrade:ratelimit")
-            calls_per_minute: Maximum calls allowed per minute
-            calls_per_day: Maximum calls allowed per day
+            calls_per_minute: Maximum calls allowed per minute. ``0`` = unbounded.
+            calls_per_day: Maximum calls allowed per day. ``0`` = unbounded —
+                used on paid Alpha Vantage tiers (Phase J).
 
         Raises:
-            ValueError: If limits are not positive integers
+            ValueError: If limits are negative.
         """
-        if calls_per_minute <= 0:
-            raise ValueError("calls_per_minute must be positive")
-        if calls_per_day <= 0:
-            raise ValueError("calls_per_day must be positive")
+        if calls_per_minute < 0:
+            raise ValueError("calls_per_minute must be non-negative")
+        if calls_per_day < 0:
+            raise ValueError("calls_per_day must be non-negative")
 
         self.redis = redis
         self.key_prefix = key_prefix
@@ -135,6 +143,13 @@ class RateLimiter:
         self._minute_window = 60
         self._day_window = 86400  # 24 hours
 
+        # Sentinel "effectively unbounded" capacity used by the Lua
+        # script when a real cap of ``0`` (unbounded) is requested. The
+        # script consumes one token per call; we set the bucket high
+        # enough that the day window will never exhaust within the
+        # 24h refill cycle (>1k req/sec would still take >86400 to drain).
+        self._unbounded_capacity = 10_000_000
+
     def _get_minute_key(self) -> str:
         """Get Redis key for minute bucket."""
         return f"{self.key_prefix}:minute"
@@ -142,6 +157,18 @@ class RateLimiter:
     def _get_day_key(self) -> str:
         """Get Redis key for day bucket."""
         return f"{self.key_prefix}:day"
+
+    def _effective_minute_capacity(self) -> int:
+        """Effective minute-bucket size — sentinel when unbounded."""
+        if self.calls_per_minute == 0:
+            return self._unbounded_capacity
+        return self.calls_per_minute
+
+    def _effective_day_capacity(self) -> int:
+        """Effective day-bucket size — sentinel when unbounded."""
+        if self.calls_per_day == 0:
+            return self._unbounded_capacity
+        return self.calls_per_day
 
     async def can_make_request(self) -> bool:
         """Check if a request can be made without consuming tokens.
@@ -159,15 +186,17 @@ class RateLimiter:
         """
         minute_key = self._get_minute_key()
         day_key = self._get_day_key()
+        minute_capacity = self._effective_minute_capacity()
+        day_capacity = self._effective_day_capacity()
 
         # Get current token counts
         minute_tokens_bytes = await self.redis.get(minute_key)
         minute_tokens = (
-            int(minute_tokens_bytes) if minute_tokens_bytes else self.calls_per_minute
+            int(minute_tokens_bytes) if minute_tokens_bytes else minute_capacity
         )
 
         day_tokens_bytes = await self.redis.get(day_key)
-        day_tokens = int(day_tokens_bytes) if day_tokens_bytes else self.calls_per_day
+        day_tokens = int(day_tokens_bytes) if day_tokens_bytes else day_capacity
 
         return minute_tokens > 0 and day_tokens > 0
 
@@ -190,14 +219,16 @@ class RateLimiter:
         """
         minute_key = self._get_minute_key()
         day_key = self._get_day_key()
+        minute_capacity = self._effective_minute_capacity()
+        day_capacity = self._effective_day_capacity()
 
         result = await self.redis.eval(  # type: ignore[misc]  # Redis.eval() has complex Lua script type signature
             self._CONSUME_SCRIPT,
             2,  # Number of keys
             minute_key,
             day_key,
-            str(self.calls_per_minute),
-            str(self.calls_per_day),
+            str(minute_capacity),
+            str(day_capacity),
             str(self._minute_window),
             str(self._day_window),
         )
@@ -221,15 +252,17 @@ class RateLimiter:
         """
         minute_key = self._get_minute_key()
         day_key = self._get_day_key()
+        minute_capacity = self._effective_minute_capacity()
+        day_capacity = self._effective_day_capacity()
 
         # Get current token counts
         minute_tokens_bytes = await self.redis.get(minute_key)
         minute_tokens = (
-            int(minute_tokens_bytes) if minute_tokens_bytes else self.calls_per_minute
+            int(minute_tokens_bytes) if minute_tokens_bytes else minute_capacity
         )
 
         day_tokens_bytes = await self.redis.get(day_key)
-        day_tokens = int(day_tokens_bytes) if day_tokens_bytes else self.calls_per_day
+        day_tokens = int(day_tokens_bytes) if day_tokens_bytes else day_capacity
 
         # If both have tokens, no wait needed
         if minute_tokens > 0 and day_tokens > 0:
@@ -272,14 +305,16 @@ class RateLimiter:
         """
         minute_key = self._get_minute_key()
         day_key = self._get_day_key()
+        minute_capacity = self._effective_minute_capacity()
+        day_capacity = self._effective_day_capacity()
 
         minute_tokens_bytes = await self.redis.get(minute_key)
         minute_tokens = (
-            int(minute_tokens_bytes) if minute_tokens_bytes else self.calls_per_minute
+            int(minute_tokens_bytes) if minute_tokens_bytes else minute_capacity
         )
 
         day_tokens_bytes = await self.redis.get(day_key)
-        day_tokens = int(day_tokens_bytes) if day_tokens_bytes else self.calls_per_day
+        day_tokens = int(day_tokens_bytes) if day_tokens_bytes else day_capacity
 
         return {
             "minute": minute_tokens,
