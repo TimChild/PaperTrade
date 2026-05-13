@@ -117,6 +117,17 @@ class CreateTriggerRequest(BaseModel):
             "evaluator transitions the trigger to EXPIRED."
         ),
     )
+    mode: str = Field(
+        default="direct",
+        description=(
+            "How the trigger reaches an agent when it fires. ``direct`` "
+            "(the default) keeps the existing inline-Anthropic path; "
+            "``queue`` opts into Pattern B — the platform files an "
+            "URGENT ExplorationTask for an out-of-band agent (Claude "
+            "Desktop / Gemini CLI / etc.) to claim and process. "
+            "See ``docs/agents/operating-manual.md`` §3.5.1."
+        ),
+    )
 
 
 class UpdateTriggerRequest(BaseModel):
@@ -157,6 +168,15 @@ class UpdateTriggerRequest(BaseModel):
             "instead (Phase-F design Q3)."
         ),
     )
+    mode: str | None = Field(
+        default=None,
+        description=(
+            "Optional invocation-mode update. ``direct`` keeps the "
+            "inline-Anthropic path; ``queue`` switches the trigger to "
+            "Pattern B (URGENT ExplorationTask filing). See "
+            "``docs/agents/operating-manual.md`` §3.5.1."
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -188,6 +208,7 @@ class TriggerResponse(BaseModel):
     created_at: str
     created_by: UUID
     updated_at: str
+    mode: str
 
 
 class TriggerFireResponse(BaseModel):

@@ -30,6 +30,7 @@ from zebu.domain.value_objects.trigger_condition import (
     DrawdownParams,
     VolatilityParams,
 )
+from zebu.domain.value_objects.trigger_invocation_mode import TriggerInvocationMode
 from zebu.domain.value_objects.trigger_status import TriggerStatus
 
 
@@ -500,3 +501,25 @@ class TestFrozen:
         trigger = _make_trigger()
         with pytest.raises(FrozenInstanceError):
             trigger.priority = 50  # type: ignore[misc]
+
+
+class TestInvocationMode:
+    """Phase J / Task #213 — ``mode`` field defaults to DIRECT and round-trips."""
+
+    def test_default_mode_is_direct(self) -> None:
+        """Backwards compatibility — every pre-Phase-J trigger reads as DIRECT."""
+        trigger = _make_trigger()
+        assert trigger.mode is TriggerInvocationMode.DIRECT
+
+    def test_explicit_direct_mode(self) -> None:
+        trigger = _make_trigger(mode=TriggerInvocationMode.DIRECT)
+        assert trigger.mode is TriggerInvocationMode.DIRECT
+
+    def test_explicit_queue_mode(self) -> None:
+        trigger = _make_trigger(mode=TriggerInvocationMode.QUEUE)
+        assert trigger.mode is TriggerInvocationMode.QUEUE
+
+    def test_mode_is_frozen(self) -> None:
+        trigger = _make_trigger()
+        with pytest.raises(FrozenInstanceError):
+            trigger.mode = TriggerInvocationMode.QUEUE  # type: ignore[misc]

@@ -29,6 +29,7 @@ import type {
   ConditionType,
   CreateTriggerRequest,
   DrawdownMetric,
+  TriggerInvocationMode,
 } from '@/services/api/types'
 
 const SELECT_CLASSES =
@@ -117,6 +118,11 @@ export function CreateTriggerDialog({
   const [cooldownUnit, setCooldownUnit] = useState<CooldownUnit>('hours')
   const [agentPrompt, setAgentPrompt] = useState<string>('')
   const [defaultApiKeyId, setDefaultApiKeyId] = useState<string>('')
+  // Invocation mode (Phase J / Task #213). DIRECT is the default — it
+  // matches the existing Phase-F behavior. QUEUE opts into Pattern B:
+  // the platform files an URGENT ExplorationTask for the user's desktop
+  // agent to claim instead of calling Anthropic inline.
+  const [mode, setMode] = useState<TriggerInvocationMode>('direct')
   const [errors, setErrors] = useState<FormErrors>({})
 
   const createTrigger = useCreateTrigger()
@@ -219,6 +225,7 @@ export function CreateTriggerDialog({
       condition_params: conditionParams,
       agent_prompt: agentPrompt.trim(),
       cooldown_seconds: cooldownSeconds,
+      mode,
     }
     if (defaultApiKeyId) {
       body.default_api_key_id = defaultApiKeyId
@@ -547,6 +554,58 @@ export function CreateTriggerDialog({
                 {errors.agent_prompt}
               </p>
             )}
+          </div>
+
+          {/* Invocation mode (Phase J / Task #213) */}
+          <div
+            className="space-y-1.5"
+            data-testid="trigger-create-mode-group"
+            role="radiogroup"
+            aria-labelledby="trigger-create-mode-eyebrow"
+          >
+            <Eyebrow id="trigger-create-mode-eyebrow">Invocation mode</Eyebrow>
+            <div className="flex flex-col gap-2">
+              <label className="flex items-start gap-2 text-body-sm text-ink">
+                <input
+                  type="radio"
+                  name="trigger-mode"
+                  data-testid="trigger-create-mode-direct"
+                  value="direct"
+                  checked={mode === 'direct'}
+                  onChange={() => setMode('direct')}
+                  className="mt-1 accent-amber"
+                />
+                <span>
+                  <span className="block font-medium text-ink">
+                    Direct (Anthropic Haiku)
+                  </span>
+                  <span className="block text-body-sm text-ink-muted">
+                    Default. The platform invokes the agent inline. Low latency,
+                    no human-in-loop.
+                  </span>
+                </span>
+              </label>
+              <label className="flex items-start gap-2 text-body-sm text-ink">
+                <input
+                  type="radio"
+                  name="trigger-mode"
+                  data-testid="trigger-create-mode-queue"
+                  value="queue"
+                  checked={mode === 'queue'}
+                  onChange={() => setMode('queue')}
+                  className="mt-1 accent-amber"
+                />
+                <span>
+                  <span className="block font-medium text-ink">
+                    Queue (Desktop Claude / Gemini CLI)
+                  </span>
+                  <span className="block text-body-sm text-ink-muted">
+                    Files an URGENT task. Your desktop agent polls and processes
+                    it with its own connectors.
+                  </span>
+                </span>
+              </label>
+            </div>
           </div>
 
           {/* Default API key picker — only when the user has multiple

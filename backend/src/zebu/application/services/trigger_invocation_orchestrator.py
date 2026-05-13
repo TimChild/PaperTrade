@@ -96,6 +96,7 @@ from zebu.domain.value_objects.strategy_parameters import (
 from zebu.domain.value_objects.strategy_type import StrategyType
 from zebu.domain.value_objects.ticker import Ticker
 from zebu.domain.value_objects.trade_signal import TradeAction, TradeSignal
+from zebu.domain.value_objects.trigger_invocation_mode import TriggerInvocationMode
 
 logger = logging.getLogger(__name__)
 
@@ -366,6 +367,34 @@ class TriggerInvocationOrchestrator:
                 ),
             )
 
+        # 2a. Phase J / Task #213 — Pattern B (QUEUE mode).
+        #
+        # If the trigger is configured for QUEUE invocation, skip the
+        # inline Anthropic call entirely and file an URGENT
+        # ExplorationTask. The user's desktop Claude / Gemini CLI / any
+        # MCP-aware client polls the queue and processes the task with
+        # whichever tools and connectors that client already has wired.
+        #
+        # The audit row is still written (so the activity feed stays
+        # coherent) — its ``agent_response`` is NEEDS_HUMAN (the closest
+        # AgentDecision value for "the platform handed this off to a
+        # human-driven agent loop") and ``resulting_exploration_task_id``
+        # points at the queued task. ``agent_response_raw`` carries a
+        # short JSON-shaped marker so downstream consumers can detect the
+        # queue path without re-reading the trigger row.
+        if trigger.mode is TriggerInvocationMode.QUEUE:
+            return await self._fire_queue_mode(
+                trigger=trigger,
+                activation=activation,
+                strategy=strategy,
+                portfolio_id=portfolio.id,
+                evaluation_data=evaluation_data,
+                fire_id=fire_id,
+                fired_at=fired_at,
+                start=start,
+                api_key=api_key,
+            )
+
         # 3. Build prompts (deterministic so test assertions are stable).
         transactions = await self._transaction_repo.get_by_portfolio(portfolio.id)
         cash_balance = PortfolioCalculator.calculate_cash_balance(transactions)
@@ -453,6 +482,160 @@ class TriggerInvocationOrchestrator:
             latency_ms=latency_ms,
             error=execution.get("error"),
         )
+
+    # ------------------------------------------------------------------ #
+    # Queue-mode (Pattern B) — file an URGENT ExplorationTask            #
+    # ------------------------------------------------------------------ #
+
+    async def _fire_queue_mode(
+        self,
+        *,
+        trigger: StrategyConditionTrigger,
+        activation: StrategyActivation,
+        strategy: Strategy,
+        portfolio_id: UUID,
+        evaluation_data: Mapping[str, object],
+        fire_id: UUID,
+        fired_at: datetime,
+        start: float,
+        api_key: ApiKey,
+    ) -> FireOutcome:
+        """Queue-mode fire path — file an URGENT ExplorationTask.
+
+        Skips the inline Anthropic invocation entirely. The platform
+        writes an :class:`ExplorationTask` row whose prompt begins with
+        the :literal:`[URGENT]` marker convention (per
+        ``docs/agents/operating-manual.md`` §3.5) so polling agents can
+        prioritise it. A :class:`TriggerFireRecord` audit row is still
+        appended — its ``resulting_exploration_task_id`` points at the
+        queued task so the activity feed renders coherently and the
+        trigger's cooldown applies.
+        """
+        task = await self._file_urgent_exploration_task(
+            trigger=trigger,
+            activation=activation,
+            strategy=strategy,
+            portfolio_id=portfolio_id,
+            evaluation_data=evaluation_data,
+            api_key_id=api_key.id,
+            fired_at=fired_at,
+        )
+
+        latency_ms = int((time.perf_counter() - start) * 1000)
+        # Compact marker in agent_response_raw so consumers (UI, logs)
+        # can detect that this fire took the queue path without
+        # re-reading the trigger row. The trigger's ``mode`` field on
+        # ``TriggerResponse`` is the canonical source — this is the
+        # convenience copy on the audit row.
+        rationale_raw = f'{{"queued_task_id":"{task.id}","mode":"queue"}}'
+        record = TriggerFireRecord(
+            id=fire_id,
+            trigger_id=trigger.id,
+            activation_id=trigger.activation_id,
+            fired_at=fired_at,
+            condition_evaluation_data=dict(evaluation_data),
+            # NEEDS_HUMAN is the AgentDecision that semantically maps to
+            # "platform deferred this fire to a human-driven agent." The
+            # entity invariants require ``resulting_exploration_task_id``
+            # to be set (and the others to be null) for this decision —
+            # the queue path satisfies that contract.
+            agent_response=AgentDecision.NEEDS_HUMAN,
+            agent_response_raw=_truncate(rationale_raw),
+            latency_ms=latency_ms,
+            api_key_id_used=api_key.id,
+            agent_invocation_id=None,
+            resulting_exploration_task_id=task.id,
+        )
+        await self._fire_repo.save(record)
+        await self._trigger_repo.save(trigger.record_fire(fired_at=fired_at))
+
+        logger.info(
+            "Trigger fire complete (queue mode)",
+            extra={
+                "trigger_id": str(trigger.id),
+                "activation_id": str(trigger.activation_id),
+                "fire_record_id": str(fire_id),
+                "queued_task_id": str(task.id),
+                "latency_ms": latency_ms,
+                "mode": trigger.mode.value,
+            },
+        )
+
+        return FireOutcome(
+            trigger_id=trigger.id,
+            fire_record_id=fire_id,
+            decision=AgentDecision.NEEDS_HUMAN,
+            latency_ms=latency_ms,
+            error=None,
+        )
+
+    async def _file_urgent_exploration_task(
+        self,
+        *,
+        trigger: StrategyConditionTrigger,
+        activation: StrategyActivation,
+        strategy: Strategy,
+        portfolio_id: UUID,
+        evaluation_data: Mapping[str, object],
+        api_key_id: UUID,
+        fired_at: datetime,
+    ) -> ExplorationTask:
+        """Build + persist an URGENT :class:`ExplorationTask` for a queued fire.
+
+        The task's prompt begins with the ``[URGENT]`` prefix convention
+        documented in ``docs/agents/operating-manual.md`` §3.5 so polling
+        agents (Claude Desktop / Code / Gemini CLI / etc.) can recognise
+        and prioritise it. The body composes the trigger's
+        ``agent_prompt`` with the condition's evaluation snapshot so the
+        consumer has the full context without round-tripping back to the
+        trigger row.
+
+        Returns the persisted task so the caller can stash its id on the
+        audit row.
+        """
+        lines = [
+            (
+                "[URGENT] [TRIGGER FIRE] Queue-mode trigger fired — "
+                "agent action requested."
+            ),
+            "",
+            f"Trigger ID: {trigger.id}",
+            f"Activation ID: {trigger.activation_id}",
+            f"Strategy: {strategy.name} ({strategy.strategy_type.value})",
+            f"Portfolio ID: {portfolio_id}",
+            f"Condition type: {trigger.condition_type.value}",
+            f"Fired at: {fired_at.isoformat()}",
+            "",
+            "## Condition snapshot",
+        ]
+        for key, value in sorted(evaluation_data.items()):
+            lines.append(f"- {key}: {value}")
+        lines.extend(
+            [
+                "",
+                "## Operator instruction",
+                trigger.agent_prompt,
+            ]
+        )
+        prompt = "\n".join(lines)
+        # The ExplorationTask entity caps prompt at 4000 chars — truncate
+        # defensively so a verbose snapshot doesn't reject the task.
+        if len(prompt) > 4000:
+            prompt = prompt[:4000]
+
+        task_id = uuid4()
+        now = datetime.now(UTC)
+        task = ExplorationTask(
+            id=task_id,
+            created_by=trigger.user_id,
+            prompt=prompt,
+            status=ExplorationTaskStatus.OPEN,
+            created_at=now,
+            updated_at=now,
+            target_portfolio_id=activation.portfolio_id,
+        )
+        await self._task_repo.save(task, api_key_id=api_key_id)
+        return task
 
     # ------------------------------------------------------------------ #
     # Decision execution                                                 #

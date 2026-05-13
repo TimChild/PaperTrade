@@ -300,6 +300,120 @@ class TestCreateTrigger:
 
 
 # ---------------------------------------------------------------------------
+# Phase J / Task #213 — queue-mode invocation field
+# ---------------------------------------------------------------------------
+
+
+class TestQueueModeField:
+    """``mode`` field on POST / GET / PATCH for the queue-mode trigger."""
+
+    def test_create_without_mode_defaults_to_direct(
+        self,
+        client: "TestClient",
+        auth_headers: dict[str, str],
+    ) -> None:
+        """Backwards compatibility — no mode in body → mode=direct on response."""
+        activation_id = _setup_activation(client, auth_headers)
+        body = _create_trigger(client, auth_headers, activation_id=activation_id)
+        assert body["mode"] == "direct"
+
+    def test_create_with_queue_mode_persists(
+        self,
+        client: "TestClient",
+        auth_headers: dict[str, str],
+    ) -> None:
+        """A queue-mode trigger reads back with mode=queue."""
+        activation_id = _setup_activation(client, auth_headers)
+        response = client.post(
+            f"/api/v1/activations/{activation_id}/triggers",
+            headers=auth_headers,
+            json={
+                "condition_type": "DRAWDOWN_THRESHOLD",
+                "condition_params": _drawdown_payload(),
+                "agent_prompt": (
+                    "Pull in news context from my desktop tools and decide."
+                ),
+                "cooldown_seconds": 21600,
+                "priority": 0,
+                "mode": "queue",
+            },
+        )
+        assert response.status_code == 201, response.text
+        body = response.json()
+        assert body["mode"] == "queue"
+
+        # GET round-trips
+        getted = client.get(
+            f"/api/v1/triggers/{body['id']}",
+            headers=auth_headers,
+        )
+        assert getted.status_code == 200
+        assert getted.json()["mode"] == "queue"
+
+    def test_create_with_invalid_mode_returns_422(
+        self,
+        client: "TestClient",
+        auth_headers: dict[str, str],
+    ) -> None:
+        activation_id = _setup_activation(client, auth_headers)
+        response = client.post(
+            f"/api/v1/activations/{activation_id}/triggers",
+            headers=auth_headers,
+            json={
+                "condition_type": "DRAWDOWN_THRESHOLD",
+                "condition_params": _drawdown_payload(),
+                "agent_prompt": ("This should fail because the mode value is invalid."),
+                "mode": "inline",
+            },
+        )
+        assert response.status_code == 422
+        body = response.json()
+        assert "mode" in body["detail"].lower()
+
+    def test_patch_mode_from_direct_to_queue(
+        self,
+        client: "TestClient",
+        auth_headers: dict[str, str],
+    ) -> None:
+        """PATCHing mode flips a trigger from direct to queue (and back)."""
+        activation_id = _setup_activation(client, auth_headers)
+        created = _create_trigger(client, auth_headers, activation_id=activation_id)
+        assert created["mode"] == "direct"
+
+        # Flip to queue
+        flipped = client.patch(
+            f"/api/v1/triggers/{created['id']}",
+            headers=auth_headers,
+            json={"mode": "queue"},
+        )
+        assert flipped.status_code == 200, flipped.text
+        assert flipped.json()["mode"] == "queue"
+
+        # Flip back to direct
+        flipped_back = client.patch(
+            f"/api/v1/triggers/{created['id']}",
+            headers=auth_headers,
+            json={"mode": "direct"},
+        )
+        assert flipped_back.status_code == 200, flipped_back.text
+        assert flipped_back.json()["mode"] == "direct"
+
+    def test_patch_invalid_mode_returns_422(
+        self,
+        client: "TestClient",
+        auth_headers: dict[str, str],
+    ) -> None:
+        activation_id = _setup_activation(client, auth_headers)
+        created = _create_trigger(client, auth_headers, activation_id=activation_id)
+        response = client.patch(
+            f"/api/v1/triggers/{created['id']}",
+            headers=auth_headers,
+            json={"mode": "INLINE"},
+        )
+        assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
 # List for activation
 # ---------------------------------------------------------------------------
 

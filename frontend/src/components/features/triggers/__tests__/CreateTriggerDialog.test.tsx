@@ -60,6 +60,7 @@ const sampleTrigger: TriggerResponse = {
   created_at: '2026-05-09T12:00:00Z',
   created_by: 'user-1',
   updated_at: '2026-05-09T12:00:00Z',
+  mode: 'direct',
 }
 
 const emptyApiKeys: ApiKeyListResponse = { items: [], total: 0 }
@@ -235,9 +236,61 @@ describe('CreateTriggerDialog', () => {
         },
         agent_prompt: 'Investigate the drawdown.',
         cooldown_seconds: 3600,
+        mode: 'direct',
       })
     })
     await waitFor(() => expect(onClose).toHaveBeenCalled())
+  })
+
+  it('renders the invocation-mode radio with DIRECT as the default', async () => {
+    render(
+      <CreateTriggerDialog
+        isOpen={true}
+        activationId="activation-1"
+        onClose={() => {}}
+      />,
+      { wrapper: createWrapper() }
+    )
+
+    // Both radio inputs render; DIRECT is checked by default.
+    const direct = screen.getByTestId(
+      'trigger-create-mode-direct'
+    ) as HTMLInputElement
+    const queue = screen.getByTestId(
+      'trigger-create-mode-queue'
+    ) as HTMLInputElement
+    expect(direct.checked).toBe(true)
+    expect(queue.checked).toBe(false)
+  })
+
+  it('submits mode=queue when the queue radio is selected', async () => {
+    vi.mocked(triggersApi.create).mockResolvedValueOnce(sampleTrigger)
+    const user = userEvent.setup()
+
+    render(
+      <CreateTriggerDialog
+        isOpen={true}
+        activationId="activation-1"
+        onClose={() => {}}
+      />,
+      { wrapper: createWrapper() }
+    )
+
+    await user.type(
+      screen.getByTestId('trigger-create-agent-prompt'),
+      'Use desktop tools to investigate this fire.'
+    )
+    await user.click(screen.getByTestId('trigger-create-mode-queue'))
+    fireEvent.submit(screen.getByTestId('trigger-create-form'))
+
+    await waitFor(() => {
+      expect(triggersApi.create).toHaveBeenCalledWith(
+        'activation-1',
+        expect.objectContaining({
+          mode: 'queue',
+        })
+      )
+    })
   })
 
   it('submits via a real button click without tripping HTML5 step validation', async () => {

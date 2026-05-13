@@ -49,6 +49,7 @@ from zebu.application.services.trigger_invocation_orchestrator import (
     build_user_prompt,
 )
 from zebu.domain.entities.api_key import ApiKey
+from zebu.domain.entities.exploration_task import ExplorationTaskStatus
 from zebu.domain.entities.portfolio import Portfolio
 from zebu.domain.entities.strategy import Strategy
 from zebu.domain.entities.strategy_activation import StrategyActivation
@@ -75,6 +76,7 @@ from zebu.domain.value_objects.trigger_condition import (
     DrawdownMetric,
     DrawdownParams,
 )
+from zebu.domain.value_objects.trigger_invocation_mode import TriggerInvocationMode
 from zebu.domain.value_objects.trigger_status import TriggerStatus
 
 # ---------------------------------------------------------------------------
@@ -148,6 +150,7 @@ def _make_trigger(
     activation_id: UUID,
     default_api_key_id: UUID | None = None,
     cooldown_seconds: int = 21600,
+    mode: TriggerInvocationMode = TriggerInvocationMode.DIRECT,
 ) -> StrategyConditionTrigger:
     when = _now() - timedelta(days=10)
     return StrategyConditionTrigger(
@@ -170,6 +173,7 @@ def _make_trigger(
         updated_at=when,
         created_by=user_id,
         default_api_key_id=default_api_key_id,
+        mode=mode,
     )
 
 
@@ -1186,3 +1190,245 @@ class TestPromptBuilders:
         # Portfolio state appears
         assert "9500.00" in prompt
         assert "AAPL: 10" in prompt
+
+
+# ---------------------------------------------------------------------------
+# Phase J / Task #213 — Pattern B queue-mode triggers
+# ---------------------------------------------------------------------------
+
+
+class TestQueueModeInvocation:
+    """A QUEUE-mode trigger files an URGENT ExplorationTask, no Anthropic call."""
+
+    async def test_queue_mode_files_urgent_task_and_skips_agent_call(
+        self,
+    ) -> None:
+        """Mode branch: agent_invocation NOT called; exploration_task_repo IS called."""
+        user_id = uuid4()
+        api_key = _make_api_key(user_id=user_id)
+        api_key_repo = InMemoryApiKeyRepository()
+        await api_key_repo.save(api_key)
+
+        strategy = _make_strategy(user_id=user_id, tickers=["AAPL"])
+        portfolio = _make_portfolio(user_id=user_id)
+        activation = _make_activation(
+            user_id=user_id,
+            strategy_id=strategy.id,
+            portfolio_id=portfolio.id,
+        )
+
+        strategy_repo = InMemoryStrategyRepository()
+        await strategy_repo.save(strategy)
+        portfolio_repo = InMemoryPortfolioRepository()
+        await portfolio_repo.save(portfolio)
+        activation_repo = InMemoryStrategyActivationRepository()
+        await activation_repo.save(activation)
+
+        trigger = _make_trigger(
+            user_id=user_id,
+            activation_id=activation.id,
+            default_api_key_id=api_key.id,
+            mode=TriggerInvocationMode.QUEUE,
+        )
+        trigger_repo = InMemoryTriggerRepository()
+        await trigger_repo.save(trigger)
+
+        task_repo = InMemoryExplorationTaskRepository()
+        # Use a FailingAgentInvocationPort to prove the queue branch
+        # never reaches the Anthropic invocation step — if it did, the
+        # test would surface as INVOCATION_FAILED rather than NEEDS_HUMAN.
+        agent_port = FailingAgentInvocationPort(
+            message="Queue mode must not call agent invocation"
+        )
+
+        fire_repo = InMemoryTriggerFireRepository()
+        orchestrator = _build_orchestrator(
+            agent_port=agent_port,
+            trigger_repo=trigger_repo,
+            fire_repo=fire_repo,
+            activation_repo=activation_repo,
+            strategy_repo=strategy_repo,
+            portfolio_repo=portfolio_repo,
+            txn_repo=InMemoryTransactionRepository(),
+            market_data=InMemoryMarketDataAdapter(),
+            api_key_repo=api_key_repo,
+            task_repo=task_repo,
+        )
+
+        outcome = await orchestrator.fire(
+            trigger=trigger, evaluation_data=_evaluation_data()
+        )
+
+        # No inline Anthropic invocation happened
+        assert len(agent_port.invocations) == 0
+
+        # ExplorationTask was written with the [URGENT] prefix
+        open_tasks = await task_repo.list_by_status(ExplorationTaskStatus.OPEN)
+        assert len(open_tasks) == 1
+        task = open_tasks[0]
+        assert task.prompt.startswith("[URGENT]")
+        assert "[TRIGGER FIRE]" in task.prompt
+        assert task.created_by == user_id
+        assert task.target_portfolio_id == portfolio.id
+        # Trigger's agent_prompt is composed into the task body
+        assert trigger.agent_prompt in task.prompt
+        # Condition snapshot is composed too (one field from _evaluation_data)
+        assert "drawdown_pct" in task.prompt
+
+        # Audit row landed and points at the queued task
+        assert outcome.decision is AgentDecision.NEEDS_HUMAN
+        assert outcome.error is None
+        record = await fire_repo.get(outcome.fire_record_id)
+        assert record is not None
+        assert record.resulting_exploration_task_id == task.id
+        assert record.resulting_trade_id is None
+        assert record.resulting_modify_payload is None
+        assert record.api_key_id_used == api_key.id
+        # The raw rationale carries the queue-mode marker so the UI can
+        # render "Queued" without re-reading the trigger row.
+        assert '"mode":"queue"' in record.agent_response_raw
+        assert str(task.id) in record.agent_response_raw
+
+        # Trigger's last_fired_at advanced so cooldown applies
+        reloaded = await trigger_repo.get(trigger.id)
+        assert reloaded is not None
+        assert reloaded.last_fired_at is not None
+
+    async def test_direct_mode_still_calls_agent_invocation(self) -> None:
+        """A DIRECT trigger continues to invoke the agent and skips the queue."""
+        user_id = uuid4()
+        api_key = _make_api_key(user_id=user_id)
+        api_key_repo = InMemoryApiKeyRepository()
+        await api_key_repo.save(api_key)
+
+        strategy = _make_strategy(user_id=user_id, tickers=["AAPL"])
+        portfolio = _make_portfolio(user_id=user_id)
+        activation = _make_activation(
+            user_id=user_id,
+            strategy_id=strategy.id,
+            portfolio_id=portfolio.id,
+        )
+
+        strategy_repo = InMemoryStrategyRepository()
+        await strategy_repo.save(strategy)
+        portfolio_repo = InMemoryPortfolioRepository()
+        await portfolio_repo.save(portfolio)
+        activation_repo = InMemoryStrategyActivationRepository()
+        await activation_repo.save(activation)
+
+        trigger = _make_trigger(
+            user_id=user_id,
+            activation_id=activation.id,
+            default_api_key_id=api_key.id,
+            mode=TriggerInvocationMode.DIRECT,
+        )
+        trigger_repo = InMemoryTriggerRepository()
+        await trigger_repo.save(trigger)
+
+        task_repo = InMemoryExplorationTaskRepository()
+        agent_port = StaticAgentInvocationPort(
+            result=make_result(
+                decision=AgentDecision.HOLD,
+                rationale="Drawdown within tolerance — staying the course.",
+            )
+        )
+
+        fire_repo = InMemoryTriggerFireRepository()
+        orchestrator = _build_orchestrator(
+            agent_port=agent_port,
+            trigger_repo=trigger_repo,
+            fire_repo=fire_repo,
+            activation_repo=activation_repo,
+            strategy_repo=strategy_repo,
+            portfolio_repo=portfolio_repo,
+            txn_repo=InMemoryTransactionRepository(),
+            market_data=InMemoryMarketDataAdapter(),
+            api_key_repo=api_key_repo,
+            task_repo=task_repo,
+        )
+
+        outcome = await orchestrator.fire(
+            trigger=trigger, evaluation_data=_evaluation_data()
+        )
+
+        # Agent WAS called
+        assert len(agent_port.invocations) == 1
+
+        # No queue-mode exploration task was filed by the orchestrator
+        open_tasks = await task_repo.list_by_status(ExplorationTaskStatus.OPEN)
+        assert open_tasks == []
+
+        # Audit row reflects HOLD (the agent's decision), not NEEDS_HUMAN
+        record = await fire_repo.get(outcome.fire_record_id)
+        assert record is not None
+        assert record.agent_response is AgentDecision.HOLD
+        assert record.resulting_exploration_task_id is None
+        # Direct-mode rationale doesn't carry the queue marker
+        assert '"mode":"queue"' not in record.agent_response_raw
+
+    async def test_queue_mode_audit_row_is_well_formed(self) -> None:
+        """The audit row written in queue mode satisfies the entity invariants."""
+        user_id = uuid4()
+        api_key = _make_api_key(user_id=user_id)
+        api_key_repo = InMemoryApiKeyRepository()
+        await api_key_repo.save(api_key)
+
+        strategy = _make_strategy(user_id=user_id, tickers=["AAPL"])
+        portfolio = _make_portfolio(user_id=user_id)
+        activation = _make_activation(
+            user_id=user_id,
+            strategy_id=strategy.id,
+            portfolio_id=portfolio.id,
+        )
+
+        strategy_repo = InMemoryStrategyRepository()
+        await strategy_repo.save(strategy)
+        portfolio_repo = InMemoryPortfolioRepository()
+        await portfolio_repo.save(portfolio)
+        activation_repo = InMemoryStrategyActivationRepository()
+        await activation_repo.save(activation)
+
+        trigger = _make_trigger(
+            user_id=user_id,
+            activation_id=activation.id,
+            default_api_key_id=api_key.id,
+            mode=TriggerInvocationMode.QUEUE,
+        )
+        trigger_repo = InMemoryTriggerRepository()
+        await trigger_repo.save(trigger)
+
+        task_repo = InMemoryExplorationTaskRepository()
+        agent_port = StaticAgentInvocationPort(
+            result=make_result(decision=AgentDecision.HOLD),
+        )
+
+        fire_repo = InMemoryTriggerFireRepository()
+        orchestrator = _build_orchestrator(
+            agent_port=agent_port,
+            trigger_repo=trigger_repo,
+            fire_repo=fire_repo,
+            activation_repo=activation_repo,
+            strategy_repo=strategy_repo,
+            portfolio_repo=portfolio_repo,
+            txn_repo=InMemoryTransactionRepository(),
+            market_data=InMemoryMarketDataAdapter(),
+            api_key_repo=api_key_repo,
+            task_repo=task_repo,
+        )
+
+        outcome = await orchestrator.fire(
+            trigger=trigger, evaluation_data=_evaluation_data()
+        )
+
+        record = await fire_repo.get(outcome.fire_record_id)
+        assert record is not None
+        # NEEDS_HUMAN requires resulting_exploration_task_id (entity invariant)
+        assert record.agent_response is AgentDecision.NEEDS_HUMAN
+        assert record.resulting_exploration_task_id is not None
+        # NEEDS_HUMAN forbids the other resulting_* pointers
+        assert record.resulting_trade_id is None
+        assert record.resulting_modify_payload is None
+        # Latency is non-negative
+        assert record.latency_ms >= 0
+        # Condition evaluation data round-trips
+        assert record.condition_evaluation_data["schema_version"] == 1

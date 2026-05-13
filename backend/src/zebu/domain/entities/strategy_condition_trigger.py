@@ -35,6 +35,7 @@ from zebu.domain.value_objects.trigger_condition import (
     ConditionType,
     params_match_type,
 )
+from zebu.domain.value_objects.trigger_invocation_mode import TriggerInvocationMode
 from zebu.domain.value_objects.trigger_status import TriggerStatus
 
 # Trigger-level limits that match the Phase-F design §1.1.
@@ -84,6 +85,11 @@ class StrategyConditionTrigger:
             activation owner's most-recently-used trade-scoped key".
         expires_at: Optional natural expiry. When set + lapsed, the
             evaluator transitions the trigger to ``EXPIRED``.
+        mode: How the trigger reaches an agent when it fires. Defaults to
+            :attr:`TriggerInvocationMode.DIRECT` for backwards
+            compatibility — pre-Phase-J rows behave exactly as they did
+            before. ``QUEUE`` opts into Pattern B (file an URGENT
+            :class:`ExplorationTask` for an out-of-band agent to claim).
         created_at: Creation timestamp (UTC; not in the future).
         created_by: User or API-key-derived UUID that created the trigger.
         updated_at: Last-mutation timestamp (UTC; ``>= created_at``).
@@ -107,6 +113,11 @@ class StrategyConditionTrigger:
     last_fired_at: datetime | None = None
     default_api_key_id: UUID | None = None
     expires_at: datetime | None = None
+    # Phase J / Task #213 — DIRECT keeps the F-3 inline-Anthropic
+    # behaviour; QUEUE causes the orchestrator to file an URGENT
+    # ExplorationTask instead. Default DIRECT so existing rows behave
+    # exactly as they did pre-Phase-J.
+    mode: TriggerInvocationMode = TriggerInvocationMode.DIRECT
 
     def __post_init__(self) -> None:
         """Validate all invariants after initialisation."""

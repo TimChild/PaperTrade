@@ -658,6 +658,19 @@ export interface EarningsConditionParams {
  * type to match the backend's wire format (JSON dict). Renderers narrow it
  * via `condition_type` before accessing keyed fields.
  */
+/**
+ * Trigger invocation mode (Phase J — Task #213).
+ *
+ * `direct` — the default. The platform calls Anthropic Haiku inline when
+ *   the condition fires.
+ * `queue` — Pattern B. The platform files an URGENT `ExplorationTask`
+ *   for the user's desktop agent (Claude Code / Desktop / Gemini CLI) to
+ *   claim via MCP and process with that client's own connectors.
+ *
+ * Mirrors the `TriggerInvocationMode` StrEnum on the backend.
+ */
+export type TriggerInvocationMode = 'direct' | 'queue'
+
 export interface TriggerResponse {
   id: string
   activation_id: string
@@ -674,6 +687,7 @@ export interface TriggerResponse {
   created_at: string
   created_by: string
   updated_at: string
+  mode: TriggerInvocationMode
 }
 
 /**
@@ -692,6 +706,12 @@ export interface CreateTriggerRequest {
   priority?: number
   default_api_key_id?: string | null
   expires_at?: string | null
+  /**
+   * Invocation mode (Phase J — Task #213). Defaults to `direct` on the
+   * backend. Set to `queue` to opt into Pattern B (URGENT
+   * ExplorationTask filing for an out-of-band desktop agent to claim).
+   */
+  mode?: TriggerInvocationMode
 }
 
 /**
@@ -705,6 +725,11 @@ export interface UpdateTriggerRequest {
   priority?: number
   condition_params?: Record<string, unknown>
   status?: 'ACTIVE' | 'PAUSED'
+  /**
+   * Optional invocation-mode update (Phase J — Task #213). Switching from
+   * `direct` to `queue` (or back) takes effect on the next fire.
+   */
+  mode?: TriggerInvocationMode
 }
 
 /**

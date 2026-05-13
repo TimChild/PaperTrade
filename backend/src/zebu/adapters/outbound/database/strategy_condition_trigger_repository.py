@@ -152,6 +152,7 @@ class SQLModelTriggerRepository:
         existing.priority = replacement.priority
         existing.default_api_key_id = replacement.default_api_key_id
         existing.expires_at = replacement.expires_at
+        existing.mode = replacement.mode
         # ``created_at`` and ``created_by`` are immutable by convention;
         # we don't overwrite them on update so accidental clock drift in
         # the entity doesn't rewrite history.
