@@ -52,6 +52,7 @@ from zebu.domain.value_objects.trigger_condition import (
     ConditionType,
     params_from_dict,
 )
+from zebu.domain.value_objects.trigger_invocation_mode import TriggerInvocationMode
 from zebu.domain.value_objects.trigger_status import TriggerStatus
 
 _logger = logging.getLogger(__name__)
@@ -1410,6 +1411,13 @@ class StrategyConditionTriggerModel(SQLModel, table=True):
     created_at: datetime
     created_by: UUID
     updated_at: datetime
+    # Phase J / Task #213 — invocation mode (``direct`` keeps the F-3
+    # inline-Anthropic behavior; ``queue`` files an URGENT ExplorationTask
+    # so an out-of-band agent can claim it). Defaults to ``direct`` so
+    # pre-Phase-J rows keep their existing behavior — the matching
+    # ``j003_trigger_mode`` migration adds the column with a server-side
+    # default.
+    mode: str = Field(default="direct", max_length=16)
 
     def to_domain(self) -> StrategyConditionTrigger:
         """Convert database model to domain entity.
@@ -1432,6 +1440,11 @@ class StrategyConditionTriggerModel(SQLModel, table=True):
         # before the entity sees it.
         condition_params = params_from_dict(condition_type, dict(self.condition_params))
         status = TriggerStatus(self.status)
+        # ``mode`` is recorded as a lowercase string in the DB (matches
+        # ``TriggerInvocationMode`` member values). The StrEnum
+        # constructor raises ValueError on drift — surface that as the
+        # caller's error (matches the existing pattern for ``status``).
+        mode = TriggerInvocationMode(self.mode)
 
         return StrategyConditionTrigger(
             id=self.id,
@@ -1449,6 +1462,7 @@ class StrategyConditionTriggerModel(SQLModel, table=True):
             created_at=created_at_utc,
             created_by=self.created_by,
             updated_at=updated_at_utc,
+            mode=mode,
         )
 
     @classmethod
@@ -1472,6 +1486,7 @@ class StrategyConditionTriggerModel(SQLModel, table=True):
             created_at=_strip_tz(trigger.created_at) or trigger.created_at,
             created_by=trigger.created_by,
             updated_at=_strip_tz(trigger.updated_at) or trigger.updated_at,
+            mode=trigger.mode.value,
         )
 
 

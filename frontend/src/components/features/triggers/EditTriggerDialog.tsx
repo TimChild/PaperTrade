@@ -19,7 +19,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Eyebrow } from '@/components/ui/Eyebrow'
 import { useUpdateTrigger } from '@/hooks/useTriggers'
-import type { TriggerResponse } from '@/services/api/types'
+import type {
+  TriggerInvocationMode,
+  TriggerResponse,
+} from '@/services/api/types'
 
 const SELECT_CLASSES =
   'flex h-10 w-full rounded-input border border-hairline bg-canvas-raised/40 px-3 py-2 text-body-sm text-ink focus-visible:outline-none focus-visible:border-amber focus-visible:ring-1 focus-visible:ring-amber/40 disabled:cursor-not-allowed disabled:opacity-50'
@@ -78,6 +81,9 @@ export function EditTriggerDialog({
     initialCooldown.unit
   )
   const [agentPrompt, setAgentPrompt] = useState<string>(trigger.agent_prompt)
+  // Invocation mode (Phase J / Task #213). Seeded from the persisted
+  // value so the form opens reflecting the current backend state.
+  const [mode, setMode] = useState<TriggerInvocationMode>(trigger.mode)
   const [errors, setErrors] = useState<{
     cooldown?: string
     agent_prompt?: string
@@ -117,6 +123,7 @@ export function EditTriggerDialog({
         body: {
           agent_prompt: agentPrompt.trim(),
           cooldown_seconds: cooldownSeconds,
+          mode,
         },
       },
       {
@@ -227,6 +234,59 @@ export function EditTriggerDialog({
                 {errors.agent_prompt}
               </p>
             )}
+          </div>
+
+          {/* Invocation mode (Phase J / Task #213) */}
+          <div
+            className="space-y-1.5"
+            data-testid={`trigger-edit-mode-group-${trigger.id}`}
+            role="radiogroup"
+            aria-labelledby={`trigger-edit-mode-eyebrow-${trigger.id}`}
+          >
+            <Eyebrow id={`trigger-edit-mode-eyebrow-${trigger.id}`}>
+              Invocation mode
+            </Eyebrow>
+            <div className="flex flex-col gap-2">
+              <label className="flex items-start gap-2 text-body-sm text-ink">
+                <input
+                  type="radio"
+                  name={`trigger-edit-mode-${trigger.id}`}
+                  data-testid={`trigger-edit-mode-direct-${trigger.id}`}
+                  value="direct"
+                  checked={mode === 'direct'}
+                  onChange={() => setMode('direct')}
+                  className="mt-1 accent-amber"
+                />
+                <span>
+                  <span className="block font-medium text-ink">
+                    Direct (Anthropic Haiku)
+                  </span>
+                  <span className="block text-body-sm text-ink-muted">
+                    Default. The platform invokes the agent inline.
+                  </span>
+                </span>
+              </label>
+              <label className="flex items-start gap-2 text-body-sm text-ink">
+                <input
+                  type="radio"
+                  name={`trigger-edit-mode-${trigger.id}`}
+                  data-testid={`trigger-edit-mode-queue-${trigger.id}`}
+                  value="queue"
+                  checked={mode === 'queue'}
+                  onChange={() => setMode('queue')}
+                  className="mt-1 accent-amber"
+                />
+                <span>
+                  <span className="block font-medium text-ink">
+                    Queue (Desktop Claude / Gemini CLI)
+                  </span>
+                  <span className="block text-body-sm text-ink-muted">
+                    Files an URGENT task. Your desktop agent polls and processes
+                    it.
+                  </span>
+                </span>
+              </label>
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

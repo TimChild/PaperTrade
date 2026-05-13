@@ -323,6 +323,34 @@ Every decision lands in the `TriggerFireRecord` table:
 
 Full design: [`docs/architecture/phase-f-agent-in-the-loop.md`](../architecture/phase-f-agent-in-the-loop.md).
 
+#### Invocation mode — Direct vs Queue (Phase J, Task #213)
+
+Phase J introduces a second way to reach an agent on trigger fire: **Pattern B**. Every trigger now carries a `mode` field:
+
+| Mode | What happens on fire | When to pick this |
+|---|---|---|
+| `direct` (default) | The platform calls Anthropic Haiku inline via the `AgentInvocationPort`, parses the structured decision, and executes it. End-to-end latency is typically <1 s. Matches the existing Phase F-3 behaviour. | Latency-sensitive triggers (intraday drawdown, volatility spikes). When the agent's job is well-bounded enough that Haiku + the platform's prompt template is sufficient. |
+| `queue` | The platform files an **URGENT** `ExplorationTask` (title prefix `[URGENT] [TRIGGER FIRE]`) and writes the audit row immediately. **No inline agent call.** Your desktop Claude / Claude Code / Gemini CLI polls the queue and processes the task with whatever connectors + tools that client already has wired (web search, news APIs, Gmail, Drive, etc.). | When the agent needs **wide tool access** the platform doesn't expose (web search, your inbox, your Slack). When you want the **decision in your own client** (Claude Desktop, Code, Gemini CLI) rather than the platform's inline Haiku. When the trigger isn't time-critical (a queue-mode fire waits for the next poll cycle). |
+
+The `mode` field defaults to `direct` for **every existing trigger** — Phase J is opt-in per-row.
+
+##### Consuming queued fires from your desktop agent
+
+When you've opted a trigger into `queue` mode and the condition fires, the platform creates an `ExplorationTask` row. To consume it from your desktop agent:
+
+1. **Poll** — call `mcp__zebu__list_exploration_tasks` with `status=OPEN` periodically (typical cadence: every 1–5 minutes for active hours; longer overnight). Tasks whose prompt starts with `[URGENT]` are the queue-mode trigger fires; ordinary exploration tasks (research backlog) lack the prefix.
+2. **Claim** — call `mcp__zebu__claim_exploration_task(task_id, agent_id="<your-client-id>")` to transition `OPEN -> IN_PROGRESS`. The atomic claim prevents two desktop sessions from racing on the same task.
+3. **Work the task** — read the task body for trigger metadata + the operator's instruction + the condition snapshot. Use whichever tools you have available (Anthropic / Gemini API direct calls, web search, news fetches) to make a decision.
+4. **Submit** — call `mcp__zebu__submit_exploration_finding(task_id, summary="...", ...)` to mark the task `DONE` with your reasoning. If the right call is a trade, execute it via `mcp__zebu__create_strategy` + activate, or via direct REST against `/api/v1/strategies/.../activate` — same as any other agent-driven trade.
+
+Queue-mode fires still write a `TriggerFireRecord` audit row (so the fire log and activity feed show the fire happened), with `resulting_exploration_task_id` pointing at the queued task. The fire log UI renders a small `Queued` pill next to those rows.
+
+##### Picking a mode — quick rules of thumb
+
+- **Default to `direct`** when you're not sure. The platform's inline Haiku is conservative + fast.
+- **Pick `queue`** when the trigger asks the agent to gather context from outside Zebu (news, earnings transcripts, social sentiment) — your desktop agent already has those connectors authenticated; the inline Haiku doesn't.
+- **Pick `queue`** when you want the human-in-loop pace — a queued task waits patiently until your desktop session polls; you're never racing the agent to override its decision.
+
 ### 3.5.2 Configuring triggers via the API
 
 As of Phase F-5, the trigger CRUD + fire-log endpoints are live. Use them when you want to attach an agent-in-the-loop trigger to one of your activations. The trigger configuration UI is deferred to Phase G — for now, every interaction goes through the API directly.

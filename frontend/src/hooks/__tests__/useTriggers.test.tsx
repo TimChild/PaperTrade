@@ -56,6 +56,7 @@ const mockTrigger: TriggerResponse = {
   created_at: '2026-05-09T12:00:00Z',
   created_by: 'user-1',
   updated_at: '2026-05-09T12:00:00Z',
+  mode: 'direct',
 }
 
 const mockFire: TriggerFireResponse = {

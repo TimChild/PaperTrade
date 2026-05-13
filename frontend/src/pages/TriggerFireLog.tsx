@@ -44,6 +44,18 @@ function truncate(text: string, max: number): string {
   return text.slice(0, max - 1) + '…'
 }
 
+/**
+ * Detect whether a fire record was produced via Pattern B (queue mode).
+ *
+ * The orchestrator stamps a compact `{"mode":"queue", ...}` marker into
+ * `agent_response_raw` on queue-mode fires (see
+ * `TriggerInvocationOrchestrator._fire_queue_mode`). The direct path
+ * never writes that marker.
+ */
+function isQueuedFire(rationaleRaw: string): boolean {
+  return rationaleRaw.includes('"mode":"queue"')
+}
+
 export function TriggerFireLog(): React.JSX.Element {
   const { id } = useParams<{ id: string }>()
   const triggerId = id ?? ''
@@ -196,6 +208,7 @@ export function TriggerFireLog(): React.JSX.Element {
               <DataTableHead>
                 <DataHeaderCell>Time</DataHeaderCell>
                 <DataHeaderCell>Decision</DataHeaderCell>
+                <DataHeaderCell>Path</DataHeaderCell>
                 <DataHeaderCell hideOnMobile>Snapshot</DataHeaderCell>
                 <DataHeaderCell hideUntilMd>Rationale</DataHeaderCell>
                 <DataHeaderCell hideOnMobile>Trade</DataHeaderCell>
@@ -217,6 +230,11 @@ export function TriggerFireLog(): React.JSX.Element {
                     </DataCell>
                     <DataCell>
                       <AgentDecisionBadge decision={f.agent_response} />
+                    </DataCell>
+                    <DataCell>
+                      <FireModeBadge
+                        queued={isQueuedFire(f.agent_response_raw)}
+                      />
                     </DataCell>
                     <DataCell tone="muted" hideOnMobile>
                       <span
@@ -270,6 +288,34 @@ export function TriggerFireLog(): React.JSX.Element {
         )}
       </section>
     </PageFrame>
+  )
+}
+
+/**
+ * Pill rendering "Inline" (Pattern A — Anthropic direct) or "Queued"
+ * (Pattern B — ExplorationTask) so the user can tell at a glance which
+ * path each fire took.
+ */
+function FireModeBadge({ queued }: { queued: boolean }): React.JSX.Element {
+  if (queued) {
+    return (
+      <span
+        className="inline-flex items-center bg-amber-soft text-amber px-2 py-1 rounded-editorial font-eyebrow"
+        data-testid="fire-mode-pill-queued"
+        title="Queue mode — platform filed an URGENT ExplorationTask for your desktop agent."
+      >
+        Queued
+      </span>
+    )
+  }
+  return (
+    <span
+      className="inline-flex items-center font-eyebrow text-ink-subtle"
+      data-testid="fire-mode-pill-inline"
+      title="Direct mode — platform invoked Anthropic Haiku inline."
+    >
+      Inline
+    </span>
   )
 }
 

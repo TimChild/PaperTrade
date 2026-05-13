@@ -61,6 +61,7 @@ from zebu.domain.value_objects.trigger_condition import (
     ConditionType,
     params_from_dict,
 )
+from zebu.domain.value_objects.trigger_invocation_mode import TriggerInvocationMode
 from zebu.domain.value_objects.trigger_status import TriggerStatus
 from zebu.infrastructure.database import SessionDep
 
@@ -111,7 +112,22 @@ def _trigger_to_response(trigger: StrategyConditionTrigger) -> TriggerResponse:
         created_at=trigger.created_at.isoformat(),
         created_by=trigger.created_by,
         updated_at=trigger.updated_at.isoformat(),
+        mode=trigger.mode.value,
     )
+
+
+def _parse_invocation_mode(raw: str) -> TriggerInvocationMode:
+    """Parse ``mode`` from the wire payload, returning a 422 on bad input."""
+    try:
+        return TriggerInvocationMode(raw)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"Invalid mode: '{raw}'. Must be one of: "
+                f"{', '.join(m.value for m in TriggerInvocationMode)}"
+            ),
+        ) from exc
 
 
 def _fire_to_response(record: TriggerFireRecord) -> TriggerFireResponse:
@@ -213,6 +229,7 @@ async def create_trigger(
 
     condition_type = _parse_condition_type(request.condition_type)
     expires_at = _parse_expires_at(request.expires_at)
+    mode = _parse_invocation_mode(request.mode)
 
     # The domain factory validates the params shape against the
     # discriminator and raises ``InvalidTriggerError`` (mapped to 422 by
@@ -242,6 +259,7 @@ async def create_trigger(
             created_at=now,
             created_by=current_user,
             updated_at=now,
+            mode=mode,
         )
     except InvalidTriggerError as exc:
         # Surface entity-level invariant violations (e.g. agent_prompt too
@@ -257,6 +275,7 @@ async def create_trigger(
         trigger_id=str(trigger.id),
         activation_id=str(activation_id),
         condition_type=condition_type.value,
+        mode=mode.value,
     )
     return _trigger_to_response(trigger)
 
@@ -434,6 +453,13 @@ async def update_trigger(
     now = datetime.now(UTC)
     updated = trigger
 
+    # Parse the optional mode early so we can fold it into the same
+    # reconstruction pass below (avoids an extra entity rebuild when both
+    # mode and other fields change in the same PATCH).
+    mode_override: TriggerInvocationMode | None = None
+    if request.mode is not None:
+        mode_override = _parse_invocation_mode(request.mode)
+
     # Apply non-status updates first via dataclasses.replace-equivalent
     # so the entity's __post_init__ re-validates the new values. We
     # reconstruct via the dataclass constructor to keep the path explicit.
@@ -442,6 +468,7 @@ async def update_trigger(
         or request.cooldown_seconds is not None
         or request.priority is not None
         or request.condition_params is not None
+        or mode_override is not None
     ):
         new_condition_params = updated.condition_params
         if request.condition_params is not None:
@@ -484,6 +511,7 @@ async def update_trigger(
                 created_at=updated.created_at,
                 created_by=updated.created_by,
                 updated_at=now,
+                mode=mode_override if mode_override is not None else updated.mode,
             )
         except InvalidTriggerError as exc:
             raise HTTPException(
@@ -623,6 +651,7 @@ async def delete_trigger(
             created_at=trigger.created_at,
             created_by=trigger.created_by,
             updated_at=now,
+            mode=trigger.mode,
         )
     except InvalidTriggerError as exc:  # pragma: no cover — defensive
         raise HTTPException(

@@ -48,6 +48,7 @@ const trigger: TriggerResponse = {
   created_at: '2026-05-09T12:00:00Z',
   created_by: 'user-1',
   updated_at: '2026-05-09T12:00:00Z',
+  mode: 'direct',
 }
 
 const fire: TriggerFireResponse = {
@@ -190,5 +191,54 @@ describe('TriggerFireLog', () => {
     expect(
       await screen.findByTestId('trigger-fire-log-error')
     ).toBeInTheDocument()
+  })
+
+  // Phase J / Task #213 — fire-mode pill rendering.
+  it('renders the Inline pill for a direct-mode fire', async () => {
+    vi.mocked(triggersApi.getById).mockResolvedValueOnce(trigger)
+    vi.mocked(triggersApi.listFires).mockResolvedValueOnce(paged([fire]))
+
+    renderPage()
+
+    await waitFor(() =>
+      expect(screen.getByTestId('trigger-fire-row-fire-1')).toBeInTheDocument()
+    )
+    // A direct-mode rationale lacks the queue marker → "Inline" pill.
+    expect(screen.getByTestId('fire-mode-pill-inline')).toHaveTextContent(
+      'Inline'
+    )
+    expect(
+      screen.queryByTestId('fire-mode-pill-queued')
+    ).not.toBeInTheDocument()
+  })
+
+  it('renders the Queued pill for a queue-mode fire', async () => {
+    vi.mocked(triggersApi.getById).mockResolvedValueOnce({
+      ...trigger,
+      mode: 'queue',
+    })
+    vi.mocked(triggersApi.listFires).mockResolvedValueOnce(
+      paged([
+        {
+          ...fire,
+          agent_response: 'NEEDS_HUMAN',
+          agent_response_raw:
+            '{"queued_task_id":"task-queued-1","mode":"queue"}',
+          resulting_exploration_task_id: 'task-queued-1',
+        },
+      ])
+    )
+
+    renderPage()
+
+    await waitFor(() =>
+      expect(screen.getByTestId('trigger-fire-row-fire-1')).toBeInTheDocument()
+    )
+    expect(screen.getByTestId('fire-mode-pill-queued')).toHaveTextContent(
+      'Queued'
+    )
+    expect(
+      screen.queryByTestId('fire-mode-pill-inline')
+    ).not.toBeInTheDocument()
   })
 })
