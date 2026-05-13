@@ -125,6 +125,38 @@ When evaluating an issue:
 - **Diagnose before delegating.** Task #133 (E2E failures): found missing Playwright browsers — orchestrator fixed in 1 line, no agent task needed. *Simple fixes don't need agent tasks.*
 - **Don't accept tech-debt creep.** Agent proposes `# type: ignore` → reject, request proper types. *One exception becomes ten.*
 
+## Wave closeout — mandatory before the next dispatch
+
+The H/I/E/F/G cycle left **57 locked agent worktrees totalling 19 GB** under `.claude/worktrees/`. The `Agent({isolation: "worktree"})` pattern spawns a worktree per dispatched agent, and each worktree installs its own `backend/.venv` (~284 MB) plus frontend `node_modules` if touched. Without an explicit teardown step they accumulate silently — `git worktree list` shows them as `locked` so `git worktree prune` won't touch them.
+
+At the end of every wave (i.e., after the last agent's PR is merged in a parallel batch), run:
+
+```bash
+for wt in .claude/worktrees/agent-*; do
+  if [ -d "$wt" ]; then
+    git worktree unlock "$wt" 2>/dev/null
+    git worktree remove --force "$wt" 2>/dev/null || rm -rf "$wt"
+  fi
+done
+git worktree prune
+```
+
+Then sweep the local refs left behind:
+
+```bash
+# 1. Branches whose PRs are confirmed merged on GitHub
+gh pr list --state merged --json headRefName --limit 200 -q '.[].headRefName' | sort -u > /tmp/merged_prs.txt
+git branch | sed 's/^[* ] *//' | grep -v "^main$" | sort -u > /tmp/local_branches.txt
+comm -12 /tmp/local_branches.txt /tmp/merged_prs.txt | xargs -I {} git branch -D {}
+
+# 2. Orchestration scratch refs (temp-*, worktree-agent-*) — never tied to a PR
+git branch | grep -E "^  (temp-|worktree-agent-)" | sed 's/^  //' | xargs -r git branch -D
+```
+
+Verify: `git worktree list | wc -l` should be `1` (just the main repo), `git branch | wc -l` should be the genuine in-flight set (typically 1–3 incl. `main`).
+
+**Why this is non-negotiable**: every new wave runs with a clean slate; the next orchestrator (or next CI run, or next agent dispatch) should not pay for the previous wave's debris. Document the closeout step in the wave's progress doc.
+
 ## Lessons compounded
 
 - Quality compounds — every good decision makes the next easier
