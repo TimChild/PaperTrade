@@ -573,9 +573,19 @@ async def get_market_data(session: SessionDep) -> MarketDataPort:
         # Use demo key for development/testing
         alpha_vantage_api_key = "demo"
 
-    # Get rate limits from environment or use defaults
+    # Get rate limits from environment or use defaults.
+    # Phase J / Task #212 Layer 2 — ``ALPHA_VANTAGE_DAILY_CAP`` is the
+    # operator-facing knob (default 25, matching the free-tier daily cap;
+    # ``0`` = unbounded for paid AV). It takes precedence over the older
+    # ``ALPHA_VANTAGE_RATE_LIMIT_PER_DAY`` (default 500) but the legacy
+    # name is kept as a fallback so an existing prod deployment doesn't
+    # silently flip caps until the env file is updated.
     calls_per_minute = int(os.getenv("ALPHA_VANTAGE_RATE_LIMIT_PER_MIN", "5"))
-    calls_per_day = int(os.getenv("ALPHA_VANTAGE_RATE_LIMIT_PER_DAY", "500"))
+    daily_cap_raw = os.getenv("ALPHA_VANTAGE_DAILY_CAP")
+    if daily_cap_raw is not None:
+        calls_per_day = int(daily_cap_raw)
+    else:
+        calls_per_day = int(os.getenv("ALPHA_VANTAGE_RATE_LIMIT_PER_DAY", "500"))
 
     # Create Redis client (singleton)
     if _redis_client is None:
