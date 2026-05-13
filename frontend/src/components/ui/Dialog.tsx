@@ -2,6 +2,15 @@
  * Editorial dialog — canvas-raised panel with hairline border, eyebrow +
  * display-serif heading. Uses the native `<dialog>` element with
  * `showModal()` for keyboard / focus-trap / ESC-close mechanics.
+ *
+ * Children render only when `isOpen` is true. The native `<dialog>` element
+ * itself stays mounted (so focus-trap and a11y semantics persist), but its
+ * subtree is gated on the open state — this prevents side-effects in
+ * children (TanStack mutations, queries, `useEffect`) from firing on first
+ * render while the dialog is closed, and keeps hidden `<option>` rows etc.
+ * out of DOM where they would otherwise be matched by host-page E2E tests.
+ * See `docs/planning/agent-platform-next-steps.md` §1.3 for the original
+ * `AskAnAgentButton` workaround that motivated this refactor.
  */
 import { useEffect, useRef } from 'react'
 import { Eyebrow } from './Eyebrow'
@@ -85,15 +94,19 @@ export function Dialog({
       data-testid="dialog"
       className={`rounded-editorial border border-hairline bg-canvas-raised text-ink p-6 shadow-elevated backdrop:bg-canvas-sunken/80 backdrop:backdrop-blur-sm ${className}`}
     >
-      {title && (
-        <header className="mb-5">
-          <Eyebrow>{eyebrow}</Eyebrow>
-          <h2 className="mt-1.5 font-display text-display-sm tracking-tight text-ink">
-            {title}
-          </h2>
-        </header>
+      {isOpen && (
+        <>
+          {title && (
+            <header className="mb-5">
+              <Eyebrow>{eyebrow}</Eyebrow>
+              <h2 className="mt-1.5 font-display text-display-sm tracking-tight text-ink">
+                {title}
+              </h2>
+            </header>
+          )}
+          <div>{children}</div>
+        </>
       )}
-      <div>{children}</div>
     </dialog>
   )
 }
