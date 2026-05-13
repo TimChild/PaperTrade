@@ -45,7 +45,10 @@ from zebu.adapters.outbound.database.transaction_repository import (
     SQLModelTransactionRepository,
 )
 from zebu.application.commands.run_backtest import RunBacktestCommand
-from zebu.application.exceptions import TickerNotFoundError
+from zebu.application.exceptions import (
+    IncompleteHistoricalDataError,
+    TickerNotFoundError,
+)
 from zebu.application.services.backtest_executor import BacktestExecutor
 from zebu.application.services.historical_data_preparer import HistoricalDataPreparer
 from zebu.application.services.snapshot_job import SnapshotJobService
@@ -266,6 +269,21 @@ async def run_backtest(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
         ) from exc
+    except IncompleteHistoricalDataError as exc:
+        # Phase J / Task #212 Layer 3 — the adapter has already enqueued a
+        # high-priority backfill (idempotent on (ticker, range)); the
+        # caller should retry after the fetch has had a chance to run.
+        # Refund the rate-limit token so the retry isn't penalised by the
+        # transient miss, then re-raise so the global
+        # IncompleteHistoricalDataError handler shapes the 503 body.
+        await rate_limiter.refund(api_key_id=api_key_id)
+        logger.info(
+            "Backtest deferred — historical data being fetched",
+            strategy_id=str(request.strategy_id),
+            ticker=exc.ticker.symbol,
+            missing_days_count=exc.missing_days_count,
+        )
+        raise
     except (InsufficientHistoricalDataError, TickerNotFoundError) as exc:
         # Market-data gap — neither error is the agent's fault; refund
         # the rate-limit token. ``TickerNotFoundError`` was previously

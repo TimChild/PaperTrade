@@ -24,6 +24,7 @@ from zebu.adapters.inbound.api.dependencies import (
     MarketDataDep,
 )
 from zebu.application.exceptions import (
+    IncompleteHistoricalDataError,
     MarketDataUnavailableError,
     TickerNotFoundError,
 )
@@ -538,6 +539,26 @@ async def fetch_historical_data(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e),
         ) from e
+
+    except IncompleteHistoricalDataError as e:
+        # Admin-triggered fetch with partial coverage. The adapter has
+        # already enqueued a high-priority backfill for the gap; the
+        # admin doesn't need an error — they need to know the partial
+        # state was persisted and a backfill is in flight. Report
+        # ``fetched=0`` (we have no per-call count handy at this layer)
+        # paired with the requested range; the admin can re-poll once
+        # the queued backfill drains.
+        logger.info(
+            "Admin fetch — partial coverage, backfill enqueued",
+            ticker=e.ticker.symbol,
+            missing_days_count=e.missing_days_count,
+        )
+        return FetchHistoricalDataResponse(
+            ticker=e.ticker.symbol,
+            fetched=0,
+            start=request.start,
+            end=request.end,
+        )
 
     except TickerNotFoundError as e:
         raise HTTPException(

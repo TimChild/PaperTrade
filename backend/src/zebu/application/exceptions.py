@@ -4,6 +4,10 @@ Application layer exceptions represent errors that occur during use case executi
 including issues with external data sources and integration failures.
 """
 
+from datetime import date
+
+from zebu.domain.value_objects.ticker import Ticker
+
 
 class MarketDataError(Exception):
     """Base exception for all market data related errors.
@@ -78,6 +82,80 @@ class MarketDataUnavailableError(MarketDataError):
         self.reason = reason
         if message is None:
             message = f"Market data unavailable: {reason}"
+        super().__init__(message)
+
+
+class IncompleteHistoricalDataError(MarketDataError):
+    """Raised when historical price data covers only a subset of the requested range.
+
+    Phase J (Task #212 Layer 3) — lazy backfill at the API boundary.
+
+    Distinct from :class:`TickerNotFoundError` (the ticker is invalid) and
+    :class:`MarketDataUnavailableError` (a transient failure with no
+    cached data): the ticker IS valid and we DO have some data, but the
+    returned coverage is a strict subset of what the caller asked for.
+
+    When this is raised, the AV adapter has already enqueued a high-priority
+    :class:`BackfillTask` for the missing window (idempotent — duplicate
+    pending/running tasks for the same range are skipped). The API layer
+    surfaces this to clients as ``503 Service Unavailable`` with a
+    structured "fetching" body + ``Retry-After`` header so callers know
+    the data is being healed in the background.
+
+    Attributes:
+        ticker: The ticker whose history was incomplete.
+        requested_range: The ``(start, end)`` date window the caller
+            asked for.
+        available_range: The ``(first, last)`` date window the adapter
+            could actually return, or ``None`` if there was no data at
+            all for the ticker yet (still partial because we'd otherwise
+            raise :class:`TickerNotFoundError`).
+        missing_days_count: Calendar-day count of the missing slice.
+            Calendar days (not trading days) — chosen for cheapness and
+            because the caller mostly cares about order of magnitude.
+        message: Human-readable error description.
+    """
+
+    def __init__(
+        self,
+        ticker: Ticker,
+        requested_range: tuple[date, date],
+        available_range: tuple[date, date] | None,
+        missing_days_count: int,
+        message: str | None = None,
+    ) -> None:
+        """Initialize IncompleteHistoricalDataError.
+
+        Args:
+            ticker: Ticker whose history was incomplete.
+            requested_range: ``(start, end)`` of the requested window.
+            available_range: ``(first, last)`` of what we have, or ``None``
+                if we have no data for this ticker yet.
+            missing_days_count: Calendar-day count of the missing window.
+            message: Optional human-readable override.
+        """
+        self.ticker = ticker
+        self.requested_range = requested_range
+        self.available_range = available_range
+        self.missing_days_count = missing_days_count
+        if message is None:
+            req_start, req_end = requested_range
+            if available_range is None:
+                message = (
+                    f"No historical data yet for {ticker.symbol}; "
+                    f"requested {req_start} .. {req_end} "
+                    f"({missing_days_count} day(s) missing). "
+                    "A backfill has been queued."
+                )
+            else:
+                avail_start, avail_end = available_range
+                message = (
+                    f"Incomplete historical data for {ticker.symbol}; "
+                    f"requested {req_start} .. {req_end}, "
+                    f"available {avail_start} .. {avail_end} "
+                    f"({missing_days_count} day(s) missing). "
+                    "A backfill has been queued."
+                )
         super().__init__(message)
 
 

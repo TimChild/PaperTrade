@@ -220,6 +220,23 @@ export function RunBacktestForm({
           )}
         </div>
 
+        {/* Phase J / Task #212 Layer 3: loading-affordance shown while the
+            backend is lazily fetching historical bars. ``dataFetching`` is
+            distinct from ``isPending`` — ``isPending`` covers the actual
+            HTTP call, while ``dataFetching`` is set during the wait
+            between auto-retries. Both render the same disabled-button
+            state below, but only the fetching banner gets a different
+            copy line. */}
+        {runBacktest.dataFetching && runBacktest.fetchingTicker && (
+          <div
+            role="status"
+            data-testid="backtest-fetching-banner"
+            className="rounded-input border border-amber/40 bg-amber/10 px-3 py-2 text-body-sm text-amber"
+          >
+            Loading historical data for {runBacktest.fetchingTicker}…
+          </div>
+        )}
+
         {/* Actions */}
         <div className="flex justify-end gap-2 pt-2">
           <Button
@@ -233,9 +250,13 @@ export function RunBacktestForm({
           <Button
             type="submit"
             data-testid="run-backtest-submit"
-            disabled={runBacktest.isPending}
+            disabled={runBacktest.isPending || runBacktest.dataFetching}
           >
-            {runBacktest.isPending ? 'Running...' : 'Run backtest'}
+            {runBacktest.dataFetching
+              ? 'Fetching data…'
+              : runBacktest.isPending
+                ? 'Running...'
+                : 'Run backtest'}
           </Button>
         </div>
       </form>

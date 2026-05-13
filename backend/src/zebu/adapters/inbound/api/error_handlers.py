@@ -9,6 +9,7 @@ a string; auxiliary numeric / identifier data (``available``, ``required``,
 """
 
 from collections.abc import Sequence
+from datetime import timedelta
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request, status
@@ -18,6 +19,7 @@ from pydantic import ValidationError
 
 from zebu.adapters.inbound.api.schemas.errors import ErrorCode, ErrorResponse
 from zebu.application.exceptions import (
+    IncompleteHistoricalDataError,
     MarketDataUnavailableError,
     TickerNotFoundError,
 )
@@ -196,6 +198,52 @@ def register_exception_handlers(app: FastAPI) -> None:
             detail="Unable to fetch market data. Please try again later.",
             code=ErrorCode.MARKET_DATA_UNAVAILABLE,
             fields={"reason": exc.reason},
+        )
+
+    @app.exception_handler(IncompleteHistoricalDataError)
+    async def handle_incomplete_historical_data(  # pyright: ignore[reportUnusedFunction]
+        request: Request, exc: IncompleteHistoricalDataError
+    ) -> JSONResponse:
+        """Handle IncompleteHistoricalDataError -> 503 with structured body.
+
+        Phase J / Task #212 Layer 3. Returns a *bespoke* body shape that
+        differs from the standard ``{detail, code, fields}`` envelope —
+        the spec calls for ``{status, ticker, missing_range, eta_seconds,
+        retry_after_seconds}`` so the frontend can distinguish a
+        "fetching" 503 from any other 503 by inspecting ``status`` at
+        the top level. ``Retry-After`` HTTP header mirrors the body's
+        ``retry_after_seconds``.
+        """
+        retry_after_seconds = 60
+        req_start, req_end = exc.requested_range
+        if exc.available_range is None:
+            missing_start, missing_end = req_start, req_end
+        else:
+            avail_start, avail_end = exc.available_range
+            head_missing = avail_start > req_start
+            tail_missing = avail_end < req_end
+            if head_missing and tail_missing:
+                missing_start, missing_end = req_start, req_end
+            elif head_missing:
+                missing_start = req_start
+                missing_end = avail_start - timedelta(days=1)
+            else:
+                missing_start = avail_end + timedelta(days=1)
+                missing_end = req_end
+        body: dict[str, Any] = {
+            "status": "fetching",
+            "ticker": exc.ticker.symbol,
+            "missing_range": {
+                "start": missing_start.isoformat(),
+                "end": missing_end.isoformat(),
+            },
+            "eta_seconds": retry_after_seconds,
+            "retry_after_seconds": retry_after_seconds,
+        }
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content=body,
+            headers={"Retry-After": str(retry_after_seconds)},
         )
 
     @app.exception_handler(HTTPException)

@@ -8,6 +8,7 @@ from typing import TypedDict
 from uuid import UUID, uuid4
 
 from zebu.application.commands.run_backtest import RunBacktestCommand
+from zebu.application.exceptions import IncompleteHistoricalDataError
 from zebu.application.ports.backtest_run_repository import BacktestRunRepository
 from zebu.application.ports.portfolio_repository import PortfolioRepository
 from zebu.application.ports.snapshot_repository import SnapshotRepository
@@ -156,6 +157,36 @@ class BacktestExecutor:
                 strategy_snapshot=strategy_snapshot,
                 initial_cash=initial_cash_money,
             )
+        except IncompleteHistoricalDataError as exc:
+            # Phase J / Task #212 Layer 3 — partial-coverage is not a
+            # failed backtest, it's "data isn't ready yet; please retry".
+            # Mark the run row as FAILED (so the user sees a record of
+            # the attempt) but re-raise so the API surface returns a
+            # structured 503 instead of a 201 with status=FAILED.
+            logger.info(
+                "Backtest %s deferred — incomplete historical data for %s",
+                backtest_run_id,
+                exc.ticker.symbol,
+            )
+            failed_run = BacktestRun(
+                id=backtest_run_id,
+                user_id=command.user_id,
+                strategy_id=command.strategy_id,
+                portfolio_id=portfolio_id,
+                strategy_snapshot=strategy_snapshot,
+                backtest_name=command.backtest_name,
+                start_date=command.start_date,
+                end_date=command.end_date,
+                initial_cash=initial_cash_money,
+                status=BacktestStatus.FAILED,
+                created_at=now,
+                completed_at=datetime.now(UTC),
+                error_message=str(exc),
+            )
+            await self._backtest_run_repo.save(
+                failed_run, api_key_id=command.api_key_id
+            )
+            raise
         except Exception as exc:
             logger.exception("Backtest %s failed: %s", backtest_run_id, exc)
             failed_run = BacktestRun(

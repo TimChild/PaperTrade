@@ -1,13 +1,17 @@
 """Tests for application layer exceptions."""
 
+from datetime import date
+
 import pytest
 
 from zebu.application.exceptions import (
+    IncompleteHistoricalDataError,
     InvalidPriceDataError,
     MarketDataError,
     MarketDataUnavailableError,
     TickerNotFoundError,
 )
+from zebu.domain.value_objects.ticker import Ticker
 
 
 class TestMarketDataError:
@@ -119,6 +123,68 @@ class TestInvalidPriceDataError:
         assert error.reason == "impossible OHLCV values"
 
 
+class TestIncompleteHistoricalDataError:
+    """Tests for IncompleteHistoricalDataError (Phase J / Task #212 Layer 3)."""
+
+    def test_construction_with_available_range(self) -> None:
+        """Holds ticker, ranges, missing-day count and a default message."""
+        ticker = Ticker("AAPL")
+        requested = (date(2026, 1, 1), date(2026, 1, 31))
+        available = (date(2026, 1, 15), date(2026, 1, 31))
+        error = IncompleteHistoricalDataError(
+            ticker=ticker,
+            requested_range=requested,
+            available_range=available,
+            missing_days_count=14,
+        )
+        assert error.ticker == ticker
+        assert error.requested_range == requested
+        assert error.available_range == available
+        assert error.missing_days_count == 14
+        # Default message includes both the available range and the count.
+        assert "AAPL" in str(error)
+        assert "2026-01-15" in str(error)
+        assert "14" in str(error)
+
+    def test_construction_with_no_available_range(self) -> None:
+        """``available_range=None`` is allowed for the no-data-yet case."""
+        ticker = Ticker("AAPL")
+        requested = (date(2026, 1, 1), date(2026, 1, 31))
+        error = IncompleteHistoricalDataError(
+            ticker=ticker,
+            requested_range=requested,
+            available_range=None,
+            missing_days_count=30,
+        )
+        assert error.available_range is None
+        assert "No historical data" in str(error)
+        assert "AAPL" in str(error)
+
+    def test_inheritance(self) -> None:
+        """Should inherit from MarketDataError."""
+        ticker = Ticker("AAPL")
+        error = IncompleteHistoricalDataError(
+            ticker=ticker,
+            requested_range=(date(2026, 1, 1), date(2026, 1, 31)),
+            available_range=None,
+            missing_days_count=30,
+        )
+        assert isinstance(error, MarketDataError)
+        assert isinstance(error, Exception)
+
+    def test_custom_message_overrides_default(self) -> None:
+        """Caller-supplied message wins."""
+        ticker = Ticker("AAPL")
+        error = IncompleteHistoricalDataError(
+            ticker=ticker,
+            requested_range=(date(2026, 1, 1), date(2026, 1, 31)),
+            available_range=None,
+            missing_days_count=30,
+            message="custom!",
+        )
+        assert str(error) == "custom!"
+
+
 class TestExceptionHierarchy:
     """Tests for exception hierarchy relationships."""
 
@@ -128,6 +194,12 @@ class TestExceptionHierarchy:
             TickerNotFoundError("XYZ"),
             MarketDataUnavailableError("test"),
             InvalidPriceDataError("AAPL", "test"),
+            IncompleteHistoricalDataError(
+                ticker=Ticker("AAPL"),
+                requested_range=(date(2026, 1, 1), date(2026, 1, 31)),
+                available_range=None,
+                missing_days_count=30,
+            ),
         ]
 
         for error in errors:
