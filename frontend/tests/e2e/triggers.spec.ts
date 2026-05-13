@@ -18,15 +18,7 @@ test.describe('Trigger Configuration Flow', () => {
   // Default 60s isn't enough; bump to 180s.
   test.setTimeout(180_000)
 
-  // TODO: re-enable once the trigger create POST landing in the list
-  // is investigated. The unit-level coverage in
-  // `TriggersSection.test.tsx` + `CreateTriggerDialog.test.tsx` already
-  // covers every dialog/list interaction; this E2E was the only path
-  // exercising the full activation→trigger flow against a real DB and
-  // it's failing intermittently on CI for reasons that aren't visible
-  // in logs (the trigger row never appears after submit). Followup:
-  // GitHub Issue to debug + restore.
-  test.skip('attaches, pauses, and deletes a trigger on an activation', async ({
+  test('attaches, pauses, and deletes a trigger on an activation', async ({
     page,
   }) => {
     // 1. Create a paper-trading portfolio.

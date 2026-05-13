@@ -240,6 +240,46 @@ describe('CreateTriggerDialog', () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled())
   })
 
+  it('submits via a real button click without tripping HTML5 step validation', async () => {
+    // Regression for issue #269: previously the threshold-pct input had
+    // `min="0.01" step="0.1"` while the default value `5` did not sit on
+    // the resulting step grid `(value - min) % step !== 0`. Chromium
+    // blocked form submission at the constraint-validation layer and the
+    // `onSubmit` handler never ran — so the trigger row never appeared
+    // in the E2E. `fireEvent.submit` masks this in JSDOM because it
+    // dispatches the submit event directly; we now exercise the button
+    // click path to keep the constraint check exercised.
+    vi.mocked(triggersApi.create).mockResolvedValueOnce(sampleTrigger)
+    const user = userEvent.setup()
+
+    render(
+      <CreateTriggerDialog
+        isOpen={true}
+        activationId="activation-1"
+        onClose={() => {}}
+      />,
+      { wrapper: createWrapper() }
+    )
+
+    await user.type(
+      screen.getByTestId('trigger-create-agent-prompt'),
+      'Investigate the drawdown.'
+    )
+    // Real-button click — this is the path the E2E uses, and the one
+    // that runs HTML5 constraint validation.
+    await user.click(screen.getByTestId('trigger-create-submit-btn'))
+
+    await waitFor(() => {
+      expect(triggersApi.create).toHaveBeenCalledWith(
+        'activation-1',
+        expect.objectContaining({
+          condition_type: 'DRAWDOWN_THRESHOLD',
+          agent_prompt: 'Investigate the drawdown.',
+        })
+      )
+    })
+  })
+
   it('translates cooldown unit changes correctly (days)', async () => {
     vi.mocked(triggersApi.create).mockResolvedValueOnce(sampleTrigger)
     const user = userEvent.setup()

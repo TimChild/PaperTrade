@@ -322,7 +322,12 @@ export function CreateTriggerDialog({
                   type="number"
                   min="0.01"
                   max="100"
-                  step="0.1"
+                  // `step="any"` keeps HTML5 constraint validation from
+                  // rejecting the default `5` (which violates a 0.01-anchored
+                  // 0.1 step grid). Range + decimal validation lives in
+                  // `validate()` and the domain VO — the step here is a UX
+                  // nicety for keyboard nudging, not a hard contract.
+                  step="any"
                   value={thresholdPct}
                   onChange={(e) => setThresholdPct(e.target.value)}
                 />
@@ -408,7 +413,12 @@ export function CreateTriggerDialog({
                   type="number"
                   min="0.01"
                   max="500"
-                  step="0.5"
+                  // `step="any"` — same reason as the drawdown threshold
+                  // above: the default value of `30` does not sit on a
+                  // 0.01-anchored 0.5 step grid, so the browser-level
+                  // constraint validator would block form submission
+                  // before our `onSubmit` even ran.
+                  step="any"
                   value={volThresholdPct}
                   onChange={(e) => setVolThresholdPct(e.target.value)}
                 />
