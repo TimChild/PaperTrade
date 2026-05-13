@@ -252,8 +252,6 @@ class BacktestExecutor:
         Returns:
             COMPLETED BacktestRun with metrics
         """
-        now_utc = backtest_run.created_at
-
         # ── Phase 0: Setup ────────────────────────────────────────────────────
         # The synthetic portfolio is created + saved by ``execute()``
         # before this pipeline runs, so the BacktestRun's FK to
