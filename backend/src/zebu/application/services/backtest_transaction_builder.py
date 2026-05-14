@@ -22,6 +22,12 @@ from zebu.domain.value_objects.trade_signal import TradeAction, TradeSignal
 
 logger = logging.getLogger(__name__)
 
+# Fractional-share precision matches ``Quantity``'s 4-decimal-place invariant.
+# Amount-based BUY/SELL signals (DCA, MA crossover, …) are quantised to this
+# precision so a small ``amount_per_period`` at a high-priced ticker still
+# produces a non-zero quantity instead of silently flooring to zero (#283).
+_FRACTIONAL_SHARES_QUANTUM = Decimal("0.0001")
+
 
 class BacktestTransactionBuilder:
     """In-memory portfolio state tracker that creates validated transactions.
@@ -69,9 +75,16 @@ class BacktestTransactionBuilder:
     ) -> Transaction | None:
         """Apply a trade signal, creating a transaction if valid.
 
-        For amount-based BUY signals, resolves to whole-share quantity via
-        floor(amount / price_per_share). Returns None if the signal cannot
-        be executed (insufficient funds/shares, zero quantity after floor, etc).
+        For amount-based BUY/SELL signals, resolves to a fractional-share
+        quantity (rounded down to four decimal places, matching
+        ``Quantity``'s precision). Returns None only if the signal cannot
+        be executed (insufficient funds/shares, zero quantity after
+        rounding, non-positive price, etc.).
+
+        Fractional-share execution is required so DCA strategies that
+        invest a small fixed amount per period (e.g. ``$100`` at a
+        ``$150`` ticker) still produce trades — flooring to a whole
+        share silently produced zero in #283.
 
         Args:
             signal: The trade signal to apply
@@ -98,14 +111,19 @@ class BacktestTransactionBuilder:
             if price_per_share.amount <= Decimal("0"):
                 return None
             raw_qty = signal.amount.amount / price_per_share.amount
-            floored = raw_qty.to_integral_value(rounding=ROUND_DOWN)
-            if floored <= Decimal("0"):
+            # Quantise to fractional-share precision (rounding down so we
+            # never spend more than the requested ``amount``).
+            quantised = raw_qty.quantize(
+                _FRACTIONAL_SHARES_QUANTUM, rounding=ROUND_DOWN
+            )
+            if quantised <= Decimal("0"):
                 logger.debug(
                     f"Skipping BUY {signal.ticker.symbol}: "
-                    f"amount {signal.amount} too small at price {price_per_share}"
+                    f"amount {signal.amount} too small at price {price_per_share} "
+                    f"(quantised quantity is zero)"
                 )
                 return None
-            quantity = Quantity(floored)
+            quantity = Quantity(quantised)
         else:
             # signal.quantity is not None
             assert signal.quantity is not None
@@ -157,10 +175,17 @@ class BacktestTransactionBuilder:
             if price_per_share.amount <= Decimal("0"):
                 return None
             raw_qty = signal.amount.amount / price_per_share.amount
-            floored = raw_qty.to_integral_value(rounding=ROUND_DOWN)
-            if floored <= Decimal("0"):
+            quantised = raw_qty.quantize(
+                _FRACTIONAL_SHARES_QUANTUM, rounding=ROUND_DOWN
+            )
+            if quantised <= Decimal("0"):
+                logger.debug(
+                    f"Skipping SELL {signal.ticker.symbol}: amount "
+                    f"{signal.amount} too small at price {price_per_share} "
+                    f"(quantised quantity is zero)"
+                )
                 return None
-            quantity = Quantity(floored)
+            quantity = Quantity(quantised)
 
         try:
             transaction = create_sell_transaction(

@@ -55,7 +55,7 @@ class TestBacktestTransactionBuilderBuy:
     """Tests for BUY signal handling."""
 
     def test_buy_by_amount_creates_transaction(self) -> None:
-        """BUY with amount creates a valid transaction."""
+        """BUY with amount creates a valid transaction with fractional shares."""
         portfolio_id = uuid4()
         builder = BacktestTransactionBuilder(
             portfolio_id=portfolio_id,
@@ -70,17 +70,23 @@ class TestBacktestTransactionBuilderBuy:
         assert transaction.transaction_type == TransactionType.BUY
         assert transaction.ticker is not None
         assert transaction.ticker.symbol == "AAPL"
-        # floor(1500 / 150) = 10 shares
+        # 1500 / 150 = 10.0000 shares (clean division)
         assert transaction.quantity is not None
-        assert transaction.quantity.shares == Decimal("10")
+        assert transaction.quantity.shares == Decimal("10.0000")
 
-    def test_buy_by_amount_resolves_floor_division(self) -> None:
-        """Amount-based BUY uses floor(amount/price) for shares."""
+    def test_buy_by_amount_resolves_to_fractional_shares(self) -> None:
+        """Amount-based BUY produces fractional shares to four decimal places.
+
+        Regression for #283: previously this floored to whole shares, so a
+        DCA strategy investing $100/period at a $150-priced ticker silently
+        emitted zero trades. Fractional execution is the standard model
+        retail brokers use for DCA.
+        """
         builder = BacktestTransactionBuilder(
             portfolio_id=uuid4(),
             initial_cash=Money(Decimal("10000"), "USD"),
         )
-        # floor(1000 / 300) = 3 shares
+        # 1000 / 300 = 3.3333… → quantised to 3.3333 (round-down)
         signal = _buy_signal_by_amount("GOOGL", Decimal("1000"))
         price = Money(Decimal("300.00"), "USD")
 
@@ -88,7 +94,28 @@ class TestBacktestTransactionBuilderBuy:
 
         assert transaction is not None
         assert transaction.quantity is not None
-        assert transaction.quantity.shares == Decimal("3")
+        assert transaction.quantity.shares == Decimal("3.3333")
+
+    def test_buy_by_amount_smaller_than_price_uses_fractional_share(self) -> None:
+        """A BUY amount below price-per-share still produces a trade.
+
+        Direct regression for #283: ``amount_per_period=$100`` at a
+        ``$150`` ticker used to floor to zero shares and silently skip.
+        The fractional fix executes ``0.6666`` shares instead.
+        """
+        builder = BacktestTransactionBuilder(
+            portfolio_id=uuid4(),
+            initial_cash=Money(Decimal("10000"), "USD"),
+        )
+        signal = _buy_signal_by_amount("AAPL", Decimal("100"))
+        price = Money(Decimal("150.00"), "USD")
+
+        transaction = builder.apply_signal(signal, price, _now())
+
+        assert transaction is not None
+        assert transaction.quantity is not None
+        # 100 / 150 = 0.6666… → quantised to 0.6666 (round-down)
+        assert transaction.quantity.shares == Decimal("0.6666")
 
     def test_buy_by_quantity_creates_transaction(self) -> None:
         """BUY with explicit quantity creates correct transaction."""
@@ -150,19 +177,44 @@ class TestBacktestTransactionBuilderBuy:
         assert builder.cash_balance.amount == Decimal("100")
         assert builder.holdings == {}
 
-    def test_buy_zero_shares_after_floor_returns_none(self) -> None:
-        """If amount < price_per_share, floor gives 0 → returns None."""
+    def test_buy_amount_below_one_fractional_share_returns_none(self) -> None:
+        """If amount/price < 0.0001 the quantised quantity is zero → None.
+
+        With four-decimal-place fractional shares, the only "amount too
+        small" case is when ``amount / price`` rounds down to zero (i.e.
+        below the ``0.0001`` fractional-share quantum).
+        """
         builder = BacktestTransactionBuilder(
             portfolio_id=uuid4(),
             initial_cash=Money(Decimal("10000"), "USD"),
         )
-        # amount = $50, price = $100 → floor(50/100) = 0
-        signal = _buy_signal_by_amount("AAPL", Decimal("50"))
-        price = Money(Decimal("100.00"), "USD")
+        # amount = $0.01 (1 cent), price = $200 → 0.00005 → quantised to 0
+        signal = _buy_signal_by_amount("AAPL", Decimal("0.01"))
+        price = Money(Decimal("200.00"), "USD")
 
         result = builder.apply_signal(signal, price, _now())
 
         assert result is None
+
+    def test_buy_amount_smaller_than_price_executes_fractional_share(self) -> None:
+        """An amount below the price-per-share executes a fractional share.
+
+        Mirrors the user-visible behaviour from #283: DCA with
+        ``amount_per_period=$50`` at a ``$100`` ticker now buys
+        ``0.5000`` shares, not zero.
+        """
+        builder = BacktestTransactionBuilder(
+            portfolio_id=uuid4(),
+            initial_cash=Money(Decimal("10000"), "USD"),
+        )
+        signal = _buy_signal_by_amount("AAPL", Decimal("50"))
+        price = Money(Decimal("100.00"), "USD")
+
+        transaction = builder.apply_signal(signal, price, _now())
+
+        assert transaction is not None
+        assert transaction.quantity is not None
+        assert transaction.quantity.shares == Decimal("0.5000")
 
     def test_multiple_buys_accumulate_holdings(self) -> None:
         """Multiple BUY signals for the same ticker accumulate holdings."""

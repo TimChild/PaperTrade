@@ -267,6 +267,86 @@ class TestDCAIntegration:
         ]
         assert len(buy_txns) >= 2
 
+    async def test_small_amount_at_high_priced_ticker_fires_each_period(
+        self,
+    ) -> None:
+        """DCA with ``amount_per_period`` below the share price still buys.
+
+        Regression for issue #283. Previously the transaction builder
+        floored amount-based BUY quantity to whole shares, so a DCA
+        strategy investing ``$100`` per period at a ``$150`` ticker
+        produced zero trades — the user saw a completed backtest with
+        ``total_trades=0`` and no error. Fractional-share execution
+        means each scheduled purchase now produces a real trade.
+
+        With ``frequency_days=30`` over ~1 year, we expect ~12 buys.
+        """
+        user_id = uuid4()
+        start = date(2024, 1, 1)
+        end = date(2024, 12, 31)
+
+        adapter = InMemoryMarketDataAdapter()
+        _seed_daily_prices(adapter, "AAPL", start, end, Decimal("150.00"))
+
+        strategy = Strategy(
+            id=uuid4(),
+            user_id=user_id,
+            name="DCA small amount high price",
+            strategy_type=StrategyType.DOLLAR_COST_AVERAGING,
+            tickers=["AAPL"],
+            parameters=DcaParameters(
+                frequency_days=30,
+                amount_per_period=Decimal("100"),
+                allocation={"AAPL": Decimal("1")},
+            ),
+            created_at=datetime.now(UTC),
+        )
+
+        portfolio_repo = InMemoryPortfolioRepository()
+        transaction_repo = InMemoryTransactionRepository()
+        strategy_repo = InMemoryStrategyRepository()
+        backtest_run_repo = InMemoryBacktestRunRepository()
+        snapshot_repo = InMemorySnapshotRepository()
+
+        await strategy_repo.save(strategy)
+
+        executor = _build_executor(
+            portfolio_repo=portfolio_repo,
+            transaction_repo=transaction_repo,
+            strategy_repo=strategy_repo,
+            backtest_run_repo=backtest_run_repo,
+            snapshot_repo=snapshot_repo,
+            market_data=adapter,
+        )
+
+        command = RunBacktestCommand(
+            user_id=user_id,
+            strategy_id=strategy.id,
+            backtest_name="DCA fractional regression",
+            start_date=start,
+            end_date=end,
+            initial_cash=Decimal("10000.00"),
+        )
+
+        result = await executor.execute(command)
+
+        assert result.status == BacktestStatus.COMPLETED
+        assert result.total_trades is not None
+        # Expect ~12 purchases over the year (~365 / 30 days). Allow ±2
+        # for calendar / first-day rounding.
+        assert 10 <= result.total_trades <= 13, (
+            f"Expected ~12 DCA buys, got {result.total_trades}"
+        )
+
+        transactions = await transaction_repo.get_by_portfolio(result.portfolio_id)
+        buy_txns = [
+            t for t in transactions if t.transaction_type == TransactionType.BUY
+        ]
+        # Each buy should be a fractional share: 100 / 150 = 0.6666 shares
+        for buy in buy_txns:
+            assert buy.quantity is not None
+            assert buy.quantity.shares == Decimal("0.6666")
+
 
 class TestMovingAverageCrossoverIntegration:
     """Integration tests for the Moving Average Crossover strategy pipeline."""

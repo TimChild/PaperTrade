@@ -1,6 +1,6 @@
 """Tests for DollarCostAveragingStrategy."""
 
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 from zebu.domain.services.strategies.dollar_cost_averaging import (
@@ -179,6 +179,39 @@ class TestDollarCostAveragingStrategy:
         assert signals[0].amount is not None
         # 500 × 1.0 = 500
         assert signals[0].amount.amount == Decimal("500.00")
+
+    def test_thirty_day_frequency_over_year_emits_twelve_signals(self) -> None:
+        """Calling once per calendar day for 365 days yields ~12 BUYs.
+
+        Regression for issue #283 at the signal-generator layer. The
+        purchase calendar is independent of how the executor turns each
+        signal into a trade — we expect exactly 13 buy days at
+        frequency_days=30 starting on day 0 (days 0, 30, 60, …, 360).
+        """
+        strategy = DollarCostAveragingStrategy(
+            tickers=["AAPL"],
+            frequency_days=30,
+            amount_per_period=Decimal("100"),
+            allocation=Allocation.from_raw({"AAPL": 1.0}),
+        )
+
+        start = date(2024, 1, 1)
+        purchase_days = 0
+        for offset in range(365):
+            current = start + timedelta(days=offset)
+            signals = strategy.generate_signals(
+                current_date=current,
+                price_map=self._make_price_map(),
+                cash_balance=Decimal("10000"),
+                holdings={},
+            )
+            if signals:
+                purchase_days += 1
+
+        # First purchase fires on day 0, then every 30 days thereafter.
+        # Within a 365-day window we see purchases on days 0, 30, 60,
+        # …, 360 = 13 purchase days.
+        assert purchase_days == 13
 
     def test_signal_date_matches_current_date(self) -> None:
         """TradeSignal.signal_date matches the current_date argument."""
