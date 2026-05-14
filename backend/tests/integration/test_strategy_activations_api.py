@@ -120,6 +120,7 @@ class TestActivate:
         assert body["frequency"] == "DAILY_MARKET_CLOSE"
         assert body["last_executed_at"] is None
         assert body["last_error"] is None
+        assert body["deactivation_reason"] is None
         # Sanity: id is a uuid.
         UUID(str(body["id"]))
 
@@ -375,7 +376,10 @@ class TestDeactivate:
         assert response.status_code == 200
         body = response.json()
         assert body["status"] == "PAUSED"
-        assert body["last_error"] == "User paused for the holiday"
+        # Issue #284 — the reason lands on the dedicated
+        # ``deactivation_reason`` column, not on ``last_error``.
+        assert body["deactivation_reason"] == "User paused for the holiday"
+        assert body["last_error"] is None
 
     def test_deactivate_without_body_works(
         self,

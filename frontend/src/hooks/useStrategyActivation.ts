@@ -131,7 +131,7 @@ export function useActivateStrategy(): UseMutationResult<
  */
 export interface DeactivateActivationVariables {
   activationId: string
-  /** Optional human-readable reason captured on `last_error`. */
+  /** Optional human-readable reason captured on `deactivation_reason`. */
   reason?: string
   /** Optional — the strategy this activation belongs to, used to invalidate the by-strategy cache key. */
   strategyId?: string

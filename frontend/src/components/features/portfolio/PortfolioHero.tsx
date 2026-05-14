@@ -29,7 +29,6 @@ interface PortfolioHeroProps {
   missingTickers?: string[]
 }
 
-
 /**
  * Editorial hero band for PortfolioDetail.
  *

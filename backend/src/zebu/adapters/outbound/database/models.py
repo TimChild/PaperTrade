@@ -760,6 +760,15 @@ class StrategyActivationModel(SQLModel, table=True):
     frequency: str = Field(max_length=30)
     last_executed_at: datetime | None = Field(default=None)
     last_error: str | None = Field(default=None, max_length=500)
+    # Issue #284 — dedicated column for deliberate-pause reasons. The
+    # endpoint used to fold the user-provided reason into ``last_error``,
+    # which conflated "the platform tried to run this and failed" with
+    # "the user deliberately paused this and wrote a note." UI / alerting
+    # that keys off ``last_error is not None`` was false-positiving on
+    # benign pauses. ``last_error`` is now reserved for execution
+    # failures from :mod:`strategy_execution_service`; pause notes land
+    # here.
+    deactivation_reason: str | None = Field(default=None, max_length=500)
     created_at: datetime
     updated_at: datetime
     # Phase H2: see TransactionModel.api_key_id for the full doc. Null for
@@ -797,6 +806,7 @@ class StrategyActivationModel(SQLModel, table=True):
             frequency=ActivationFrequency(self.frequency),
             last_executed_at=last_executed_at_utc,
             last_error=self.last_error,
+            deactivation_reason=self.deactivation_reason,
             created_at=created_at_utc,
             updated_at=updated_at_utc,
         )
@@ -846,6 +856,7 @@ class StrategyActivationModel(SQLModel, table=True):
             frequency=activation.frequency.value,
             last_executed_at=last_executed_at_naive,
             last_error=activation.last_error,
+            deactivation_reason=activation.deactivation_reason,
             created_at=created_at_naive,
             updated_at=updated_at_naive,
         )
@@ -1568,9 +1579,16 @@ class TriggerFireRecordModel(SQLModel, table=True):
     condition_evaluation_data: dict[str, object] = Field(  # type: ignore[assignment]
         sa_column=Column(JSON, nullable=False)
     )
+    # Issue #278 — dedicated column for how the fire reached the agent.
+    # Mirrors :class:`TriggerInvocationMode`. NOT NULL with server-side
+    # default ``'direct'`` so pre-existing rows (all of which were
+    # produced by the inline Anthropic path) backfill cleanly.
+    invocation_mode: str = Field(default="direct", max_length=16)
     agent_invocation_id: str | None = Field(default=None, max_length=200)
-    agent_response: str = Field(max_length=30)
-    agent_response_raw: str = Field(max_length=8000)
+    # ``agent_response`` is nullable so queue-mode rows (no inline
+    # invocation happened, per Issue #278) can persist as ``NULL``.
+    agent_response: str | None = Field(default=None, max_length=30)
+    agent_response_raw: str = Field(default="", max_length=8000)
     # FK to transactions.id with ON DELETE SET NULL — deleted transaction
     # must not erase the audit row.
     resulting_trade_id: UUID | None = Field(
@@ -1600,10 +1618,16 @@ class TriggerFireRecordModel(SQLModel, table=True):
 
         Raises:
             ValueError: If ``agent_response`` drifts from
-                :class:`AgentDecision`.
+                :class:`AgentDecision`, or ``invocation_mode`` drifts
+                from :class:`TriggerInvocationMode`.
         """
         fired_at_utc = self.fired_at.replace(tzinfo=UTC)
-        agent_response = AgentDecision(self.agent_response)
+        invocation_mode = TriggerInvocationMode(self.invocation_mode)
+        agent_response: AgentDecision | None
+        if self.agent_response is None:
+            agent_response = None
+        else:
+            agent_response = AgentDecision(self.agent_response)
 
         # Defensive copies of the JSON columns insulate the domain from
         # any in-place mutation before the entity sees them.
@@ -1620,6 +1644,7 @@ class TriggerFireRecordModel(SQLModel, table=True):
             activation_id=self.activation_id,
             fired_at=fired_at_utc,
             condition_evaluation_data=evaluation_data,
+            invocation_mode=invocation_mode,
             agent_invocation_id=self.agent_invocation_id,
             agent_response=agent_response,
             agent_response_raw=self.agent_response_raw,
@@ -1648,8 +1673,13 @@ class TriggerFireRecordModel(SQLModel, table=True):
             activation_id=record.activation_id,
             fired_at=_strip_tz(record.fired_at) or record.fired_at,
             condition_evaluation_data=dict(record.condition_evaluation_data),
+            invocation_mode=record.invocation_mode.value,
             agent_invocation_id=record.agent_invocation_id,
-            agent_response=record.agent_response.value,
+            agent_response=(
+                record.agent_response.value
+                if record.agent_response is not None
+                else None
+            ),
             agent_response_raw=record.agent_response_raw,
             resulting_trade_id=record.resulting_trade_id,
             resulting_modify_payload=modify_payload,

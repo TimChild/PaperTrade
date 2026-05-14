@@ -253,6 +253,12 @@ export type ActivationFrequency = 'DAILY_MARKET_CLOSE'
  *
  * Mirrors `StrategyActivationResponse` in
  * `backend/src/zebu/adapters/inbound/api/strategy_activations.py`.
+ *
+ * `last_error` is reserved for execution failures from the live-execution
+ * service; `deactivation_reason` (Issue #284) carries the user-supplied
+ * note attached on `POST /activations/{id}/deactivate`. UI keying off
+ * "is the activation in an error state?" should look at `status === 'ERROR'`
+ * or `last_error !== null` — not `deactivation_reason`.
  */
 export interface StrategyActivationResponse {
   id: string
@@ -263,6 +269,7 @@ export interface StrategyActivationResponse {
   frequency: ActivationFrequency
   last_executed_at: string | null
   last_error: string | null
+  deactivation_reason: string | null
   created_at: string
   updated_at: string
 }
@@ -278,8 +285,9 @@ export interface ActivateStrategyRequest {
 /**
  * Request body for `POST /activations/{id}/deactivate`.
  *
- * The optional `reason` is captured on the activation's `last_error` field
- * (the entity's auxiliary text channel) so the UI can surface it.
+ * The optional `reason` is captured on the activation's
+ * `deactivation_reason` field (Issue #284). `last_error` is left
+ * untouched — that field is reserved for real execution failures.
  */
 export interface DeactivateActivationRequest {
   reason?: string
@@ -787,8 +795,20 @@ export interface TriggerFireResponse {
   activation_id: string
   fired_at: string
   condition_evaluation_data: Record<string, unknown>
+  /**
+   * How the trigger fire reached the agent (Issue #278). `'direct'` =
+   * inline Anthropic invocation; `'queue'` = the platform filed an
+   * URGENT ExplorationTask for an out-of-band agent. Use this to render
+   * the "Inline" / "Queued" pill instead of parsing
+   * `agent_response_raw`.
+   */
+  invocation_mode: TriggerInvocationMode
   agent_invocation_id: string | null
-  agent_response: AgentDecision
+  /**
+   * Structured decision the inline agent emitted. `null` only when
+   * `invocation_mode === 'queue'` — no inline invocation happened.
+   */
+  agent_response: AgentDecision | null
   agent_response_raw: string
   resulting_trade_id: string | null
   resulting_modify_payload: Record<string, unknown> | null

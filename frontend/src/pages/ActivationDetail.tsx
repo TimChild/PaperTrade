@@ -165,6 +165,18 @@ export function ActivationDetail(): React.JSX.Element {
               </p>
             </div>
           )}
+
+          {activation.status === 'PAUSED' && activation.deactivation_reason && (
+            <div
+              className="mt-4 rounded-editorial border border-hairline bg-amber-soft/40 p-3"
+              data-testid="activation-detail-deactivation-reason"
+            >
+              <Eyebrow tone="accent">Paused — reason</Eyebrow>
+              <p className="mt-1 text-body-sm text-ink whitespace-pre-wrap">
+                {activation.deactivation_reason}
+              </p>
+            </div>
+          )}
         </Panel>
       </section>
 

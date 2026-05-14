@@ -123,7 +123,9 @@ class FireOutcome:
         fire_record_id: The :class:`TriggerFireRecord` written for this
             fire. Always populated — every fire writes an audit row,
             even on INVOCATION_FAILED.
-        decision: The post-guardrail decision recorded.
+        decision: The post-guardrail decision recorded. ``None`` for
+            queue-mode fires (Issue #278) where the platform handed off
+            to an out-of-band agent and never invoked an inline agent.
         latency_ms: End-to-end latency from "evaluator handed off" to
             "fire record persisted".
         error: Human-readable error if the path took the
@@ -132,7 +134,7 @@ class FireOutcome:
 
     trigger_id: UUID
     fire_record_id: UUID
-    decision: AgentDecision
+    decision: AgentDecision | None
     latency_ms: int
     error: str | None
 
@@ -376,12 +378,12 @@ class TriggerInvocationOrchestrator:
         # whichever tools and connectors that client already has wired.
         #
         # The audit row is still written (so the activity feed stays
-        # coherent) — its ``agent_response`` is NEEDS_HUMAN (the closest
-        # AgentDecision value for "the platform handed this off to a
-        # human-driven agent loop") and ``resulting_exploration_task_id``
-        # points at the queued task. ``agent_response_raw`` carries a
-        # short JSON-shaped marker so downstream consumers can detect the
-        # queue path without re-reading the trigger row.
+        # coherent). Issue #278 introduced ``invocation_mode`` on the
+        # record — queue-mode rows set ``invocation_mode=QUEUE`` and
+        # leave ``agent_response`` as ``None`` (the platform never
+        # invoked an agent). ``resulting_exploration_task_id`` still
+        # points at the queued task so the activity feed and fire-log UI
+        # can render coherently.
         if trigger.mode is TriggerInvocationMode.QUEUE:
             return await self._fire_queue_mode(
                 trigger=trigger,
@@ -449,6 +451,7 @@ class TriggerInvocationOrchestrator:
             activation_id=trigger.activation_id,
             fired_at=fired_at,
             condition_evaluation_data=dict(evaluation_data),
+            invocation_mode=TriggerInvocationMode.DIRECT,
             agent_response=execution["decision"],
             agent_response_raw=_truncate(result.rationale),
             latency_ms=latency_ms,
@@ -522,25 +525,21 @@ class TriggerInvocationOrchestrator:
         )
 
         latency_ms = int((time.perf_counter() - start) * 1000)
-        # Compact marker in agent_response_raw so consumers (UI, logs)
-        # can detect that this fire took the queue path without
-        # re-reading the trigger row. The trigger's ``mode`` field on
-        # ``TriggerResponse`` is the canonical source — this is the
-        # convenience copy on the audit row.
-        rationale_raw = f'{{"queued_task_id":"{task.id}","mode":"queue"}}'
         record = TriggerFireRecord(
             id=fire_id,
             trigger_id=trigger.id,
             activation_id=trigger.activation_id,
             fired_at=fired_at,
             condition_evaluation_data=dict(evaluation_data),
-            # NEEDS_HUMAN is the AgentDecision that semantically maps to
-            # "platform deferred this fire to a human-driven agent." The
-            # entity invariants require ``resulting_exploration_task_id``
-            # to be set (and the others to be null) for this decision —
-            # the queue path satisfies that contract.
-            agent_response=AgentDecision.NEEDS_HUMAN,
-            agent_response_raw=_truncate(rationale_raw),
+            # Issue #278 — dedicated ``invocation_mode`` flag. The
+            # platform never invoked an agent on this path, so
+            # ``agent_response`` is ``None``. The audit row's
+            # ``resulting_exploration_task_id`` is the link to the queued
+            # work; the activity feed + fire-log UI render the "Queued"
+            # pill from ``invocation_mode`` directly.
+            invocation_mode=TriggerInvocationMode.QUEUE,
+            agent_response=None,
+            agent_response_raw="",
             latency_ms=latency_ms,
             api_key_id_used=api_key.id,
             agent_invocation_id=None,
@@ -564,7 +563,8 @@ class TriggerInvocationOrchestrator:
         return FireOutcome(
             trigger_id=trigger.id,
             fire_record_id=fire_id,
-            decision=AgentDecision.NEEDS_HUMAN,
+            # Issue #278 — queue-mode fires never produce a decision.
+            decision=None,
             latency_ms=latency_ms,
             error=None,
         )
@@ -1119,6 +1119,7 @@ class TriggerInvocationOrchestrator:
             activation_id=trigger.activation_id,
             fired_at=fired_at,
             condition_evaluation_data=dict(evaluation_data),
+            invocation_mode=TriggerInvocationMode.DIRECT,
             agent_response=AgentDecision.INVOCATION_FAILED,
             agent_response_raw=_truncate(body),
             latency_ms=latency_ms,

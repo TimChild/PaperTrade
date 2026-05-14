@@ -18,7 +18,6 @@ interface PortfolioSummaryCardProps {
   missingTickers?: string[]
 }
 
-
 /**
  * Format the `balanceAsOf` ISO timestamp for the "Last updated" caption.
  * Returns `null` when no timestamp is available (don't render the caption).

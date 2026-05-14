@@ -57,6 +57,7 @@ const fire: TriggerFireResponse = {
   activation_id: 'activation-1',
   fired_at: '2026-05-09T13:00:00Z',
   condition_evaluation_data: { drawdown_pct: '6.0', peak_value: '10000' },
+  invocation_mode: 'direct',
   agent_invocation_id: 'inv-1',
   agent_response: 'HOLD',
   agent_response_raw: 'Conditions look like noise; holding.',
@@ -221,9 +222,11 @@ describe('TriggerFireLog', () => {
       paged([
         {
           ...fire,
-          agent_response: 'NEEDS_HUMAN',
-          agent_response_raw:
-            '{"queued_task_id":"task-queued-1","mode":"queue"}',
+          // Issue #278 — queue-mode rows carry the dedicated flag;
+          // agent_response is null because no inline agent ran.
+          invocation_mode: 'queue',
+          agent_response: null,
+          agent_response_raw: '',
           resulting_exploration_task_id: 'task-queued-1',
         },
       ])

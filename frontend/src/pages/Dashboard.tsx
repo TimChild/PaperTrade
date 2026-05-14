@@ -32,8 +32,11 @@ function PortfolioCardWithBalance({
 }: {
   portfolioDTO: PortfolioDTO
 }): React.JSX.Element {
-  const { data: balanceData, pricingStatus, missingTickers } =
-    usePortfolioBalance(portfolioDTO.id)
+  const {
+    data: balanceData,
+    pricingStatus,
+    missingTickers,
+  } = usePortfolioBalance(portfolioDTO.id)
   const portfolio = adaptPortfolio(portfolioDTO, balanceData || null)
   // Phase J / Task #214 — distinguish the pre-first-fetch skeleton
   // (`isLoading`) from the "pricing partial" skeleton
