@@ -96,6 +96,57 @@ class TestTransactionConstruction:
         assert transaction.price_per_share == price
         assert transaction.cash_change == cash_change
 
+    def test_valid_buy_with_fractional_shares_at_odd_price(self) -> None:
+        """Regression: BUY with fractional shares × odd price was failing
+        the 2-decimal-place Money invariant inside _validate_buy before
+        the validator could even compare the actual vs expected cash_change.
+
+        0.6666 shares × $149.99 raw = $99.973334 (6dp) → InvalidMoneyError.
+        Fix: validator uses Money.multiply() which quantises to 2dp the
+        same way trade_factory does when building the original cash_change.
+        """
+        quantity = Quantity(Decimal("0.6666"))
+        price = Money(Decimal("149.99"))
+        # Mirror what trade_factory.create_buy_transaction would compute:
+        # price.multiply(0.6666) → Money quantised to 2dp.
+        cash_change = price.multiply(quantity.shares).negate()
+
+        transaction = Transaction(
+            id=uuid4(),
+            portfolio_id=uuid4(),
+            transaction_type=TransactionType.BUY,
+            timestamp=datetime.now(UTC),
+            cash_change=cash_change,
+            ticker=Ticker("AAPL"),
+            quantity=quantity,
+            price_per_share=price,
+            notes=None,
+        )
+
+        assert transaction.transaction_type == TransactionType.BUY
+        assert transaction.cash_change == cash_change
+
+    def test_valid_sell_with_fractional_shares_at_odd_price(self) -> None:
+        """Same regression as the BUY-side fractional-share test, on SELL."""
+        quantity = Quantity(Decimal("0.6666"))
+        price = Money(Decimal("149.99"))
+        cash_change = price.multiply(quantity.shares)
+
+        transaction = Transaction(
+            id=uuid4(),
+            portfolio_id=uuid4(),
+            transaction_type=TransactionType.SELL,
+            timestamp=datetime.now(UTC),
+            cash_change=cash_change,
+            ticker=Ticker("AAPL"),
+            quantity=quantity,
+            price_per_share=price,
+            notes=None,
+        )
+
+        assert transaction.transaction_type == TransactionType.SELL
+        assert transaction.cash_change == cash_change
+
     def test_valid_sell_transaction(self) -> None:
         """Should create valid SELL transaction."""
         quantity = Quantity(Decimal("5"))

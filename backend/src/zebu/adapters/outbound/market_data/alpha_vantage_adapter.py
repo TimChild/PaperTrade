@@ -588,6 +588,18 @@ class AlphaVantageAdapter:
             InvalidPriceDataError: Malformed or invalid response
         """
         try:
+            # AV returns HTTP 200 with an "Information" / "Note" payload
+            # when the rate limit or daily cap is hit. Surface that as
+            # MarketDataUnavailableError rather than the misleading
+            # TickerNotFoundError. See the matching guard in
+            # ``_parse_daily_history_response``.
+            cap_message = data.get("Information") or data.get("Note")
+            if cap_message and isinstance(cap_message, str):
+                raise MarketDataUnavailableError(
+                    f"Alpha Vantage refused the request for {ticker.symbol}: "
+                    f"{cap_message[:300]}"
+                )
+
             global_quote = data.get("Global Quote")
 
             if not global_quote or not isinstance(global_quote, dict):
@@ -1620,6 +1632,21 @@ class AlphaVantageAdapter:
             InvalidPriceDataError: Malformed or invalid response
         """
         try:
+            # Alpha Vantage returns HTTP 200 even when the daily/per-minute
+            # rate limit is exhausted — the body carries an "Information" or
+            # "Note" key explaining the limit and no time-series data.
+            # Previously the parser fell through the "no time series" branch
+            # below and raised TickerNotFoundError, which is wildly
+            # misleading (the ticker is fine; we just can't fetch it right
+            # now). Surface MarketDataUnavailableError so the caller's
+            # rate-limit / retry path takes over.
+            cap_message = data.get("Information") or data.get("Note")
+            if cap_message and isinstance(cap_message, str):
+                raise MarketDataUnavailableError(
+                    f"Alpha Vantage refused the request for {ticker.symbol}: "
+                    f"{cap_message[:300]}"
+                )
+
             time_series = data.get("Time Series (Daily)")
 
             if not time_series or not isinstance(time_series, dict):

@@ -124,11 +124,15 @@ class Transaction:
                 "BUY transaction must have negative cash_change (money leaving)"
             )
 
-        # Verify cash_change = -(quantity × price)
-        expected_cash_change = Money(
-            -(self.quantity.shares * self.price_per_share.amount),
-            self.cash_change.currency,
-        )
+        # Verify cash_change = -(quantity × price). Use Money.multiply so
+        # the raw 4dp×2dp Decimal product gets quantised to 2dp the same
+        # way the cash_change was originally constructed in trade_factory
+        # — otherwise a fractional-share BUY (e.g. 0.6666 shares at $149.99)
+        # produces a 6dp raw product that fails Money's 2dp invariant
+        # before the validator can even compare. See #283 fix.
+        expected_cash_change = self.price_per_share.multiply(
+            self.quantity.shares
+        ).negate()
         if self.cash_change != expected_cash_change:
             raise InvalidTransactionError(
                 f"BUY transaction cash_change must equal "
@@ -152,11 +156,11 @@ class Transaction:
                 "SELL transaction must have positive cash_change (money coming in)"
             )
 
-        # Verify cash_change = (quantity × price)
-        expected_cash_change = Money(
-            self.quantity.shares * self.price_per_share.amount,
-            self.cash_change.currency,
-        )
+        # Verify cash_change = (quantity × price). Mirror the BUY-side
+        # fix: use Money.multiply so the 4dp×2dp Decimal product is
+        # quantised to 2dp consistently with how cash_change was
+        # constructed in trade_factory.
+        expected_cash_change = self.price_per_share.multiply(self.quantity.shares)
         if self.cash_change != expected_cash_change:
             raise InvalidTransactionError(
                 f"SELL transaction cash_change must equal "
