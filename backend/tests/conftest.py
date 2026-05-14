@@ -7,6 +7,7 @@ import pytest
 import pytest_asyncio
 from fastapi import Depends
 from fastapi.testclient import TestClient
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel
@@ -45,7 +46,22 @@ from zebu.main import app
 
 @pytest_asyncio.fixture
 async def test_engine() -> AsyncGenerator[AsyncEngine, None]:
-    """Create an in-memory SQLite engine for testing."""
+    """Create an in-memory SQLite engine for testing.
+
+    NOTE: This fixture does **not** enable ``PRAGMA foreign_keys=ON``.
+    A previous attempt to turn FK enforcement on globally surfaced ~17
+    pre-existing test-fixture FK violations (e.g. transactions created
+    with ``api_key_id`` references that don't exist in ``api_keys``) and
+    one repo-level bug (``transaction_repository.save`` catches every
+    ``IntegrityError`` and translates it to ``DuplicateTransactionError``,
+    so FK violations get misclassified). Retrofitting those is a separate
+    cleanup PR.
+
+    For new tests that need FK enforcement to catch referential-integrity
+    bugs the way production Postgres would (e.g. the MCP-smoke flows),
+    use the ``test_engine_with_fks`` fixture below — it sets the PRAGMA
+    on every new connection.
+    """
     engine = create_async_engine(
         "sqlite+aiosqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -60,6 +76,43 @@ async def test_engine() -> AsyncGenerator[AsyncEngine, None]:
     yield engine
 
     # Cleanup
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def test_engine_with_fks() -> AsyncGenerator[AsyncEngine, None]:
+    """Same as ``test_engine`` but with FK enforcement turned on.
+
+    SQLite has FK checks off by default. The lower-level
+    ``backend/tests/integration/conftest.py`` ``engine`` fixture has long
+    set this PRAGMA on every connection; new HTTP-level integration tests
+    that want the same guarantee should opt in via this fixture instead
+    of inheriting the FK-disabled default.
+
+    Use case: the MCP-smoke flows in ``test_mcp_smoke_flows.py`` exercise
+    full create-write chains (strategy → activation → trigger fires,
+    portfolio → backtest → trades) that touch every FK in the schema.
+    Catching FK ordering bugs here is the whole reason this fixture
+    exists — see #287 for the bug that motivated it.
+    """
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+        echo=False,
+    )
+
+    @event.listens_for(engine.sync_engine, "connect")
+    def _enable_sqlite_fks(dbapi_connection: object, _record: object) -> None:
+        cursor = dbapi_connection.cursor()  # type: ignore[attr-defined]
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+
+    yield engine
+
     await engine.dispose()
 
 
