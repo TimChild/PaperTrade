@@ -1,7 +1,7 @@
 # Domain and SSL Setup Guide
 
-**Last Updated**: January 11, 2026  
-**Agent**: quality-infra  
+**Last Updated**: May 13, 2026
+**Agent**: quality-infra
 **Purpose**: Configure custom domain with HTTPS/SSL for production deployment
 
 ---
@@ -17,10 +17,14 @@ This guide walks through configuring a custom domain (e.g., `zebutrader.com`) wi
 - Reverse proxy available (this guide uses NPMplus - Nginx Proxy Manager Plus)
 - Access to your network's public IP or ability to configure port forwarding
 
+> [!IMPORTANT]
+> **VM IP is currently DHCP-assigned.** As of 2026-05-13 the production VM lives at `192.168.4.26`, but this address came from a DHCP lease and rotated from a prior `.112` value during a Proxmox host reboot — which silently broke the NPMplus upstream until the IP was re-pointed. The references below use `192.168.4.26` for accuracy today, but the **right fix is a DHCP reservation or static IP on the VM** (MAC `02:DF:C1:BA:46:FF`). Until that lands, treat every appearance of `.26` here as "whatever the VM's current IP is — verify with `qm guest exec 200 -- ip -4 addr show eth0` on the Proxmox host."
+
 **Infrastructure Assumptions:**
 
-- **VM IP**: `192.168.4.111` (internal network)
-- **NPMplus IP**: `192.168.4.200` (reverse proxy on Proxmox host network)
+- **VM IP**: `192.168.4.26` (internal network — DHCP-assigned; pin via reservation when convenient — see note above)
+- **Proxmox host**: `192.168.4.200` (SSH target for `pct` / `qm` commands)
+- **NPMplus IP**: `192.168.4.110` (reverse proxy LXC container `108` on the Proxmox host network — listening on `:80`/`:443`; admin UI on `:81`)
 - **Domain**: `zebutrader.com` (example - replace with your domain)
 - **DNS Provider**: Cloudflare (instructions adaptable to other providers)
 
@@ -127,7 +131,7 @@ NPMplus (Nginx Proxy Manager Plus) is a user-friendly web interface for managing
 
 - **Domain Names**: `zebutrader.com` (add without `www`, or add both)
 - **Scheme**: `http`
-- **Forward Hostname/IP**: `192.168.4.111` (your VM IP)
+- **Forward Hostname/IP**: `192.168.4.26` (your VM IP)
 - **Forward Port**: `80`
 - **Cache Assets**: ✅ Enabled (recommended)
 - **Block Common Exploits**: ✅ Enabled (recommended)
@@ -162,7 +166,7 @@ NPMplus will automatically:
 
 - **Domain Names**: `api.zebutrader.com`
 - **Scheme**: `http`
-- **Forward Hostname/IP**: `192.168.4.111`
+- **Forward Hostname/IP**: `192.168.4.26`
 - **Forward Port**: `8000`
 - **Cache Assets**: ⬜ Disabled (API responses shouldn't be cached)
 - **Block Common Exploits**: ✅ Enabled
@@ -182,7 +186,7 @@ Instead of a subdomain, route `/api/*` to the backend:
 
 ```nginx
 location /api/ {
-    proxy_pass http://192.168.4.111:8000/api/;
+    proxy_pass http://192.168.4.26:8000/api/;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -227,7 +231,7 @@ Configure allowed origins for your production domain:
 1. SSH into your VM:
 
 ```bash
-ssh root@192.168.4.111
+ssh root@192.168.4.26
 cd /opt/zebu
 ```
 
@@ -268,7 +272,7 @@ The frontend needs to know where to send API requests.
 1. SSH into VM:
 
 ```bash
-ssh root@192.168.4.111
+ssh root@192.168.4.26
 cd /opt/zebu
 ```
 
@@ -450,7 +454,7 @@ has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is pres
 1. **Verify CORS_ORIGINS in .env:**
 
    ```bash
-   ssh root@192.168.4.111
+   ssh root@192.168.4.26
    cat /opt/zebu/.env | grep CORS_ORIGINS
    # Should show: CORS_ORIGINS=https://zebutrader.com,https://api.zebutrader.com
    ```
@@ -458,7 +462,7 @@ has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is pres
 2. **Check backend logs:**
 
    ```bash
-   ssh root@192.168.4.111
+   ssh root@192.168.4.26
    cd /opt/zebu
    docker compose -f docker-compose.prod.yml logs backend | tail -50
    ```
@@ -486,7 +490,7 @@ has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is pres
 2. **Verify environment variables:**
 
    ```bash
-   ssh root@192.168.4.111
+   ssh root@192.168.4.26
    cat /opt/zebu/.env | grep VITE_API_BASE_URL
    ```
 
@@ -519,8 +523,8 @@ has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is pres
 **Solutions**:
 
 - Check VM is running: `ssh root@proxmox qm status 200`
-- Verify services running: `ssh root@192.168.4.111 docker compose -f /opt/zebu/docker-compose.prod.yml ps`
-- Check NPMplus can reach VM: From NPMplus host, `curl http://192.168.4.111`
+- Verify services running: `ssh root@192.168.4.26 docker compose -f /opt/zebu/docker-compose.prod.yml ps`
+- Check NPMplus can reach VM: From NPMplus host, `curl http://192.168.4.26`
 
 ### Cloudflare Proxy Issues
 
@@ -568,7 +572,7 @@ has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is pres
 1. **Check backend is running:**
 
    ```bash
-   ssh root@192.168.4.111
+   ssh root@192.168.4.26
    docker compose -f /opt/zebu/docker-compose.prod.yml ps backend
    ```
 
@@ -580,7 +584,7 @@ has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is pres
 
 3. **Check NPMplus proxy host configuration:**
    - Forward Port should be `8000`
-   - Forward Hostname/IP should be `192.168.4.111`
+   - Forward Hostname/IP should be `192.168.4.26`
 
 4. **Test backend locally on VM:**
 
@@ -597,7 +601,7 @@ has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is pres
 task proxmox-vm:status
 
 # From VM
-ssh root@192.168.4.111
+ssh root@192.168.4.26
 cd /opt/zebu
 docker compose -f docker-compose.prod.yml ps
 docker compose -f docker-compose.prod.yml logs --tail=100
@@ -609,20 +613,20 @@ docker compose -f docker-compose.prod.yml logs --tail=100
 curl -I http://192.168.4.200
 
 # Test from local machine to VM
-curl -I http://192.168.4.111
+curl -I http://192.168.4.26
 
 # Test from VM to internet (DNS resolution)
-ssh root@192.168.4.111 curl -I https://google.com
+ssh root@192.168.4.26 curl -I https://google.com
 ```
 
 **Firewall check:**
 ```bash
 # On VM, check if firewall is blocking
-ssh root@192.168.4.111
+ssh root@192.168.4.26
 ufw status  # If UFW is installed
 
 # On Proxmox host
-iptables -L -n | grep 192.168.4.111
+iptables -L -n | grep 192.168.4.26
 ```
 
 ---
