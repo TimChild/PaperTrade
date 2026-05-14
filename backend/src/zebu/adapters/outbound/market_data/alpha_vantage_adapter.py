@@ -609,11 +609,15 @@ class AlphaVantageAdapter:
                     ticker.symbol, f"Invalid price: {price_value}"
                 )
 
-            # Extract timestamp - use current time for cache freshness tracking
-            # Note: The "07. latest trading day" field tells us which day's
-            # data this is, but we use current time to track when we fetched
-            # it (for cache expiry)
-            timestamp = datetime.now(UTC)
+            # Canonicalise the timestamp to market close (21:00 UTC) for the
+            # bar's trading day. GLOBAL_QUOTE returns the daily closing
+            # price; using ``datetime.now(UTC)`` here would stamp the bar
+            # with fetch time, which corrupts trading-day bucketing and
+            # breaks the dedup helper that prefers 21:00 UTC entries (see
+            # ``_deduplicate_daily_prices``). Issue #286.
+            timestamp = self._canonical_close_timestamp(
+                global_quote.get("07. latest trading day")
+            )
 
             # Construct PricePoint
             return PricePoint(
@@ -1144,6 +1148,45 @@ class AlphaVantageAdapter:
                 missing_start=missing_start.isoformat(),
                 missing_end=missing_end.isoformat(),
             )
+
+    def _canonical_close_timestamp(self, latest_trading_day: object) -> datetime:
+        """Return the canonical market-close UTC timestamp for a daily bar.
+
+        For daily-interval bars (GLOBAL_QUOTE, TIME_SERIES_DAILY) the
+        timestamp must encode *the trading day the bar represents*, not
+        when we fetched it. The canonical stamp is 21:00 UTC (16:00 ET,
+        regular-session close).
+
+        Args:
+            latest_trading_day: Raw ``"07. latest trading day"`` field from
+                the GLOBAL_QUOTE payload (typically a ``YYYY-MM-DD`` string
+                from Alpha Vantage). Accepted as ``object`` because the
+                upstream JSON is loosely typed; non-string / unparseable
+                values trigger the fallback path.
+
+        Returns:
+            A UTC-aware datetime at 21:00:00 on the bar's trading day. If
+            ``latest_trading_day`` is missing or malformed, falls back to
+            :meth:`_get_last_trading_day` applied to "now", which walks
+            back through the market calendar to the previous regular
+            trading session.
+        """
+        if isinstance(latest_trading_day, str):
+            try:
+                trading_day = date.fromisoformat(latest_trading_day)
+            except ValueError:
+                return self._get_last_trading_day(datetime.now(UTC))
+            return datetime(
+                trading_day.year,
+                trading_day.month,
+                trading_day.day,
+                21,
+                0,
+                0,
+                0,
+                tzinfo=UTC,
+            )
+        return self._get_last_trading_day(datetime.now(UTC))
 
     def _get_last_trading_day(self, from_date: datetime) -> datetime:
         """Calculate the most recent trading day from a given date.

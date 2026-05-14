@@ -625,6 +625,149 @@ class TestDecimalPrecisionRounding:
         assert point.price.amount == Decimal("151.57")  # Same as close
 
 
+class TestCurrentPriceTimestampCanonicalisation:
+    """Issue #286 — GLOBAL_QUOTE writes must use market-close timestamps.
+
+    The "current price" / "latest bar" write path stamps a daily price
+    point with the canonical market close (21:00 UTC) for the bar's
+    trading day, NOT ``datetime.now(UTC)`` (fetch time). The latter
+    breaks trading-day bucketing and the dedup helper that prefers
+    21:00-UTC entries.
+    """
+
+    @staticmethod
+    def _global_quote(
+        latest_trading_day: str, price: str = "194.50"
+    ) -> dict[str, object]:
+        """Build a GLOBAL_QUOTE-shaped JSON payload."""
+        return {
+            "Global Quote": {
+                "01. symbol": "AAPL",
+                "05. price": price,
+                "07. latest trading day": latest_trading_day,
+            }
+        }
+
+    @staticmethod
+    def _stub_remaining_tokens(rate_limiter: MagicMock) -> None:
+        """Stub the rate limiter's debug logging hook used inside
+        ``_fetch_from_api``. The shared fixture only configures the gating
+        methods (``can_make_request``/``consume_token``)."""
+        rate_limiter.get_remaining_tokens = AsyncMock(
+            return_value={"minute": 5, "day": 500}
+        )
+
+    async def test_fetch_from_api_stamps_at_market_close_for_trading_day(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_http_client: MagicMock,
+        mock_rate_limiter: MagicMock,
+    ) -> None:
+        """``_fetch_from_api`` should stamp daily bars at 21:00 UTC on the
+        ``07. latest trading day`` date — never wall-clock fetch time.
+        """
+        ticker = Ticker("AAPL")
+        self._stub_remaining_tokens(mock_rate_limiter)
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = self._global_quote("2026-04-01")
+        mock_http_client.get = AsyncMock(return_value=mock_response)
+
+        result = await alpha_vantage_adapter._fetch_from_api(ticker)
+
+        assert result.timestamp == datetime(2026, 4, 1, 21, 0, 0, tzinfo=UTC)
+        assert result.timestamp.hour == 21
+        assert result.timestamp.minute == 0
+        assert result.timestamp.second == 0
+        assert result.interval == "1day"
+        assert result.source == "alpha_vantage"
+
+    async def test_get_current_price_persists_canonical_timestamp(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_http_client: MagicMock,
+        mock_price_repository: MagicMock,
+        mock_price_cache: MagicMock,
+        mock_rate_limiter: MagicMock,
+    ) -> None:
+        """Regression: the bar passed to ``upsert_price`` from the
+        end-to-end ``get_current_price`` path is canonicalised. Previously
+        this was ``datetime.now(UTC)`` — see issue #286 — which corrupted
+        the dedup helper that prefers 21:00-UTC entries.
+        """
+        ticker = Ticker("AAPL")
+        self._stub_remaining_tokens(mock_rate_limiter)
+        # Cache empty + DB empty → API path.
+        mock_price_cache.get = AsyncMock(return_value=None)
+        mock_price_cache.set = AsyncMock()
+        mock_price_repository.get_latest_price = AsyncMock(return_value=None)
+
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = self._global_quote("2026-04-01")
+        mock_http_client.get = AsyncMock(return_value=mock_response)
+
+        result = await alpha_vantage_adapter.get_current_price(ticker)
+
+        # The returned bar carries the canonical close stamp.
+        assert result.timestamp == datetime(2026, 4, 1, 21, 0, 0, tzinfo=UTC)
+
+        # And the same canonical bar was persisted to the repository — so
+        # any subsequent history read sees a 21:00-UTC entry that the
+        # ``_deduplicate_daily_prices`` helper will correctly prefer.
+        mock_price_repository.upsert_price.assert_awaited_once()
+        persisted = mock_price_repository.upsert_price.await_args.args[0]
+        assert persisted.timestamp == datetime(2026, 4, 1, 21, 0, 0, tzinfo=UTC)
+
+    async def test_unparseable_trading_day_falls_back_to_last_trading_day(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_http_client: MagicMock,
+        mock_rate_limiter: MagicMock,
+    ) -> None:
+        """A malformed ``07. latest trading day`` value falls back to the
+        last trading day's market close — *never* fetch time."""
+        ticker = Ticker("AAPL")
+        self._stub_remaining_tokens(mock_rate_limiter)
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = self._global_quote("not-a-date")
+        mock_http_client.get = AsyncMock(return_value=mock_response)
+
+        result = await alpha_vantage_adapter._fetch_from_api(ticker)
+
+        # Fallback still produces a canonical market-close stamp.
+        assert result.timestamp.hour == 21
+        assert result.timestamp.minute == 0
+        assert result.timestamp.second == 0
+        assert result.timestamp.tzinfo == UTC
+
+    async def test_missing_trading_day_field_falls_back_to_last_trading_day(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_http_client: MagicMock,
+        mock_rate_limiter: MagicMock,
+    ) -> None:
+        """If the API payload omits ``07. latest trading day`` entirely,
+        the timestamp still resolves to a canonical market close — never
+        a fetch-time stamp."""
+        ticker = Ticker("AAPL")
+        self._stub_remaining_tokens(mock_rate_limiter)
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "Global Quote": {"01. symbol": "AAPL", "05. price": "194.50"}
+        }
+        mock_http_client.get = AsyncMock(return_value=mock_response)
+
+        result = await alpha_vantage_adapter._fetch_from_api(ticker)
+
+        assert result.timestamp.hour == 21
+        assert result.timestamp.minute == 0
+        assert result.timestamp.second == 0
+
+
 class TestHistoryCachingTTL:
     """Tests for TTL calculation for price history caching."""
 
