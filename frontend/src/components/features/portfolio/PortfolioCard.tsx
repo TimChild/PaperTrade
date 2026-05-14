@@ -28,7 +28,6 @@ interface PortfolioCardProps {
   missingTickers?: string[]
 }
 
-
 /**
  * Editorial portfolio card — flush hairline panel with the portfolio name as
  * a small-display heading, a serif tabular total value, and a muted gain/loss

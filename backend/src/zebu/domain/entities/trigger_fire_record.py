@@ -29,6 +29,7 @@ from uuid import UUID
 
 from zebu.domain.exceptions import InvalidTriggerFireError
 from zebu.domain.value_objects.agent_decision import AgentDecision
+from zebu.domain.value_objects.trigger_invocation_mode import TriggerInvocationMode
 
 # Truncate the raw agent body to 8000 chars at write time. Matches the
 # Phase-F design §1.4 — full body lives in observability, this column
@@ -60,20 +61,34 @@ class TriggerFireRecord:
             is per-type and includes a ``schema_version`` field. The
             entity treats it as opaque — the per-type evaluators populate
             it.
+        invocation_mode: How the trigger fire reached the agent. Mirrors
+            the trigger's own ``mode`` at fire time. ``DIRECT`` means the
+            orchestrator invoked the inline agent and a structured
+            decision is in ``agent_response``. ``QUEUE`` means the
+            platform deferred to an out-of-band agent via an
+            :class:`ExplorationTask` — ``agent_response`` is ``None`` and
+            ``resulting_exploration_task_id`` points at the queued task.
+            Defaults to ``DIRECT`` so existing rows + the inline path
+            remain unchanged.
         agent_invocation_id: Identifier from the Anthropic Messages API
             response (e.g. message ID). ``None`` when the call failed
-            before producing an ID.
+            before producing an ID — or always ``None`` for queue-mode
+            rows (no inline invocation happened).
         agent_response: Post-guardrail decision the executor acted on
             (or ``HOLD`` / ``INVOCATION_FAILED`` for no-action / failure).
+            ``None`` only when ``invocation_mode == QUEUE`` — the platform
+            did not invoke an agent, so no decision exists.
         agent_response_raw: Truncated free-text agent body (≤8000 chars
             at write time). Captures the original content even when the
-            decision was downgraded by guardrails.
+            decision was downgraded by guardrails. May be the empty
+            string for queue-mode fires (no rationale was generated).
         resulting_trade_id: FK to ``transactions.id`` when the response
             was BUY / SELL and the trade landed. ``None`` otherwise.
         resulting_modify_payload: Decision-execution payload when the
             response was ``MODIFY_STRATEGY``. ``None`` otherwise.
         resulting_exploration_task_id: FK to ``exploration_tasks.id``
-            when the response was ``NEEDS_HUMAN``. ``None`` otherwise.
+            when the response was ``NEEDS_HUMAN`` or the fire was
+            queue-mode. ``None`` otherwise.
         latency_ms: End-to-end latency from "evaluator decided to fire"
             to "decision executed (or rejected)". ``>= 0``.
         api_key_id_used: FK to ``api_keys.id``. Records the key the agent
@@ -89,10 +104,11 @@ class TriggerFireRecord:
     activation_id: UUID
     fired_at: datetime
     condition_evaluation_data: Mapping[str, object]
-    agent_response: AgentDecision
     agent_response_raw: str
     latency_ms: int
     api_key_id_used: UUID
+    agent_response: AgentDecision | None = None
+    invocation_mode: TriggerInvocationMode = TriggerInvocationMode.DIRECT
     agent_invocation_id: str | None = None
     resulting_trade_id: UUID | None = None
     resulting_modify_payload: Mapping[str, object] | None = None
@@ -155,15 +171,52 @@ class TriggerFireRecord:
         if fired_at_utc > now:
             raise InvalidTriggerFireError("fired_at cannot be in the future")
 
-        # Resulting-pointer cardinality: exactly one populated UNLESS the
-        # response is HOLD / INVOCATION_FAILED (in which case all three
-        # must be null).
+        # Resulting-pointer cardinality. Two regimes:
+        #
+        # * ``invocation_mode == QUEUE`` — no agent decision was made by
+        #   the platform; the row records that the trigger fired and the
+        #   platform handed off to an out-of-band agent via an
+        #   ExplorationTask. ``agent_response`` must be ``None`` and
+        #   ``resulting_exploration_task_id`` must be set (the others
+        #   must be null).
+        # * ``invocation_mode == DIRECT`` — the platform invoked an agent
+        #   inline and acted on its structured decision. The existing
+        #   per-decision invariants apply: exactly one resulting pointer
+        #   unless the decision is HOLD / INVOCATION_FAILED.
         populated = [
             self.resulting_trade_id is not None,
             self.resulting_modify_payload is not None,
             self.resulting_exploration_task_id is not None,
         ]
         populated_count = sum(populated)
+
+        if self.invocation_mode is TriggerInvocationMode.QUEUE:
+            if self.agent_response is not None:
+                raise InvalidTriggerFireError(
+                    "invocation_mode=queue requires agent_response to be "
+                    f"None; got {self.agent_response.value}"
+                )
+            if self.resulting_exploration_task_id is None:
+                raise InvalidTriggerFireError(
+                    "invocation_mode=queue requires "
+                    "resulting_exploration_task_id to be set"
+                )
+            if self.resulting_trade_id is not None:
+                raise InvalidTriggerFireError(
+                    "invocation_mode=queue forbids resulting_trade_id"
+                )
+            if self.resulting_modify_payload is not None:
+                raise InvalidTriggerFireError(
+                    "invocation_mode=queue forbids resulting_modify_payload"
+                )
+            return
+
+        # DIRECT mode below — agent_response must be set; existing
+        # per-decision invariants apply.
+        if self.agent_response is None:
+            raise InvalidTriggerFireError(
+                "invocation_mode=direct requires agent_response to be set"
+            )
 
         if self.agent_response in _DECISIONS_WITHOUT_RESULTING_POINTER:
             if populated_count != 0:
@@ -225,9 +278,13 @@ class TriggerFireRecord:
 
     def __repr__(self) -> str:
         """Return repr for debugging."""
+        response_str = (
+            self.agent_response.value if self.agent_response is not None else "None"
+        )
         return (
             f"TriggerFireRecord(id={self.id}, trigger_id={self.trigger_id}, "
-            f"agent_response={self.agent_response.value}, "
+            f"invocation_mode={self.invocation_mode.value}, "
+            f"agent_response={response_str}, "
             f"latency_ms={self.latency_ms})"
         )
 

@@ -122,6 +122,7 @@ describe('formatFireSnapshot', () => {
     activation_id: 'activation-1',
     fired_at: '2026-05-09T12:00:00Z',
     condition_evaluation_data: {},
+    invocation_mode: 'direct',
     agent_invocation_id: null,
     agent_response: 'HOLD',
     agent_response_raw: '',

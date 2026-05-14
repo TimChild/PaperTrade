@@ -22,6 +22,7 @@ import pytest
 from zebu.domain.entities.trigger_fire_record import TriggerFireRecord
 from zebu.domain.exceptions import InvalidTriggerFireError
 from zebu.domain.value_objects.agent_decision import AgentDecision
+from zebu.domain.value_objects.trigger_invocation_mode import TriggerInvocationMode
 
 
 def _make_record(**overrides: object) -> TriggerFireRecord:
@@ -313,3 +314,82 @@ class TestFrozen:
         record = _make_record()
         with pytest.raises(FrozenInstanceError):
             record.latency_ms = 5000  # type: ignore[misc]
+
+
+# ---------------------------------------------------------------------------
+# Issue #278 — invocation_mode column
+# ---------------------------------------------------------------------------
+
+
+class TestInvocationMode:
+    """``invocation_mode`` distinguishes direct- and queue-path fires."""
+
+    def test_default_invocation_mode_is_direct(self) -> None:
+        """Pre-existing call sites that don't pass ``invocation_mode`` get DIRECT."""
+        record = _make_record()
+        assert record.invocation_mode is TriggerInvocationMode.DIRECT
+
+    def test_direct_mode_round_trips(self) -> None:
+        record = _make_record(invocation_mode=TriggerInvocationMode.DIRECT)
+        assert record.invocation_mode is TriggerInvocationMode.DIRECT
+
+    def test_queue_mode_with_task_id_and_null_response_valid(self) -> None:
+        """Queue mode: agent_response=None + resulting_exploration_task_id set."""
+        record = _make_record(
+            invocation_mode=TriggerInvocationMode.QUEUE,
+            agent_response=None,
+            agent_response_raw="",
+            resulting_exploration_task_id=uuid4(),
+        )
+        assert record.invocation_mode is TriggerInvocationMode.QUEUE
+        assert record.agent_response is None
+        assert record.resulting_exploration_task_id is not None
+
+    def test_queue_mode_with_agent_response_set_raises(self) -> None:
+        """Queue mode forbids an agent decision — no inline invocation happened."""
+        with pytest.raises(
+            InvalidTriggerFireError,
+            match="invocation_mode=queue requires agent_response to be None",
+        ):
+            _make_record(
+                invocation_mode=TriggerInvocationMode.QUEUE,
+                agent_response=AgentDecision.HOLD,
+                resulting_exploration_task_id=uuid4(),
+            )
+
+    def test_queue_mode_without_task_id_raises(self) -> None:
+        """Queue mode requires the resulting_exploration_task_id link."""
+        with pytest.raises(
+            InvalidTriggerFireError,
+            match="invocation_mode=queue requires resulting_exploration_task_id",
+        ):
+            _make_record(
+                invocation_mode=TriggerInvocationMode.QUEUE,
+                agent_response=None,
+                agent_response_raw="",
+            )
+
+    def test_queue_mode_with_trade_id_raises(self) -> None:
+        """Queue mode forbids resulting_trade_id."""
+        with pytest.raises(
+            InvalidTriggerFireError,
+            match="invocation_mode=queue forbids resulting_trade_id",
+        ):
+            _make_record(
+                invocation_mode=TriggerInvocationMode.QUEUE,
+                agent_response=None,
+                agent_response_raw="",
+                resulting_exploration_task_id=uuid4(),
+                resulting_trade_id=uuid4(),
+            )
+
+    def test_direct_mode_with_none_agent_response_raises(self) -> None:
+        """Direct mode requires a concrete agent decision."""
+        with pytest.raises(
+            InvalidTriggerFireError,
+            match="invocation_mode=direct requires agent_response to be set",
+        ):
+            _make_record(
+                invocation_mode=TriggerInvocationMode.DIRECT,
+                agent_response=None,
+            )

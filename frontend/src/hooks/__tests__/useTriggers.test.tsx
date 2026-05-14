@@ -65,6 +65,7 @@ const mockFire: TriggerFireResponse = {
   activation_id: 'activation-1',
   fired_at: '2026-05-09T13:00:00Z',
   condition_evaluation_data: { drawdown_pct: '6.0' },
+  invocation_mode: 'direct',
   agent_invocation_id: 'inv-1',
   agent_response: 'HOLD',
   agent_response_raw: 'No action required.',

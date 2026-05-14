@@ -227,8 +227,9 @@ class TriggerFireResponse(BaseModel):
     activation_id: UUID
     fired_at: str
     condition_evaluation_data: dict[str, object]
+    invocation_mode: str
     agent_invocation_id: str | None
-    agent_response: str
+    agent_response: str | None
     agent_response_raw: str
     resulting_trade_id: UUID | None
     resulting_modify_payload: dict[str, object] | None

@@ -1275,19 +1275,24 @@ class TestQueueModeInvocation:
         # Condition snapshot is composed too (one field from _evaluation_data)
         assert "drawdown_pct" in task.prompt
 
-        # Audit row landed and points at the queued task
-        assert outcome.decision is AgentDecision.NEEDS_HUMAN
+        # Audit row landed and points at the queued task.
+        # Issue #278 — queue-mode fires no longer overload NEEDS_HUMAN.
+        # The outcome carries `decision=None`; the record carries
+        # `invocation_mode=QUEUE` and `agent_response=None`.
+        assert outcome.decision is None
         assert outcome.error is None
         record = await fire_repo.get(outcome.fire_record_id)
         assert record is not None
+        assert record.invocation_mode is TriggerInvocationMode.QUEUE
+        assert record.agent_response is None
         assert record.resulting_exploration_task_id == task.id
         assert record.resulting_trade_id is None
         assert record.resulting_modify_payload is None
         assert record.api_key_id_used == api_key.id
-        # The raw rationale carries the queue-mode marker so the UI can
-        # render "Queued" without re-reading the trigger row.
-        assert '"mode":"queue"' in record.agent_response_raw
-        assert str(task.id) in record.agent_response_raw
+        # The raw rationale is empty on queue-mode rows — the queue
+        # marker that used to be stashed there is replaced by the
+        # dedicated invocation_mode column.
+        assert record.agent_response_raw == ""
 
         # Trigger's last_fired_at advanced so cooldown applies
         reloaded = await trigger_repo.get(trigger.id)
@@ -1361,10 +1366,9 @@ class TestQueueModeInvocation:
         # Audit row reflects HOLD (the agent's decision), not NEEDS_HUMAN
         record = await fire_repo.get(outcome.fire_record_id)
         assert record is not None
+        assert record.invocation_mode is TriggerInvocationMode.DIRECT
         assert record.agent_response is AgentDecision.HOLD
         assert record.resulting_exploration_task_id is None
-        # Direct-mode rationale doesn't carry the queue marker
-        assert '"mode":"queue"' not in record.agent_response_raw
 
     async def test_queue_mode_audit_row_is_well_formed(self) -> None:
         """The audit row written in queue mode satisfies the entity invariants."""
@@ -1422,10 +1426,12 @@ class TestQueueModeInvocation:
 
         record = await fire_repo.get(outcome.fire_record_id)
         assert record is not None
-        # NEEDS_HUMAN requires resulting_exploration_task_id (entity invariant)
-        assert record.agent_response is AgentDecision.NEEDS_HUMAN
+        # Issue #278 — queue-mode rows: invocation_mode=QUEUE,
+        # agent_response=None, resulting_exploration_task_id set,
+        # the other resulting_* pointers null.
+        assert record.invocation_mode is TriggerInvocationMode.QUEUE
+        assert record.agent_response is None
         assert record.resulting_exploration_task_id is not None
-        # NEEDS_HUMAN forbids the other resulting_* pointers
         assert record.resulting_trade_id is None
         assert record.resulting_modify_payload is None
         # Latency is non-negative

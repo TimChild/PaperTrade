@@ -142,6 +142,7 @@ class SQLModelStrategyActivationRepository:
         existing.status = activation.status.value
         existing.frequency = activation.frequency.value
         existing.last_error = activation.last_error
+        existing.deactivation_reason = activation.deactivation_reason
 
         if activation.last_executed_at is not None:
             if activation.last_executed_at.tzinfo:

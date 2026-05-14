@@ -27,6 +27,7 @@ const mockActivation: StrategyActivationResponse = {
   frequency: 'DAILY_MARKET_CLOSE',
   last_executed_at: null,
   last_error: null,
+  deactivation_reason: null,
   created_at: '2026-05-09T00:00:00Z',
   updated_at: '2026-05-09T00:00:00Z',
 }

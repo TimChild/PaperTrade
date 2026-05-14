@@ -44,18 +44,6 @@ function truncate(text: string, max: number): string {
   return text.slice(0, max - 1) + '…'
 }
 
-/**
- * Detect whether a fire record was produced via Pattern B (queue mode).
- *
- * The orchestrator stamps a compact `{"mode":"queue", ...}` marker into
- * `agent_response_raw` on queue-mode fires (see
- * `TriggerInvocationOrchestrator._fire_queue_mode`). The direct path
- * never writes that marker.
- */
-function isQueuedFire(rationaleRaw: string): boolean {
-  return rationaleRaw.includes('"mode":"queue"')
-}
-
 export function TriggerFireLog(): React.JSX.Element {
   const { id } = useParams<{ id: string }>()
   const triggerId = id ?? ''
@@ -229,12 +217,19 @@ export function TriggerFireLog(): React.JSX.Element {
                       </span>
                     </DataCell>
                     <DataCell>
-                      <AgentDecisionBadge decision={f.agent_response} />
+                      {f.agent_response !== null ? (
+                        <AgentDecisionBadge decision={f.agent_response} />
+                      ) : (
+                        <span
+                          className="font-eyebrow text-ink-subtle"
+                          data-testid={`trigger-fire-decision-none-${f.id}`}
+                        >
+                          —
+                        </span>
+                      )}
                     </DataCell>
                     <DataCell>
-                      <FireModeBadge
-                        queued={isQueuedFire(f.agent_response_raw)}
-                      />
+                      <FireModeBadge queued={f.invocation_mode === 'queue'} />
                     </DataCell>
                     <DataCell tone="muted" hideOnMobile>
                       <span

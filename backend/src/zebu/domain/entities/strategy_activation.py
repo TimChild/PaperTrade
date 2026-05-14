@@ -52,9 +52,23 @@ class StrategyActivation:
             ``DAILY_MARKET_CLOSE`` but the enum is forward-compatible.
         last_executed_at: Timestamp of the most recent execution attempt
             (success or failure). ``None`` until the first run completes.
-        last_error: Human-readable failure reason. Should be set when
-            ``status == ERROR``; a warning is logged otherwise. ``None`` for
-            healthy activations.
+        last_error: Human-readable failure reason from a scheduled run.
+            Should be set when ``status == ERROR``; a warning is logged
+            otherwise. ``None`` for healthy activations. Reserved for
+            actual execution failures from
+            :mod:`strategy_execution_service` — a deliberate human pause
+            uses ``deactivation_reason`` instead so UI / alerting that
+            keys off "is ``last_error`` non-null?" doesn't false-positive.
+        deactivation_reason: Human-readable note attached when the user
+            deliberately deactivates the activation via the
+            ``POST /activations/{id}/deactivate`` endpoint. ``None`` for
+            activations that were never user-paused (or were re-activated
+            after a pause and have since run cleanly). This is the
+            counterpart to ``last_error`` — "the user paused this because
+            X" vs "the platform tried to run this and Y blew up". The
+            entity does not clear it on re-activation; it persists as a
+            historical breadcrumb until the next deactivation overwrites
+            it.
         created_at: When the activation was first created (UTC).
         updated_at: When the activation was last mutated (UTC). Must be ``>=``
             ``created_at``.
@@ -75,6 +89,7 @@ class StrategyActivation:
     updated_at: datetime
     last_executed_at: datetime | None = None
     last_error: str | None = None
+    deactivation_reason: str | None = None
 
     def __post_init__(self) -> None:
         """Validate StrategyActivation invariants after initialization."""

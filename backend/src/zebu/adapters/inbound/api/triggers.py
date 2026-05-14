@@ -138,8 +138,11 @@ def _fire_to_response(record: TriggerFireRecord) -> TriggerFireResponse:
         activation_id=record.activation_id,
         fired_at=record.fired_at.isoformat(),
         condition_evaluation_data=dict(record.condition_evaluation_data),
+        invocation_mode=record.invocation_mode.value,
         agent_invocation_id=record.agent_invocation_id,
-        agent_response=record.agent_response.value,
+        agent_response=(
+            record.agent_response.value if record.agent_response is not None else None
+        ),
         agent_response_raw=record.agent_response_raw,
         resulting_trade_id=record.resulting_trade_id,
         resulting_modify_payload=(

@@ -115,9 +115,12 @@ class ActivateStrategyRequest(BaseModel):
 class DeactivateRequest(BaseModel):
     """Request body for ``POST /activations/{id}/deactivate``.
 
-    The ``reason`` is captured on the entity's ``last_error`` field for
-    visibility in the user UI — it's not an error per se but it's the
-    same auxiliary text channel.
+    The ``reason`` is captured on the entity's ``deactivation_reason``
+    field (Issue #284). Prior to that change, the reason landed in
+    ``last_error``, which conflated benign user-initiated pauses with
+    real execution failures — alerting / UI keying off "is last_error
+    set?" false-positived. The dedicated field separates the two
+    concerns.
     """
 
     reason: str | None = Field(default=None, max_length=500)
@@ -134,6 +137,7 @@ class StrategyActivationResponse(BaseModel):
     frequency: str
     last_executed_at: str | None
     last_error: str | None
+    deactivation_reason: str | None
     created_at: str
     updated_at: str
 
@@ -173,6 +177,7 @@ def _to_response(activation: StrategyActivation) -> StrategyActivationResponse:
             else None
         ),
         last_error=activation.last_error,
+        deactivation_reason=activation.deactivation_reason,
         created_at=activation.created_at.isoformat(),
         updated_at=activation.updated_at.isoformat(),
     )
@@ -616,10 +621,12 @@ async def deactivate_activation(
     semantic; ``STOPPED`` is reserved for terminal cases (e.g. linked
     portfolio deleted) and is not exposed via this endpoint.
 
-    The optional ``reason`` is stored on ``last_error`` so the UI can
-    surface "paused because: <reason>". This conflates "actual error"
-    with "user-supplied note" but matches the existing entity shape;
-    a dedicated field is a deferred refactor.
+    The optional ``reason`` is stored on the entity's
+    ``deactivation_reason`` field (Issue #284) so it doesn't get
+    confused with ``last_error`` (which is reserved for real execution
+    failures from :mod:`strategy_execution_service`). ``last_error``
+    is preserved unchanged on the new row — a pause shouldn't erase a
+    prior failure breadcrumb.
     """
     repo = SQLModelStrategyActivationRepository(session)
     activation = await repo.get(activation_id)
@@ -645,7 +652,8 @@ async def deactivate_activation(
         created_at=activation.created_at,
         updated_at=datetime.now(UTC),
         last_executed_at=activation.last_executed_at,
-        last_error=reason,
+        last_error=activation.last_error,
+        deactivation_reason=reason,
     )
     await repo.save(paused)
     logger.info(

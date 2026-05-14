@@ -467,7 +467,8 @@ class TriggerEvaluationService:
             )
             return None, None, f"orchestrator raised: {exc}"
 
-        return outcome.fire_record_id, outcome.decision.value, outcome.error
+        decision_str = outcome.decision.value if outcome.decision is not None else None
+        return outcome.fire_record_id, decision_str, outcome.error
 
     async def _evaluate_one(
         self,

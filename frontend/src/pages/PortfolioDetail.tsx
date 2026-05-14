@@ -69,7 +69,9 @@ export function PortfolioDetail(): React.JSX.Element {
   // surface the balance's own ``as_of`` (or null) as the "last updated"
   // proxy when the hook reports an OK pricing state.
   const balanceUpdatedAt =
-    balanceData?.as_of != null ? new Date(balanceData.as_of).getTime() : undefined
+    balanceData?.as_of != null
+      ? new Date(balanceData.as_of).getTime()
+      : undefined
   const { data: holdingsData, isLoading: holdingsLoading } =
     useHoldings(portfolioId)
   const { data: transactionsData, isLoading: transactionsLoading } =

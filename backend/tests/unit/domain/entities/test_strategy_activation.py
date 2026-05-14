@@ -280,3 +280,35 @@ class TestStrategyActivationRepr:
         assert str(activation.id) in text
         assert str(activation.strategy_id) in text
         assert "ACTIVE" in text
+
+
+class TestDeactivationReason:
+    """Issue #284 — ``deactivation_reason`` is the user-pause channel.
+
+    Distinct from ``last_error`` (execution failures). Both can coexist
+    — e.g. an activation that failed at runtime, was paused by a human
+    with a note, and then re-activated, would carry both breadcrumbs.
+    """
+
+    def test_default_deactivation_reason_is_none(self) -> None:
+        activation = _make_activation()
+        assert activation.deactivation_reason is None
+
+    def test_deactivation_reason_round_trips(self) -> None:
+        activation = _make_activation(deactivation_reason="manual review needed")
+        assert activation.deactivation_reason == "manual review needed"
+
+    def test_deactivation_reason_and_last_error_can_coexist(self) -> None:
+        """A row can carry both: an execution failure AND a pause note."""
+        activation = _make_activation(
+            status=ActivationStatus.PAUSED,
+            last_error="market data timeout on AAPL",
+            deactivation_reason="taking a break while we investigate",
+        )
+        assert activation.last_error == "market data timeout on AAPL"
+        assert activation.deactivation_reason == "taking a break while we investigate"
+
+    def test_deactivation_reason_is_frozen(self) -> None:
+        activation = _make_activation(deactivation_reason="x")
+        with pytest.raises(FrozenInstanceError):
+            activation.deactivation_reason = "y"  # type: ignore[misc]
