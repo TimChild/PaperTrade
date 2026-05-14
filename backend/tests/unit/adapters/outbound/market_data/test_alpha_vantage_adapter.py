@@ -625,6 +625,66 @@ class TestDecimalPrecisionRounding:
         assert point.price.amount == Decimal("151.57")  # Same as close
 
 
+class TestRateLimitInformationalResponseHandling:
+    """Regression: AV returns HTTP 200 with an "Information" or "Note"
+    payload when the daily cap / per-minute rate limit is hit. The
+    parsers previously raised TickerNotFoundError, which is wildly
+    misleading — the ticker is fine; we just can't fetch right now.
+    Both parsers now raise MarketDataUnavailableError so the caller's
+    retry / fallback path takes over.
+
+    Origin: 2026-05-14 MCP smoke test; observed in prod logs as
+    "Backtest failed: Ticker not found in Alpha Vantage database"
+    on tickers (MSFT, MU, AAPL) that are obviously valid.
+    """
+
+    async def test_daily_history_information_payload_raises_unavailable(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+    ) -> None:
+        """``Information`` key on a 200 means cap hit, not ticker not found."""
+        ticker = Ticker("MSFT")
+        response: dict[str, object] = {
+            "Information": (
+                "Thank you for using Alpha Vantage! Our standard API rate "
+                "limit is 25 requests per day. Please subscribe to any of "
+                "the premium plans to remove daily rate limits."
+            ),
+        }
+
+        with pytest.raises(MarketDataUnavailableError, match="MSFT"):
+            alpha_vantage_adapter._parse_daily_history_response(ticker, response)
+
+    async def test_daily_history_note_payload_raises_unavailable(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+    ) -> None:
+        """``Note`` is the older per-minute rate-limit signal."""
+        ticker = Ticker("AAPL")
+        response: dict[str, object] = {
+            "Note": (
+                "Thank you for using Alpha Vantage! Our standard API call "
+                "frequency is 5 calls per minute and 500 calls per day."
+            ),
+        }
+
+        with pytest.raises(MarketDataUnavailableError, match="AAPL"):
+            alpha_vantage_adapter._parse_daily_history_response(ticker, response)
+
+    async def test_global_quote_information_payload_raises_unavailable(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+    ) -> None:
+        """GLOBAL_QUOTE parser has the same guard."""
+        ticker = Ticker("MU")
+        response: dict[str, object] = {
+            "Information": "API call frequency exceeded",
+        }
+
+        with pytest.raises(MarketDataUnavailableError, match="MU"):
+            alpha_vantage_adapter._parse_response(ticker, response)
+
+
 class TestCurrentPriceTimestampCanonicalisation:
     """Issue #286 — GLOBAL_QUOTE writes must use market-close timestamps.
 
