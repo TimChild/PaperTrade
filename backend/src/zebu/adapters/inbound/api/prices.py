@@ -34,6 +34,13 @@ logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/prices", tags=["prices"])
 
+# Intervals the platform can actually serve via Alpha Vantage's free tier.
+# Sub-daily intervals (1min/5min/15min/30min/1hour) require paid AV and
+# wiring through ``TIME_SERIES_INTRADAY`` — neither is in place. Until
+# then we reject at the API boundary so MCP agents get a clear error
+# instead of silently empty 200 responses. See GitHub issue #285.
+SUPPORTED_PRICE_HISTORY_INTERVALS: frozenset[str] = frozenset({"1day"})
+
 
 # Response Models
 
@@ -268,7 +275,13 @@ async def get_price_history(
     ],
     interval: Annotated[
         str,
-        Query(description="Price interval (1min, 5min, 1hour, 1day)"),
+        Query(
+            description=(
+                "Price interval. Currently only '1day' is supported; sub-daily "
+                "intervals (1min, 5min, 15min, 30min, 1hour) return 422 until "
+                "intraday data is wired in (see GitHub issue #285)."
+            )
+        ),
     ] = "1day",
 ) -> PriceHistoryResponse:
     """Get historical price data for a ticker.
@@ -278,15 +291,31 @@ async def get_price_history(
         market_data: Market data port implementation (injected)
         start: Start of time range (UTC)
         end: End of time range (UTC)
-        interval: Price interval type (default: "1day")
+        interval: Price interval type (default: "1day"). Only "1day" is
+            currently accepted; any other value is rejected with HTTP 422.
 
     Returns:
         PriceHistoryResponse with list of price points
 
     Raises:
         HTTPException: 400 if invalid parameters, 404 if ticker not found,
+                      422 if ``interval`` is not in the supported set,
                       503 if market data unavailable
     """
+    # Reject unsupported intervals at the boundary so callers (notably MCP
+    # agents) get an explicit error instead of an empty 200 response. The
+    # Alpha Vantage free tier does not serve intraday bars and
+    # ``TIME_SERIES_INTRADAY`` is not wired in the adapter; see #285.
+    if interval not in SUPPORTED_PRICE_HISTORY_INTERVALS:
+        supported = ", ".join(sorted(SUPPORTED_PRICE_HISTORY_INTERVALS))
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"interval '{interval}' is not supported on the current data "
+                f"tier. Supported intervals: {supported}."
+            ),
+        )
+
     try:
         # Parse ticker
         ticker_obj = Ticker(ticker.upper())

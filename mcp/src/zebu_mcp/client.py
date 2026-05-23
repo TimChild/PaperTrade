@@ -293,7 +293,10 @@ class ZebuClient(AbstractAsyncContextManager["ZebuClient"]):
             ticker: Stock ticker symbol.
             start: ISO-8601 datetime or ``YYYY-MM-DD`` date.
             end: ISO-8601 datetime or ``YYYY-MM-DD`` date.
-            interval: One of ``1min``, ``5min``, ``1hour``, ``1day``.
+            interval: Currently only ``1day`` is supported. Sub-daily
+                intervals (``1min``, ``5min``, ``15min``, ``30min``,
+                ``1hour``) will be rejected by the API with HTTP 422
+                until intraday data is wired in (GitHub issue #285).
         """
         body = await self._request_json(
             "GET",
