@@ -34,6 +34,13 @@ class RunBacktestCommand:
             the real Anthropic adapter via the L-2 backtest-safe
             wrapper. The mode is stamped onto the resulting
             :class:`BacktestRun` row.
+        agent_temperature: Phase L-3 — optional sampling-temperature
+            override forwarded to the agent invocation port (and, via
+            the L-2 wrapper, to the Anthropic SDK). ``None`` means "use
+            the adapter / wrapper default" — the L-2 wrapper defaults
+            to ``0.0`` for deterministic-ish replays. Ignored when
+            ``agent_invocation_mode`` is ``NONE`` (no agent calls) or
+            ``MOCK`` (the mock port is sampling-free).
     """
 
     user_id: UUID
@@ -46,3 +53,4 @@ class RunBacktestCommand:
     agent_invocation_mode: BacktestAgentInvocationMode = (
         BacktestAgentInvocationMode.NONE
     )
+    agent_temperature: float | None = None
