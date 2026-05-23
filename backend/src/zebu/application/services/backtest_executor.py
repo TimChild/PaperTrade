@@ -10,6 +10,7 @@ from uuid import UUID, uuid4
 
 from zebu.application.commands.run_backtest import RunBacktestCommand
 from zebu.application.exceptions import IncompleteHistoricalDataError
+from zebu.application.ports.agent_invocation_port import AgentInvocationResult
 from zebu.application.ports.backtest_agent_invocation_factory import (
     BacktestAgentInvocationFactory,
 )
@@ -916,7 +917,10 @@ class BacktestExecutor:
 
         now = datetime.now(UTC)
         activation_shim = StrategyActivation(
-            id=portfolio_id,  # arbitrary — prompt only echoes this for context
+            # Synthetic id — the activation is transient (not persisted).
+            # The prompt only echoes this for context; reusing the
+            # portfolio_id slot was a copy-paste mistake.
+            id=uuid4(),
             user_id=strategy.user_id,
             strategy_id=strategy.id,
             portfolio_id=portfolio_id,
@@ -1197,7 +1201,7 @@ def _apply_simulated_decision(
     simulated_now: datetime,
     evaluation_data: Mapping[str, object],
     mode: BacktestAgentInvocationMode,
-    result: object,  # AgentInvocationResult — typed below
+    result: AgentInvocationResult,
     builder: BacktestTransactionBuilder,
     price_map: Mapping[str, Mapping[date, PricePoint]],
     strategy: Strategy,
@@ -1221,13 +1225,7 @@ def _apply_simulated_decision(
       strategy is NOT mutated; ``decision_executed=False`` and the
       rationale notes the no-op.
     * LIVE HOLD / NEEDS_HUMAN: audit-only; no trade.
-
-    Imported lazily inside the function so the module-level imports
-    stay focused on the executor's hot dependencies.
     """
-    from zebu.application.ports.agent_invocation_port import AgentInvocationResult
-
-    assert isinstance(result, AgentInvocationResult)
 
     # MOCK rows are byte-stable — the mock port always returns HOLD with
     # ``model=""``. Build the MOCK-shaped row regardless of the
@@ -1252,9 +1250,13 @@ def _apply_simulated_decision(
             agent_invocation_id=None,
         )
 
-    # LIVE branch.
+    # LIVE branch. Per L-1 entity invariants, LIVE rows whose decision
+    # is not INVOCATION_FAILED MUST have a non-empty rationale. Pad with
+    # a decision-stamp when the upstream port returned an empty one
+    # (production Anthropic never does, but test fakes / mis-behaving
+    # transports might).
     decision = result.decision
-    rationale_raw = result.rationale or ""
+    rationale_raw = result.rationale or f"({decision.value} — no rationale provided)"
 
     if decision is AgentDecision.BUY or decision is AgentDecision.SELL:
         applied_trade_id, downgraded_reason = _try_apply_trade(
