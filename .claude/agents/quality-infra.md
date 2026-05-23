@@ -86,8 +86,8 @@ task docker:up            # Postgres + Redis only
 task docker:up:all        # full stack including backend + frontend
 task dev:backend          # backend with reload
 task dev:frontend         # Vite dev server
-task ci                   # full CI run locally
-task ci:fast              # lint only (no tests)
+task ci                   # full CI run locally (uses isolated CI docker stack)
+task ci:fresh             # tear down any running dev/CI stacks first, then `task ci`
 ```
 
 ## When to engage

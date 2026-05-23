@@ -338,6 +338,41 @@ tasks:
       - docker compose down -v
       - echo "✓ Docker services stopped and volumes removed"
 
+  # ---------------------------------------------------------------------------
+  # CI-isolated Docker stack
+  # ---------------------------------------------------------------------------
+  # The CI stack runs under a distinct COMPOSE_PROJECT_NAME and a CI-specific
+  # override (`docker-compose.ci.yml`) so that local `task ci` runs don't
+  # collide with a developer's already-running dev Postgres/Redis on host
+  # ports 5432 / 6379. See docker-compose.ci.yml for the override details.
+  docker:up:ci:
+    desc: "Start the CI-isolated stack (db+redis on docker network only; no host 5432/6379 bindings)"
+    env:
+      COMPOSE_PROJECT_NAME: papertrade-ci
+    cmds:
+      - docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
+      - echo "✓ CI Docker stack started (project=papertrade-ci)"
+      - 'echo "  - PostgreSQL: docker-network-only (no host port)"'
+      - 'echo "  - Redis: docker-network-only (no host port)"'
+      - 'echo "  - Backend API: http://localhost:8000"'
+      - 'echo "  - Frontend: http://localhost:5173"'
+
+  docker:down:ci:
+    desc: "Stop the CI-isolated Docker stack"
+    env:
+      COMPOSE_PROJECT_NAME: papertrade-ci
+    cmds:
+      - docker compose -f docker-compose.yml -f docker-compose.ci.yml down
+      - echo "✓ CI Docker stack stopped"
+
+  docker:clean:ci:
+    desc: "Stop the CI-isolated stack and remove its volumes (WARNING: deletes CI data)"
+    env:
+      COMPOSE_PROJECT_NAME: papertrade-ci
+    cmds:
+      - docker compose -f docker-compose.yml -f docker-compose.ci.yml down -v
+      - echo "✓ CI Docker stack stopped and volumes removed"
+
   clean:
     desc: "Clean build artifacts and caches"
     cmds:
@@ -489,14 +524,82 @@ tasks:
       - task: quality:frontend
 
   ci:e2e:
-    desc: "Run E2E tests (requires Docker services)"
+    desc: "Run E2E tests against the CI-isolated Docker stack (no host 5432/6379 conflicts)"
     deps:
-      - docker:up:all
+      - docker:up:ci
+    env:
+      # Re-declared here so the inline `docker compose` calls target the CI
+      # stack regardless of which compose project the shell's CWD-named
+      # default would resolve to. Sub-tasks see their own env, not this one,
+      # so health-wait / cleanup are inlined below rather than delegated to
+      # the generic `health:wait` / `test:e2e:cleanup` tasks (those default
+      # to the dev project name).
+      COMPOSE_PROJECT_NAME: papertrade-ci
     cmds:
-      - echo "🔄 Running E2E tests..."
-      - task: health:wait
-      - task: test:e2e:cleanup
-      - task: test:e2e
+      - echo "🔄 Running E2E tests against the CI stack..."
+      - |
+        echo "⏳ Waiting for CI services to be ready..."
+
+        # Wait for PostgreSQL
+        echo "  Waiting for PostgreSQL..."
+        timeout 30 bash -c 'until docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T db pg_isready -U papertrade 2>/dev/null; do sleep 1; done' || (echo "  ❌ PostgreSQL timeout" && exit 1)
+        echo "  ✅ PostgreSQL ready"
+
+        # Wait for Redis
+        echo "  Waiting for Redis..."
+        timeout 30 bash -c 'until docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T redis redis-cli ping 2>/dev/null | grep -q PONG; do sleep 1; done' || (echo "  ❌ Redis timeout" && exit 1)
+        echo "  ✅ Redis ready"
+
+        # Wait for Backend (still on host:8000)
+        echo "  Waiting for backend..."
+        timeout 60 bash -c 'until curl -f http://localhost:8000/health &>/dev/null; do sleep 2; done' || (echo "  ❌ Backend timeout" && exit 1)
+        echo "  ✅ Backend ready"
+
+        # Wait for Frontend (still on host:5173)
+        echo "  Waiting for frontend..."
+        timeout 60 bash -c 'until curl -f http://localhost:5173 &>/dev/null; do sleep 2; done' || (echo "  ❌ Frontend timeout" && exit 1)
+        echo "  ✅ Frontend ready"
+      - |
+        echo "Running Alembic migrations in the CI backend container..."
+        docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T backend alembic upgrade head
+        echo "✓ CI migrations complete"
+      - |
+        echo "Cleaning up E2E test portfolios from the CI database..."
+        docker compose -f docker-compose.yml -f docker-compose.ci.yml exec -T db psql -U papertrade -d papertrade_dev -c \
+          "DELETE FROM portfolios WHERE name LIKE 'Test Portfolio %' OR name LIKE 'Persistent %' OR name LIKE 'Analytics Test %' OR name LIKE 'Trading Portfolio %' OR name LIKE 'Poor Portfolio%' OR name LIKE 'Holdings Test%' OR name LIKE 'Buy-Sell Portfolio%' OR name LIKE 'Empty Portfolio%' OR name LIKE 'Quick Sell%' OR name LIKE 'Multi Test Portfolio%' OR name LIKE 'Click Test Portfolio%';"
+        echo "✓ CI E2E test data cleaned up"
+      - task: ci:test:e2e
+
+  ci:test:e2e:
+    desc: "Run Playwright E2E tests against the CI stack (no docker:up:all dep)"
+    dir: "{{.FRONTEND_DIR}}"
+    env:
+      # Load Clerk credentials from the repo-root .env (same pattern as
+      # `test:e2e`); kept distinct so this task doesn't trigger the
+      # `docker:up:all` dep of the dev `test:e2e` and double-start a stack.
+      CLERK_SECRET_KEY:
+        sh: grep "^CLERK_SECRET_KEY=" ../.env | cut -d= -f2- || echo ""
+      CLERK_PUBLISHABLE_KEY:
+        sh: grep "^CLERK_PUBLISHABLE_KEY=" ../.env | cut -d= -f2- || echo ""
+      VITE_CLERK_PUBLISHABLE_KEY:
+        sh: grep "^VITE_CLERK_PUBLISHABLE_KEY=" ../.env | cut -d= -f2- || echo ""
+      E2E_CLERK_USER_EMAIL:
+        sh: grep "^E2E_CLERK_USER_EMAIL=" ../.env | cut -d= -f2- || echo ""
+    cmds:
+      - npm run test:e2e
+    preconditions:
+      - sh: test -f package.json
+        msg: "Frontend not found"
+
+  ci:fresh:
+    desc: "Tear down any running dev/CI Docker stacks, then run `task ci` (WARNING: destructive — stops your dev stack)"
+    cmds:
+      - |
+        echo "🧹 Tearing down dev + CI stacks before running CI..."
+        docker compose down 2>/dev/null || true
+        COMPOSE_PROJECT_NAME=papertrade-ci docker compose -f docker-compose.yml -f docker-compose.ci.yml down 2>/dev/null || true
+        echo "✓ Existing stacks torn down"
+      - task: ci
 
   # =========================================================================
   # Validation & Health Checks
