@@ -53,10 +53,15 @@ Common fixes:
 |---|---|
 | `task docker:up` | Postgres + Redis only |
 | `task docker:up:all` | Full stack (db + redis + backend + frontend) |
-| `task docker:down` | Stop |
+| `task docker:up:ci` | CI-isolated stack — db/redis only on docker network, no host 5432/6379 |
+| `task docker:down` | Stop the dev stack |
+| `task docker:down:ci` | Stop the CI-isolated stack |
 | `task docker:logs[:backend|:frontend]` | Tail logs |
 | `task docker:restart[:backend|:frontend]` | Restart services |
-| `task docker:clean` | Stop + remove volumes (deletes data) |
+| `task docker:clean` | Stop + remove dev volumes (deletes data) |
+| `task docker:clean:ci` | Stop the CI stack + remove its volumes |
+
+The CI stack (`docker-compose.ci.yml`) runs under `COMPOSE_PROJECT_NAME=papertrade-ci` and omits the host bindings for `db` / `redis`. This is what `task ci` / `task ci:e2e` use locally so they don't collide with a developer's dev Postgres on host port 5432. The dev stack is unaffected — both can run side by side.
 
 Status / debugging:
 
@@ -94,9 +99,11 @@ task test:e2e              # if UI changed
 Or run the full CI:
 
 ```bash
-task ci                    # all checks (== GitHub Actions)
-task ci:fast               # lint only, skip tests
+task ci                    # all checks (== GitHub Actions); uses the CI-isolated docker stack
+task ci:fresh              # tear down any running dev/CI stacks first, then `task ci` (destructive)
 ```
+
+The CI suite brings up its own isolated Postgres / Redis (no host port bindings) so it doesn't collide with a running dev stack. Backend (8000) and frontend (5173) still bind to default host ports because Playwright needs to reach them — if those collide with a running dev backend / frontend, use `task ci:fresh` to tear the dev stack down first.
 
 **Don't mark work complete until all checks pass.** CI runs the same commands.
 
