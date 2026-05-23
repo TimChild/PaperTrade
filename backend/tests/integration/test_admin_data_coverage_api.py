@@ -1,23 +1,27 @@
 """Integration tests for ``/api/v1/admin/data-coverage`` endpoints.
 
-Phase J (Task #212 Layer 4).
+Phase J (Task #212 Layer 4); Task #215 "catch up" UX rework.
 
 Covers:
 
 * Auth gating — 401 unauthenticated, 403 for non-admin, 200 for admin.
-* GET ``/admin/data-coverage``: empty DB, with seeded daily bars, gap
-  computation correctness, ordering, is_active union.
-* POST ``/admin/data-coverage/backfill``: creates a task, idempotency
-  on ``(ticker, start_date, end_date)``, terminal tasks don't block
-  new ones, validation errors map to 422.
+* GET ``/admin/data-coverage``: empty DB, with seeded daily bars,
+  gap computation against ``[ZEBU_HISTORY_EPOCH, today]``, ordering,
+  is_active union, ``backfill_status`` payload + ``target_epoch``
+  echo.
+* POST ``/admin/data-coverage/backfill``: creates a task for the
+  ``[epoch, today]`` range, idempotency on the computed range,
+  rejects bodies that include ``start_date`` / ``end_date`` (the
+  pre-Task-215 shape) with 422.
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterator
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import TYPE_CHECKING
+from uuid import uuid4
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -49,6 +53,19 @@ def non_admin_headers(monkeypatch: pytest.MonkeyPatch) -> Iterator[dict[str, str
     """Bearer headers that do NOT pass the admin allowlist gate."""
     monkeypatch.setenv("ADMIN_USER_IDS", "")
     yield {"Authorization": "Bearer test-token-default"}
+
+
+@pytest.fixture
+def pinned_epoch(monkeypatch: pytest.MonkeyPatch) -> str:
+    """Pin ``ZEBU_HISTORY_EPOCH`` to a deterministic date for the test.
+
+    Uses a date well in the past so ``end_date`` (today, computed by
+    the handler) is always >= the epoch — no risk of triggering the
+    domain's ``end_date >= start_date`` invariant.
+    """
+    epoch = "2015-01-01"
+    monkeypatch.setenv("ZEBU_HISTORY_EPOCH", epoch)
+    return epoch
 
 
 async def _seed_bars(
@@ -87,6 +104,41 @@ async def _seed_watchlist(engine: AsyncEngine, *, ticker: str) -> None:
         await session.commit()
 
 
+async def _seed_backfill_task(
+    engine: AsyncEngine,
+    *,
+    ticker: str,
+    status: BackfillTaskStatus,
+    start_date: date,
+    end_date: date,
+    created_at: datetime,
+    finished_at: datetime | None = None,
+    error_message: str | None = None,
+) -> None:
+    """Insert a backfill task row directly."""
+    async with AsyncSession(engine, expire_on_commit=False) as session:
+        session.add(
+            BackfillTaskModel(
+                id=uuid4(),
+                ticker=ticker,
+                start_date=start_date,
+                end_date=end_date,
+                priority="high",
+                status=status.value,
+                created_at=created_at.replace(tzinfo=None)
+                if created_at.tzinfo
+                else created_at,
+                finished_at=(
+                    finished_at.replace(tzinfo=None)
+                    if finished_at is not None and finished_at.tzinfo
+                    else finished_at
+                ),
+                error_message=error_message,
+            )
+        )
+        await session.commit()
+
+
 async def _fetch_backfill_task(
     engine: AsyncEngine, task_id: str
 ) -> BackfillTaskModel | None:
@@ -105,7 +157,9 @@ async def _fetch_backfill_task(
 class TestGetAuthGating:
     """``GET /admin/data-coverage`` rejects non-admin callers."""
 
-    def test_unauthenticated_rejects(self, client: TestClient) -> None:
+    def test_unauthenticated_rejects(
+        self, client: TestClient, pinned_epoch: str
+    ) -> None:
         response = client.get("/api/v1/admin/data-coverage")
         assert response.status_code in (401, 403)
 
@@ -113,6 +167,7 @@ class TestGetAuthGating:
         self,
         client: TestClient,
         non_admin_headers: dict[str, str],
+        pinned_epoch: str,
     ) -> None:
         response = client.get(
             "/api/v1/admin/data-coverage",
@@ -124,6 +179,7 @@ class TestGetAuthGating:
         self,
         client: TestClient,
         admin_headers: dict[str, str],
+        pinned_epoch: str,
     ) -> None:
         response = client.get(
             "/api/v1/admin/data-coverage",
@@ -144,6 +200,7 @@ class TestGetEmptyDatabase:
         self,
         client: TestClient,
         admin_headers: dict[str, str],
+        pinned_epoch: str,
     ) -> None:
         response = client.get(
             "/api/v1/admin/data-coverage",
@@ -163,8 +220,9 @@ class TestGetWithSeededData:
         client: TestClient,
         admin_headers: dict[str, str],
         test_engine: AsyncEngine,
+        pinned_epoch: str,
     ) -> None:
-        """A watchlisted ticker with no bars renders with null ranges."""
+        """Watchlist ticker with no bars yields null ranges + echoed epoch."""
         await _seed_watchlist(test_engine, ticker="AAPL")
 
         response = client.get(
@@ -179,17 +237,23 @@ class TestGetWithSeededData:
         assert row["coverage_start"] is None
         assert row["coverage_end"] is None
         assert row["last_refresh"] is None
-        assert row["gap_days_count"] == 0
+        # With no bars the gap is large (full [epoch, today] trading-day span).
+        assert row["gap_days_count"] > 0
         assert row["is_active"] is True
+        assert row["target_epoch"] == pinned_epoch
+        assert row["backfill_status"] is None
 
-    async def test_contiguous_bars_produce_zero_gaps(
+    async def test_contiguous_bars_produce_realistic_gap(
         self,
         client: TestClient,
         admin_headers: dict[str, str],
         test_engine: AsyncEngine,
+        pinned_epoch: str,
     ) -> None:
-        """A run of contiguous trading days produces ``gap_days_count=0``."""
-        # 2025-01-06 (Mon) through 2025-01-10 (Fri).
+        """Bars seeded recently leave a head-gap from epoch up to coverage_start."""
+        # Cover a handful of recent trading days. The head-gap (epoch ->
+        # bar) means gap_days_count is enormous; we just assert that the
+        # query handles it without falling over.
         days = [date(2025, 1, d) for d in (6, 7, 8, 9, 10)]
         await _seed_bars(
             test_engine,
@@ -206,41 +270,19 @@ class TestGetWithSeededData:
         row = next(r for r in body["tickers"] if r["ticker"] == "AAPL")
         assert row["coverage_start"] == "2025-01-06"
         assert row["coverage_end"] == "2025-01-10"
-        assert row["gap_days_count"] == 0
+        # Big head-gap from 2015-01-01 to 2025-01-05 + the tail gap to today.
+        assert row["gap_days_count"] > 1000
         assert row["last_refresh"] is not None
-
-    async def test_interior_hole_yields_nonzero_gap(
-        self,
-        client: TestClient,
-        admin_headers: dict[str, str],
-        test_engine: AsyncEngine,
-    ) -> None:
-        """Skipping Wednesday produces ``gap_days_count=1``."""
-        # Skip 2025-01-08 (Wed).
-        days = [date(2025, 1, d) for d in (6, 7, 9, 10)]
-        await _seed_bars(
-            test_engine,
-            ticker="MSFT",
-            days=days,
-            created_at=datetime(2025, 1, 10, tzinfo=UTC),
-        )
-
-        response = client.get(
-            "/api/v1/admin/data-coverage",
-            headers=admin_headers,
-        )
-        body = response.json()
-        row = next(r for r in body["tickers"] if r["ticker"] == "MSFT")
-        assert row["gap_days_count"] == 1
+        assert row["target_epoch"] == pinned_epoch
 
     async def test_intraday_bars_ignored(
         self,
         client: TestClient,
         admin_headers: dict[str, str],
         test_engine: AsyncEngine,
+        pinned_epoch: str,
     ) -> None:
         """Only ``1day`` interval rows count; intraday is invisible."""
-        # Seed only intraday rows for a ticker.
         await _seed_watchlist(test_engine, ticker="MSFT")
         await _seed_bars(
             test_engine,
@@ -266,8 +308,9 @@ class TestGetWithSeededData:
         client: TestClient,
         admin_headers: dict[str, str],
         test_engine: AsyncEngine,
+        pinned_epoch: str,
     ) -> None:
-        """Every entry exposes the keys from the §"Layer 4 Endpoint" spec."""
+        """Every entry exposes the full key set from Task #215."""
         await _seed_watchlist(test_engine, ticker="AAPL")
         await _seed_bars(
             test_engine,
@@ -288,8 +331,41 @@ class TestGetWithSeededData:
                 "coverage_end",
                 "last_refresh",
                 "gap_days_count",
+                "target_epoch",
                 "is_active",
+                "backfill_status",
             }
+
+    async def test_backfill_status_pending_surfaces(
+        self,
+        client: TestClient,
+        admin_headers: dict[str, str],
+        test_engine: AsyncEngine,
+        pinned_epoch: str,
+    ) -> None:
+        """A PENDING task on a ticker shows up in the response payload."""
+        await _seed_watchlist(test_engine, ticker="AAPL")
+        await _seed_backfill_task(
+            test_engine,
+            ticker="AAPL",
+            status=BackfillTaskStatus.PENDING,
+            start_date=date(2015, 1, 1),
+            end_date=datetime.now(UTC).date(),
+            created_at=datetime.now(UTC) - timedelta(minutes=2),
+        )
+
+        response = client.get(
+            "/api/v1/admin/data-coverage",
+            headers=admin_headers,
+        )
+        body = response.json()
+        row = next(r for r in body["tickers"] if r["ticker"] == "AAPL")
+        assert row["backfill_status"] is not None
+        assert row["backfill_status"]["status"] == "pending"
+        assert row["backfill_status"]["error_message"] is None
+        # task_id and enqueued_at are both present strings.
+        assert isinstance(row["backfill_status"]["task_id"], str)
+        assert isinstance(row["backfill_status"]["enqueued_at"], str)
 
 
 # =============================================================================
@@ -300,14 +376,12 @@ class TestGetWithSeededData:
 class TestBackfillAuthGating:
     """``POST /admin/data-coverage/backfill`` auth gating."""
 
-    def test_unauthenticated_rejects(self, client: TestClient) -> None:
+    def test_unauthenticated_rejects(
+        self, client: TestClient, pinned_epoch: str
+    ) -> None:
         response = client.post(
             "/api/v1/admin/data-coverage/backfill",
-            json={
-                "ticker": "AAPL",
-                "start_date": "2025-01-06",
-                "end_date": "2025-01-10",
-            },
+            json={"ticker": "AAPL"},
         )
         assert response.status_code in (401, 403)
 
@@ -315,93 +389,68 @@ class TestBackfillAuthGating:
         self,
         client: TestClient,
         non_admin_headers: dict[str, str],
+        pinned_epoch: str,
     ) -> None:
         response = client.post(
             "/api/v1/admin/data-coverage/backfill",
             headers=non_admin_headers,
-            json={
-                "ticker": "AAPL",
-                "start_date": "2025-01-06",
-                "end_date": "2025-01-10",
-            },
+            json={"ticker": "AAPL"},
         )
         assert response.status_code == 403
 
 
 @pytest.mark.asyncio
 class TestBackfillHappyPath:
-    """``POST /admin/data-coverage/backfill`` creates a task."""
+    """POST creates a task over the canonical ``[epoch, today]`` range."""
 
-    async def test_creates_task_returns_201(
+    async def test_creates_task_over_epoch_today_range(
         self,
         client: TestClient,
         admin_headers: dict[str, str],
         test_engine: AsyncEngine,
+        pinned_epoch: str,
     ) -> None:
+        """The handler computes ``[epoch, today]`` from env + clock."""
         response = client.post(
             "/api/v1/admin/data-coverage/backfill",
             headers=admin_headers,
-            json={
-                "ticker": "AAPL",
-                "start_date": "2025-01-06",
-                "end_date": "2025-01-10",
-                "priority": "high",
-            },
+            json={"ticker": "AAPL"},
         )
         assert response.status_code == 201, response.text
         body = response.json()
         assert "task_id" in body
         assert body["status"] == "pending"
         assert body["existing"] is False
+        assert body["start_date"] == pinned_epoch
+        # end_date is today UTC; compare on string form.
+        assert body["end_date"] == datetime.now(UTC).date().isoformat()
 
-        # Confirm the row landed in the DB.
+        # Confirm the row landed in the DB with the expected range.
         persisted = await _fetch_backfill_task(test_engine, body["task_id"])
         assert persisted is not None
         assert persisted.ticker == "AAPL"
-        assert persisted.start_date == date(2025, 1, 6)
-        assert persisted.end_date == date(2025, 1, 10)
+        assert persisted.start_date == date.fromisoformat(pinned_epoch)
+        assert persisted.end_date == datetime.now(UTC).date()
         assert persisted.status == BackfillTaskStatus.PENDING.value
-
-    async def test_default_priority_is_high(
-        self,
-        client: TestClient,
-        admin_headers: dict[str, str],
-        test_engine: AsyncEngine,
-    ) -> None:
-        """The ``priority`` field defaults to ``high`` for admin backfills."""
-        response = client.post(
-            "/api/v1/admin/data-coverage/backfill",
-            headers=admin_headers,
-            json={
-                "ticker": "AAPL",
-                "start_date": "2025-01-06",
-                "end_date": "2025-01-10",
-            },
-        )
-        body = response.json()
-        persisted = await _fetch_backfill_task(test_engine, body["task_id"])
-        assert persisted is not None
+        # Default priority is HIGH for operator-driven catch-ups.
         assert persisted.priority == "high"
 
 
 @pytest.mark.asyncio
 class TestBackfillIdempotency:
-    """Same ``(ticker, start_date, end_date)`` returns the existing task."""
+    """Idempotent on ``(ticker, epoch, today)``."""
 
-    async def test_duplicate_returns_existing(
+    async def test_second_call_dedupes(
         self,
         client: TestClient,
         admin_headers: dict[str, str],
         test_engine: AsyncEngine,
+        pinned_epoch: str,
     ) -> None:
         first = client.post(
             "/api/v1/admin/data-coverage/backfill",
             headers=admin_headers,
-            json={
-                "ticker": "AAPL",
-                "start_date": "2025-01-06",
-                "end_date": "2025-01-10",
-            },
+            json={"ticker": "AAPL"},
         )
         assert first.status_code == 201
         first_id = first.json()["task_id"]
@@ -409,47 +458,13 @@ class TestBackfillIdempotency:
         second = client.post(
             "/api/v1/admin/data-coverage/backfill",
             headers=admin_headers,
-            json={
-                "ticker": "AAPL",
-                "start_date": "2025-01-06",
-                "end_date": "2025-01-10",
-            },
+            json={"ticker": "AAPL"},
         )
         assert second.status_code == 201
         body = second.json()
         assert body["task_id"] == first_id
         assert body["existing"] is True
         assert body["status"] == "pending"
-
-    async def test_different_ranges_create_distinct_tasks(
-        self,
-        client: TestClient,
-        admin_headers: dict[str, str],
-        test_engine: AsyncEngine,
-    ) -> None:
-        first = client.post(
-            "/api/v1/admin/data-coverage/backfill",
-            headers=admin_headers,
-            json={
-                "ticker": "AAPL",
-                "start_date": "2025-01-06",
-                "end_date": "2025-01-10",
-            },
-        )
-        second = client.post(
-            "/api/v1/admin/data-coverage/backfill",
-            headers=admin_headers,
-            json={
-                "ticker": "AAPL",
-                # Different end_date → distinct task.
-                "start_date": "2025-01-06",
-                "end_date": "2025-01-15",
-            },
-        )
-        assert first.status_code == 201
-        assert second.status_code == 201
-        assert first.json()["task_id"] != second.json()["task_id"]
-        assert second.json()["existing"] is False
 
 
 @pytest.mark.asyncio
@@ -460,49 +475,94 @@ class TestBackfillValidation:
         self,
         client: TestClient,
         admin_headers: dict[str, str],
+        pinned_epoch: str,
     ) -> None:
         """Lowercase / overly-long ticker → 400 InvalidTicker."""
         response = client.post(
             "/api/v1/admin/data-coverage/backfill",
             headers=admin_headers,
+            json={"ticker": "TOOLONGSYMBOL"},
+        )
+        assert response.status_code == 400
+
+    async def test_rejects_legacy_body_with_start_date(
+        self,
+        client: TestClient,
+        admin_headers: dict[str, str],
+        pinned_epoch: str,
+    ) -> None:
+        """Task #215: bodies with ``start_date`` / ``end_date`` are rejected."""
+        response = client.post(
+            "/api/v1/admin/data-coverage/backfill",
+            headers=admin_headers,
             json={
-                "ticker": "TOOLONGSYMBOL",
+                "ticker": "AAPL",
                 "start_date": "2025-01-06",
                 "end_date": "2025-01-10",
             },
         )
-        assert response.status_code == 400
+        assert response.status_code == 422
 
-    async def test_end_before_start_returns_422(
+    async def test_rejects_legacy_body_with_priority(
         self,
         client: TestClient,
         admin_headers: dict[str, str],
+        pinned_epoch: str,
     ) -> None:
-        """``end_date < start_date`` is rejected by the domain invariant."""
+        """Task #215: priority is server-set; rejecting client overrides too."""
         response = client.post(
             "/api/v1/admin/data-coverage/backfill",
             headers=admin_headers,
-            json={
-                "ticker": "AAPL",
-                "start_date": "2025-01-10",
-                "end_date": "2025-01-06",
-            },
+            json={"ticker": "AAPL", "priority": "low"},
         )
         assert response.status_code == 422
 
-    async def test_invalid_date_format_returns_422(
+
+@pytest.mark.asyncio
+class TestHistoryEpochEnv:
+    """``ZEBU_HISTORY_EPOCH`` env override is honoured."""
+
+    async def test_custom_epoch_drives_backfill_range(
         self,
         client: TestClient,
         admin_headers: dict[str, str],
+        test_engine: AsyncEngine,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """Pydantic rejects non-ISO date strings."""
+        """Setting the env to a non-default value flows through to the task row."""
+        monkeypatch.setenv("ZEBU_HISTORY_EPOCH", "2020-06-15")
         response = client.post(
             "/api/v1/admin/data-coverage/backfill",
             headers=admin_headers,
-            json={
-                "ticker": "AAPL",
-                "start_date": "not-a-date",
-                "end_date": "2025-01-10",
-            },
+            json={"ticker": "AAPL"},
         )
-        assert response.status_code == 422
+        assert response.status_code == 201, response.text
+        body = response.json()
+        assert body["start_date"] == "2020-06-15"
+
+        persisted = await _fetch_backfill_task(test_engine, body["task_id"])
+        assert persisted is not None
+        assert persisted.start_date == date(2020, 6, 15)
+
+    async def test_invalid_epoch_raises_runtime_error(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Garbage in ``ZEBU_HISTORY_EPOCH`` is rejected at config-read time.
+
+        FastAPI's exception handler chain translates the ``RuntimeError``
+        into a 500 response in real deployments — the TestClient
+        propagates the original exception rather than masking it as 500,
+        so we assert against the dependency function directly. This
+        keeps the misconfiguration loud (no silent fallback) and the
+        test fast.
+        """
+        from zebu.adapters.inbound.api.dependencies import get_history_epoch
+
+        monkeypatch.setenv("ZEBU_HISTORY_EPOCH", "not-a-date")
+        try:
+            get_history_epoch()
+        except RuntimeError as exc:
+            assert "ZEBU_HISTORY_EPOCH" in str(exc)
+        else:
+            raise AssertionError("Expected RuntimeError for invalid epoch")

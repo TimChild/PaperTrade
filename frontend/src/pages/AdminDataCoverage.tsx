@@ -1,26 +1,28 @@
 /**
- * Admin data-coverage page (Phase J / Task #212 Layer 4).
+ * Admin data-coverage page (Phase J / Task #212 Layer 4 + Task #215).
  *
- * Operator view of per-ticker price-history coverage. Surface goals:
+ * Operator view of per-ticker price-history coverage.
  *
- * - "Healthy" tickers — coverage is current and contiguous — should
- *   visually fade so the operator's eye lands on what's broken.
- * - "Stale" tickers — last_refresh > 48h — and "Gaps" tickers —
+ * Task #215 rework: no date-range picker. The operator presses a single
+ * "Catch up" button per ticker; the backend fills `[ZEBU_HISTORY_EPOCH,
+ * today]` and the page surfaces real `BackfillTask` state (pending /
+ * running / succeeded / failed) so the operator sees progress on the
+ * next 30 s poll.
+ *
+ * Surface goals:
+ *
+ * - "Healthy" tickers — coverage current and contiguous — fade so the
+ *   operator's eye lands on what's broken.
+ * - "Stale" tickers — last_refresh > 48 h — and "Gaps" tickers —
  *   gap_days_count > 0 — pop with the editorial amber and loss tones.
- * - One-click backfill action per row opens a date-range modal; the
- *   modal POSTs and the underlying query re-fetches via mutation
- *   invalidation. Pollwise the query refetches every 30 seconds.
+ * - Active backfill tasks for a ticker show a "Queued" / "Catching up…"
+ *   / "Caught up" / "Failed" pill driven by the backend's
+ *   `backfill_status`. The Catch-up button disables while the task is
+ *   non-terminal.
  *
- * Status pill rules (per §"Layer 4 — UI"):
- *
- * - `gap_days_count > 0`              → Gaps (loss)
- * - else if last_refresh older than 48h → Stale (amber)
- * - else                                → Healthy (subtle)
- *
- * The operator can backfill any ticker, including healthy ones (no
- * client-side gating) — the backend de-dupes on (ticker, start, end).
+ * The Catch-up button is idempotent server-side — if the operator
+ * clicks it twice we get the existing task back.
  */
-import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { isAxiosError } from 'axios'
 import { Button } from '@/components/ui/button'
@@ -33,34 +35,95 @@ import {
   DataTableBody,
   DataTableHead,
 } from '@/components/ui/DataRow'
-import { Dialog } from '@/components/ui/Dialog'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Eyebrow } from '@/components/ui/Eyebrow'
-import { Input } from '@/components/ui/input'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import {
   DATA_COVERAGE_POLL_INTERVAL_MS,
   useBackfillTicker,
   useDataCoverage,
 } from '@/hooks/useDataCoverage'
-import type { TickerCoverageEntry } from '@/services/api/types'
+import type {
+  BackfillTaskStatus,
+  TickerCoverageEntry,
+} from '@/services/api/types'
 import { formatRelativeTime } from '@/utils/formatters'
 
 /** Threshold (ms) above which a ticker's last_refresh is considered "Stale". */
 const STALE_THRESHOLD_MS = 48 * 60 * 60 * 1000
 
-/** Status pill discriminator. Computed in one place so the table + pill agree. */
-type CoverageStatus = 'healthy' | 'stale' | 'gaps' | 'no-data'
+/**
+ * Status pill discriminator. Backfill states take precedence over the
+ * derived coverage state (healthy/stale/gaps/no-data) so the operator
+ * always sees the most-current signal.
+ */
+type CoverageStatus =
+  | 'healthy'
+  | 'stale'
+  | 'gaps'
+  | 'no-data'
+  | 'queued'
+  | 'catching-up'
+  | 'caught-up'
+  | 'failed'
 
 interface CoverageStatusInfo {
   status: CoverageStatus
   label: string
+  /** Used as a hover-tooltip when the backfill failed. */
+  detail?: string
+}
+
+const STATUS_PILL_CLASSES: Record<CoverageStatus, string> = {
+  healthy:
+    'inline-flex items-center bg-canvas-raised/60 text-ink-muted px-2 py-1 rounded-editorial font-eyebrow',
+  stale:
+    'inline-flex items-center bg-amber-soft text-amber px-2 py-1 rounded-editorial font-eyebrow',
+  gaps: 'inline-flex items-center bg-loss-soft text-loss px-2 py-1 rounded-editorial font-eyebrow',
+  'no-data':
+    'inline-flex items-center bg-canvas-sunken text-ink-subtle px-2 py-1 rounded-editorial font-eyebrow',
+  queued:
+    'inline-flex items-center bg-amber-soft/70 text-amber px-2 py-1 rounded-editorial font-eyebrow',
+  'catching-up':
+    'inline-flex items-center bg-amber-soft text-amber px-2 py-1 rounded-editorial font-eyebrow animate-pulse',
+  'caught-up':
+    'inline-flex items-center bg-gain-soft text-gain px-2 py-1 rounded-editorial font-eyebrow',
+  failed:
+    'inline-flex items-center bg-loss-soft text-loss px-2 py-1 rounded-editorial font-eyebrow',
+}
+
+function backfillStatusToCoverageStatus(
+  status: BackfillTaskStatus,
+  errorMessage: string | null
+): CoverageStatusInfo {
+  switch (status) {
+    case 'pending':
+      return { status: 'queued', label: 'Queued' }
+    case 'running':
+      return { status: 'catching-up', label: 'Catching up…' }
+    case 'succeeded':
+      return { status: 'caught-up', label: 'Caught up' }
+    case 'failed':
+      return {
+        status: 'failed',
+        label: 'Failed',
+        detail: errorMessage ?? undefined,
+      }
+  }
 }
 
 function computeStatus(
   entry: TickerCoverageEntry,
   now: Date
 ): CoverageStatusInfo {
+  // Backfill task state takes priority — if there's an active or recent
+  // task, surface that instead of the steady-state pill.
+  if (entry.backfill_status !== null) {
+    return backfillStatusToCoverageStatus(
+      entry.backfill_status.status,
+      entry.backfill_status.error_message
+    )
+  }
   if (entry.coverage_start === null || entry.last_refresh === null) {
     return { status: 'no-data', label: 'No data' }
   }
@@ -74,24 +137,53 @@ function computeStatus(
   return { status: 'healthy', label: 'Healthy' }
 }
 
-const STATUS_PILL_CLASSES: Record<CoverageStatus, string> = {
-  healthy:
-    'inline-flex items-center bg-canvas-raised/60 text-ink-muted px-2 py-1 rounded-editorial font-eyebrow',
-  stale:
-    'inline-flex items-center bg-amber-soft text-amber px-2 py-1 rounded-editorial font-eyebrow',
-  gaps: 'inline-flex items-center bg-loss-soft text-loss px-2 py-1 rounded-editorial font-eyebrow',
-  'no-data':
-    'inline-flex items-center bg-canvas-sunken text-ink-subtle px-2 py-1 rounded-editorial font-eyebrow',
+function isBackfillInFlight(entry: TickerCoverageEntry): boolean {
+  return (
+    entry.backfill_status !== null &&
+    (entry.backfill_status.status === 'pending' ||
+      entry.backfill_status.status === 'running')
+  )
 }
 
 export function AdminDataCoverage(): React.JSX.Element {
   const { data, isLoading, error } = useDataCoverage()
-  const [activeTicker, setActiveTicker] = useState<TickerCoverageEntry | null>(
-    null
-  )
+  const backfill = useBackfillTicker()
   const now = new Date()
 
   const rows = data?.tickers ?? []
+  // Every row carries the same target_epoch — read it from the first row
+  // for the header, fall back to a placeholder when the table is empty.
+  const targetEpoch = rows.length > 0 ? rows[0].target_epoch : null
+
+  const handleCatchUp = (entry: TickerCoverageEntry): void => {
+    backfill.mutate(
+      { ticker: entry.ticker },
+      {
+        onSuccess: (response) => {
+          if (response.existing) {
+            toast.success(
+              `Catch-up already in progress for ${entry.ticker} — using existing task.`
+            )
+          } else {
+            toast.success(
+              `Catching ${entry.ticker} up to ${response.end_date}.`
+            )
+          }
+        },
+        onError: (err: Error) => {
+          if (isAxiosError(err) && err.response?.status === 403) {
+            toast.error('Admin privileges required.')
+            return
+          }
+          const message =
+            isAxiosError(err) && err.response?.data?.detail
+              ? String(err.response.data.detail)
+              : 'Failed to enqueue catch-up.'
+          toast.error(message)
+        },
+      }
+    )
+  }
 
   return (
     <div data-testid="admin-data-coverage-page">
@@ -105,6 +197,14 @@ export function AdminDataCoverage(): React.JSX.Element {
           {Math.round(DATA_COVERAGE_POLL_INTERVAL_MS / 1000)} seconds while this
           page is open.
         </Caption>
+        {targetEpoch !== null && (
+          <Caption
+            className="mt-1 block text-ink-subtle"
+            data-testid="admin-data-coverage-target-epoch"
+          >
+            Target epoch: <span className="font-tabular">{targetEpoch}</span>
+          </Caption>
+        )}
       </header>
 
       {isLoading && !data && (
@@ -157,6 +257,7 @@ export function AdminDataCoverage(): React.JSX.Element {
           <DataTableBody>
             {rows.map((row) => {
               const status = computeStatus(row, now)
+              const inFlight = isBackfillInFlight(row)
               return (
                 <DataRow key={row.ticker} testId={`coverage-row-${row.ticker}`}>
                   <DataCell
@@ -201,6 +302,7 @@ export function AdminDataCoverage(): React.JSX.Element {
                       className={STATUS_PILL_CLASSES[status.status]}
                       data-testid={`coverage-status-${row.ticker}`}
                       data-status={status.status}
+                      title={status.detail}
                     >
                       {status.label}
                     </span>
@@ -209,10 +311,11 @@ export function AdminDataCoverage(): React.JSX.Element {
                     <Button
                       size="sm"
                       variant="secondary"
-                      onClick={() => setActiveTicker(row)}
-                      data-testid={`coverage-backfill-btn-${row.ticker}`}
+                      onClick={() => handleCatchUp(row)}
+                      disabled={inFlight || backfill.isPending}
+                      data-testid={`coverage-catch-up-btn-${row.ticker}`}
                     >
-                      Backfill
+                      {inFlight ? 'Catching up…' : 'Catch up'}
                     </Button>
                   </DataCell>
                 </DataRow>
@@ -221,185 +324,6 @@ export function AdminDataCoverage(): React.JSX.Element {
           </DataTableBody>
         </DataTable>
       )}
-
-      <BackfillDialog
-        entry={activeTicker}
-        onClose={() => setActiveTicker(null)}
-      />
     </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Backfill dialog
-// ---------------------------------------------------------------------------
-
-interface BackfillDialogProps {
-  entry: TickerCoverageEntry | null
-  onClose: () => void
-}
-
-/**
- * Determine the date-input defaults for the backfill modal.
- *
- * - Tickers with existing coverage: prefill `[coverage_end, today]` so
- *   the operator is targeting "catch up to today" by default.
- * - Tickers with no coverage: prefill the trailing 30-day window.
- */
-function defaultRangeFor(entry: TickerCoverageEntry): {
-  start: string
-  end: string
-} {
-  const today = new Date().toISOString().slice(0, 10)
-  if (entry.coverage_end) {
-    return { start: entry.coverage_end, end: today }
-  }
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 10)
-  return { start: thirtyDaysAgo, end: today }
-}
-
-function BackfillDialog({
-  entry,
-  onClose,
-}: BackfillDialogProps): React.JSX.Element {
-  // The dialog stays mounted while closed (`Dialog` requires it for native
-  // close + focus-trap mechanics); render an empty form when entry is null
-  // to keep the hook tree stable.
-  const fallbackKey = 'no-ticker'
-  const dialogKey = entry?.ticker ?? fallbackKey
-
-  return (
-    <Dialog
-      isOpen={entry !== null}
-      onClose={onClose}
-      eyebrow="Backfill"
-      title={entry ? `Backfill ${entry.ticker}` : ''}
-      className="w-full max-w-md"
-    >
-      {entry && (
-        <BackfillForm
-          key={dialogKey /* remount on ticker change → fresh defaults */}
-          entry={entry}
-          onClose={onClose}
-        />
-      )}
-    </Dialog>
-  )
-}
-
-interface BackfillFormProps {
-  entry: TickerCoverageEntry
-  onClose: () => void
-}
-
-function BackfillForm({
-  entry,
-  onClose,
-}: BackfillFormProps): React.JSX.Element {
-  const defaults = defaultRangeFor(entry)
-  const [startDate, setStartDate] = useState<string>(defaults.start)
-  const [endDate, setEndDate] = useState<string>(defaults.end)
-  const backfill = useBackfillTicker()
-
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>): void => {
-    event.preventDefault()
-    if (!startDate || !endDate) {
-      toast.error('Both start and end dates are required.')
-      return
-    }
-    if (endDate < startDate) {
-      toast.error('End date must be on or after the start date.')
-      return
-    }
-    backfill.mutate(
-      {
-        ticker: entry.ticker,
-        start_date: startDate,
-        end_date: endDate,
-      },
-      {
-        onSuccess: (response) => {
-          if (response.existing) {
-            toast.success(
-              `Backfill already queued for ${entry.ticker} — using existing task.`
-            )
-          } else {
-            toast.success(`Backfill queued for ${entry.ticker}.`)
-          }
-          onClose()
-        },
-        onError: (err: Error) => {
-          if (isAxiosError(err) && err.response?.status === 403) {
-            toast.error('Admin privileges required.')
-            return
-          }
-          const message =
-            isAxiosError(err) && err.response?.data?.detail
-              ? String(err.response.data.detail)
-              : 'Failed to queue backfill.'
-          toast.error(message)
-        },
-      }
-    )
-  }
-
-  return (
-    <form
-      onSubmit={handleSubmit}
-      data-testid="backfill-form"
-      className="space-y-5"
-    >
-      <p className="text-body-sm text-ink-muted">
-        Operator-driven backfill takes priority over scheduled refreshes.
-        Idempotent — if a task is already running for this range nothing new is
-        enqueued.
-      </p>
-      <div className="grid grid-cols-2 gap-4">
-        <label className="block">
-          <span className="block font-eyebrow text-ink-muted mb-1.5">
-            Start date
-          </span>
-          <Input
-            type="date"
-            value={startDate}
-            onChange={(event) => setStartDate(event.target.value)}
-            data-testid="backfill-start-date"
-            required
-          />
-        </label>
-        <label className="block">
-          <span className="block font-eyebrow text-ink-muted mb-1.5">
-            End date
-          </span>
-          <Input
-            type="date"
-            value={endDate}
-            onChange={(event) => setEndDate(event.target.value)}
-            data-testid="backfill-end-date"
-            required
-          />
-        </label>
-      </div>
-      <div className="flex justify-end gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onClose}
-          data-testid="backfill-cancel-btn"
-        >
-          Cancel
-        </Button>
-        <Button
-          type="submit"
-          variant="default"
-          disabled={backfill.isPending}
-          data-testid="backfill-submit-btn"
-        >
-          {backfill.isPending ? 'Queueing…' : 'Queue backfill'}
-        </Button>
-      </div>
-    </form>
   )
 }

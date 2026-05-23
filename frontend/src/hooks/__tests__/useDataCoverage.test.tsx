@@ -1,5 +1,6 @@
 /**
- * Tests for `useDataCoverage` + `useBackfillTicker` (Phase J / Task #212 L4).
+ * Tests for `useDataCoverage` + `useBackfillTicker`
+ * (Phase J / Task #212 L4 + Task #215).
  *
  * Mocks at the API-client boundary (`@/services/api/admin`) so we exercise
  * the real query/mutation wiring — query keys, refetch interval,
@@ -35,7 +36,9 @@ const mockResponse: DataCoverageResponse = {
       coverage_end: '2025-01-10',
       last_refresh: '2025-01-10T00:00:00Z',
       gap_days_count: 0,
+      target_epoch: '2015-01-01',
       is_active: true,
+      backfill_status: null,
     },
   ],
 }
@@ -101,13 +104,16 @@ describe('useBackfillTicker', () => {
     vi.clearAllMocks()
   })
 
-  it('calls dataCoverageApi.backfill with the request body', async () => {
-    const response: BackfillResponse = {
-      task_id: '00000000-0000-0000-0000-00000000abcd',
-      status: 'pending',
-      existing: false,
-    }
-    vi.mocked(dataCoverageApi.backfill).mockResolvedValue(response)
+  const baseResponse: BackfillResponse = {
+    task_id: '00000000-0000-0000-0000-00000000abcd',
+    status: 'pending',
+    existing: false,
+    start_date: '2015-01-01',
+    end_date: '2025-01-10',
+  }
+
+  it('calls dataCoverageApi.backfill with the ticker-only payload', async () => {
+    vi.mocked(dataCoverageApi.backfill).mockResolvedValue(baseResponse)
     const { Wrapper } = createWrapper()
 
     const { result } = renderHook(() => useBackfillTicker(), {
@@ -116,28 +122,15 @@ describe('useBackfillTicker', () => {
 
     let mutationResult: BackfillResponse | undefined
     await act(async () => {
-      mutationResult = await result.current.mutateAsync({
-        ticker: 'AAPL',
-        start_date: '2025-01-06',
-        end_date: '2025-01-10',
-      })
+      mutationResult = await result.current.mutateAsync({ ticker: 'AAPL' })
     })
 
-    expect(dataCoverageApi.backfill).toHaveBeenCalledWith({
-      ticker: 'AAPL',
-      start_date: '2025-01-06',
-      end_date: '2025-01-10',
-    })
-    expect(mutationResult).toEqual(response)
+    expect(dataCoverageApi.backfill).toHaveBeenCalledWith({ ticker: 'AAPL' })
+    expect(mutationResult).toEqual(baseResponse)
   })
 
   it('invalidates the data-coverage query on success', async () => {
-    const response: BackfillResponse = {
-      task_id: '00000000-0000-0000-0000-00000000abcd',
-      status: 'pending',
-      existing: false,
-    }
-    vi.mocked(dataCoverageApi.backfill).mockResolvedValue(response)
+    vi.mocked(dataCoverageApi.backfill).mockResolvedValue(baseResponse)
     const { Wrapper, client } = createWrapper()
     const invalidateSpy = vi.spyOn(client, 'invalidateQueries')
 
@@ -146,11 +139,7 @@ describe('useBackfillTicker', () => {
     })
 
     await act(async () => {
-      await result.current.mutateAsync({
-        ticker: 'AAPL',
-        start_date: '2025-01-06',
-        end_date: '2025-01-10',
-      })
+      await result.current.mutateAsync({ ticker: 'AAPL' })
     })
 
     expect(invalidateSpy).toHaveBeenCalledWith({
@@ -163,6 +152,8 @@ describe('useBackfillTicker', () => {
       task_id: '00000000-0000-0000-0000-00000000abcd',
       status: 'running',
       existing: true,
+      start_date: '2015-01-01',
+      end_date: '2025-01-10',
     }
     vi.mocked(dataCoverageApi.backfill).mockResolvedValue(response)
     const { Wrapper } = createWrapper()
@@ -172,13 +163,24 @@ describe('useBackfillTicker', () => {
     })
 
     await act(async () => {
-      const r = await result.current.mutateAsync({
-        ticker: 'AAPL',
-        start_date: '2025-01-06',
-        end_date: '2025-01-10',
-      })
+      const r = await result.current.mutateAsync({ ticker: 'AAPL' })
       expect(r.existing).toBe(true)
       expect(r.status).toBe('running')
+    })
+  })
+
+  it('exposes the resolved date range on the response', async () => {
+    vi.mocked(dataCoverageApi.backfill).mockResolvedValue(baseResponse)
+    const { Wrapper } = createWrapper()
+
+    const { result } = renderHook(() => useBackfillTicker(), {
+      wrapper: Wrapper,
+    })
+
+    await act(async () => {
+      const r = await result.current.mutateAsync({ ticker: 'AAPL' })
+      expect(r.start_date).toBe('2015-01-01')
+      expect(r.end_date).toBe('2025-01-10')
     })
   })
 })

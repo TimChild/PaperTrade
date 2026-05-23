@@ -35,11 +35,16 @@ export const dataCoverageApi = {
   },
 
   /**
-   * Enqueue a backfill task for `ticker` over `[start_date, end_date]`.
+   * Enqueue a "catch up" backfill task for `ticker`. The backend
+   * computes the date range from `ZEBU_HISTORY_EPOCH` and today's UTC
+   * date — Task #215 removed the operator-tunable window because
+   * Alpha Vantage's daily endpoint is binary (compact vs full) so
+   * picking dates had no actual effect on cost or returned data.
    *
-   * Idempotent on `(ticker, start_date, end_date)`: if a non-terminal
-   * task already exists for the same window, the response's `existing`
-   * flag will be true and `task_id` will reference that existing task.
+   * Idempotent on `(ticker, ZEBU_HISTORY_EPOCH, today)`: if a
+   * non-terminal task already exists for the same window, the
+   * response's `existing` flag will be true and `task_id` will
+   * reference that existing task.
    */
   backfill: async (body: BackfillRequest): Promise<BackfillResponse> => {
     const response = await apiClient.post<BackfillResponse>(

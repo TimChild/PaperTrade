@@ -834,7 +834,7 @@ export interface DisableAllResponse {
 }
 
 // ---------------------------------------------------------------------------
-// Admin: data-coverage (Phase J — Task #212 Layer 4)
+// Admin: data-coverage (Phase J — Task #212 Layer 4 / Task #215)
 //
 // Mirrors `TickerCoverageEntry` / `DataCoverageResponse` /
 // `BackfillRequest` / `BackfillResponse` in
@@ -847,6 +847,20 @@ export type BackfillPriority = 'low' | 'high'
 /** Status of a BackfillTask row; mirrors BackfillTaskStatus. */
 export type BackfillTaskStatus = 'pending' | 'running' | 'succeeded' | 'failed'
 
+/**
+ * Most-recent surfaceable backfill task for a ticker, as returned by the
+ * data-coverage endpoint. `null` on the parent entry when no recent task
+ * exists (i.e. the ticker is in steady state).
+ */
+export interface BackfillStatusInfo {
+  task_id: string
+  status: BackfillTaskStatus
+  /** ISO 8601 UTC timestamp. */
+  enqueued_at: string
+  /** Populated only when `status === 'failed'`. */
+  error_message: string | null
+}
+
 /** Per-ticker data-coverage entry returned by GET /admin/data-coverage. */
 export interface TickerCoverageEntry {
   ticker: string
@@ -856,9 +870,22 @@ export interface TickerCoverageEntry {
   coverage_end: string | null
   /** ISO 8601 UTC timestamp; null when zero daily bars. */
   last_refresh: string | null
-  /** Trading-day count inside [coverage_start, coverage_end] with no bar. */
+  /**
+   * Trading-day count inside `[target_epoch, today_utc()]` with no bar.
+   * Moves to 0 once a successful catch-up backfill has landed every
+   * expected trading day.
+   */
   gap_days_count: number
+  /** ISO 8601 date of the configured `ZEBU_HISTORY_EPOCH`. */
+  target_epoch: string
   is_active: boolean
+  /**
+   * Most-recent backfill task for this ticker, or `null` when no recent
+   * task exists. Non-terminal tasks (pending/running) are always
+   * surfaced; succeeded tasks surface only for ~60s after completion;
+   * failed tasks surface for ~24h so the operator can act.
+   */
+  backfill_status: BackfillStatusInfo | null
 }
 
 /** Response body of GET /admin/data-coverage. */
@@ -866,20 +893,25 @@ export interface DataCoverageResponse {
   tickers: TickerCoverageEntry[]
 }
 
-/** Request body of POST /admin/data-coverage/backfill. */
+/**
+ * Request body of POST /admin/data-coverage/backfill.
+ *
+ * Task #215: the body carries only the ticker — the backend computes the
+ * `[ZEBU_HISTORY_EPOCH, today]` range. Bodies with `start_date` /
+ * `end_date` / `priority` are rejected with 422.
+ */
 export interface BackfillRequest {
   ticker: string
-  /** YYYY-MM-DD. */
-  start_date: string
-  /** YYYY-MM-DD. */
-  end_date: string
-  priority?: BackfillPriority
 }
 
 /** Response body of POST /admin/data-coverage/backfill. */
 export interface BackfillResponse {
   task_id: string
   status: BackfillTaskStatus
-  /** True when the endpoint deduped on (ticker, start, end). */
+  /** True when the endpoint deduped on (ticker, epoch, today). */
   existing: boolean
+  /** Resolved start of the canonical catch-up range (`ZEBU_HISTORY_EPOCH`). */
+  start_date: string
+  /** Resolved end of the canonical catch-up range (today, UTC). */
+  end_date: string
 }

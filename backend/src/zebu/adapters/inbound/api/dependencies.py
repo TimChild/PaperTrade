@@ -6,6 +6,7 @@ Provides factory functions for repositories and other dependencies used by API r
 import logging
 import os
 from collections.abc import Awaitable, Callable
+from datetime import date
 from typing import Annotated
 from uuid import UUID
 
@@ -100,6 +101,50 @@ def is_admin_user(user_id: str, admin_ids: frozenset[str]) -> bool:
         True if user_id is in the allowlist; False otherwise.
     """
     return user_id in admin_ids
+
+
+# Default earliest date for an operator-driven "catch up" backfill if
+# ``ZEBU_HISTORY_EPOCH`` is not set in the environment. 2015-01-01 is a
+# round, deliberately-old anchor that covers ~10 years of daily bars —
+# enough for any realistic backtest window without paying the cost of
+# fetching pre-2015 history that Alpha Vantage's free tier mostly
+# returns sparsely anyway.
+_DEFAULT_HISTORY_EPOCH: date = date(2015, 1, 1)
+
+
+def get_history_epoch() -> date:
+    """Read the ``ZEBU_HISTORY_EPOCH`` env knob.
+
+    Defines the earliest target date for an operator-driven "catch up"
+    backfill. The admin data-coverage endpoint computes
+    ``[ZEBU_HISTORY_EPOCH, today]`` as the canonical backfill range and
+    uses the same span to compute ``gap_days_count`` so the metric
+    actually moves when a backfill lands.
+
+    Env value must be a parseable ISO 8601 date (``YYYY-MM-DD``).
+    Invalid values raise ``RuntimeError`` so the misconfiguration
+    surfaces as a hard 500 on first admin coverage call rather than
+    silently falling back. The read happens at call time (not at module
+    import) so test fixtures can use ``monkeypatch.setenv`` between
+    tests.
+
+    Returns:
+        Parsed ISO date. Defaults to :data:`_DEFAULT_HISTORY_EPOCH`
+        (``2015-01-01``) if the env var is unset.
+
+    Raises:
+        RuntimeError: If ``ZEBU_HISTORY_EPOCH`` is set to a value that
+            ``date.fromisoformat`` cannot parse.
+    """
+    raw = os.getenv("ZEBU_HISTORY_EPOCH")
+    if raw is None or raw.strip() == "":
+        return _DEFAULT_HISTORY_EPOCH
+    try:
+        return date.fromisoformat(raw.strip())
+    except ValueError as exc:
+        raise RuntimeError(
+            f"ZEBU_HISTORY_EPOCH must be an ISO 8601 date (YYYY-MM-DD); got {raw!r}"
+        ) from exc
 
 
 def get_portfolio_repository(
@@ -767,3 +812,4 @@ MarketDataDep = Annotated[MarketDataPort, Depends(get_market_data)]
 BacktestRateLimiterDep = Annotated[
     InboundRateLimiterPort, Depends(get_backtest_rate_limiter)
 ]
+HistoryEpochDep = Annotated[date, Depends(get_history_epoch)]
