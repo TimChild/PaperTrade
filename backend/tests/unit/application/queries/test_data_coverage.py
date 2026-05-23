@@ -104,16 +104,25 @@ async def _add_transaction(
 
     Inserts a parent ``PortfolioModel`` row first because the
     ``transactions.portfolio_id`` FK is enforced in tests (Task #216).
+
+    Transaction ``timestamp`` is computed from the ``now`` parameter
+    (default :data:`_NOW`) so the pinned-clock used by the query
+    handler and the seeded data stay in lockstep — using
+    ``datetime.now(UTC)`` here breaks the activity-window assertions.
     """
     portfolio_id = uuid4()
-    now = datetime.now(UTC).replace(tzinfo=None)
+    # Parent rows just need a valid naive UTC timestamp — the query
+    # handler doesn't filter on these. The transaction's own
+    # ``timestamp`` (below) is what the active-window check reads.
+    parent_now = datetime.now(UTC).replace(tzinfo=None)
+    tx_now_naive = now.astimezone(UTC).replace(tzinfo=None) if now.tzinfo else now
     session.add(
         PortfolioModel(
             id=portfolio_id,
             user_id=uuid4(),
             name=f"test-{ticker}",
-            created_at=now,
-            updated_at=now,
+            created_at=parent_now,
+            updated_at=parent_now,
         )
     )
     session.add(
@@ -121,7 +130,7 @@ async def _add_transaction(
             id=uuid4(),
             portfolio_id=portfolio_id,
             transaction_type="BUY",
-            timestamp=now - timedelta(days=days_ago),
+            timestamp=tx_now_naive - timedelta(days=days_ago),
             cash_change_amount=Decimal("-100"),
             cash_change_currency="USD",
             ticker=ticker,
@@ -638,6 +647,59 @@ class TestBackfillStatus:
                 status=BackfillTaskStatus.SUCCEEDED,
                 created_at=_NOW - timedelta(hours=2),
                 finished_at=_NOW - timedelta(minutes=5),
+            )
+
+            handler = DataCoverageQueryHandler(session)
+            result = await handler.execute(_default_query())
+
+        row = next(r for r in result.tickers if r.ticker.symbol == "AAPL")
+        assert row.backfill_status is None
+
+
+class TestRecentTasksWindow:
+    """Query-scope bound: terminal tasks older than 48h are filtered out
+    of the per-ticker scan; non-terminal tasks are NOT bounded by age
+    so a stuck PENDING / RUNNING still surfaces.
+    """
+
+    async def test_stuck_pending_older_than_window_still_surfaces(
+        self, test_engine: AsyncEngine
+    ) -> None:
+        """A PENDING task created 7 days ago must still surface — the
+        operator needs to see it's stuck. The WHERE bound must NOT
+        exclude non-terminal rows by age.
+        """
+        async with AsyncSession(test_engine, expire_on_commit=False) as session:
+            await _add_watchlist(session, ticker="AAPL")
+            await _seed_backfill_task(
+                session,
+                ticker="AAPL",
+                status=BackfillTaskStatus.PENDING,
+                created_at=_NOW - timedelta(days=7),
+            )
+
+            handler = DataCoverageQueryHandler(session)
+            result = await handler.execute(_default_query())
+
+        row = next(r for r in result.tickers if r.ticker.symbol == "AAPL")
+        assert row.backfill_status is not None
+        assert row.backfill_status.status is BackfillTaskStatus.PENDING
+
+    async def test_old_terminal_task_filtered_out_at_query_scope(
+        self, test_engine: AsyncEngine
+    ) -> None:
+        """A SUCCEEDED task created 50h ago is outside the 48h scan
+        window and is filtered before the surface-window check ever
+        runs. Confirms the WHERE bound is doing real work.
+        """
+        async with AsyncSession(test_engine, expire_on_commit=False) as session:
+            await _add_watchlist(session, ticker="AAPL")
+            await _seed_backfill_task(
+                session,
+                ticker="AAPL",
+                status=BackfillTaskStatus.SUCCEEDED,
+                created_at=_NOW - timedelta(hours=50),
+                finished_at=_NOW - timedelta(hours=49),
             )
 
             handler = DataCoverageQueryHandler(session)

@@ -49,7 +49,7 @@ from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -84,6 +84,14 @@ _SUCCEEDED_SURFACE_WINDOW_SECONDS: int = 60
 # failure. 24 hours is well beyond the scheduler's retry cadence so
 # repeats won't pile up multiple visible failures.
 _FAILED_SURFACE_WINDOW_HOURS: int = 24
+
+# Pull only this many hours of terminal-task history into the
+# backfill-status query. Non-terminal tasks (PENDING / RUNNING) are
+# never excluded by this window — they're caught by a separate branch
+# of the WHERE clause so a long-stuck task still surfaces. 48 hours
+# comfortably covers the 24-hour FAILED surface window plus typical
+# gap between created_at and finished_at on a backfill task.
+_RECENT_TASKS_WINDOW_HOURS: int = 48
 
 
 @dataclass(frozen=True)
@@ -363,14 +371,22 @@ class DataCoverageQueryHandler:
     ) -> dict[str, BackfillStatusInfo]:
         """Most-recent surfaceable backfill task per ticker.
 
-        Strategy: pull every backfill task row in one shot, group by
-        ticker in Python (one ticker = one most-recent task), and apply
-        the surface-window rules:
+        Strategy: pull the most-recent-enqueue-per-ticker, group by
+        ticker in Python, and apply the surface-window rules:
 
         * Non-terminal (PENDING / RUNNING) → always surface.
         * SUCCEEDED → surface only within
           :data:`_SUCCEEDED_SURFACE_WINDOW_SECONDS` of ``finished_at``.
         * FAILED → surface for :data:`_FAILED_SURFACE_WINDOW_HOURS`.
+
+        Query scope (added Task #215 follow-up): we bound the scan with
+        a WHERE that admits either non-terminal tasks (always, so a
+        stuck PENDING / RUNNING surfaces no matter how old it is) OR
+        terminal tasks within
+        :data:`_RECENT_TASKS_WINDOW_HOURS` — anything older than that
+        couldn't surface under either window. Without this bound the
+        query is O(all task rows ever written), which bloats the
+        operator's 30s poll after a year of activity.
 
         We sort by ``created_at`` (the wire-level enqueue time) DESC
         so the first row per ticker is the most recent enqueue. We
@@ -378,8 +394,25 @@ class DataCoverageQueryHandler:
         have one — the entity carrying the latest enqueue is the one
         the operator cares about.
         """
-        stmt = select(BackfillTaskModel).order_by(
-            col(BackfillTaskModel.created_at).desc()
+        # created_at is stored naive UTC; build a matching naive cutoff.
+        cutoff_naive = (
+            now.astimezone(UTC).replace(tzinfo=None)
+            - timedelta(hours=_RECENT_TASKS_WINDOW_HOURS)
+        )
+        stmt = (
+            select(BackfillTaskModel)
+            .where(
+                or_(
+                    col(BackfillTaskModel.status).in_(
+                        [
+                            BackfillTaskStatus.PENDING.value,
+                            BackfillTaskStatus.RUNNING.value,
+                        ]
+                    ),
+                    col(BackfillTaskModel.created_at) >= cutoff_naive,
+                )
+            )
+            .order_by(col(BackfillTaskModel.created_at).desc())
         )
         result = await self._session.exec(stmt)
 

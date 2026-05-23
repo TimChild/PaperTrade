@@ -404,6 +404,59 @@ describe('AdminDataCoverage', () => {
     })
   })
 
+  it('only disables the clicked row while its catch-up mutation is in flight', async () => {
+    const user = userEvent.setup()
+
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [
+            makeEntry({ ticker: 'AAPL', backfill_status: null }),
+            makeEntry({ ticker: 'TSLA', backfill_status: null }),
+          ],
+        })
+      ),
+      // Hold the response open so the mutation stays `isPending`.
+      http.post(
+        `${API_BASE_URL}/admin/data-coverage/backfill`,
+        async () =>
+          new Promise<HttpResponse>((resolve) => {
+            setTimeout(
+              () =>
+                resolve(
+                  HttpResponse.json<BackfillResponse>(
+                    {
+                      task_id: '00000000-0000-0000-0000-00000000abcd',
+                      status: 'pending',
+                      existing: false,
+                      start_date: DEFAULT_EPOCH,
+                      end_date: '2025-01-10',
+                    },
+                    { status: 201 }
+                  )
+                ),
+              300
+            )
+          })
+      )
+    )
+
+    renderPage()
+
+    const aaplBtn = await screen.findByTestId('coverage-catch-up-btn-AAPL')
+    const tslaBtn = await screen.findByTestId('coverage-catch-up-btn-TSLA')
+
+    await user.click(aaplBtn)
+
+    // While the AAPL mutation is in flight, the AAPL button is disabled
+    // but TSLA's stays enabled (regression test for the shared-isPending
+    // bug — Task #215 follow-up).
+    await waitFor(() => {
+      expect(aaplBtn).toBeDisabled()
+    })
+    expect(tslaBtn).not.toBeDisabled()
+  })
+
   it('renders an error block when the GET returns 403', async () => {
     server.use(
       http.get(`${API_BASE_URL}/admin/data-coverage`, () =>

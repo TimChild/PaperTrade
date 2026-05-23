@@ -312,7 +312,11 @@ export function AdminDataCoverage(): React.JSX.Element {
                       size="sm"
                       variant="secondary"
                       onClick={() => handleCatchUp(row)}
-                      disabled={inFlight || backfill.isPending}
+                      disabled={
+                        inFlight ||
+                        (backfill.isPending &&
+                          backfill.variables?.ticker === row.ticker)
+                      }
                       data-testid={`coverage-catch-up-btn-${row.ticker}`}
                     >
                       {inFlight ? 'Catching up…' : 'Catch up'}
