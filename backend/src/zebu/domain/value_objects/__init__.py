@@ -3,6 +3,9 @@
 from zebu.domain.value_objects.agent_decision import AgentDecision
 from zebu.domain.value_objects.allocation import Allocation
 from zebu.domain.value_objects.api_key_scope import ApiKeyScope
+from zebu.domain.value_objects.backtest_agent_invocation_mode import (
+    BacktestAgentInvocationMode,
+)
 from zebu.domain.value_objects.backtest_status import BacktestStatus
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.performance_metrics import PerformanceMetrics
@@ -37,6 +40,7 @@ __all__ = [
     "AgentDecision",
     "Allocation",
     "ApiKeyScope",
+    "BacktestAgentInvocationMode",
     "BacktestStatus",
     "BuyAndHoldParameters",
     "ConditionParams",

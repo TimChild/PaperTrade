@@ -134,6 +134,21 @@ class InvalidTriggerFireError(InvalidEntityError):
     pass
 
 
+class InvalidBacktestAgentInvocationError(InvalidEntityError):
+    """Raised when BacktestAgentInvocation invariants are violated.
+
+    The backtest invocation row has per-mode cross-field constraints
+    (MOCK rows have empty rationale / no payload; LIVE rows must carry a
+    decision and a model identifier; ``decision_executed`` is only valid
+    for actionable LIVE decisions). Distinct from :class:`InvalidTriggerFireError`
+    so callers can differentiate "live audit row is bad" from "simulated
+    audit row is bad" — the two entities have similar shape but different
+    rules.
+    """
+
+    pass
+
+
 class AgentInvocationError(DomainException):
     """Raised when invoking an agent through :class:`AgentInvocationPort` fails.
 

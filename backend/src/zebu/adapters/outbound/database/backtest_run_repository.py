@@ -112,6 +112,15 @@ class SQLModelBacktestRunRepository:
             existing.max_drawdown_pct = backtest_run.max_drawdown_pct
             existing.annualized_return_pct = backtest_run.annualized_return_pct
             existing.total_trades = backtest_run.total_trades
+            # Phase L-1 (Task #217): the agent invocation mode is part of
+            # the entity's state, so the update path must honour it. In
+            # practice the executor stamps the same mode value through
+            # every lifecycle save (RUNNING -> COMPLETED/FAILED), but a
+            # future caller (e.g. an L-2/L-3 cost-cap downgrade that
+            # records "fell back from LIVE to MOCK after the budget hit")
+            # depends on the repository persisting whatever the entity
+            # carries — not silently keeping the original.
+            existing.agent_invocation_mode = backtest_run.agent_invocation_mode.value
             if backtest_run.completed_at is not None:
                 if backtest_run.completed_at.tzinfo:
                     from datetime import UTC

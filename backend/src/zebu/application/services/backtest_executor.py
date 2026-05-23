@@ -145,7 +145,10 @@ class BacktestExecutor:
         )
         await self._portfolio_repo.save(portfolio)
 
-        # Create the initial RUNNING BacktestRun
+        # Create the initial RUNNING BacktestRun. Phase L-1 (Task #217):
+        # stamp the agent invocation mode from the command onto the run
+        # row so downstream readers can label the run without scanning
+        # the audit table.
         backtest_run = BacktestRun(
             id=backtest_run_id,
             user_id=command.user_id,
@@ -158,6 +161,7 @@ class BacktestExecutor:
             initial_cash=initial_cash_money,
             status=BacktestStatus.RUNNING,
             created_at=now,
+            agent_invocation_mode=command.agent_invocation_mode,
         )
         # Phase H2: stamp the originating credential on the run row so the
         # activity feed can resolve the actor for backtest events. Lifecycle
@@ -199,6 +203,7 @@ class BacktestExecutor:
                 created_at=now,
                 completed_at=datetime.now(UTC),
                 error_message=str(exc),
+                agent_invocation_mode=command.agent_invocation_mode,
             )
             await self._backtest_run_repo.save(
                 failed_run, api_key_id=command.api_key_id
@@ -220,6 +225,7 @@ class BacktestExecutor:
                 created_at=now,
                 completed_at=datetime.now(UTC),
                 error_message=str(exc),
+                agent_invocation_mode=command.agent_invocation_mode,
             )
             await self._backtest_run_repo.save(
                 failed_run, api_key_id=command.api_key_id
@@ -384,6 +390,7 @@ class BacktestExecutor:
             max_drawdown_pct=metrics["max_drawdown_pct"],
             annualized_return_pct=metrics["annualized_return_pct"],
             total_trades=metrics["total_trades"],
+            agent_invocation_mode=command.agent_invocation_mode,
         )
         await self._backtest_run_repo.save(completed_run, api_key_id=command.api_key_id)
 
