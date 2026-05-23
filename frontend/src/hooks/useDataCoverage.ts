@@ -1,12 +1,15 @@
 /**
- * React Query hooks for admin data-coverage (Phase J / Task #212 Layer 4).
+ * React Query hooks for admin data-coverage
+ * (Phase J / Task #212 Layer 4 + Task #215).
  *
  * `useDataCoverage` powers the admin coverage page — polls every 30s
  * while the page is mounted (matches the §"Layer 4" spec) so the
  * operator sees backfill progress without a manual refresh.
  *
- * `useBackfillTicker` enqueues a backfill via the admin POST endpoint.
- * On success it invalidates the coverage query so the updated row
+ * `useBackfillTicker` enqueues a "catch up" backfill via the admin POST
+ * endpoint. Task #215: the payload is `{ ticker }` only — the backend
+ * fills `[ZEBU_HISTORY_EPOCH, today]`. On success it invalidates the
+ * coverage query so the updated row (including `backfill_status`)
  * surfaces within one poll interval.
  */
 import {

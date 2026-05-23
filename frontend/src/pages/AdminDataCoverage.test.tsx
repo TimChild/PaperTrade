@@ -1,16 +1,19 @@
 /**
- * Component tests for the AdminDataCoverage page (Phase J / Task #212 L4).
+ * Component tests for the AdminDataCoverage page (Phase J / Task #212 L4 + Task #215).
  *
  * Coverage:
  *
  * - Renders one row per ticker in the response.
  * - Status pill colour matches `gap_days_count` + `last_refresh` rules.
- * - Backfill button click opens the modal.
- * - Submitting the modal fires the POST mutation and closes the modal.
+ * - `backfill_status` overrides the steady-state pill (queued / catching-up /
+ *   caught-up / failed).
+ * - "Catch up" button click POSTs `{ ticker }` with no date payload.
+ * - Catch-up button is disabled while a non-terminal task is active.
+ * - Target epoch is surfaced on the page header.
  * - Empty / error states render.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -19,11 +22,13 @@ import { server } from '../../tests/setup'
 import { AdminDataCoverage } from './AdminDataCoverage'
 import type {
   BackfillResponse,
+  BackfillStatusInfo,
   DataCoverageResponse,
   TickerCoverageEntry,
 } from '@/services/api/types'
 
 const API_BASE_URL = 'http://localhost:8000/api/v1'
+const DEFAULT_EPOCH = '2015-01-01'
 
 vi.mock('react-hot-toast', () => ({
   default: {
@@ -37,11 +42,25 @@ function makeEntry(
 ): TickerCoverageEntry {
   return {
     ticker: 'AAPL',
-    coverage_start: '2025-01-06',
+    coverage_start: '2015-01-06',
     coverage_end: '2025-01-10',
     last_refresh: new Date().toISOString(),
     gap_days_count: 0,
+    target_epoch: DEFAULT_EPOCH,
     is_active: true,
+    backfill_status: null,
+    ...overrides,
+  }
+}
+
+function makeBackfillStatus(
+  overrides: Partial<BackfillStatusInfo> = {}
+): BackfillStatusInfo {
+  return {
+    task_id: '00000000-0000-0000-0000-00000000abcd',
+    status: 'pending',
+    enqueued_at: new Date().toISOString(),
+    error_message: null,
     ...overrides,
   }
 }
@@ -95,6 +114,24 @@ describe('AdminDataCoverage', () => {
     expect(
       await screen.findByTestId('admin-data-coverage-empty')
     ).toBeInTheDocument()
+  })
+
+  it('surfaces the target epoch on the header when rows exist', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [makeEntry({ target_epoch: '2020-06-15' })],
+        })
+      )
+    )
+
+    renderPage()
+
+    const caption = await screen.findByTestId(
+      'admin-data-coverage-target-epoch'
+    )
+    expect(caption).toHaveTextContent(/target epoch/i)
+    expect(caption).toHaveTextContent('2020-06-15')
   })
 
   it('renders one row per ticker with healthy status when contiguous', async () => {
@@ -186,7 +223,9 @@ describe('AdminDataCoverage', () => {
               coverage_end: null,
               last_refresh: null,
               gap_days_count: 0,
+              target_epoch: DEFAULT_EPOCH,
               is_active: true,
+              backfill_status: null,
             },
           ],
         })
@@ -199,40 +238,137 @@ describe('AdminDataCoverage', () => {
     expect(statusPill).toHaveAttribute('data-status', 'no-data')
   })
 
-  it('opens the backfill modal when the Backfill button is clicked', async () => {
-    const user = userEvent.setup()
-    server.use(
-      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
-        HttpResponse.json<DataCoverageResponse>({
-          tickers: [makeEntry({ ticker: 'AAPL' })],
-        })
-      )
-    )
-
-    renderPage()
-
-    await user.click(await screen.findByTestId('coverage-backfill-btn-AAPL'))
-
-    const form = await screen.findByTestId('backfill-form')
-    expect(form).toBeInTheDocument()
-    // Native <dialog> elements aren't seen by getByRole in jsdom because
-    // showModal() is a no-op mock, so query by text instead.
-    expect(screen.getByText(/backfill aapl/i)).toBeInTheDocument()
-  })
-
-  it('submits a backfill request and closes the modal on success', async () => {
-    const user = userEvent.setup()
-    let receivedBody: unknown = null
-
+  it('renders "Queued" pill when backfill_status.status is pending', async () => {
     server.use(
       http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
         HttpResponse.json<DataCoverageResponse>({
           tickers: [
             makeEntry({
               ticker: 'AAPL',
-              coverage_end: '2025-01-10',
+              backfill_status: makeBackfillStatus({ status: 'pending' }),
             }),
           ],
+        })
+      )
+    )
+
+    renderPage()
+
+    const statusPill = await screen.findByTestId('coverage-status-AAPL')
+    expect(statusPill).toHaveAttribute('data-status', 'queued')
+    expect(statusPill).toHaveTextContent(/queued/i)
+  })
+
+  it('renders "Catching up…" pill when backfill_status.status is running', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [
+            makeEntry({
+              ticker: 'AAPL',
+              backfill_status: makeBackfillStatus({ status: 'running' }),
+            }),
+          ],
+        })
+      )
+    )
+
+    renderPage()
+
+    const statusPill = await screen.findByTestId('coverage-status-AAPL')
+    expect(statusPill).toHaveAttribute('data-status', 'catching-up')
+    expect(statusPill).toHaveTextContent(/catching up/i)
+  })
+
+  it('renders "Caught up" pill when backfill_status.status is succeeded', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [
+            makeEntry({
+              ticker: 'AAPL',
+              backfill_status: makeBackfillStatus({ status: 'succeeded' }),
+            }),
+          ],
+        })
+      )
+    )
+
+    renderPage()
+
+    const statusPill = await screen.findByTestId('coverage-status-AAPL')
+    expect(statusPill).toHaveAttribute('data-status', 'caught-up')
+    expect(statusPill).toHaveTextContent(/caught up/i)
+  })
+
+  it('renders "Failed" pill with error message in title attr when backfill failed', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [
+            makeEntry({
+              ticker: 'AAPL',
+              backfill_status: makeBackfillStatus({
+                status: 'failed',
+                error_message: 'Rate limit hit',
+              }),
+            }),
+          ],
+        })
+      )
+    )
+
+    renderPage()
+
+    const statusPill = await screen.findByTestId('coverage-status-AAPL')
+    expect(statusPill).toHaveAttribute('data-status', 'failed')
+    expect(statusPill).toHaveTextContent(/failed/i)
+    expect(statusPill).toHaveAttribute('title', 'Rate limit hit')
+  })
+
+  it('disables the Catch-up button while a non-terminal task is active', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [
+            makeEntry({
+              ticker: 'AAPL',
+              backfill_status: makeBackfillStatus({ status: 'running' }),
+            }),
+          ],
+        })
+      )
+    )
+
+    renderPage()
+
+    const button = await screen.findByTestId('coverage-catch-up-btn-AAPL')
+    expect(button).toBeDisabled()
+  })
+
+  it('keeps the Catch-up button enabled when no task is active', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [makeEntry({ ticker: 'AAPL', backfill_status: null })],
+        })
+      )
+    )
+
+    renderPage()
+
+    const button = await screen.findByTestId('coverage-catch-up-btn-AAPL')
+    expect(button).not.toBeDisabled()
+  })
+
+  it('POSTs only the ticker payload when Catch up is clicked', async () => {
+    const user = userEvent.setup()
+    let receivedBody: unknown = null
+
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [makeEntry({ ticker: 'AAPL' })],
         })
       ),
       http.post(
@@ -244,6 +380,8 @@ describe('AdminDataCoverage', () => {
               task_id: '00000000-0000-0000-0000-00000000abcd',
               status: 'pending',
               existing: false,
+              start_date: DEFAULT_EPOCH,
+              end_date: '2025-01-10',
             },
             { status: 201 }
           )
@@ -253,18 +391,70 @@ describe('AdminDataCoverage', () => {
 
     renderPage()
 
-    await user.click(await screen.findByTestId('coverage-backfill-btn-AAPL'))
-
-    const form = await screen.findByTestId('backfill-form')
-    const submit = within(form).getByTestId('backfill-submit-btn')
-    await user.click(submit)
+    await user.click(await screen.findByTestId('coverage-catch-up-btn-AAPL'))
 
     await waitFor(() => {
       const body = receivedBody as Record<string, unknown> | null
       expect(body).not.toBeNull()
       expect(body?.ticker).toBe('AAPL')
-      expect(body?.start_date).toBe('2025-01-10')
+      // Task #215: no start_date / end_date / priority in the payload.
+      expect(body?.start_date).toBeUndefined()
+      expect(body?.end_date).toBeUndefined()
+      expect(body?.priority).toBeUndefined()
     })
+  })
+
+  it('only disables the clicked row while its catch-up mutation is in flight', async () => {
+    const user = userEvent.setup()
+
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [
+            makeEntry({ ticker: 'AAPL', backfill_status: null }),
+            makeEntry({ ticker: 'TSLA', backfill_status: null }),
+          ],
+        })
+      ),
+      // Hold the response open so the mutation stays `isPending`.
+      http.post(
+        `${API_BASE_URL}/admin/data-coverage/backfill`,
+        async () =>
+          new Promise<Response>((resolve) => {
+            setTimeout(
+              () =>
+                resolve(
+                  HttpResponse.json<BackfillResponse>(
+                    {
+                      task_id: '00000000-0000-0000-0000-00000000abcd',
+                      status: 'pending',
+                      existing: false,
+                      start_date: DEFAULT_EPOCH,
+                      end_date: '2025-01-10',
+                    },
+                    { status: 201 }
+                  )
+                ),
+              300
+            )
+          })
+      )
+    )
+
+    renderPage()
+
+    const aaplBtn = await screen.findByTestId('coverage-catch-up-btn-AAPL')
+    const tslaBtn = await screen.findByTestId('coverage-catch-up-btn-TSLA')
+
+    await user.click(aaplBtn)
+
+    // While the AAPL mutation is in flight, the AAPL button is disabled
+    // but TSLA's stays enabled (regression test for the shared-isPending
+    // bug — Task #215 follow-up).
+    await waitFor(() => {
+      expect(aaplBtn).toBeDisabled()
+    })
+    expect(tslaBtn).not.toBeDisabled()
   })
 
   it('renders an error block when the GET returns 403', async () => {
