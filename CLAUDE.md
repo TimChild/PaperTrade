@@ -93,6 +93,24 @@ For multi-step work, write a numbered task spec under `agent_docs/tasks/NNN_shor
 
 Task specs include: Overview, Context (what exists), Architecture (new domain concepts, flow, endpoints), Implementation Plan (phases), Testing Strategy, Success Criteria, Agent Assignment, References. After completion, write a progress doc to `agent_docs/progress/YYYY-MM-DD_HH-MM-SS_short-description.md`.
 
+## PR workflow (Zebu-specific override)
+
+**GitHub Copilot reviewer is not wired up on this repo.** `gh pr edit --add-reviewer Copilot` errors with "Could not resolve user" and no PR in the history carries a Copilot review. The global PR-lifecycle in `~/.claude/CLAUDE.md` assumes Copilot as the review safety net; for Zebu we substitute the `/code-review` skill from `claude-plugins-official` instead.
+
+**The implementer agent owns the review.** After opening the PR, the same agent that wrote the change invokes `/code-review <PR#>` via the Skill tool. The skill orchestrates Haiku sub-agents for eligibility, CLAUDE.md lookup, summary, and confidence scoring; Sonnet sub-agents for the five-angle finder pass; then posts a single consolidated review comment on the PR via `gh pr comment` with confidence ≥80 findings only. The implementer then:
+
+1. Reads its own review comment.
+2. Addresses each finding by editing + pushing, or pushes back in a reply if it disagrees with sound reasoning.
+3. Waits for CI to re-validate.
+4. Self-merges on green CI + no unresolved review findings: `gh pr merge <N> --squash --delete-branch`.
+5. After merge: `git checkout main && git pull --ff-only`.
+
+The orchestrator's role is the safety net — review the PR diff post-merge if anything looks off, and intervene if the implementer is stuck (CI failure they can't diagnose, contested review finding, etc.). Don't drive each PR; let the implementer drive.
+
+**Drop `gh pr edit --add-reviewer Copilot` from agent prompts** — it errors and consumes agent time. Tell the implementer to run `/code-review <PR#>` instead.
+
+**Exception: trivially low-risk one-offs** (typo fixes, doc tweaks, `[skip deploy]` changes). The implementer can self-merge on green CI without a `/code-review` pass, but should call this out in the agent's final report.
+
 ## Forward plan
 
 The agent-platform plan (Phases A–J) has shipped end-to-end. The historical record is in `docs/planning/agent-platform-completed.md`; the active forward plan is `docs/planning/agent-platform-next-steps.md` (multi-provider invocation, agent-driven backtests, plus a follow-up sweep). **Read the next-steps doc before scoping significant new work.**

@@ -180,6 +180,18 @@ task quality:frontend     # format + lint + test
 task test:e2e             # if UI changed
 ```
 
+## PR + review (Zebu pattern)
+
+After opening the PR, you own its review-and-merge — the orchestrator is the safety net, not the driver. See the `PR workflow` section in the repo-root `CLAUDE.md`. Summary:
+
+1. `gh pr create ...` (don't request a Copilot reviewer — not wired up here).
+2. Invoke the `/code-review <PR#>` skill (from `claude-plugins-official`) via the Skill tool. It posts one inline review comment with confidence ≥80 findings.
+3. Address findings (edit + push, or reply with reasoning). CI re-validates.
+4. Self-merge on green CI + no unresolved findings: `gh pr merge <N> --squash --delete-branch`.
+5. After merge: `git checkout main && git pull --ff-only`.
+
+Skip the `/code-review` pass for trivially low-risk one-offs (typo fixes, doc tweaks); call that out in your final report.
+
 ## When to engage
 
 - New UI components / pages
