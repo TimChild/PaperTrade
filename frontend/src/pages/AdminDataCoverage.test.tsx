@@ -420,7 +420,7 @@ describe('AdminDataCoverage', () => {
       http.post(
         `${API_BASE_URL}/admin/data-coverage/backfill`,
         async () =>
-          new Promise<HttpResponse>((resolve) => {
+          new Promise<Response>((resolve) => {
             setTimeout(
               () =>
                 resolve(
