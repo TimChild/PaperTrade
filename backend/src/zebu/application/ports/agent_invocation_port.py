@@ -16,11 +16,22 @@ References:
 - :class:`AgentDecision` for the discriminated decision values.
 """
 
-from collections.abc import Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Protocol
 
 from zebu.domain.value_objects.agent_decision import AgentDecision
+
+# Tool-dispatch callback signature (Phase L-2). When supplied to
+# :meth:`AgentInvocationPort.invoke`, the implementation MAY enter a
+# multi-turn tool-use loop and route each non-``record_decision`` tool
+# call through the callback. The callback is the wrapper's enforcement
+# boundary — it validates arguments and returns the tool result as a
+# string (typically JSON-encoded structured data). The production
+# Anthropic adapter is the only implementation that runs the loop
+# today; in-memory fakes accept the parameter for parity but ignore it
+# (no loop, no callback invocation).
+type ToolDispatchCallback = Callable[[str, Mapping[str, object]], Awaitable[str]]
 
 
 @dataclass(frozen=True)
@@ -122,6 +133,8 @@ class AgentInvocationPort(Protocol):
         user_prompt: str,
         tools: list[ToolDefinition] | None = None,
         timeout_secs: float = 60.0,
+        agent_temperature: float | None = None,
+        dispatch_tool_call: ToolDispatchCallback | None = None,
     ) -> AgentInvocationResult:
         """Send a prompt to the agent and return its structured decision.
 
@@ -139,6 +152,24 @@ class AgentInvocationPort(Protocol):
                 ``None`` is equivalent to ``[]``.
             timeout_secs: Per-call timeout. The adapter passes this into
                 the SDK's ``timeout`` parameter. Default 60s.
+            agent_temperature: Optional override for the model's
+                ``temperature`` sampling parameter. Production adapters
+                pass this through to the SDK's ``messages.create``
+                ``temperature`` argument when not ``None``; in-memory test
+                fakes accept the parameter for parity but ignore it. Added
+                in Phase L-2 so the backtest-safe wrapper can default
+                deterministic-ish runs to ``temperature=0`` while keeping
+                the F-3 inline path's SDK-default behavior on ``None``.
+            dispatch_tool_call: Optional :data:`ToolDispatchCallback`.
+                When supplied, the implementation MAY enter a multi-turn
+                tool-use loop and route every non-``record_decision``
+                tool call through the callback before terminating on
+                ``record_decision``. The production Anthropic adapter
+                runs the loop; in-memory fakes accept the parameter for
+                parity but ignore it (single-shot). Added in Phase L-2
+                so the backtest-safe wrapper can enforce the
+                ``BACKTEST_SAFE_TOOLS`` whitelist + simulated-date cap
+                via the callback closure.
 
         Returns:
             :class:`AgentInvocationResult` with the parsed decision and
@@ -160,4 +191,5 @@ __all__ = [
     "AgentInvocationPort",
     "AgentInvocationResult",
     "ToolDefinition",
+    "ToolDispatchCallback",
 ]
