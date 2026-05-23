@@ -56,13 +56,13 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from zebu.adapters.auth.api_key_adapter import ApiKeyAuthAdapter
 from zebu.adapters.auth.api_key_hasher import ApiKeyHasher
 from zebu.adapters.auth.in_memory_adapter import InMemoryAuthAdapter
-from zebu.adapters.outbound.database.api_key_model import ApiKeyModel
 from zebu.adapters.inbound.api.dependencies import (
     get_api_key_auth_adapter,
     get_api_key_repository,
     get_auth_port,
     get_market_data,
 )
+from zebu.adapters.outbound.database.api_key_model import ApiKeyModel
 from zebu.adapters.outbound.market_data.in_memory_adapter import (
     InMemoryMarketDataAdapter,
 )
@@ -77,7 +77,6 @@ from zebu.domain.value_objects.price_point import PricePoint
 from zebu.domain.value_objects.ticker import Ticker
 from zebu.infrastructure.database import get_session
 from zebu.main import app
-
 
 _TEST_USER_ID = "test-user-mcp-smoke"
 _TEST_TOKEN = "mcp-smoke-token"
@@ -140,6 +139,7 @@ def mcp_client(
     scopes; ADMIN is intentionally omitted to mirror what an agent's
     key normally carries.
     """
+
     async def get_test_session() -> AsyncGenerator[AsyncSession, None]:
         async with AsyncSession(
             test_engine_with_fks, expire_on_commit=False
@@ -215,9 +215,7 @@ def mcp_client(
     app.dependency_overrides[get_market_data] = get_test_market_data
     app.dependency_overrides[get_auth_port] = get_test_auth_port
     app.dependency_overrides[get_api_key_repository] = get_test_api_key_repository
-    app.dependency_overrides[get_api_key_auth_adapter] = (
-        get_test_api_key_auth_adapter
-    )
+    app.dependency_overrides[get_api_key_auth_adapter] = get_test_api_key_auth_adapter
 
     with TestClient(app) as client:
         yield client
@@ -372,8 +370,7 @@ class TestDcaBacktestProducesTrades:
         # calendar-alignment edge cases without losing the regression
         # signal (the pre-fix value was 0).
         assert body["total_trades"] >= 3, (
-            f"DCA over 200 days must fire multiple trades, got "
-            f"{body['total_trades']!r}"
+            f"DCA over 200 days must fire multiple trades, got {body['total_trades']!r}"
         )
 
 
@@ -479,9 +476,7 @@ class TestExplorationTaskLifecycle:
             json={
                 "summary": "AAPL 50/200 SMA crossover: weak signal.",
                 "confidence": 0.4,
-                "notes": [
-                    "Backtest produced positive but low-magnitude returns."
-                ],
+                "notes": ["Backtest produced positive but low-magnitude returns."],
             },
         )
         assert response.status_code == 200, response.text

@@ -32,6 +32,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from zebu.adapters.outbound.database.models import (
     BackfillTaskModel,
+    PortfolioModel,
     TransactionModel,
 )
 from zebu.adapters.outbound.models.price_history import PriceHistoryModel
@@ -99,13 +100,28 @@ async def _add_transaction(
     days_ago: int,
     now: datetime = _NOW,
 ) -> None:
-    """Add a single BUY transaction for ``ticker`` ``days_ago`` days ago."""
+    """Add a single BUY transaction for ``ticker`` ``days_ago`` days ago.
+
+    Inserts a parent ``PortfolioModel`` row first because the
+    ``transactions.portfolio_id`` FK is enforced in tests (Task #216).
+    """
+    portfolio_id = uuid4()
+    now = datetime.now(UTC).replace(tzinfo=None)
+    session.add(
+        PortfolioModel(
+            id=portfolio_id,
+            user_id=uuid4(),
+            name=f"test-{ticker}",
+            created_at=now,
+            updated_at=now,
+        )
+    )
     session.add(
         TransactionModel(
             id=uuid4(),
-            portfolio_id=uuid4(),
+            portfolio_id=portfolio_id,
             transaction_type="BUY",
-            timestamp=now.replace(tzinfo=None) - timedelta(days=days_ago),
+            timestamp=now - timedelta(days=days_ago),
             cash_change_amount=Decimal("-100"),
             cash_change_currency="USD",
             ticker=ticker,

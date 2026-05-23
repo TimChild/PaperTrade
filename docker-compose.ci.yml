@@ -1,0 +1,47 @@
+# ============================================================================
+# Zebu - Local-CI Override Configuration
+# ============================================================================
+# Override used by `task ci:e2e` to bring up the E2E stack locally without
+# colliding with the developer's existing dev stack on the default Postgres
+# (5432) and Redis (6379) host ports.
+#
+# Usage (handled automatically by Taskfile):
+#   COMPOSE_PROJECT_NAME=papertrade-ci \
+#     docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d
+#
+# What this changes vs. the base config:
+#   - `db` and `redis` are NOT published to the host. They are only reachable
+#     from inside the `zebu-network` (i.e. backend → db, backend → redis). The
+#     E2E tests don't need direct host access to either, so dropping the
+#     bindings eliminates the most common "port 5432 already allocated" error.
+#   - Distinct `container_name` for `db` / `redis` so a running dev-stack
+#     instance (which uses `papertrade-postgres-dev` / `papertrade-redis-dev`
+#     via the optional override file) doesn't clash on container name when
+#     this stack also runs.
+#   - `backend` (8000) and `frontend` (5173) STILL bind to default host ports
+#     because Playwright (running on the host) drives the browser to
+#     `http://localhost:5173` and the served JS makes API calls to
+#     `http://localhost:8000`. Those URLs are baked into the frontend image at
+#     build time via `VITE_API_BASE_URL`, so the ports are not freely
+#     reconfigurable. If those collide with a running dev backend / frontend,
+#     run `task ci:fresh` to tear the dev stack down first.
+#
+# This file is NOT used by `.github/workflows/ci.yml` — GitHub-hosted runners
+# are ephemeral and have no port-conflict problem, so they continue to use
+# the base `docker-compose.yml` via `task docker:up:all`.
+#
+# This file is also NOT used by `.github/workflows/cd.yml` (the self-hosted
+# Proxmox runner deploys with `docker-compose.yml + docker-compose.prod.yml`).
+
+services:
+  db:
+    container_name: papertrade-postgres-ci
+    # No `ports:` — DB is only reachable via the docker network from the
+    # backend container. Dropping the host binding is what fixes the
+    # collision with any other Postgres already bound to host 5432.
+    ports: !reset []
+
+  redis:
+    container_name: papertrade-redis-ci
+    # Same reasoning as `db` — Redis is internal-only for the CI flow.
+    ports: !reset []
