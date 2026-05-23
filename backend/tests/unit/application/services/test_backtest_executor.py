@@ -1286,3 +1286,88 @@ class TestBacktestExecutorAgentInvocation:
                 f"BUY; got qty={qty.shares} first (then "
                 f"{[getattr(t, 'quantity', None) for t in day_buys[1:]]})."
             )
+
+    async def test_live_buy_with_empty_rationale_is_padded(self) -> None:
+        """LIVE port returning empty rationale satisfies entity invariants.
+
+        Defence: the L-1 entity rejects empty rationale on LIVE non-
+        INVOCATION_FAILED rows. The production Anthropic adapter never
+        returns an empty rationale, but a misbehaving test fake (or a
+        transport edge case) could — and the audit row construction
+        would crash. The executor pads the empty rationale with a
+        decision-stamp so the row is constructible.
+        """
+        from zebu.application.ports.in_memory_agent_invocation_port import (
+            StaticAgentInvocationPort,
+            make_result,
+        )
+        from zebu.domain.value_objects.agent_decision import AgentDecision
+        from zebu.domain.value_objects.backtest_agent_invocation_mode import (
+            BacktestAgentInvocationMode,
+        )
+
+        user_id = uuid4()
+        strategy_repo = InMemoryStrategyRepository()
+        backtest_run_repo = InMemoryBacktestRunRepository()
+        activation_repo = InMemoryStrategyActivationRepository()
+        trigger_repo = InMemoryTriggerRepository()
+        invocation_repo = InMemoryBacktestAgentInvocationRepository()
+        adapter = InMemoryMarketDataAdapter()
+
+        start = date(2024, 1, 2)
+        end = date(2024, 1, 10)
+        _seed_dropping_prices(adapter, "AAPL", start, end)
+
+        strategy = _make_dca_strategy(user_id)
+        await strategy_repo.save(strategy)
+        portfolio_id = uuid4()
+        activation = _make_active_activation(user_id, strategy.id, portfolio_id)
+        await activation_repo.save(activation)
+        trigger = _make_drawdown_trigger(user_id, activation.id, threshold_pct="3")
+        await trigger_repo.save(trigger)
+
+        # rationale="" — would violate the L-1 invariant if it landed
+        # on the audit row directly.
+        empty_port = StaticAgentInvocationPort(
+            result=make_result(
+                decision=AgentDecision.BUY,
+                rationale="",
+                payload={"ticker": "AAPL", "quantity": "1", "notes": ""},
+            )
+        )
+        factory = InMemoryBacktestAgentInvocationFactory(
+            live_port_factory=lambda: empty_port
+        )
+
+        executor = _build_executor(
+            strategy_repo=strategy_repo,
+            backtest_run_repo=backtest_run_repo,
+            activation_repo=activation_repo,
+            trigger_repo=trigger_repo,
+            backtest_agent_invocation_repo=invocation_repo,
+            agent_invocation_factory=factory,
+            market_data=adapter,
+        )
+
+        command = RunBacktestCommand(
+            user_id=user_id,
+            strategy_id=strategy.id,
+            backtest_name="Empty-rationale",
+            start_date=start,
+            end_date=end,
+            initial_cash=Decimal("10000"),
+            agent_invocation_mode=BacktestAgentInvocationMode.LIVE,
+        )
+
+        # Should not raise — the executor pads the empty rationale.
+        result = await executor.execute(command)
+
+        assert result.status == BacktestStatus.COMPLETED
+        rows = await invocation_repo.list_for_backtest_run(result.id)
+        assert len(rows) >= 1
+        # Padded rationale should be non-empty for every LIVE row.
+        for row in rows:
+            assert row.rationale != "", (
+                "LIVE row's rationale should be padded to non-empty when "
+                "the upstream port returned an empty rationale."
+            )
