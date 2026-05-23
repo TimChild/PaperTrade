@@ -6,6 +6,9 @@ from decimal import Decimal
 from uuid import UUID
 
 from zebu.domain.exceptions import InvalidBacktestRunError
+from zebu.domain.value_objects.backtest_agent_invocation_mode import (
+    BacktestAgentInvocationMode,
+)
 from zebu.domain.value_objects.backtest_status import BacktestStatus
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.strategy_snapshot import StrategySnapshot
@@ -39,6 +42,14 @@ class BacktestRun:
         max_drawdown_pct: Maximum peak-to-trough drawdown percentage
         annualized_return_pct: Return annualized over the simulation period
         total_trades: Total number of buy/sell trades executed
+        agent_invocation_mode: Phase L-1 (Task #217) — the per-run agent
+            invocation mode chosen at create time. ``NONE`` (default)
+            preserves pre-Phase-L behavior (no agent, no audit rows).
+            ``MOCK`` evaluates simulated triggers with a deterministic
+            no-op agent (audit rows written). ``LIVE`` calls the real
+            Anthropic adapter via the L-2 backtest-safe wrapper (audit
+            rows written; costs real API spend). Stamped from the
+            originating :class:`RunBacktestCommand`.
 
     Raises:
         InvalidBacktestRunError: If any invariant is violated
@@ -61,6 +72,9 @@ class BacktestRun:
     max_drawdown_pct: Decimal | None = None
     annualized_return_pct: Decimal | None = None
     total_trades: int | None = None
+    agent_invocation_mode: BacktestAgentInvocationMode = (
+        BacktestAgentInvocationMode.NONE
+    )
 
     def __post_init__(self) -> None:
         """Validate BacktestRun invariants after initialization."""

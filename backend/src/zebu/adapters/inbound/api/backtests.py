@@ -54,6 +54,9 @@ from zebu.application.services.historical_data_preparer import HistoricalDataPre
 from zebu.application.services.snapshot_job import SnapshotJobService
 from zebu.domain.entities.backtest_run import BacktestRun
 from zebu.domain.exceptions import InsufficientHistoricalDataError, InvalidStrategyError
+from zebu.domain.value_objects.backtest_agent_invocation_mode import (
+    BacktestAgentInvocationMode,
+)
 from zebu.infrastructure.database import SessionDep
 
 router = APIRouter(prefix="/backtests", tags=["backtests"])
@@ -70,13 +73,31 @@ _MAX_DATE_RANGE_DAYS = 3 * 365
 
 
 class RunBacktestRequest(BaseModel):
-    """Request to run a backtest."""
+    """Request to run a backtest.
+
+    The ``agent_invocation_mode`` field (Phase L-1, Task #217) is optional
+    and defaults to ``"none"`` — existing callers continue to behave
+    exactly as they did pre-Phase-L. Set to ``"mock"`` to exercise the
+    agent-in-the-loop pipeline without paying for real Anthropic calls,
+    or ``"live"`` for real invocations via the L-2 backtest-safe adapter
+    (not yet wired up in the executor — L-3).
+    """
 
     strategy_id: UUID
     backtest_name: str = Field(..., min_length=1, max_length=100)
     start_date: date
     end_date: date
     initial_cash: Decimal = Field(..., gt=0, decimal_places=2)
+    agent_invocation_mode: BacktestAgentInvocationMode = Field(
+        default=BacktestAgentInvocationMode.NONE,
+        description=(
+            "Agent invocation mode for this backtest. 'none' (default) "
+            "runs the existing no-agent pipeline; 'mock' evaluates "
+            "simulated triggers with a deterministic no-op agent; 'live' "
+            "calls the real Anthropic adapter via the L-2 backtest-safe "
+            "wrapper (executor wiring lands in L-3)."
+        ),
+    )
 
     @field_validator("end_date")
     @classmethod
@@ -99,7 +120,12 @@ class RunBacktestRequest(BaseModel):
 
 
 class BacktestRunResponse(BaseModel):
-    """Backtest run details response."""
+    """Backtest run details response.
+
+    The ``agent_invocation_mode`` field (Phase L-1, Task #217) reflects
+    the durable per-run mode stamped at create time. Reads as
+    ``"none"`` for all pre-Phase-L rows.
+    """
 
     id: UUID
     user_id: UUID
@@ -117,6 +143,7 @@ class BacktestRunResponse(BaseModel):
     max_drawdown_pct: str | None
     annualized_return_pct: str | None
     total_trades: int | None
+    agent_invocation_mode: BacktestAgentInvocationMode
 
 
 def _to_backtest_response(run: BacktestRun) -> BacktestRunResponse:
@@ -143,6 +170,7 @@ def _to_backtest_response(run: BacktestRun) -> BacktestRunResponse:
         if run.annualized_return_pct is not None
         else None,
         total_trades=run.total_trades,
+        agent_invocation_mode=run.agent_invocation_mode,
     )
 
 
@@ -247,6 +275,7 @@ async def run_backtest(
         end_date=request.end_date,
         initial_cash=request.initial_cash,
         api_key_id=api_key_id,
+        agent_invocation_mode=request.agent_invocation_mode,
     )
 
     executor = _build_executor(session=session, market_data=market_data)

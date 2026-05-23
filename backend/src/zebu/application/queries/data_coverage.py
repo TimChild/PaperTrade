@@ -395,9 +395,8 @@ class DataCoverageQueryHandler:
         the operator cares about.
         """
         # created_at is stored naive UTC; build a matching naive cutoff.
-        cutoff_naive = (
-            now.astimezone(UTC).replace(tzinfo=None)
-            - timedelta(hours=_RECENT_TASKS_WINDOW_HOURS)
+        cutoff_naive = now.astimezone(UTC).replace(tzinfo=None) - timedelta(
+            hours=_RECENT_TASKS_WINDOW_HOURS
         )
         stmt = (
             select(BackfillTaskModel)

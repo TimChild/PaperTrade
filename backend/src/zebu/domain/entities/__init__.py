@@ -1,6 +1,7 @@
 """Domain entities - Objects with identity and lifecycle."""
 
 from zebu.domain.entities.api_key import ApiKey, ApiKeyCreationResult
+from zebu.domain.entities.backtest_agent_invocation import BacktestAgentInvocation
 from zebu.domain.entities.backtest_run import BacktestRun
 from zebu.domain.entities.exploration_task import (
     ExplorationConstraints,
@@ -20,6 +21,7 @@ from zebu.domain.entities.trigger_fire_record import TriggerFireRecord
 __all__ = [
     "ApiKey",
     "ApiKeyCreationResult",
+    "BacktestAgentInvocation",
     "BacktestRun",
     "ExplorationConstraints",
     "ExplorationFindings",

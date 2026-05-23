@@ -13,6 +13,7 @@ from uuid import UUID
 from sqlmodel import JSON, Column, Field, Index, SQLModel, UniqueConstraint
 
 from zebu.domain.entities.backfill_task import BackfillTask
+from zebu.domain.entities.backtest_agent_invocation import BacktestAgentInvocation
 from zebu.domain.entities.backtest_run import BacktestRun
 from zebu.domain.entities.exploration_task import (
     ExplorationConstraints,
@@ -38,6 +39,9 @@ from zebu.domain.value_objects.activation_status import ActivationStatus
 from zebu.domain.value_objects.agent_decision import AgentDecision
 from zebu.domain.value_objects.backfill_priority import BackfillPriority
 from zebu.domain.value_objects.backfill_task_status import BackfillTaskStatus
+from zebu.domain.value_objects.backtest_agent_invocation_mode import (
+    BacktestAgentInvocationMode,
+)
 from zebu.domain.value_objects.backtest_status import BacktestStatus
 from zebu.domain.value_objects.job_execution import JobExecution
 from zebu.domain.value_objects.job_execution_status import JobExecutionStatus
@@ -596,6 +600,12 @@ class BacktestRunModel(SQLModel, table=True):
         foreign_key="api_keys.id",
         ondelete="SET NULL",
     )
+    # Phase L-1 (Task #217): per-run choice of agent invocation mode
+    # (``none`` / ``mock`` / ``live``). NOT NULL with server-side
+    # default ``'none'`` so existing rows backfill cleanly. The UI /
+    # activity feed reads this to label the run without scanning the
+    # ``backtest_agent_invocations`` audit table.
+    agent_invocation_mode: str = Field(default="none", max_length=16)
 
     def to_domain(self) -> BacktestRun:
         """Convert database model to domain entity.
@@ -645,6 +655,9 @@ class BacktestRunModel(SQLModel, table=True):
             max_drawdown_pct=self.max_drawdown_pct,
             annualized_return_pct=self.annualized_return_pct,
             total_trades=self.total_trades,
+            agent_invocation_mode=BacktestAgentInvocationMode(
+                self.agent_invocation_mode
+            ),
         )
 
     @classmethod
@@ -691,6 +704,7 @@ class BacktestRunModel(SQLModel, table=True):
             max_drawdown_pct=backtest_run.max_drawdown_pct,
             annualized_return_pct=backtest_run.annualized_return_pct,
             total_trades=backtest_run.total_trades,
+            agent_invocation_mode=backtest_run.agent_invocation_mode.value,
         )
 
 
@@ -1686,6 +1700,178 @@ class TriggerFireRecordModel(SQLModel, table=True):
             resulting_exploration_task_id=record.resulting_exploration_task_id,
             latency_ms=record.latency_ms,
             api_key_id_used=record.api_key_id_used,
+        )
+
+
+class BacktestAgentInvocationModel(SQLModel, table=True):
+    """Database model for :class:`BacktestAgentInvocation` (Phase L-1, Task #217).
+
+    Append-only audit row for one simulated trigger fire inside a
+    backtest. Mirrors :class:`TriggerFireRecordModel` in shape but with
+    ``simulated_date`` (in-simulation date) replacing ``fired_at`` (wall-
+    clock) and a ``backtest_run_id`` FK that cascade-deletes with the
+    parent run.
+
+    Foreign keys:
+
+    * ``backtest_run_id`` -> ``backtest_runs.id`` ON DELETE CASCADE —
+      audit rows belong to their backtest run.
+    * ``trigger_id`` -> ``strategy_condition_triggers.id`` ON DELETE
+      SET NULL — deleting a trigger doesn't break the audit row; the
+      domain entity allows ``None``.
+    * ``simulated_trade_id`` -> ``transactions.id`` ON DELETE SET NULL —
+      deleting an orphan transaction shouldn't erase the rationale.
+
+    Indexes:
+
+    * ``(backtest_run_id, simulated_date)`` — backs
+      ``list_for_backtest_run`` chronological ordering and per-run count.
+    * ``(trigger_id)`` — backs the (future) "all backtest invocations of
+      a given trigger" analytics query.
+
+    Attributes:
+        id: Primary key (UUID).
+        backtest_run_id: FK to ``backtest_runs.id``.
+        simulated_date: In-simulation calendar day for the fire.
+        trigger_id: FK to ``strategy_condition_triggers.id`` (nullable).
+        condition_evaluation_data: JSON snapshot of the fire inputs.
+            Schema is per-condition-type — treated as opaque here.
+        agent_decision: :class:`AgentDecision` value (nullable; MOCK rows
+            may carry ``None``).
+        rationale: Truncated free-text rationale (≤8000 chars). Empty
+            string allowed.
+        decision_payload: JSON payload from the agent
+            (:class:`AgentInvocationResult.payload`); ``None`` for MOCK.
+        decision_executed: Whether the decision mutated the simulated
+            trade book.
+        simulated_trade_id: FK to ``transactions.id`` (nullable).
+        invocation_mode: :class:`BacktestAgentInvocationMode` value as
+            a string. ``MOCK`` or ``LIVE`` only — ``NONE`` is run-level.
+        agent_invocation_id: Anthropic message ID (nullable, ≤200 chars).
+        latency_ms: End-to-end agent latency in milliseconds.
+        model: Anthropic model identifier (≤100 chars). Empty for MOCK.
+        created_at: Wall-clock UTC when the row was written (naive).
+    """
+
+    __tablename__ = "backtest_agent_invocations"  # type: ignore[assignment]
+    __table_args__ = (
+        Index(
+            "idx_bt_agent_invocation_run_date",
+            "backtest_run_id",
+            "simulated_date",
+        ),
+        Index(
+            "idx_bt_agent_invocation_trigger",
+            "trigger_id",
+        ),
+    )
+
+    id: UUID = Field(primary_key=True)
+    backtest_run_id: UUID = Field(
+        foreign_key="backtest_runs.id",
+        ondelete="CASCADE",
+    )
+    simulated_date: date
+    trigger_id: UUID | None = Field(
+        default=None,
+        foreign_key="strategy_condition_triggers.id",
+        ondelete="SET NULL",
+    )
+    condition_evaluation_data: dict[str, object] = Field(  # type: ignore[assignment]
+        sa_column=Column(JSON, nullable=False)
+    )
+    agent_decision: str | None = Field(default=None, max_length=30)
+    rationale: str = Field(default="", max_length=8000)
+    decision_payload: dict[str, object] | None = Field(  # type: ignore[assignment]
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+    )
+    decision_executed: bool = Field(default=False)
+    simulated_trade_id: UUID | None = Field(
+        default=None,
+        foreign_key="transactions.id",
+        ondelete="SET NULL",
+    )
+    invocation_mode: str = Field(max_length=16)
+    agent_invocation_id: str | None = Field(default=None, max_length=200)
+    latency_ms: int = Field(default=0)
+    model: str = Field(default="", max_length=100)
+    created_at: datetime
+
+    def to_domain(self) -> BacktestAgentInvocation:
+        """Convert database model to domain entity.
+
+        Raises:
+            ValueError: If ``agent_decision`` or ``invocation_mode`` drift
+                from the canonical enum values, or any per-mode invariant
+                check on the entity fails.
+        """
+        created_at_utc = self.created_at.replace(tzinfo=UTC)
+        invocation_mode = BacktestAgentInvocationMode(self.invocation_mode)
+        agent_decision: AgentDecision | None
+        if self.agent_decision is None:
+            agent_decision = None
+        else:
+            agent_decision = AgentDecision(self.agent_decision)
+
+        # Defensive copies of the JSON columns insulate the domain from
+        # any in-place mutation before the entity sees them.
+        evaluation_data = dict(self.condition_evaluation_data)
+        decision_payload: dict[str, object] | None
+        if self.decision_payload is None:
+            decision_payload = None
+        else:
+            decision_payload = dict(self.decision_payload)
+
+        return BacktestAgentInvocation(
+            id=self.id,
+            backtest_run_id=self.backtest_run_id,
+            simulated_date=self.simulated_date,
+            trigger_id=self.trigger_id,
+            condition_evaluation_data=evaluation_data,
+            agent_decision=agent_decision,
+            rationale=self.rationale,
+            decision_payload=decision_payload,
+            decision_executed=self.decision_executed,
+            simulated_trade_id=self.simulated_trade_id,
+            invocation_mode=invocation_mode,
+            agent_invocation_id=self.agent_invocation_id,
+            latency_ms=self.latency_ms,
+            model=self.model,
+            created_at=created_at_utc,
+        )
+
+    @classmethod
+    def from_domain(
+        cls, invocation: BacktestAgentInvocation
+    ) -> "BacktestAgentInvocationModel":
+        """Convert domain entity to database model."""
+        decision_payload: dict[str, object] | None
+        if invocation.decision_payload is None:
+            decision_payload = None
+        else:
+            decision_payload = dict(invocation.decision_payload)
+
+        return cls(
+            id=invocation.id,
+            backtest_run_id=invocation.backtest_run_id,
+            simulated_date=invocation.simulated_date,
+            trigger_id=invocation.trigger_id,
+            condition_evaluation_data=dict(invocation.condition_evaluation_data),
+            agent_decision=(
+                invocation.agent_decision.value
+                if invocation.agent_decision is not None
+                else None
+            ),
+            rationale=invocation.rationale,
+            decision_payload=decision_payload,
+            decision_executed=invocation.decision_executed,
+            simulated_trade_id=invocation.simulated_trade_id,
+            invocation_mode=invocation.invocation_mode.value,
+            agent_invocation_id=invocation.agent_invocation_id,
+            latency_ms=invocation.latency_ms,
+            model=invocation.model,
+            created_at=_strip_tz(invocation.created_at) or invocation.created_at,
         )
 
 
