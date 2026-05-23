@@ -118,7 +118,11 @@ def upgrade() -> None:
                 "decision_executed",
                 sa.Boolean(),
                 nullable=False,
-                server_default=sa.text("0"),
+                # ``sa.false()`` so the default renders as a typed
+                # boolean literal on Postgres (``FALSE``) rather than
+                # ``0`` — asyncpg rejects ``0`` against a BOOLEAN column.
+                # SQLite accepts both representations transparently.
+                server_default=sa.false(),
             ),
             sa.Column("simulated_trade_id", sa.Uuid(), nullable=True),
             sa.Column("invocation_mode", sa.String(length=16), nullable=False),
