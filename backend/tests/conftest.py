@@ -46,21 +46,21 @@ from zebu.main import app
 
 @pytest_asyncio.fixture
 async def test_engine() -> AsyncGenerator[AsyncEngine, None]:
-    """Create an in-memory SQLite engine for testing.
+    """Create an in-memory SQLite engine for testing, with FK enforcement on.
 
-    NOTE: This fixture does **not** enable ``PRAGMA foreign_keys=ON``.
-    A previous attempt to turn FK enforcement on globally surfaced ~17
-    pre-existing test-fixture FK violations (e.g. transactions created
-    with ``api_key_id`` references that don't exist in ``api_keys``) and
-    one repo-level bug (``transaction_repository.save`` catches every
-    ``IntegrityError`` and translates it to ``DuplicateTransactionError``,
-    so FK violations get misclassified). Retrofitting those is a separate
-    cleanup PR.
+    SQLite has FK checks off by default; we enable them via
+    ``PRAGMA foreign_keys=ON`` on every new connection so tests catch
+    referential-integrity violations the same way production Postgres
+    would. This matches the long-standing behavior of the lower-level
+    ``backend/tests/integration/conftest.py`` ``engine`` fixture.
 
-    For new tests that need FK enforcement to catch referential-integrity
-    bugs the way production Postgres would (e.g. the MCP-smoke flows),
-    use the ``test_engine_with_fks`` fixture below — it sets the PRAGMA
-    on every new connection.
+    Production parity is the goal: FK ordering bugs (#287), missing-
+    parent-row writes (#291), and the ``api_key_id`` audit-stamping
+    chain all rely on FK enforcement to fail loudly in tests instead of
+    in production. The catch-all in ``transaction_repository.save`` /
+    ``save_all`` that previously translated every ``IntegrityError`` to
+    ``DuplicateTransactionError`` has been narrowed to PK conflicts
+    only (Task #216), so FK violations now propagate as expected.
     """
     engine = create_async_engine(
         "sqlite+aiosqlite:///:memory:",
@@ -68,6 +68,13 @@ async def test_engine() -> AsyncGenerator[AsyncEngine, None]:
         poolclass=StaticPool,
         echo=False,
     )
+
+    # Enforce FK constraints in SQLite (off by default).
+    @event.listens_for(engine.sync_engine, "connect")
+    def _enable_sqlite_fks(dbapi_connection: object, _record: object) -> None:
+        cursor = dbapi_connection.cursor()  # type: ignore[attr-defined]
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
     # Create all tables
     async with engine.begin() as conn:
@@ -80,40 +87,22 @@ async def test_engine() -> AsyncGenerator[AsyncEngine, None]:
 
 
 @pytest_asyncio.fixture
-async def test_engine_with_fks() -> AsyncGenerator[AsyncEngine, None]:
-    """Same as ``test_engine`` but with FK enforcement turned on.
+async def test_engine_with_fks(
+    test_engine: AsyncEngine,
+) -> AsyncGenerator[AsyncEngine, None]:
+    """Compatibility alias for ``test_engine`` — now identical.
 
-    SQLite has FK checks off by default. The lower-level
-    ``backend/tests/integration/conftest.py`` ``engine`` fixture has long
-    set this PRAGMA on every connection; new HTTP-level integration tests
-    that want the same guarantee should opt in via this fixture instead
-    of inheriting the FK-disabled default.
-
-    Use case: the MCP-smoke flows in ``test_mcp_smoke_flows.py`` exercise
-    full create-write chains (strategy → activation → trigger fires,
-    portfolio → backtest → trades) that touch every FK in the schema.
-    Catching FK ordering bugs here is the whole reason this fixture
-    exists — see #287 for the bug that motivated it.
+    Historically (PR #292) ``test_engine_with_fks`` was the *only* FK-
+    enforcing engine — the default ``test_engine`` had FKs off because
+    turning them on globally surfaced ~17 pre-existing fixture violations
+    plus one repo bug (``transaction_repository`` catching every
+    ``IntegrityError`` as ``DuplicateTransactionError``). Task #216
+    closed that gap, so the two fixtures are now equivalent. New tests
+    should depend on ``test_engine`` directly; this alias is kept only
+    to avoid churning the smoke-flow import in
+    ``backend/tests/integration/test_mcp_smoke_flows.py``.
     """
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-        echo=False,
-    )
-
-    @event.listens_for(engine.sync_engine, "connect")
-    def _enable_sqlite_fks(dbapi_connection: object, _record: object) -> None:
-        cursor = dbapi_connection.cursor()  # type: ignore[attr-defined]
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
-
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-
-    yield engine
-
-    await engine.dispose()
+    yield test_engine
 
 
 @pytest.fixture
@@ -255,61 +244,91 @@ def client(test_engine: AsyncEngine) -> TestClient:
 
         return get_test_auth_port._adapter  # type: ignore[attr-defined, return-value]
 
-    # Phase C2: seed an in-memory API-key adapter pointed at the same
-    # test database the rest of the dependencies use. The default test
-    # API key (raw value: "test-token-default") hashes to a stable value
-    # under the test pepper and is owned by "test-user-default" — so the
-    # parameterized auth-scheme tests resolve to the same user as the
-    # Bearer path.
+    # Phase C2: seed the default test API key directly into the SQL
+    # ``api_keys`` table. Production code stamps ``api_key_id`` on every
+    # write surface (transactions, strategies, activations, etc.) with
+    # a FK reference to ``api_keys.id`` — with FK enforcement on (Task
+    # #216) the SQL row must exist before any of those writes flush.
+    #
+    # The default test key (raw value: ``"test-token-default"``) hashes
+    # to a stable value under the test pepper and is owned by
+    # ``"test-user-default"`` — so the parameterized auth-scheme tests
+    # resolve to the same user as the Bearer path.
+    #
+    # Both reads (auth lookup) and writes (HTTP-minted keys) go through
+    # the real SQL repository now, matching production behavior. The
+    # in-memory variant is no longer used here.
     from zebu.adapters.auth.api_key_adapter import ApiKeyAuthAdapter
     from zebu.adapters.auth.api_key_hasher import ApiKeyHasher
     from zebu.adapters.inbound.api.dependencies import (
         get_api_key_auth_adapter,
         get_api_key_repository,
     )
-    from zebu.application.ports.in_memory_api_key_repository import (
-        InMemoryApiKeyRepository,
+    from zebu.adapters.outbound.database.api_key_model import (
+        ApiKeyModel as _ApiKeyModel,
+    )
+    from zebu.adapters.outbound.database.api_key_repository import (
+        SQLModelApiKeyRepository,
     )
 
     _test_pepper = "test-api-key-pepper-do-not-use-in-production"
     _test_hasher = ApiKeyHasher(secret=_test_pepper)
 
-    def get_test_api_key_repository() -> InMemoryApiKeyRepository:
-        """Singleton in-memory API-key repository for the test session.
+    # Seed the default test API key into the SQL table once per fixture
+    # instance. We do this synchronously via ``asyncio.run`` because the
+    # ``client`` fixture itself is sync and we need the row in place
+    # before any HTTP request runs.
+    import asyncio
+    from datetime import UTC, datetime
+    from uuid import NAMESPACE_DNS, uuid4, uuid5
 
-        Pre-seeded with one active key whose raw value is
-        ``"test-token-default"`` and whose owner is ``"test-user-default"``
-        (the same user the Bearer fixture authenticates as).
-        """
-        from datetime import UTC, datetime
-        from uuid import NAMESPACE_DNS, uuid4, uuid5
+    from zebu.domain.value_objects.api_key_scope import ApiKeyScope
 
-        from zebu.domain.entities.api_key import ApiKey
-        from zebu.domain.value_objects.api_key_scope import ApiKeyScope
+    _seed_key_id = uuid4()
+    _seed_key_user_uuid = uuid5(NAMESPACE_DNS, "test-user-default")
+    _seed_key_hash = _test_hasher.hash("test-token-default")
 
-        if not hasattr(get_test_api_key_repository, "_repo"):
-            repo = InMemoryApiKeyRepository()
-            seed_key = ApiKey(
-                id=uuid4(),
-                user_id=uuid5(NAMESPACE_DNS, "test-user-default"),
-                clerk_user_id="test-user-default",
-                label="test-default",
-                key_hash=_test_hasher.hash("test-token-default"),
-                scopes=frozenset(
-                    [ApiKeyScope.READ, ApiKeyScope.TRADE, ApiKeyScope.ADMIN]
-                ),
-                created_at=datetime.now(UTC),
+    async def _seed_default_api_key() -> None:
+        async with AsyncSession(test_engine, expire_on_commit=False) as session:
+            session.add(
+                _ApiKeyModel(
+                    id=_seed_key_id,
+                    user_id=_seed_key_user_uuid,
+                    clerk_user_id="test-user-default",
+                    label="test-default",
+                    key_hash=_seed_key_hash,
+                    scopes=[
+                        ApiKeyScope.READ.value,
+                        ApiKeyScope.TRADE.value,
+                        ApiKeyScope.ADMIN.value,
+                    ],
+                    created_at=datetime.now(UTC),
+                )
             )
-            # Seed via direct dict assignment so we can call from a sync
-            # closure — InMemoryApiKeyRepository.save is async.
-            repo._by_id[seed_key.id] = seed_key
-            get_test_api_key_repository._repo = repo  # type: ignore[attr-defined]
-        return get_test_api_key_repository._repo  # type: ignore[attr-defined, return-value]
+            await session.commit()
 
-    def get_test_api_key_auth_adapter() -> ApiKeyAuthAdapter:
-        """API-key auth adapter for tests, sharing the in-memory repo."""
+    asyncio.run(_seed_default_api_key())
+
+    async def get_test_api_key_repository(
+        session: AsyncSession = Depends(get_test_session),  # type: ignore[assignment]  # noqa: B008
+    ) -> SQLModelApiKeyRepository:
+        """SQL-backed API-key repository for tests (Task #216).
+
+        Was previously an in-memory singleton, which broke the FK from
+        ``transactions.api_key_id`` to ``api_keys.id`` once FK
+        enforcement was turned on — minted keys lived in memory but the
+        FK targets the SQL table. Switching to ``SQLModelApiKeyRepository``
+        unifies reads/writes against the same source of truth as
+        production.
+        """
+        return SQLModelApiKeyRepository(session)
+
+    async def get_test_api_key_auth_adapter(
+        repository: SQLModelApiKeyRepository = Depends(get_test_api_key_repository),  # type: ignore[assignment]  # noqa: B008
+    ) -> ApiKeyAuthAdapter:
+        """API-key auth adapter for tests, sharing the SQL repo."""
         return ApiKeyAuthAdapter(
-            repository=get_test_api_key_repository(),
+            repository=repository,
             hasher=_test_hasher,
         )
 
@@ -327,8 +346,6 @@ def client(test_engine: AsyncEngine) -> TestClient:
     app.dependency_overrides.clear()
     if hasattr(get_test_auth_port, "_adapter"):
         delattr(get_test_auth_port, "_adapter")
-    if hasattr(get_test_api_key_repository, "_repo"):
-        delattr(get_test_api_key_repository, "_repo")
 
 
 @pytest.fixture
@@ -472,12 +489,23 @@ async def reset_global_singletons() -> AsyncGenerator[None, None]:
     # Run the test
     yield
 
-    # Clean up after test - close any open connections first
+    # Clean up after test - close any open connections first. The Redis
+    # async client was opened in the request handler's event loop; the
+    # pytest-asyncio teardown runs in a different loop, so a clean
+    # ``aclose`` can raise ``RuntimeError: Event loop is closed`` on its
+    # underlying transport. Swallow that — the connections will be GC'd
+    # along with the references we null out below. (Pre-dates Task #216;
+    # widened to also cover the http-client path which can fail the same
+    # way under contention.)
+    import contextlib
+
     if dependencies._http_client is not None:
-        await dependencies._http_client.aclose()
+        with contextlib.suppress(RuntimeError):
+            await dependencies._http_client.aclose()
 
     if dependencies._redis_client is not None:
-        await dependencies._redis_client.aclose()
+        with contextlib.suppress(RuntimeError):
+            await dependencies._redis_client.aclose()
 
     # Reset singletons to None
     dependencies._redis_client = None
