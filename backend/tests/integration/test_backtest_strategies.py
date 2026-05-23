@@ -12,6 +12,12 @@ from zebu.adapters.outbound.market_data.in_memory_adapter import (
     InMemoryMarketDataAdapter,
 )
 from zebu.application.commands.run_backtest import RunBacktestCommand
+from zebu.application.ports.in_memory_backtest_agent_invocation_factory import (
+    InMemoryBacktestAgentInvocationFactory,
+)
+from zebu.application.ports.in_memory_backtest_agent_invocation_repository import (
+    InMemoryBacktestAgentInvocationRepository,
+)
 from zebu.application.ports.in_memory_backtest_run_repository import (
     InMemoryBacktestRunRepository,
 )
@@ -21,11 +27,17 @@ from zebu.application.ports.in_memory_portfolio_repository import (
 from zebu.application.ports.in_memory_snapshot_repository import (
     InMemorySnapshotRepository,
 )
+from zebu.application.ports.in_memory_strategy_activation_repository import (
+    InMemoryStrategyActivationRepository,
+)
 from zebu.application.ports.in_memory_strategy_repository import (
     InMemoryStrategyRepository,
 )
 from zebu.application.ports.in_memory_transaction_repository import (
     InMemoryTransactionRepository,
+)
+from zebu.application.ports.in_memory_trigger_repository import (
+    InMemoryTriggerRepository,
 )
 from zebu.application.services.backtest_executor import BacktestExecutor
 from zebu.application.services.historical_data_preparer import HistoricalDataPreparer
@@ -113,6 +125,12 @@ def _build_executor(
         snapshot_service=snapshot_service,
         snapshot_repo=snapshot_repo,
         data_preparer=data_preparer,
+        # L-3 deps: defaults that produce a no-op trigger path so existing
+        # integration tests run unchanged (no agent mode, no triggers).
+        activation_repo=InMemoryStrategyActivationRepository(),
+        trigger_repo=InMemoryTriggerRepository(),
+        backtest_agent_invocation_repo=InMemoryBacktestAgentInvocationRepository(),
+        agent_invocation_factory=InMemoryBacktestAgentInvocationFactory(),
     )
 
 

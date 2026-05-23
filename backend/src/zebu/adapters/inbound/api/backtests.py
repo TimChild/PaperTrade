@@ -29,14 +29,30 @@ from zebu.adapters.inbound.api.schemas import (
 )
 from zebu.adapters.inbound.api.schemas.errors import ErrorCode, ErrorResponse
 from zebu.adapters.inbound.api.schemas.pagination import build_paginated_response
+from zebu.adapters.outbound.anthropic import (
+    AnthropicAgentInvocationAdapter,
+    AnthropicBacktestAgentInvocationFactory,
+)
+from zebu.adapters.outbound.database.backtest_agent_invocation_repository import (
+    SQLModelBacktestAgentInvocationRepository,
+)
 from zebu.adapters.outbound.database.backtest_run_repository import (
     SQLModelBacktestRunRepository,
+)
+from zebu.adapters.outbound.database.exploration_task_repository import (
+    SQLModelExplorationTaskRepository,
 )
 from zebu.adapters.outbound.database.portfolio_repository import (
     SQLModelPortfolioRepository,
 )
 from zebu.adapters.outbound.database.snapshot_repository import (
     SQLModelSnapshotRepository,
+)
+from zebu.adapters.outbound.database.strategy_activation_repository import (
+    SQLModelStrategyActivationRepository,
+)
+from zebu.adapters.outbound.database.strategy_condition_trigger_repository import (
+    SQLModelTriggerRepository,
 )
 from zebu.adapters.outbound.database.strategy_repository import (
     SQLModelStrategyRepository,
@@ -49,11 +65,24 @@ from zebu.application.exceptions import (
     IncompleteHistoricalDataError,
     TickerNotFoundError,
 )
+from zebu.application.ports.backtest_agent_invocation_factory import (
+    BacktestAgentInvocationFactory,
+)
+from zebu.application.ports.in_memory_backtest_agent_invocation_factory import (
+    InMemoryBacktestAgentInvocationFactory,
+)
+from zebu.application.queries.get_portfolio_balance import (
+    GetPortfolioBalanceHandler,
+)
 from zebu.application.services.backtest_executor import BacktestExecutor
 from zebu.application.services.historical_data_preparer import HistoricalDataPreparer
 from zebu.application.services.snapshot_job import SnapshotJobService
 from zebu.domain.entities.backtest_run import BacktestRun
-from zebu.domain.exceptions import InsufficientHistoricalDataError, InvalidStrategyError
+from zebu.domain.exceptions import (
+    AgentInvocationError,
+    InsufficientHistoricalDataError,
+    InvalidStrategyError,
+)
 from zebu.domain.value_objects.backtest_agent_invocation_mode import (
     BacktestAgentInvocationMode,
 )
@@ -174,6 +203,39 @@ def _to_backtest_response(run: BacktestRun) -> BacktestRunResponse:
     )
 
 
+def _build_agent_invocation_factory(
+    market_data: MarketDataDep,
+    portfolio_balance_handler: GetPortfolioBalanceHandler,
+    exploration_task_repo: SQLModelExplorationTaskRepository,
+) -> BacktestAgentInvocationFactory:
+    """Build the L-3 agent invocation factory for the executor.
+
+    Tries to construct the production Anthropic-backed factory first.
+    If the Anthropic adapter isn't configured (no API key in env), falls
+    back to an :class:`InMemoryBacktestAgentInvocationFactory` with no
+    ``live_port_factory`` — that still handles ``MOCK`` (returns the
+    real :class:`MockBacktestAgentInvocationPort`) and ``NONE`` (raises,
+    but the executor short-circuits before reaching the factory), and
+    raises on ``LIVE`` so a misconfigured deployment surfaces loudly
+    instead of silently degrading.
+    """
+    try:
+        inner = AnthropicAgentInvocationAdapter()
+    except AgentInvocationError as exc:
+        logger.info(
+            "AnthropicAgentInvocationAdapter unavailable — "
+            "BacktestExecutor will reject LIVE-mode runs",
+            error=str(exc),
+        )
+        return InMemoryBacktestAgentInvocationFactory(live_port_factory=None)
+    return AnthropicBacktestAgentInvocationFactory(
+        inner=inner,
+        market_data=market_data,
+        portfolio_balance_handler=portfolio_balance_handler,
+        exploration_task_repo=exploration_task_repo,
+    )
+
+
 def _build_executor(
     session: SessionDep,
     market_data: MarketDataDep,
@@ -184,6 +246,10 @@ def _build_executor(
     strategy_repo = SQLModelStrategyRepository(session)
     backtest_run_repo = SQLModelBacktestRunRepository(session)
     snapshot_repo = SQLModelSnapshotRepository(session)
+    activation_repo = SQLModelStrategyActivationRepository(session)
+    trigger_repo = SQLModelTriggerRepository(session)
+    exploration_task_repo = SQLModelExplorationTaskRepository(session)
+    backtest_agent_invocation_repo = SQLModelBacktestAgentInvocationRepository(session)
 
     snapshot_service = SnapshotJobService(
         portfolio_repo=portfolio_repo,
@@ -193,6 +259,20 @@ def _build_executor(
     )
     data_preparer = HistoricalDataPreparer(market_data=market_data)
 
+    # L-3: build the agent invocation factory. The production factory
+    # needs a portfolio_balance_handler for the L-2 wrapper's tool
+    # dispatch; that handler reuses the same session-scoped repos.
+    portfolio_balance_handler = GetPortfolioBalanceHandler(
+        portfolio_repository=portfolio_repo,
+        transaction_repository=transaction_repo,
+        market_data=market_data,
+    )
+    agent_invocation_factory = _build_agent_invocation_factory(
+        market_data=market_data,
+        portfolio_balance_handler=portfolio_balance_handler,
+        exploration_task_repo=exploration_task_repo,
+    )
+
     return BacktestExecutor(
         portfolio_repo=portfolio_repo,
         transaction_repo=transaction_repo,
@@ -201,6 +281,10 @@ def _build_executor(
         snapshot_service=snapshot_service,
         snapshot_repo=snapshot_repo,
         data_preparer=data_preparer,
+        activation_repo=activation_repo,
+        trigger_repo=trigger_repo,
+        backtest_agent_invocation_repo=backtest_agent_invocation_repo,
+        agent_invocation_factory=agent_invocation_factory,
     )
 
 
