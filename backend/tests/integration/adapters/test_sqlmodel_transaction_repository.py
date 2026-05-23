@@ -344,6 +344,159 @@ class TestSQLModelTransactionRepository:
         assert result.price_per_share.amount == Decimal("150.00")
 
 
+class TestIntegrityErrorNarrowing:
+    """Task #216 — repo translates PK conflicts to DuplicateTransactionError,
+    but every other IntegrityError (FK / NOT NULL / CHECK) propagates
+    unchanged so callers can tell a duplicate insert from a real
+    referential-integrity bug.
+
+    Before #216 the catch was a catch-all and FK violations got
+    silently relabelled — the failure pattern behind #287 (FK ordering)
+    and #291 (missing-parent writes).
+    """
+
+    @pytest.mark.asyncio
+    async def test_save_propagates_fk_violation_as_integrity_error(
+        self, session
+    ) -> None:
+        """A transaction whose portfolio_id has no parent row must raise
+        ``IntegrityError`` — *not* ``DuplicateTransactionError``."""
+        from sqlalchemy.exc import IntegrityError
+
+        repo = SQLModelTransactionRepository(session)
+
+        # Deliberately do NOT call insert_portfolio — we want the FK to fail.
+        orphan_transaction = Transaction(
+            id=uuid4(),
+            portfolio_id=uuid4(),
+            transaction_type=TransactionType.DEPOSIT,
+            timestamp=datetime.now(),
+            cash_change=Money(Decimal("100.00"), "USD"),
+            ticker=None,
+            quantity=None,
+            price_per_share=None,
+        )
+
+        with pytest.raises(IntegrityError) as exc_info:
+            await repo.save(orphan_transaction)
+
+        # And explicitly NOT DuplicateTransactionError.
+        assert not isinstance(exc_info.value, DuplicateTransactionError)
+
+    @pytest.mark.asyncio
+    async def test_save_translates_pk_conflict_to_duplicate_transaction_error(
+        self, session
+    ) -> None:
+        """A second insert with the same PK still surfaces as
+        ``DuplicateTransactionError`` — that translation is the only
+        path the narrowed catch is allowed to take."""
+        repo = SQLModelTransactionRepository(session)
+        portfolio_id = await insert_portfolio(session, uuid4())
+        shared_id = uuid4()
+
+        first = Transaction(
+            id=shared_id,
+            portfolio_id=portfolio_id,
+            transaction_type=TransactionType.DEPOSIT,
+            timestamp=datetime.now(),
+            cash_change=Money(Decimal("100.00"), "USD"),
+            ticker=None,
+            quantity=None,
+            price_per_share=None,
+        )
+        await repo.save(first)
+        await session.commit()
+
+        duplicate = Transaction(
+            id=shared_id,
+            portfolio_id=portfolio_id,
+            transaction_type=TransactionType.DEPOSIT,
+            timestamp=datetime.now(),
+            cash_change=Money(Decimal("200.00"), "USD"),
+            ticker=None,
+            quantity=None,
+            price_per_share=None,
+        )
+        with pytest.raises(DuplicateTransactionError):
+            await repo.save(duplicate)
+
+    @pytest.mark.asyncio
+    async def test_save_all_propagates_fk_violation_as_integrity_error(
+        self, session
+    ) -> None:
+        """The bulk path (``save_all``) narrows the same way as ``save``."""
+        from sqlalchemy.exc import IntegrityError
+
+        repo = SQLModelTransactionRepository(session)
+
+        # One real portfolio, one orphan — the batch should fail with the
+        # FK on the orphan, NOT get relabelled as a duplicate.
+        portfolio_id = await insert_portfolio(session, uuid4())
+        orphan_portfolio_id = uuid4()
+
+        real = Transaction(
+            id=uuid4(),
+            portfolio_id=portfolio_id,
+            transaction_type=TransactionType.DEPOSIT,
+            timestamp=datetime.now(),
+            cash_change=Money(Decimal("100.00"), "USD"),
+            ticker=None,
+            quantity=None,
+            price_per_share=None,
+        )
+        orphan = Transaction(
+            id=uuid4(),
+            portfolio_id=orphan_portfolio_id,
+            transaction_type=TransactionType.DEPOSIT,
+            timestamp=datetime.now(),
+            cash_change=Money(Decimal("100.00"), "USD"),
+            ticker=None,
+            quantity=None,
+            price_per_share=None,
+        )
+
+        with pytest.raises(IntegrityError) as exc_info:
+            await repo.save_all([real, orphan])
+
+        assert not isinstance(exc_info.value, DuplicateTransactionError)
+
+    @pytest.mark.asyncio
+    async def test_save_all_translates_pk_conflict_to_duplicate_transaction_error(
+        self, session
+    ) -> None:
+        """The bulk path still produces ``DuplicateTransactionError`` for
+        a real PK conflict."""
+        repo = SQLModelTransactionRepository(session)
+        portfolio_id = await insert_portfolio(session, uuid4())
+        shared_id = uuid4()
+
+        first = Transaction(
+            id=shared_id,
+            portfolio_id=portfolio_id,
+            transaction_type=TransactionType.DEPOSIT,
+            timestamp=datetime.now(),
+            cash_change=Money(Decimal("100.00"), "USD"),
+            ticker=None,
+            quantity=None,
+            price_per_share=None,
+        )
+        await repo.save(first)
+        await session.commit()
+
+        duplicate = Transaction(
+            id=shared_id,
+            portfolio_id=portfolio_id,
+            transaction_type=TransactionType.DEPOSIT,
+            timestamp=datetime.now(),
+            cash_change=Money(Decimal("200.00"), "USD"),
+            ticker=None,
+            quantity=None,
+            price_per_share=None,
+        )
+        with pytest.raises(DuplicateTransactionError):
+            await repo.save_all([duplicate])
+
+
 class TestGetByPortfolios:
     """Tests for get_by_portfolios() batch query."""
 

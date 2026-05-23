@@ -1,17 +1,39 @@
 """Tests for GetActiveTickers query."""
 
 from datetime import UTC, datetime, timedelta
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from zebu.adapters.outbound.database.models import TransactionModel
+from zebu.adapters.outbound.database.models import (
+    PortfolioModel,
+    TransactionModel,
+)
 from zebu.application.queries.get_active_tickers import (
     GetActiveTickersHandler,
     GetActiveTickersQuery,
 )
 from zebu.domain.value_objects.ticker import Ticker
+
+
+async def _seed_portfolio(session: AsyncSession, portfolio_id: UUID) -> None:
+    """Insert a parent portfolio row so the FK from transactions resolves.
+
+    Task #216 enabled FK enforcement in ``test_engine``; transactions
+    can no longer reference a non-existent ``portfolios.id``.
+    """
+    now = datetime.now(UTC)
+    session.add(
+        PortfolioModel(
+            id=portfolio_id,
+            user_id=uuid4(),
+            name="test-portfolio",
+            created_at=now,
+            updated_at=now,
+        )
+    )
+    await session.flush()
 
 
 class TestGetActiveTickers:
@@ -41,6 +63,7 @@ class TestGetActiveTickers:
         async with AsyncSession(test_engine, expire_on_commit=False) as session:
             # Create test transactions with different tickers
             portfolio_id = uuid4()
+            await _seed_portfolio(session, portfolio_id)
             now = datetime.now(UTC)
 
             transactions = [
@@ -103,6 +126,7 @@ class TestGetActiveTickers:
         # Arrange
         async with AsyncSession(test_engine, expire_on_commit=False) as session:
             portfolio_id = uuid4()
+            await _seed_portfolio(session, portfolio_id)
             now = datetime.now(UTC)
 
             # Create transactions: some recent, some old
@@ -155,6 +179,7 @@ class TestGetActiveTickers:
         # Arrange
         async with AsyncSession(test_engine, expire_on_commit=False) as session:
             portfolio_id = uuid4()
+            await _seed_portfolio(session, portfolio_id)
             now = datetime.now(UTC)
 
             # Create multiple transactions for same ticker
@@ -218,6 +243,7 @@ class TestGetActiveTickers:
         # Arrange
         async with AsyncSession(test_engine, expire_on_commit=False) as session:
             portfolio_id = uuid4()
+            await _seed_portfolio(session, portfolio_id)
             now = datetime.now(UTC)
 
             transactions = [
