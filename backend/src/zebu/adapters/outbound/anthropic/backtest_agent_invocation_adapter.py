@@ -42,10 +42,15 @@ from decimal import Decimal
 from typing import cast
 from uuid import UUID
 
+from zebu.application.exceptions import (
+    MarketDataUnavailableError,
+    TickerNotFoundError,
+)
 from zebu.application.ports.agent_invocation_port import (
     AgentInvocationPort,
     AgentInvocationResult,
     ToolDefinition,
+    ToolDispatchCallback,
 )
 from zebu.application.ports.exploration_task_repository import (
     ExplorationTaskRepository,
@@ -56,7 +61,12 @@ from zebu.application.queries.get_portfolio_balance import (
     GetPortfolioBalanceQuery,
 )
 from zebu.domain.entities.exploration_task import ExplorationTaskStatus
-from zebu.domain.exceptions import BacktestSafetyViolationError
+from zebu.domain.exceptions import (
+    AgentInvocationError,
+    BacktestSafetyViolationError,
+    InvalidPortfolioError,
+    InvalidTickerError,
+)
 from zebu.domain.value_objects.backtest_safe_tool import (
     BACKTEST_SAFE_TOOL_NAMES,
     BacktestSafeTool,
@@ -356,6 +366,7 @@ class BacktestAgentInvocationAdapter:
         tools: list[ToolDefinition] | None = None,
         timeout_secs: float = 60.0,
         agent_temperature: float | None = None,
+        dispatch_tool_call: ToolDispatchCallback | None = None,
     ) -> AgentInvocationResult:
         """Run the simulated agent invocation with safety enforcement.
 
@@ -365,6 +376,9 @@ class BacktestAgentInvocationAdapter:
           its own :attr:`BACKTEST_SAFE_TOOLS_DEFINITIONS` list to the
           inner port so the agent's tool surface is exactly the
           whitelist — belt-and-braces against a future L-3 mistake.
+        - **Caller-supplied ``dispatch_tool_call`` is IGNORED.** Same
+          rationale: the wrapper IS the safety enforcement; a caller
+          passing their own dispatch would bypass it.
         - **Safety preamble** is prepended to the caller's
           ``system_prompt`` so the agent reads the boundary up front.
         - **Dispatch callback** validates every tool call against
@@ -382,6 +396,12 @@ class BacktestAgentInvocationAdapter:
                 :attr:`_agent_temperature` is used. When set, overrides
                 for this call only — useful for tests that need to
                 assert plumbing without re-constructing the wrapper.
+            dispatch_tool_call: Accepted for :class:`AgentInvocationPort`
+                conformance but IGNORED — the wrapper substitutes its
+                own safety-enforcing dispatch closure. Any caller-
+                supplied callback would bypass the simulated-date filter,
+                so silently dropping it is the correct (and only safe)
+                behaviour.
 
         Returns:
             The :class:`AgentInvocationResult` from the inner port,
@@ -392,10 +412,13 @@ class BacktestAgentInvocationAdapter:
                 tool, or passed a date/datetime argument exceeding
                 ``simulated_date`` end-of-UTC-day.
             AgentInvocationError: Transport / parse failure from the
-                inner port (propagates).
+                inner port (propagates), or an unexpected error from
+                an underlying port / handler / repo (wrapped so L-3's
+                ``except AgentInvocationError`` clause catches it).
         """
-        # Belt-and-braces: ignore any caller-supplied tools list.
-        del tools
+        # Belt-and-braces: ignore any caller-supplied tools list and
+        # any caller-supplied dispatch callback.
+        del tools, dispatch_tool_call
 
         safety_preamble = _build_safety_preamble(self._simulated_date)
         if system_prompt:
@@ -465,7 +488,17 @@ class BacktestAgentInvocationAdapter:
     async def _dispatch_get_price_history(
         self, tool_input: Mapping[str, object]
     ) -> str:
-        """Dispatch ``get_price_history`` with simulated-date cap on ``end``."""
+        """Dispatch ``get_price_history`` with simulated-date cap on ``end``.
+
+        Raises:
+            BacktestSafetyViolationError: Argument missing / malformed,
+                or ``end`` exceeds ``simulated_date`` end-of-UTC-day.
+            AgentInvocationError: Underlying market_data adapter
+                rejected the ticker (TickerNotFoundError) or was
+                unavailable (MarketDataUnavailableError). Wrapped here
+                so the L-3 executor's ``except AgentInvocationError``
+                clause catches it uniformly.
+        """
         ticker_raw = tool_input.get("ticker")
         if not isinstance(ticker_raw, str) or not ticker_raw.strip():
             raise BacktestSafetyViolationError(
@@ -518,13 +551,32 @@ class BacktestAgentInvocationAdapter:
         interval_raw = tool_input.get("interval", "1day")
         interval = interval_raw if isinstance(interval_raw, str) else "1day"
 
-        ticker = Ticker(ticker_raw.upper())
-        price_points = await self._market_data.get_price_history(
-            ticker=ticker,
-            start=start,
-            end=end,
-            interval=interval,
-        )
+        # Construct Ticker — invalid format is a tool-argument error,
+        # surface as a safety violation so the L-3 executor records it
+        # as INVOCATION_FAILED with a meaningful reason.
+        try:
+            ticker = Ticker(ticker_raw.upper())
+        except InvalidTickerError as exc:
+            raise BacktestSafetyViolationError(
+                tool_name=BacktestSafeTool.GET_PRICE_HISTORY.value,
+                simulated_date=self._simulated_date,
+                reason=f"invalid ticker {ticker_raw!r}: {exc}",
+            ) from exc
+
+        # Wrap downstream adapter errors as AgentInvocationError so the
+        # L-3 executor's catch sees a consistent exception hierarchy.
+        try:
+            price_points = await self._market_data.get_price_history(
+                ticker=ticker,
+                start=start,
+                end=end,
+                interval=interval,
+            )
+        except (TickerNotFoundError, MarketDataUnavailableError) as exc:
+            raise AgentInvocationError(
+                f"get_price_history dispatch failed for {ticker.symbol}: {exc}",
+                cause=exc,
+            ) from exc
         # Serialise to a small JSON-compatible shape. The model only
         # needs the list of (timestamp, price) tuples — not the full
         # PricePoint metadata.
@@ -597,9 +649,19 @@ class BacktestAgentInvocationAdapter:
         else:
             as_of = as_of_arg
 
-        result = await self._portfolio_balance_handler.execute(
-            GetPortfolioBalanceQuery(portfolio_id=portfolio_id, as_of=as_of)
-        )
+        # Wrap downstream errors so L-3's catch handler sees a uniform
+        # exception hierarchy. InvalidPortfolioError = portfolio not
+        # found; MarketDataUnavailableError = balance-handler pricing
+        # gap (cash-only portfolios skip this path).
+        try:
+            result = await self._portfolio_balance_handler.execute(
+                GetPortfolioBalanceQuery(portfolio_id=portfolio_id, as_of=as_of)
+            )
+        except (InvalidPortfolioError, MarketDataUnavailableError) as exc:
+            raise AgentInvocationError(
+                f"get_portfolio_state dispatch failed for {portfolio_id}: {exc}",
+                cause=exc,
+            ) from exc
         return json.dumps(
             {
                 "portfolio_id": str(result.portfolio_id),
@@ -656,19 +718,24 @@ class BacktestAgentInvocationAdapter:
             if isinstance(limit_raw, int) and not isinstance(limit_raw, bool)
             else 20
         )
-        # Fetch DONE-status tasks; the repo doesn't expose a
-        # ``claimed_before`` filter so we post-filter here. The repo
-        # caps via ``limit``; over-fetch and filter is acceptable for
-        # the small backtest set sizes.
+        # Fetch DONE-status tasks without an SQL-level limit so we can
+        # post-filter by ``claimed_before`` and still return up to
+        # ``limit`` matches. (The repo's list_by_status orders by
+        # ``created_at`` ascending; a limit-then-filter would silently
+        # under-return when the oldest tasks were claimed AFTER
+        # ``simulated_date`` — a 'tasks created in 2020 but claimed in
+        # 2025' scenario.) Backtest task sets are small, so the
+        # over-fetch is acceptable.
         tasks = await self._exploration_task_repo.list_by_status(
             ExplorationTaskStatus.DONE,
-            limit=limit,
+            limit=None,
         )
         filtered = [
             t
             for t in tasks
             if t.claimed_at is not None and t.claimed_at <= claimed_before
         ]
+        capped = filtered[:limit] if limit > 0 else filtered
         return json.dumps(
             {
                 "claimed_before": claimed_before.isoformat(),
@@ -682,7 +749,7 @@ class BacktestAgentInvocationAdapter:
                         ),
                         "created_at": t.created_at.isoformat(),
                     }
-                    for t in filtered
+                    for t in capped
                 ],
             },
             default=_json_default,

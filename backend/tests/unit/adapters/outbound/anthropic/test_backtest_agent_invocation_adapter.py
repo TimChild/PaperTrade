@@ -890,3 +890,218 @@ class TestEndToEndLoop:
 
         # Only one tool dispatch was attempted; the second was never reached.
         assert len(inner.tool_results) == 0
+
+
+# ---------------------------------------------------------------------------
+# Protocol conformance + caller-supplied dispatch_tool_call ignored
+# ---------------------------------------------------------------------------
+
+
+class TestProtocolConformance:
+    """The wrapper satisfies AgentInvocationPort and ignores caller dispatch."""
+
+    async def test_satisfies_agent_invocation_port(self) -> None:
+        """Wrapper is assignable to AgentInvocationPort — structural check."""
+        from zebu.application.ports.agent_invocation_port import AgentInvocationPort
+
+        inner = _CapturingInnerPort()
+        wrapper = _make_wrapper(inner=inner)
+
+        # No runtime assertion needed — pyright catches Protocol gaps at
+        # type-check time. The assignment here is the live check.
+        port: AgentInvocationPort = wrapper
+        await port.invoke(system_prompt="s", user_prompt="u")
+        assert len(inner.invocations) == 1
+
+    async def test_caller_supplied_dispatch_tool_call_is_ignored(self) -> None:
+        """Caller-supplied dispatch_tool_call MUST NOT override the safety closure."""
+        from collections.abc import Mapping as _Mapping  # local alias
+
+        caller_dispatched: list[str] = []
+
+        async def evil_dispatch(name: str, inp: _Mapping[str, object]) -> str:
+            # If this ever fires, the wrapper bypassed its own safety
+            # closure — that would be a fatal hole.
+            caller_dispatched.append(name)
+            return "ATTACKER CONTROLLED"
+
+        # Seed market_data so the real dispatch closure succeeds — we
+        # want to verify only the evil callback was not invoked.
+        market_data = InMemoryMarketDataAdapter()
+        market_data.seed_prices(
+            [
+                _make_aapl_price(
+                    timestamp=datetime(2024, 3, 14, 21, 0, tzinfo=UTC),
+                ),
+            ]
+        )
+
+        inner = _CapturingInnerPort(
+            script=[("get_price_history", {"ticker": "AAPL", "start": "2024-03-01"})]
+        )
+        wrapper = _make_wrapper(
+            inner=inner,
+            simulated_date=date(2024, 3, 15),
+            market_data=market_data,
+        )
+
+        # Pass evil_dispatch — the wrapper MUST ignore it and substitute
+        # its own enforcement closure.
+        await wrapper.invoke(
+            system_prompt="s",
+            user_prompt="u",
+            dispatch_tool_call=evil_dispatch,
+        )
+
+        # The evil callback was never invoked.
+        assert caller_dispatched == []
+
+
+# ---------------------------------------------------------------------------
+# Downstream-error wrapping into AgentInvocationError
+# ---------------------------------------------------------------------------
+
+
+class TestDownstreamErrorWrapping:
+    """Adapter / handler errors are wrapped so L-3's catch handler is uniform."""
+
+    async def test_invalid_ticker_raises_safety_violation(self) -> None:
+        """Malformed ticker is a tool-argument error → BacktestSafetyViolationError."""
+        inner = _CapturingInnerPort(
+            script=[
+                (
+                    "get_price_history",
+                    {
+                        "ticker": "INV4LID-123",  # contains digits and dash
+                        "start": "2024-03-01",
+                    },
+                ),
+            ]
+        )
+        wrapper = _make_wrapper(inner=inner, simulated_date=date(2024, 3, 15))
+
+        with pytest.raises(BacktestSafetyViolationError) as exc_info:
+            await wrapper.invoke(system_prompt="s", user_prompt="u")
+        assert exc_info.value.tool_name == "get_price_history"
+        assert "invalid ticker" in exc_info.value.reason.lower()
+
+    async def test_ticker_not_found_wraps_to_agent_invocation_error(self) -> None:
+        """TickerNotFoundError from market_data wraps to AgentInvocationError.
+
+        L-3 catches AgentInvocationError to write INVOCATION_FAILED; an
+        un-wrapped TickerNotFoundError would slip past and crash the run.
+        """
+        from zebu.domain.exceptions import AgentInvocationError
+
+        # Empty market_data adapter — a valid-format ticker (1-5 caps)
+        # passes Ticker construction but triggers TickerNotFoundError
+        # from get_price_history because no prices are seeded.
+        market_data = InMemoryMarketDataAdapter()
+        inner = _CapturingInnerPort(
+            script=[
+                (
+                    "get_price_history",
+                    {
+                        "ticker": "AAPL",
+                        "start": "2024-03-01",
+                    },
+                ),
+            ]
+        )
+        wrapper = _make_wrapper(
+            inner=inner,
+            simulated_date=date(2024, 3, 15),
+            market_data=market_data,
+        )
+
+        with pytest.raises(AgentInvocationError) as exc_info:
+            await wrapper.invoke(system_prompt="s", user_prompt="u")
+        # Should NOT be a BacktestSafetyViolationError — this isn't a
+        # safety violation, it's a downstream data issue.
+        assert not isinstance(exc_info.value, BacktestSafetyViolationError)
+        assert "get_price_history" in str(exc_info.value).lower()
+
+    async def test_invalid_portfolio_wraps_to_agent_invocation_error(self) -> None:
+        """InvalidPortfolioError from balance handler wraps to AgentInvocationError."""
+        from zebu.domain.exceptions import AgentInvocationError
+
+        # Balance handler with no portfolios — any valid-format UUID
+        # triggers InvalidPortfolioError from the balance query.
+        handler = _make_safe_balance_handler()
+        nonexistent_id = uuid4()
+        inner = _CapturingInnerPort(
+            script=[
+                (
+                    "get_portfolio_state",
+                    {"portfolio_id": str(nonexistent_id)},
+                ),
+            ]
+        )
+        wrapper = _make_wrapper(
+            inner=inner,
+            simulated_date=date(2024, 3, 15),
+            balance_handler=handler,
+        )
+
+        with pytest.raises(AgentInvocationError) as exc_info:
+            await wrapper.invoke(system_prompt="s", user_prompt="u")
+        assert not isinstance(exc_info.value, BacktestSafetyViolationError)
+        assert "get_portfolio_state" in str(exc_info.value).lower()
+
+
+# ---------------------------------------------------------------------------
+# list_exploration_tasks over-fetch correctness
+# ---------------------------------------------------------------------------
+
+
+class TestListExplorationTasksOverFetch:
+    """The post-filter must not under-return when old tasks were claimed late.
+
+    The repo's ``list_by_status`` orders by ``created_at`` ascending. If
+    we passed ``limit`` down to the repo, we'd risk getting back N
+    oldest-by-created tasks that were ALL claimed after simulated_date —
+    and the post-filter would yield zero. The wrapper over-fetches
+    (limit=None) and caps after filtering.
+    """
+
+    async def test_old_created_late_claimed_tasks_filtered_correctly(self) -> None:
+        """Tasks created old but claimed AFTER simulated_date are excluded."""
+        repo = InMemoryExplorationTaskRepository()
+        # Three tasks created on Jan 1, 2024 but claimed on different dates:
+        # - claimed Mar 5  (before simulated_date)  → returned
+        # - claimed Mar 16 (after simulated_date)   → filtered out
+        # - claimed Mar 20 (after simulated_date)   → filtered out
+        old_created = datetime(2024, 1, 1, tzinfo=UTC)
+        good = _make_done_task(
+            claimed_at=datetime(2024, 3, 5, tzinfo=UTC),
+            created_at=old_created,
+        )
+        future1 = _make_done_task(
+            claimed_at=datetime(2024, 3, 16, tzinfo=UTC),
+            created_at=old_created,
+        )
+        future2 = _make_done_task(
+            claimed_at=datetime(2024, 3, 20, tzinfo=UTC),
+            created_at=old_created,
+        )
+        for task in (good, future1, future2):
+            await repo.save(task)
+
+        inner = _CapturingInnerPort(
+            script=[("list_exploration_tasks", {"limit": 2})],
+        )
+        wrapper = _make_wrapper(
+            inner=inner,
+            simulated_date=date(2024, 3, 15),
+            exploration_task_repo=repo,
+        )
+
+        await wrapper.invoke(system_prompt="s", user_prompt="u")
+
+        parsed = json.loads(inner.tool_results[0])
+        returned_ids = {t["id"] for t in parsed["tasks"]}
+        # The "good" task must come through — even though it's
+        # at the same created_at as the two future-claimed ones.
+        assert str(good.id) in returned_ids
+        assert str(future1.id) not in returned_ids
+        assert str(future2.id) not in returned_ids
