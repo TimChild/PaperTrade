@@ -386,3 +386,279 @@ class TestToolAndSystemBlocks:
         result = await adapter.invoke(system_prompt="s", user_prompt="u")
         assert mock_create.call_args.kwargs["model"] == "claude-opus-4-7"
         assert result.model == "claude-opus-4-7"
+
+
+# ---------------------------------------------------------------------------
+# agent_temperature plumbing (Phase L-2 port extension)
+# ---------------------------------------------------------------------------
+
+
+class TestAgentTemperature:
+    """Phase L-2: the port now accepts ``agent_temperature``.
+
+    The production adapter must thread it to the SDK's ``temperature``
+    parameter when supplied, and OMIT the parameter entirely when
+    ``None`` (so the SDK's default applies — important for the F-3 path
+    that didn't set ``temperature`` at all pre-L-2).
+    """
+
+    async def test_temperature_appears_on_sdk_call_when_set(self) -> None:
+        message = _build_message(decision="HOLD")
+        adapter, mock_create = _build_adapter_with_mock(message=message)
+
+        await adapter.invoke(
+            system_prompt="s",
+            user_prompt="u",
+            agent_temperature=0.0,
+        )
+        assert mock_create.call_args.kwargs["temperature"] == 0.0
+
+    async def test_temperature_override_passes_through(self) -> None:
+        message = _build_message(decision="HOLD")
+        adapter, mock_create = _build_adapter_with_mock(message=message)
+
+        await adapter.invoke(
+            system_prompt="s",
+            user_prompt="u",
+            agent_temperature=0.5,
+        )
+        assert mock_create.call_args.kwargs["temperature"] == 0.5
+
+    async def test_temperature_omitted_when_none(self) -> None:
+        """Pre-L-2 callers that don't pass ``agent_temperature`` see no change."""
+        message = _build_message(decision="HOLD")
+        adapter, mock_create = _build_adapter_with_mock(message=message)
+
+        await adapter.invoke(system_prompt="s", user_prompt="u")
+        # The SDK call kwargs should NOT contain ``temperature`` — the
+        # F-3 path historically left it unspecified so the SDK default
+        # (sampling-on) applied.
+        assert "temperature" not in mock_create.call_args.kwargs
+
+
+# ---------------------------------------------------------------------------
+# Multi-turn tool-use loop (Phase L-2)
+# ---------------------------------------------------------------------------
+
+
+def _build_tool_use_message(
+    *,
+    tool_name: str,
+    tool_input: dict[str, object],
+    tool_id: str = "toolu_test_id",
+    msg_id: str = "msg_loop_id",
+    stop_reason: str = "tool_use",
+) -> Message:
+    """Build a Message that contains exactly one non-record_decision tool_use.
+
+    Used to script the multi-turn loop: the first response is a
+    ``get_price_history`` (or similar) tool_use; the second response is
+    a ``record_decision`` to terminate.
+    """
+    tool_use = MagicMock(spec=ToolUseBlock)
+    tool_use.name = tool_name
+    tool_use.input = tool_input
+    tool_use.id = tool_id
+
+    message = MagicMock(spec=Message)
+    message.id = msg_id
+    message.content = [tool_use]
+    message.stop_reason = stop_reason
+    return cast("Message", message)
+
+
+class TestToolUseLoop:
+    """Phase L-2 multi-turn tool-use loop.
+
+    When a ``dispatch_tool_call`` callback is provided, the adapter
+    allows the model to call non-``record_decision`` tools, invokes the
+    callback, appends the result, and loops until the model emits
+    ``record_decision``.
+    """
+
+    async def test_no_dispatch_callback_uses_single_shot(self) -> None:
+        """No callback → ``tool_choice`` forces ``record_decision`` as before."""
+        message = _build_message(decision="HOLD")
+        adapter, mock_create = _build_adapter_with_mock(message=message)
+
+        await adapter.invoke(system_prompt="s", user_prompt="u")
+        assert mock_create.call_args.kwargs["tool_choice"] == {
+            "type": "tool",
+            "name": "record_decision",
+        }
+
+    async def test_with_dispatch_callback_uses_auto_tool_choice(self) -> None:
+        """Callback present → ``tool_choice`` is ``{"type": "auto"}``."""
+        # Single turn: model immediately emits record_decision.
+        message = _build_message(decision="HOLD")
+        adapter, mock_create = _build_adapter_with_mock(message=message)
+
+        async def noop_dispatch(
+            name: str, inp: dict[str, object]
+        ) -> str:  # pragma: no cover - not called on single-turn
+            return ""
+
+        await adapter.invoke(
+            system_prompt="s",
+            user_prompt="u",
+            dispatch_tool_call=noop_dispatch,
+        )
+        # The model's first response was record_decision, so the loop
+        # exits after one turn. ``tool_choice`` MUST have been ``auto``,
+        # not forced, otherwise the model couldn't have considered the
+        # read tools.
+        assert mock_create.call_args.kwargs["tool_choice"] == {"type": "auto"}
+
+    async def test_dispatch_callback_invoked_with_tool_input(self) -> None:
+        """One read-tool turn, then record_decision."""
+        first_response = _build_tool_use_message(
+            tool_name="get_price_history",
+            tool_input={"ticker": "AAPL", "end": "2024-03-15"},
+            tool_id="toolu_first",
+        )
+        second_response = _build_message(decision="HOLD", rationale="okay")
+
+        adapter, mock_create = _build_adapter_with_mock()
+        mock_create.side_effect = [first_response, second_response]
+
+        captured: list[tuple[str, dict[str, object]]] = []
+
+        async def dispatch(name: str, inp: dict[str, object]) -> str:
+            captured.append((name, dict(inp)))
+            return '{"price_points": []}'
+
+        result = await adapter.invoke(
+            system_prompt="s",
+            user_prompt="u",
+            dispatch_tool_call=dispatch,
+        )
+
+        assert result.decision is AgentDecision.HOLD
+        assert captured == [
+            ("get_price_history", {"ticker": "AAPL", "end": "2024-03-15"})
+        ]
+        # Two SDK calls = two turns.
+        assert mock_create.call_count == 2
+        # The second SDK call must carry the prior assistant + the
+        # user(tool_result) appended to ``messages``.
+        second_call_messages = mock_create.call_args_list[1].kwargs["messages"]
+        assert len(second_call_messages) == 3  # original user + assistant + tool_result
+        assert second_call_messages[-1]["role"] == "user"
+        # tool_result block carries the matching tool_use_id.
+        tool_result_block = second_call_messages[-1]["content"][0]
+        assert tool_result_block["type"] == "tool_result"
+        assert tool_result_block["tool_use_id"] == "toolu_first"
+        assert tool_result_block["content"] == '{"price_points": []}'
+
+    async def test_dispatch_callback_exception_propagates(self) -> None:
+        """A safety violation raised by the callback is not swallowed."""
+        first_response = _build_tool_use_message(
+            tool_name="web_search",
+            tool_input={"query": "AAPL news"},
+        )
+
+        adapter, mock_create = _build_adapter_with_mock()
+        mock_create.side_effect = [first_response]
+
+        class _SimulatedViolation(Exception):
+            """Stand-in for BacktestSafetyViolationError.
+
+            Same propagation behaviour as the real exception — verifies
+            the loop doesn't swallow callback errors.
+            """
+
+        async def dispatch(name: str, inp: dict[str, object]) -> str:
+            raise _SimulatedViolation("violation")
+
+        with pytest.raises(_SimulatedViolation):
+            await adapter.invoke(
+                system_prompt="s",
+                user_prompt="u",
+                dispatch_tool_call=dispatch,
+            )
+
+    async def test_loop_terminates_on_record_decision_in_same_turn(self) -> None:
+        """A turn can contain BOTH a read tool_use and record_decision — return."""
+        # If the model produces record_decision plus a read tool in the
+        # same response, prefer to terminate immediately (the decision
+        # is the artefact; further dispatch would be wasted work).
+        record_block = MagicMock(spec=ToolUseBlock)
+        record_block.name = "record_decision"
+        record_block.input = {"decision": "HOLD", "rationale": "decided"}
+        record_block.id = "toolu_record"
+
+        message = MagicMock(spec=Message)
+        message.id = "msg_combined"
+        message.content = [record_block]
+        message.stop_reason = "tool_use"
+        terminating = cast("Message", message)
+
+        adapter, mock_create = _build_adapter_with_mock()
+        mock_create.side_effect = [terminating]
+
+        async def dispatch(
+            name: str, inp: dict[str, object]
+        ) -> str:  # pragma: no cover - not dispatched
+            return ""
+
+        result = await adapter.invoke(
+            system_prompt="s",
+            user_prompt="u",
+            dispatch_tool_call=dispatch,
+        )
+        assert result.decision is AgentDecision.HOLD
+        assert mock_create.call_count == 1
+
+    async def test_loop_raises_when_no_tool_use_and_no_terminator(self) -> None:
+        """The model returned plain text without record_decision — surface as error."""
+        message = MagicMock(spec=Message)
+        message.id = "msg_no_tool"
+        message.content = []
+        message.stop_reason = "end_turn"
+        empty_message = cast("Message", message)
+
+        adapter, mock_create = _build_adapter_with_mock()
+        mock_create.side_effect = [empty_message]
+
+        async def dispatch(
+            name: str, inp: dict[str, object]
+        ) -> str:  # pragma: no cover - not called
+            return ""
+
+        with pytest.raises(AgentInvocationError) as exc_info:
+            await adapter.invoke(
+                system_prompt="s",
+                user_prompt="u",
+                dispatch_tool_call=dispatch,
+            )
+        assert "without a record_decision" in str(exc_info.value)
+
+    async def test_loop_raises_when_max_turns_exceeded(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Bound the loop so a misbehaving agent can't burn budget forever."""
+        # Cap _MAX_TOOL_USE_TURNS to a small value to keep the test fast.
+        from zebu.adapters.outbound.anthropic import agent_invocation_adapter as mod
+
+        monkeypatch.setattr(mod, "_MAX_TOOL_USE_TURNS", 2)
+
+        # Always emit a non-terminator tool_use so the loop never exits.
+        non_terminator = _build_tool_use_message(
+            tool_name="get_price_history",
+            tool_input={"ticker": "AAPL", "end": "2024-03-15"},
+        )
+
+        adapter, mock_create = _build_adapter_with_mock()
+        mock_create.side_effect = [non_terminator, non_terminator]
+
+        async def dispatch(name: str, inp: dict[str, object]) -> str:
+            return '{"price_points": []}'
+
+        with pytest.raises(AgentInvocationError) as exc_info:
+            await adapter.invoke(
+                system_prompt="s",
+                user_prompt="u",
+                dispatch_tool_call=dispatch,
+            )
+        assert "exceeded" in str(exc_info.value).lower()
+        assert mock_create.call_count == 2

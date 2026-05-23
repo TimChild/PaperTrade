@@ -370,7 +370,7 @@ class TestBuyDecision:
 
         # Agent was given a system + user prompt
         assert len(agent_port.invocations) == 1
-        system_prompt, user_prompt, _, _ = agent_port.invocations[0]
+        system_prompt, user_prompt, _, _, _ = agent_port.invocations[0]
         assert "Zebu trigger-fire decision agent" in system_prompt
         assert "record_decision" in system_prompt.lower()
         assert "Drawdown" not in user_prompt  # the eval data has condition_type

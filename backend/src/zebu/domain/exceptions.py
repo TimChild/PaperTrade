@@ -184,6 +184,72 @@ class AgentResponseParseError(AgentInvocationError):
     pass
 
 
+class BacktestSafetyViolationError(AgentInvocationError):
+    """Raised when a backtest agent invocation violates the safety contract.
+
+    The :class:`BacktestAgentInvocationAdapter` (Phase L-2) enforces two
+    invariants on every tool call the agent issues:
+
+    1. The tool name MUST be in :class:`BacktestSafeTool` (the
+       ``BACKTEST_SAFE_TOOLS`` whitelist). Anything else — ``web_search``,
+       ``fetch_news``, ``get_current_price``, third-party MCP tools, etc.
+       — is rejected.
+    2. Any date or datetime argument MUST be at or before
+       ``simulated_date`` end-of-UTC-day. Future-data leakage is the #1
+       backtest pitfall.
+
+    Raising this exception is the adapter's only response to a violation
+    — it never silently coerces the argument, never substitutes a safe
+    default — so the L-3 executor records the broken-contract signal as
+    an ``INVOCATION_FAILED`` audit row with the reason on
+    ``BacktestAgentInvocation.rationale``.
+
+    Distinct from :class:`AgentResponseParseError` because the model's
+    response was structurally valid — the agent emitted a parseable
+    tool-use block — it just chose an unsafe target. Operationally, a
+    parse error indicates a prompt regression; a safety violation
+    indicates the agent ignored the backtest-mode preamble (or attempted
+    an unconstrained generation despite the schema constraint).
+
+    Attributes:
+        tool_name: Name of the offending tool. ``None`` when the violation
+            is not tool-bound (e.g. an unbound parameter check).
+        simulated_date: The in-simulation calendar day that bounds the
+            permissible data window. Carried for L-3's audit-row writer
+            so the rationale captures the exact date the agent tried to
+            exceed.
+        reason: Human-readable description of what went wrong (e.g.
+            ``"end date 2024-03-16 exceeds simulated_date 2024-03-15"``).
+    """
+
+    def __init__(
+        self,
+        *,
+        tool_name: str | None,
+        simulated_date: "date",  # type: ignore  # Forward ref to keep stdlib import deferred  # noqa: F821
+        reason: str,
+    ) -> None:
+        """Initialise the violation with the offending tool + reason.
+
+        Args:
+            tool_name: Name of the tool the agent attempted to call.
+                ``None`` when the violation is not tool-bound.
+            simulated_date: The simulated-day boundary that was exceeded.
+            reason: Human-readable description of the violation; lands on
+                ``BacktestAgentInvocation.rationale`` via the L-3
+                executor.
+        """
+        self.tool_name = tool_name
+        self.simulated_date = simulated_date
+        self.reason = reason
+        message = (
+            f"Backtest safety violation"
+            f"{f' on tool {tool_name!r}' if tool_name is not None else ''}"
+            f" (simulated_date={simulated_date.isoformat()}): {reason}"
+        )
+        super().__init__(message)
+
+
 # Business Rule Violation Exceptions
 
 

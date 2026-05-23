@@ -47,6 +47,7 @@ from anthropic.types import Message, MessageParam, ToolParam, ToolUseBlock
 from zebu.application.ports.agent_invocation_port import (
     AgentInvocationResult,
     ToolDefinition,
+    ToolDispatchCallback,
 )
 from zebu.domain.exceptions import (
     AgentInvocationError,
@@ -72,6 +73,13 @@ _MAX_TOKENS: int = 4096
 # an INVOCATION_FAILED audit row.
 _MAX_RETRIES: int = 2
 _RETRY_INITIAL_BACKOFF_SECS: float = 1.0
+
+# Maximum number of tool-use loop turns before the adapter gives up.
+# Each turn = one ``messages.create`` round-trip + one batch of tool
+# dispatches. 20 turns is generous for the L-2 backtest path (the agent
+# rarely needs more than a few read-tool calls before deciding) but
+# guards against an unbounded loop on a malformed callback.
+_MAX_TOOL_USE_TURNS: int = 20
 
 
 # --------------------------------------------------------------------------- #
@@ -241,26 +249,55 @@ class AnthropicAgentInvocationAdapter:
         user_prompt: str,
         tools: list[ToolDefinition] | None = None,
         timeout_secs: float = 60.0,
+        agent_temperature: float | None = None,
+        dispatch_tool_call: ToolDispatchCallback | None = None,
     ) -> AgentInvocationResult:
         """Send the prompt to Anthropic and return the parsed decision.
 
-        See :meth:`AgentInvocationPort.invoke` for the contract.
+        See :meth:`AgentInvocationPort.invoke` for the base contract.
+        This implementation has two modes:
 
-        Implementation:
+        **Single-shot (``dispatch_tool_call`` is ``None``)** — Phase F-3
+        behaviour, preserved unchanged. The model is forced to call
+        ``record_decision`` via ``tool_choice``, the response is parsed
+        immediately, and the call returns. No tool-use loop runs.
 
-        1. Build the tool block: synthetic ``record_decision`` tool
-           prepended to any read-tools the caller passed.
-        2. Build the system block with ``cache_control=ephemeral`` so
-           the system prompt is cached across invocations.
-        3. Force the model to call ``record_decision`` via
-           ``tool_choice``.
-        4. Bounded retry on transient SDK errors.
-        5. Parse the resulting tool-use block into an
-           :class:`AgentInvocationResult`.
+        **Multi-turn tool-use loop (``dispatch_tool_call`` provided)** —
+        Phase L-2 behaviour. The model is allowed to call
+        ``record_decision`` OR any caller-supplied read tool. When it
+        calls a read tool, the adapter invokes ``dispatch_tool_call`` to
+        execute it, appends a ``tool_result`` to the conversation, and
+        re-issues ``messages.create`` until the model calls
+        ``record_decision`` (or :attr:`_MAX_TOOL_USE_TURNS` is exceeded).
+        The dispatch callback is the only place safety enforcement
+        lives — the wrapper supplies a closure that validates each call
+        against ``simulated_date`` and raises
+        :class:`BacktestSafetyViolationError` on violation.
+
+        Args:
+            system_prompt: System-level message bounding the agent.
+            user_prompt: Per-invocation user message.
+            tools: Optional list of tool definitions the agent may call
+                (in addition to the synthetic ``record_decision``).
+            timeout_secs: Per-call timeout passed to the SDK.
+            agent_temperature: Optional override for the model's
+                ``temperature`` parameter. When not ``None``, passed
+                through to ``messages.create``; when ``None``, the SDK's
+                default applies. Added in Phase L-2 for the backtest
+                wrapper's ``temperature=0`` default.
+            dispatch_tool_call: Optional callback that executes
+                non-``record_decision`` tool calls. When ``None`` the
+                adapter uses the F-3 single-shot path; when supplied the
+                adapter runs the multi-turn tool-use loop and routes each
+                tool call through the callback.
 
         Raises:
             AgentInvocationError: Transport / authentication failure
-                (after retries), or invalid input rejected by the API.
+                (after retries), or invalid input rejected by the API,
+                or the tool-use loop exceeded :attr:`_MAX_TOOL_USE_TURNS`
+                without the model calling ``record_decision``.
+                :class:`BacktestSafetyViolationError` raised by the
+                dispatch callback propagates as a subclass.
             AgentResponseParseError: The model's response did not call
                 ``record_decision`` or the payload didn't match the
                 expected shape for the chosen decision.
@@ -273,12 +310,23 @@ class AnthropicAgentInvocationAdapter:
 
         start = time.perf_counter()
         try:
-            message = await self._invoke_with_retry(
-                system_blocks=system_blocks,
-                messages=messages,
-                tools=tool_blocks,
-                timeout_secs=timeout_secs,
-            )
+            if dispatch_tool_call is None:
+                message = await self._invoke_single_shot(
+                    system_blocks=system_blocks,
+                    messages=messages,
+                    tools=tool_blocks,
+                    timeout_secs=timeout_secs,
+                    agent_temperature=agent_temperature,
+                )
+            else:
+                message = await self._invoke_tool_use_loop(
+                    system_blocks=system_blocks,
+                    messages=messages,
+                    tools=tool_blocks,
+                    timeout_secs=timeout_secs,
+                    agent_temperature=agent_temperature,
+                    dispatch_tool_call=dispatch_tool_call,
+                )
         except anthropic.APIError as exc:
             # Non-transient API error after retries (auth, malformed
             # input, etc.). Surface as AgentInvocationError so the
@@ -290,6 +338,148 @@ class AnthropicAgentInvocationAdapter:
 
         latency_ms = int((time.perf_counter() - start) * 1000)
         return self._parse_response(message=message, latency_ms=latency_ms)
+
+    async def _invoke_single_shot(
+        self,
+        *,
+        system_blocks: list[dict[str, object]],
+        messages: list[MessageParam],
+        tools: list[ToolParam],
+        timeout_secs: float,
+        agent_temperature: float | None,
+    ) -> Message:
+        """F-3 single-shot path: force ``record_decision`` via ``tool_choice``.
+
+        The model has no opportunity to call read tools — it must
+        terminate immediately by calling ``record_decision``. Identical
+        in behaviour to the pre-L-2 implementation; preserved when no
+        :data:`ToolDispatchCallback` is provided to :meth:`invoke`.
+        """
+        return await self._invoke_with_retry(
+            system_blocks=system_blocks,
+            messages=messages,
+            tools=tools,
+            timeout_secs=timeout_secs,
+            agent_temperature=agent_temperature,
+            tool_choice={"type": "tool", "name": "record_decision"},
+        )
+
+    async def _invoke_tool_use_loop(
+        self,
+        *,
+        system_blocks: list[dict[str, object]],
+        messages: list[MessageParam],
+        tools: list[ToolParam],
+        timeout_secs: float,
+        agent_temperature: float | None,
+        dispatch_tool_call: ToolDispatchCallback,
+    ) -> Message:
+        """Phase L-2 multi-turn tool-use loop.
+
+        Iterates the Messages API conversation until the model calls
+        ``record_decision`` or :attr:`_MAX_TOOL_USE_TURNS` is exceeded.
+        Each turn:
+
+        1. Call ``messages.create`` with ``tool_choice="auto"`` (so the
+           model may emit either a read-tool call or
+           ``record_decision``).
+        2. Inspect the response. If it contains a ``record_decision``
+           tool-use block, return immediately — the outer
+           :meth:`_parse_response` builds the result.
+        3. Otherwise, for each non-``record_decision`` tool-use block,
+           call the dispatch callback with the tool name + input;
+           collect the string result.
+        4. Append the assistant message + a follow-up user message
+           containing the ``tool_result`` blocks. Re-enter the loop.
+
+        :class:`BacktestSafetyViolationError` raised by the dispatch
+        callback propagates immediately — the wrapper's safety contract
+        is "violation aborts the invocation".
+
+        Raises:
+            AgentInvocationError: Loop exceeded
+                :attr:`_MAX_TOOL_USE_TURNS` without
+                ``record_decision``; or the model returned with
+                ``stop_reason != "tool_use"`` and no terminator.
+        """
+        # Mutable copy: each turn appends an assistant + a user(tool_result).
+        conversation: list[MessageParam] = list(messages)
+
+        for turn in range(_MAX_TOOL_USE_TURNS):
+            message = await self._invoke_with_retry(
+                system_blocks=system_blocks,
+                messages=conversation,
+                tools=tools,
+                timeout_secs=timeout_secs,
+                agent_temperature=agent_temperature,
+                tool_choice={"type": "auto"},
+            )
+
+            tool_uses: list[ToolUseBlock] = [
+                block for block in message.content if isinstance(block, ToolUseBlock)
+            ]
+
+            # Terminator: the model called ``record_decision``. Return
+            # immediately so :meth:`_parse_response` extracts it.
+            if any(block.name == "record_decision" for block in tool_uses):
+                return message
+
+            # No terminator AND no read-tool calls: the model returned
+            # plain text. Surface as an invocation error — the parse
+            # path would also fail, but distinguishing "ran out of
+            # tools to call" from "couldn't parse the response" makes
+            # the audit row more diagnostic.
+            if not tool_uses:
+                raise AgentInvocationError(
+                    "Tool-use loop ended without a record_decision call "
+                    f"(turn {turn + 1}/{_MAX_TOOL_USE_TURNS}, "
+                    f"stop_reason={message.stop_reason!r})"
+                )
+
+            # Dispatch each read-tool call. The callback may raise
+            # :class:`BacktestSafetyViolationError`; we let it propagate
+            # untouched so the L-3 executor sees the original cause.
+            tool_results: list[Mapping[str, object]] = []
+            for block in tool_uses:
+                tool_input = dict(cast("Mapping[str, object]", block.input))
+                content = await dispatch_tool_call(block.name, tool_input)
+                tool_results.append(
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": content,
+                    }
+                )
+
+            # Echo the assistant message back, then append a user
+            # message with the tool_result blocks. The SDK reconstructs
+            # the assistant turn from ``message.content`` blocks as
+            # ``ContentBlockParam`` dicts.
+            conversation.append(
+                {
+                    "role": "assistant",
+                    "content": cast(
+                        "list[object]",  # type: ignore[arg-type]
+                        message.content,
+                    ),
+                }
+            )
+            conversation.append(
+                {
+                    "role": "user",
+                    "content": cast(
+                        "list[object]",  # type: ignore[arg-type]
+                        tool_results,
+                    ),
+                }
+            )
+
+        # Exhausted turn budget — the model kept calling read tools
+        # without ever terminating with ``record_decision``.
+        raise AgentInvocationError(
+            "Tool-use loop exceeded "
+            f"max turns ({_MAX_TOOL_USE_TURNS}) without a record_decision call"
+        )
 
     # ------------------------------------------------------------------ #
     # Helpers                                                            #
@@ -342,6 +532,8 @@ class AnthropicAgentInvocationAdapter:
         messages: list[MessageParam],
         tools: list[ToolParam],
         timeout_secs: float,
+        agent_temperature: float | None = None,
+        tool_choice: Mapping[str, object] | None = None,
     ) -> Message:
         """Call the Messages API with bounded retry on transient errors.
 
@@ -352,21 +544,46 @@ class AnthropicAgentInvocationAdapter:
         The Anthropic SDK already does some retries; this layers on a
         small additional cushion specifically for the trigger-fire path
         where one transient bump shouldn't fail the audit.
+
+        Args:
+            system_blocks: System message blocks (with cache_control).
+            messages: Conversation history. May include prior
+                assistant + tool_result turns when called from inside
+                the tool-use loop.
+            tools: SDK ``ToolParam`` list — ``record_decision`` plus any
+                caller tools.
+            timeout_secs: Per-call timeout.
+            agent_temperature: Optional override for the model's
+                ``temperature`` sampling parameter. When ``None`` the
+                SDK's default applies; when set, passed through verbatim.
+            tool_choice: Tool-choice directive. When ``None``, defaults
+                to forcing ``record_decision`` (preserves F-3
+                single-shot behaviour). The L-2 loop passes
+                ``{"type": "auto"}`` so the model may call read tools
+                before terminating.
         """
+        resolved_tool_choice: Mapping[str, object] = (
+            tool_choice
+            if tool_choice is not None
+            else {"type": "tool", "name": "record_decision"}
+        )
         backoff = _RETRY_INITIAL_BACKOFF_SECS
         last_exc: Exception | None = None
 
         for attempt in range(_MAX_RETRIES + 1):
             try:
-                return await self._client.messages.create(
-                    model=self.model,
-                    max_tokens=_MAX_TOKENS,
-                    system=cast("object", system_blocks),  # type: ignore[arg-type]
-                    messages=messages,
-                    tools=tools,
-                    tool_choice={"type": "tool", "name": "record_decision"},
-                    timeout=timeout_secs,
-                )
+                create_kwargs: dict[str, object] = {
+                    "model": self.model,
+                    "max_tokens": _MAX_TOKENS,
+                    "system": cast("object", system_blocks),
+                    "messages": messages,
+                    "tools": tools,
+                    "tool_choice": resolved_tool_choice,
+                    "timeout": timeout_secs,
+                }
+                if agent_temperature is not None:
+                    create_kwargs["temperature"] = agent_temperature
+                return await self._client.messages.create(**create_kwargs)  # type: ignore[arg-type]
             except (
                 anthropic.APIConnectionError,
                 anthropic.RateLimitError,
