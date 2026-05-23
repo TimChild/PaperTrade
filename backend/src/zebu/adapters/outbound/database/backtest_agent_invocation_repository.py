@@ -93,11 +93,14 @@ class SQLModelBacktestAgentInvocationRepository:
         self,
         invocations: Sequence[BacktestAgentInvocation],
     ) -> None:
-        """Bulk-insert invocation rows in a single ``flush``.
+        """Bulk-insert invocation rows in a single round-trip.
 
         Does NOT loop per-row ``save`` calls — the executor accumulates
-        in memory and flushes at end of run; 500 rows must be one
-        round-trip.
+        in memory and flushes at end of run; 500 rows must complete in
+        a bounded number of DB round-trips (two: one bulk existence
+        check + one bulk INSERT). The previous in-memory-only test
+        couldn't see the difference, but on Postgres with network
+        latency a per-row ``session.get`` would dominate the run.
 
         Raises:
             ValueError: If the batch contains a duplicate id within
@@ -118,18 +121,24 @@ class SQLModelBacktestAgentInvocationRepository:
                 )
             seen.add(invocation.id)
 
-        # Check for pre-existing rows in the DB. A bulk ``add_all`` would
-        # otherwise raise IntegrityError on flush — we want a clear
-        # ValueError before any rows enter the unit of work.
-        for invocation in invocations:
-            existing = await self._session.get(
-                BacktestAgentInvocationModel, invocation.id
+        # Check for pre-existing rows in the DB via a SINGLE bulk
+        # statement — ``SELECT id FROM ... WHERE id IN (:ids)``. The
+        # previous N+1 ``session.get(...)`` loop was correct but turned
+        # a 500-row flush into 500 round-trips on Postgres, defeating
+        # the whole point of ``save_all``.
+        statement = select(BacktestAgentInvocationModel.id).where(
+            col(BacktestAgentInvocationModel.id).in_(seen)
+        )
+        result = await self._session.exec(statement)
+        existing_ids = set(result.all())
+        if existing_ids:
+            # Pick a deterministic id to surface so the error message is
+            # stable across runs / Python set-iteration order.
+            duplicate_id = min(existing_ids, key=str)
+            raise ValueError(
+                f"BacktestAgentInvocation with id={duplicate_id} already "
+                "exists; the audit log is append-only"
             )
-            if existing is not None:
-                raise ValueError(
-                    f"BacktestAgentInvocation with id={invocation.id} "
-                    "already exists; the audit log is append-only"
-                )
 
         models = [
             BacktestAgentInvocationModel.from_domain(invocation)

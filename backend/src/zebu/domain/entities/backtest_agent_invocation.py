@@ -258,11 +258,9 @@ class BacktestAgentInvocation:
             raise InvalidBacktestAgentInvocationError(
                 "invocation_mode=MOCK requires agent_invocation_id to be None"
             )
-        # decision_executed already checked above as a global cross-check.
-        if self.decision_executed:
-            raise InvalidBacktestAgentInvocationError(
-                "invocation_mode=MOCK forbids decision_executed=True"
-            )
+        # NB: ``decision_executed=True`` for MOCK is already rejected by
+        # the global cross-check in ``__post_init__`` (which raises before
+        # this method runs), so we don't repeat it here.
 
     def _check_live_invariants(self) -> None:
         """Validate the LIVE-mode field combinations."""
