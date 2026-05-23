@@ -122,7 +122,7 @@ Default of `NONE` preserves backwards compatibility — every existing call site
 
 API request schema mirror in `backend/src/zebu/adapters/inbound/api/schemas/backtests.py` (or wherever the existing `POST /api/v1/backtests` request body lives — agent should confirm by reading): add the optional `agent_invocation_mode` field with the same enum, default `"none"`.
 
-Field placement decision: keep it on the command (and the request schema), NOT on a new column of `backtest_runs`. The mode is an execution-time choice, not durable metadata about the run — knowing "this backtest's agent mode was LIVE" is recoverable from "there are `BacktestAgentInvocation` rows for it" or "there are zero rows therefore the run was NONE/MOCK". (Open question: see §4 below — Tim may want this stamped on `backtest_runs` for activity-feed rendering. Default position: don't stamp.)
+Field placement decision (Tim 2026-05-23): the mode also lives as a column on `backtest_runs.agent_invocation_mode`. Resolves the ambiguity where zero audit rows could mean either NONE-mode or LIVE-with-no-fires; gives the UI / activity-feed a single-row lookup for the badge label without scanning the audit table. The column is `VARCHAR(16) NOT NULL DEFAULT 'none'` (server default for back-fill of existing rows).
 
 ### Migration: `l001_backtest_agent_invocations`
 
@@ -147,6 +147,11 @@ TABLE backtest_agent_invocations
   latency_ms                  INTEGER      NOT NULL DEFAULT 0
   model                       VARCHAR(100) NOT NULL DEFAULT ''
   created_at                  DATETIME     NOT NULL
+
+ALTER TABLE backtest_runs
+  ADD COLUMN agent_invocation_mode  VARCHAR(16)  NOT NULL DEFAULT 'none'
+                                                 -- back-fills existing rows
+                                                 -- (matches BacktestAgentInvocationMode width)
 ```
 
 #### Indexes
@@ -213,7 +218,7 @@ sequenceDiagram
 | `condition_evaluation_data` stays JSON-opaque on the entity | Same precedent as `TriggerFireRecord`. The per-condition shape is the evaluator's contract, not the entity's. |
 | Append-only — no update path | Audit log integrity. Corrections happen via a new row, not by mutating an existing one. |
 | FK on `trigger_id` is `ON DELETE SET NULL` | Deleting a trigger after the backtest ran shouldn't delete the historical audit row — the rationale and condition snapshot are still useful for retrospective analysis. (Open question §2 — Tim may prefer `RESTRICT` instead.) |
-| `agent_invocation_mode` lives on `RunBacktestCommand`, not on the `BacktestRun` entity / table | The mode is an execution-time configuration, not durable state. The presence of rows in `backtest_agent_invocations` is the durable artefact. Saves a column + simplifies the lifecycle (no "did this finished backtest have agent mode X?" state to keep consistent). (Open question §4 — Tim may want the column for the activity feed.) |
+| `agent_invocation_mode` lives on **both** `RunBacktestCommand` (input) and `BacktestRun` (durable state, new column) | The command carries the operator's choice into the executor; the `BacktestRun` column stamps it for downstream readers (UI badge, activity feed, analytics) so they don't have to scan `backtest_agent_invocations` to label a run. Resolves "zero audit rows = NONE-mode? or = LIVE with no fires?" ambiguity. |
 | Migration revision id prefix `l001` | Phase L is post-J; matches the existing prefix convention (`f`, `h`, `j`). |
 
 ## Implementation plan
@@ -227,7 +232,8 @@ Single PR. Order within the branch:
 5. **Migration** `l001_backtest_agent_invocations` (idempotent — inspector checks for table and each index). Run `alembic upgrade head` against a clean SQLite to verify.
 6. **SQLModel model + adapter** — `BacktestAgentInvocationModel` in `models.py` with `to_domain` / `from_domain`. `SQLModelBacktestAgentInvocationRepository` mirroring `trigger_fire_repository.py`. Integration test against SQLite covering save / save_all / get / list_for_backtest_run / count_for_backtest_run.
 7. **Command extension** — `RunBacktestCommand.agent_invocation_mode` field with `NONE` default. Update API request schema in `adapters/inbound/api/schemas/backtests.py` (or equivalent). API integration test that the field round-trips through the request → command → response shape (response shape is unchanged because the L-3 executor isn't wired yet, but the field should appear in the request schema and pass through).
-8. **Wire-up audit** — every constructor of `RunBacktestCommand` in tests / fixtures gets the new field (or relies on the default). Grep for `RunBacktestCommand(` across the repo and ensure none are broken.
+8. **Backtest-run column** — extend the existing `BacktestRun` entity (`backend/src/zebu/domain/entities/backtest_run.py`) and `BacktestRunModel` to carry `agent_invocation_mode: BacktestAgentInvocationMode` (default `NONE`). The L-1 use case that creates a `BacktestRun` stamps the value from the command. Add a property to the API response schema so the UI can read it. Unit test that the round-trip preserves the mode.
+9. **Wire-up audit** — every constructor of `RunBacktestCommand` and `BacktestRun` in tests / fixtures gets the new field (or relies on the default). Grep for `RunBacktestCommand(` and `BacktestRun(` across the repo and ensure none are broken.
 
 The migration must apply cleanly to a fresh prod-like DB (Postgres) and a fresh test DB (SQLite). Both branches of the inspector-based `_has_table` / `_has_index` checks must be exercised.
 
@@ -271,19 +277,17 @@ The migration must apply cleanly to a fresh prod-like DB (Postgres) and a fresh 
 - Conventional commits (this branch shipped as one PR).
 - `task quality:backend` + `task ci` green.
 
-## Open design questions
+## Design decisions (resolved 2026-05-23)
 
-Surface these in the PR body so Tim can weigh in before L-2 / L-3 build on them:
+1. **`simulated_trade_id` on the invocation entity** — keep as specified. Trade-side attribution via a future `transactions.backtest_agent_invocation_id` column is a separate concern; not blocking L-1.
 
-1. **`simulated_trade_id` here vs `trigger_id` on the transaction row.** Live execution stamps the originating `trigger_id` on the trade row (`transactions.trigger_id`, added in Phase F-5). Should the backtest path do the same (use the existing `trigger_id` column on transactions) and drop `simulated_trade_id` from this entity, OR should `BacktestAgentInvocation` carry its own pointer because the transaction table doesn't yet have a `backtest_agent_invocation_id` column? **Default position adopted in this spec**: include `simulated_trade_id` on the invocation entity now, leave the transaction's `trigger_id` column unchanged. Trade attribution from the trade side is a separate concern (and a future migration could add `backtest_agent_invocation_id` if useful for the UI).
+2. **`trigger_id` `ON DELETE SET NULL`** — confirmed. Triggers are mutable user-owned entities; locking trigger deletion against historical backtest audit rows would be a footgun for cleanup.
 
-2. **`trigger_id` nullable vs not-null with RESTRICT.** Setting `trigger_id ON DELETE SET NULL` means a deleted trigger orphans audit rows (data is preserved, link is lost). The alternative is `RESTRICT` — you can't delete a trigger that has any backtest audit rows referencing it. **Default position adopted**: `SET NULL`. Triggers are mutable user-owned entities and we shouldn't lock their deletion to historical backtest audit rows. Tim may prefer RESTRICT for stronger referential integrity — flagging.
+3. **MOCK-mode decision value** — the entity is permissive (accepts both `None` and `HOLD` for `MOCK` rows). L-2 will pick one shape and write consistently; entity invariants stay flexible.
 
-3. **MOCK-mode decision value: `None` or `HOLD`?** L-2 will define the precise contract (see #218 §"Mock-mode shape"). This task's entity must accept whichever shape L-2 lands on. **Default position adopted**: the entity allows BOTH `None` AND `HOLD` for `MOCK` rows, with the rest of the MOCK invariants applied. L-2 then picks one and consistently writes it. The entity is permissive; the adapter narrows. (If we want the entity to be strict, this is the moment to decide.)
+4. **`backtest_runs.agent_invocation_mode` column** — **ADDED** (Tim's call, overriding the architect's "implicit by row count" default). The column lives at the run level so the UI / activity feed can label a run as MOCK / LIVE / NONE without scanning the audit table, and to disambiguate "zero rows = NONE-mode" from "zero rows = LIVE with no fires". Schema in the migration section above; back-filled with server default `'none'`.
 
-4. **Should `backtest_runs` grow an `agent_invocation_mode` column?** Useful for the activity feed (so "this backtest" can be labelled "MOCK" / "LIVE" / "NONE" in the UI without scanning the audit table). **Default position adopted in this spec**: no — keep it implicit (presence of rows ⇒ MOCK or LIVE; absence ⇒ NONE). If Tim wants a column, this should be folded into the L-1 migration now rather than added later.
-
-5. **Future-proofing the entity for multi-provider.** §3 of the proposal mentions Gemini adapters as a separate workstream. Should `BacktestAgentInvocation` carry a `provider: str` field (e.g. `"anthropic"`, `"gemini"`) up front? **Default position adopted**: no. The `model` field already carries provider-derivable info (`"claude-haiku-..."` vs `"gemini-..."`) and the separate-adapter design means a future Gemini wrapper for backtests would just write a different model string. Adding a provider column is cheap if needed later (small alembic migration); pre-adding now creates dead weight.
+5. **No `provider` field on the invocation row** — the `model` string already carries provider-derivable info. Pre-adding `provider` would be dead weight until a Gemini backtest adapter ships; a future migration is cheap if needed.
 
 ## Out of scope (do not draft / implement here)
 

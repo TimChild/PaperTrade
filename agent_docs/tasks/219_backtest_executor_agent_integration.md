@@ -333,25 +333,23 @@ Single PR. Order within branch:
 - `task quality:backend` + `task ci` green.
 - The pre-L-3 happy-path backtest test (a strategy with no triggers, completing successfully) must still pass with zero behavior change.
 
-## Open design questions
+## Design decisions (resolved 2026-05-23)
 
-Surface these in the PR body for Tim:
+1. **Trigger universe = live triggers only** — confirmed (Tim 2026-05-23). Per-request custom triggers would be a useful what-if surface but represents a whole API/UI of its own; deferred until we see actual demand.
 
-1. **Trigger universe scoping — live triggers vs backtest-attached triggers.** This spec uses live triggers on the user's activations of the strategy. Alternative: the backtest request body grows an optional `triggers: list[TriggerSpec]` allowing the user to specify a custom trigger config for this run only (no live activation needed). **Default position adopted**: live triggers. Simpler; enough for L phase. Future enhancement is its own task.
+2. **In-memory cooldown dict** — confirmed. Cloning the entity per-backtest just to mutate `last_fired_at` would be overkill; an in-memory `simulated_last_fired_at[trigger.id]` captures cooldown semantics cleanly.
 
-2. **Per-simulation cooldown OR per-trigger-durable?** This spec keeps cooldown in an in-memory dict (`simulated_last_fired_at[trigger.id]`). Alternative: build a backtest-local `StrategyConditionTrigger` clone with mutated `last_fired_at`, evaluate against that clone. **Default position adopted**: in-memory dict. Avoids cloning the entity per-backtest; cooldown is just "minimum gap between fires" which a dict handles cleanly.
+3. **MODIFY_STRATEGY is record-only in backtest** — confirmed (Tim 2026-05-23). Applying the mutation would open the "which-strategy-was-the-result-of" question and complicate the simulated state space. Users wanting to test mutated strategies should create a new strategy with the modified params and backtest separately.
 
-3. **MODIFY_STRATEGY in backtest.** This spec records but does NOT apply. Alternative: apply, log the strategy mutation, and continue the simulation with the new params. The complication is whether the resulting backtest is "the strategy as configured" or "the strategy as the agent evolved it" — a meaningful distinction for the result interpretation. **Default position adopted**: record-only. The activity log captures what the agent wanted; the run continues with the original strategy. Tim may want this expanded post-L.
+4. **Agent fires first, then strategy signals** — agent-first matches the "trigger evaluated end-of-prior-day" semantic the live trigger system implies.
 
-4. **Agent firing order vs strategy signal order.** This spec: agent first, then strategy. Alternative: strategy first, then agent (agent reacts to today's strategy moves). Both have merits; agent-first matches the "trigger evaluated end-of-prior-day" semantic that the live trigger system implies. **Default position adopted**: agent first.
+5. **Earnings-proximity triggers skipped in L-3** — the `EarningsCalendarPort` is a stub; logged warning on skip. Re-enable when a real historical earnings-date dataset ships (separate proposal).
 
-5. **Where does `EarningsCalendarPort` actually get its data in backtest mode?** Today's adapter is a stub. A useful backtest of earnings-proximity triggers requires a historical earnings-date dataset. **Default position adopted**: skip earnings-proximity triggers entirely in L-3 with a logged warning. Re-enable when a real calendar source ships (out of scope of agent-platform-next-steps.md; separate proposal).
+6. **MOCK backtests are byte-stable** — documented in the L-5 operating manual.
 
-6. **Backtest determinism with `MOCK` mode.** Should MOCK mode produce a fully deterministic byte-stable backtest result? Currently the executor's other phases (snapshot computation, metrics) are deterministic. MOCK adds zero non-determinism. **Default position adopted**: yes, MOCK backtests are byte-stable. Documented in L-5 operating manual.
+7. **No L-3 invocation-count cap** — trust the trigger cooldown. Total fires bounded by `(simulated_days × triggers_in_universe) / min_cooldown_days`. Budget enforcement belongs to L-6.
 
-7. **Should the executor cap the total number of agent invocations per backtest as a runaway-cost guardrail?** L-6 is the proper home for cost caps, but L-3 might want a defensive sanity check (e.g. "no more than 10,000 invocations per run, regardless of mode"). **Default position adopted**: no L-3 cap. Trust the trigger evaluator's cooldown. The total fire count is bounded by `(simulated_days × triggers_in_universe) / min_cooldown_days`. L-6 owns budget enforcement.
-
-8. **`api_key_id` on simulated trades.** The existing executor stamps `command.api_key_id` on simulated trades. Should the L-3 agent-fired trades use a different key (the trigger's `default_api_key_id` per live convention) or the same `command.api_key_id`? **Default position adopted**: same `command.api_key_id`. The backtest is owned by the human who initiated it; the simulated trade attribution should reflect that, not a synthetic mapping to the trigger's key. Tim may prefer the live convention; flagging.
+8. **Simulated agent-fired trades use `command.api_key_id`** — the backtest is owned by the human who initiated it; trade attribution reflects the operator, not a synthetic mapping to the trigger's `default_api_key_id`.
 
 ## Out of scope
 

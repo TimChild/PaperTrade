@@ -315,23 +315,21 @@ This is a non-trivial change to the inner adapter. Flag it in the PR; reviewers 
 - Conventional commits.
 - `task quality:backend` + `task ci` green.
 
-## Open design questions
+## Design decisions (resolved 2026-05-23)
 
-Surface these in the PR body for Tim:
+1. **Adapter-level enforcement** — confirmed (Tim 2026-05-23). The F-3 pipeline runs in-process via the Anthropic SDK's tool-use loop; no HTTP boundary exists for an `X-Zebu-Simulated-Date` middleware to attach to. Adapter-level filter is the natural boundary.
 
-1. **Adapter vs middleware enforcement.** This spec adopts adapter-level enforcement. Tim should confirm. If middleware is preferred (e.g. for future MCP-via-HTTP backtest replay), say so before #219 starts and we re-design the L-2/L-3 boundary.
+2. **Reusable tool-use loop** — confirmed (Tim 2026-05-23). Land the multi-turn tool-use loop in the inner Anthropic adapter as a first-class feature with a dispatch-callback parameter. F-3 (current single-shot) passes a no-op callback; L-2 passes the backtest-safe callback that enforces the whitelist + `simulated_date` filter. Any future F-4 inline tool-use inherits the same machinery. Cross-cutting change to the inner adapter — call out explicitly in the L-2 PR body so reviewers don't get blindsided.
 
-2. **Should the L-2 adapter be reusable for an eventual "F-4" inline tool-use path?** The Anthropic SDK tool-use loop in option A above is a generic mechanism. If we expect F-4 (inline read-tools for live agents) within the next few cycles, the loop should land in the inner adapter as a first-class feature, not a backtest-private path. **Default position adopted**: design the loop to be reusable (option A in "Implementation note"), but only L-2 uses it for now. Future F-4 inherits it.
+3. **MOCK-mode decision: returns `HOLD` with the no-op payload** as specified. Synthetic invocations log a row so MOCK runs cross-check executor wiring.
 
-3. **MOCK-mode decision: `HOLD` or `None`?** The proposal §3 says MOCK "always returns HOLD". L-1's entity is permissive enough for either. **Default position adopted in this spec**: returns `HOLD` with the no-op payload above. Synthetic invocations DO log a row (so MOCK runs can be cross-checked for executor wiring correctness). Tim may prefer `None` (no row at all) — if so, L-3 should skip the row write in MOCK mode and the entity invariants in #217 should narrow.
+4. **Cost-guardrail handoff stays in L-3 / L-6** — wrapper is budget-agnostic. L-3 owns the per-run budget; if exhausted, L-3 substitutes the MOCK port mid-run and writes a `MOCK` invocation row so the gap is visible. Simpler than threading a budget through the adapter.
 
-4. **Cost guardrail handoff.** L-6 (not yet spec'd) needs a way to halt LIVE invocations when a budget cap is hit. Should the wrapper expose a `budget_remaining_usd` parameter or callback now, even though L-6 is later? **Default position adopted**: no — leave the wrapper budget-agnostic. L-3 owns the budget check; if exhausted, L-3 substitutes the MOCK port mid-run (and writes a `MOCK` invocation row so the gap is visible). Simpler than threading a budget through the adapter.
+5. **`simulated_date` boundary = end-of-UTC-day** — the agent needs that day's close to decide for that day's market. Matches live-invocation semantics.
 
-5. **`simulated_date` boundary semantics.** End-of-UTC-day is the most permissive cap. Alternative: start-of-day (so the agent can only see strictly-prior data). **Default position adopted**: end-of-day. The agent reasonably needs that day's close to make a decision for that day's market. Start-of-day would be too restrictive and force the agent to make decisions on T-1 data, which doesn't match the live invocation pattern.
+6. **No-tool-call path allowed** — agent may emit `record_decision` immediately; wrapper returns unchanged.
 
-6. **What if the agent calls `record_decision` immediately without using any tool?** Allowed — the wrapper returns the result unchanged. The agent's prerogative.
-
-7. **What if the inner adapter's tool-use loop produces dozens of tool calls?** No hard cap in L-2. Cost concerns are L-6's. **Tactical guard**: the prompt's safety preamble should explicitly say "you have a token budget — use tools sparingly, decide quickly". Soft pressure only.
+7. **No L-2 cap on tool-call count** — cost concerns belong to L-6. Soft pressure via prompt preamble ("use tools sparingly, decide quickly").
 
 ## Out of scope
 
