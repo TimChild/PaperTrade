@@ -141,10 +141,10 @@ def test_get_price_history_valid_interval_accepted(
     client: TestClient,
     auth_headers: dict[str, str],
 ) -> None:
-    """Test price history endpoint accepts valid intervals.
+    """Price history endpoint accepts ``interval=1day`` (the only supported value).
 
-    Note: InMemoryAdapter doesn't validate intervals, so this just
-    ensures the API doesn't reject valid interval values.
+    Sub-daily intervals are rejected at the boundary — see
+    ``test_get_price_history_rejects_unsupported_intervals``.
     """
     response = client.get(
         "/api/v1/prices/AAPL/history"
@@ -156,6 +156,78 @@ def test_get_price_history_valid_interval_accepted(
 
     # Should succeed (may return empty list if no data)
     assert response.status_code == 200
+
+
+def test_get_price_history_default_interval_is_1day(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    """Omitting ``interval`` defaults to ``1day`` and succeeds."""
+    response = client.get(
+        "/api/v1/prices/AAPL/history"
+        "?start=2024-01-01T00:00:00Z"
+        "&end=2024-12-31T23:59:59Z",
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["interval"] == "1day"
+
+
+@pytest.mark.parametrize(
+    "interval",
+    ["1min", "5min", "15min", "30min", "1hour"],
+)
+def test_get_price_history_rejects_unsupported_intervals(
+    client: TestClient,
+    auth_headers: dict[str, str],
+    interval: str,
+) -> None:
+    """Sub-daily intervals are rejected at the boundary with HTTP 422.
+
+    The Alpha Vantage free tier does not serve intraday bars and
+    ``TIME_SERIES_INTRADAY`` is not wired in the adapter, so requests for
+    sub-daily intervals previously returned HTTP 200 with ``count: 0`` —
+    leaving callers (notably MCP agents) to guess whether the ticker was
+    inactive or the data tier didn't support the interval. Reject with a
+    clear 422 instead. See GitHub issue #285.
+    """
+    response = client.get(
+        "/api/v1/prices/AAPL/history"
+        "?start=2024-01-01T00:00:00Z"
+        f"&end=2024-12-31T23:59:59Z&interval={interval}",
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 422
+    data = response.json()
+    assert "detail" in data
+    assert f"interval '{interval}' is not supported" in data["detail"]
+    assert "1day" in data["detail"]
+
+
+def test_get_price_history_rejects_garbage_interval(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    """Any unrecognised interval string is rejected with HTTP 422.
+
+    Guards against typos and future-tense intervals that aren't yet
+    plumbed end-to-end (e.g. ``1week``).
+    """
+    response = client.get(
+        "/api/v1/prices/AAPL/history"
+        "?start=2024-01-01T00:00:00Z"
+        "&end=2024-12-31T23:59:59Z"
+        "&interval=banana",
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 422
+    data = response.json()
+    assert "detail" in data
+    assert "interval 'banana' is not supported" in data["detail"]
 
 
 def test_get_price_history_invalid_date_range(
