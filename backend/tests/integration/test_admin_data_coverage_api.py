@@ -21,7 +21,7 @@ from collections.abc import Iterator
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import TYPE_CHECKING
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -46,6 +46,27 @@ def admin_headers(monkeypatch: pytest.MonkeyPatch) -> Iterator[dict[str, str]]:
     """
     monkeypatch.setenv("ADMIN_USER_IDS", "test-user-default")
     yield {"Authorization": "Bearer test-token-default"}
+
+
+@pytest.fixture
+def no_immediate_drain(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Disable the fire-and-forget post-create drain so DB-state
+    assertions stay deterministic.
+
+    Without this, the background task ``_run_drain_background`` may
+    transition the freshly-created ``BackfillTask`` from PENDING to
+    RUNNING / SUCCEEDED / FAILED before the assertion runs against the
+    DB, depending on how the asyncio loop interleaves the test's read
+    with the scheduled drain. Tests that explicitly exercise the drain
+    behaviour should NOT use this fixture.
+    """
+    from zebu.adapters.inbound.api import admin_data_coverage
+
+    monkeypatch.setattr(
+        admin_data_coverage,
+        "_schedule_immediate_drain",
+        lambda **_: None,
+    )
 
 
 @pytest.fixture
@@ -409,6 +430,7 @@ class TestBackfillHappyPath:
         admin_headers: dict[str, str],
         test_engine: AsyncEngine,
         pinned_epoch: str,
+        no_immediate_drain: None,
     ) -> None:
         """The handler computes ``[epoch, today]`` from env + clock."""
         response = client.post(
@@ -446,6 +468,7 @@ class TestBackfillIdempotency:
         admin_headers: dict[str, str],
         test_engine: AsyncEngine,
         pinned_epoch: str,
+        no_immediate_drain: None,
     ) -> None:
         first = client.post(
             "/api/v1/admin/data-coverage/backfill",
@@ -528,6 +551,7 @@ class TestHistoryEpochEnv:
         admin_headers: dict[str, str],
         test_engine: AsyncEngine,
         monkeypatch: pytest.MonkeyPatch,
+        no_immediate_drain: None,
     ) -> None:
         """Setting the env to a non-default value flows through to the task row."""
         monkeypatch.setenv("ZEBU_HISTORY_EPOCH", "2020-06-15")
@@ -543,6 +567,86 @@ class TestHistoryEpochEnv:
         persisted = await _fetch_backfill_task(test_engine, body["task_id"])
         assert persisted is not None
         assert persisted.start_date == date(2020, 6, 15)
+
+
+@pytest.mark.asyncio
+class TestBackfillImmediateDrain:
+    """The operator endpoint schedules a fire-and-forget background
+    drain so the freshly-queued task doesn't have to wait for the
+    next scheduler firing (midnight UTC, daily).
+    """
+
+    async def test_drain_is_scheduled_on_create(
+        self,
+        client: TestClient,
+        admin_headers: dict[str, str],
+        pinned_epoch: str,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """``_schedule_immediate_drain`` is called once per task creation."""
+        from zebu.adapters.inbound.api import admin_data_coverage
+
+        captured: list[dict[str, object]] = []
+
+        def _capture(**kwargs: object) -> None:
+            captured.append(kwargs)
+
+        monkeypatch.setattr(
+            admin_data_coverage,
+            "_schedule_immediate_drain",
+            _capture,
+        )
+
+        response = client.post(
+            "/api/v1/admin/data-coverage/backfill",
+            headers=admin_headers,
+            json={"ticker": "AAPL"},
+        )
+        assert response.status_code == 201, response.text
+        assert len(captured) == 1
+        call = captured[0]
+        assert str(call["ticker"]) == "AAPL"
+        assert call["task_id"] == UUID(response.json()["task_id"])
+
+    async def test_drain_not_scheduled_when_deduping_existing_task(
+        self,
+        client: TestClient,
+        admin_headers: dict[str, str],
+        pinned_epoch: str,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Idempotency dedupe returns the existing task without
+        re-scheduling a drain — the scheduler already has the task in
+        its pickup queue from the first POST.
+        """
+        from zebu.adapters.inbound.api import admin_data_coverage
+
+        first = client.post(
+            "/api/v1/admin/data-coverage/backfill",
+            headers=admin_headers,
+            json={"ticker": "AAPL"},
+        )
+        assert first.status_code == 201
+
+        captured: list[dict[str, object]] = []
+
+        def _capture(**kwargs: object) -> None:
+            captured.append(kwargs)
+
+        monkeypatch.setattr(
+            admin_data_coverage,
+            "_schedule_immediate_drain",
+            _capture,
+        )
+
+        second = client.post(
+            "/api/v1/admin/data-coverage/backfill",
+            headers=admin_headers,
+            json={"ticker": "AAPL"},
+        )
+        assert second.status_code == 201
+        assert second.json()["existing"] is True
+        assert captured == []  # no second drain scheduled
 
     async def test_invalid_epoch_raises_runtime_error(
         self,

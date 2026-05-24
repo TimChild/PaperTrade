@@ -8,7 +8,7 @@ Scope:
   same SQLite engine used by the rest of the test suite.
 
 * Scheduler pickup drain: a PENDING task is picked up by
-  :func:`_drain_one_backfill` (the helper invoked by the scheduler's
+  :func:`drain_one_backfill` (the helper invoked by the scheduler's
   ``refresh_active_stocks`` loop) and flips to SUCCEEDED.
 
 * Failure path: a missing ticker in the market-data adapter ends in
@@ -45,7 +45,7 @@ from zebu.domain.value_objects.backfill_task_status import BackfillTaskStatus
 from zebu.domain.value_objects.money import Money
 from zebu.domain.value_objects.price_point import PricePoint
 from zebu.domain.value_objects.ticker import Ticker
-from zebu.infrastructure.scheduler import _drain_one_backfill
+from zebu.infrastructure.scheduler import drain_one_backfill
 
 
 @pytest.fixture
@@ -180,7 +180,7 @@ class TestSchedulerPickupDrainsPending:
 
         async with test_engine_session_maker() as session:
             repo = SQLModelBackfillTaskRepository(session)
-            await _drain_one_backfill(
+            await drain_one_backfill(
                 market_data=adapter,
                 repo=repo,
                 task_id=task.id,
@@ -226,7 +226,7 @@ class TestSchedulerPickupDrainsPending:
 
         async with test_engine_session_maker() as session:
             repo = SQLModelBackfillTaskRepository(session)
-            await _drain_one_backfill(
+            await drain_one_backfill(
                 market_data=adapter,
                 repo=repo,
                 task_id=task.id,

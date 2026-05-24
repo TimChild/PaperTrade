@@ -301,7 +301,7 @@ async def refresh_active_stocks(config: SchedulerConfig) -> None:
                     # row via create(), so to avoid duplicating we
                     # process the row directly through its own
                     # transitions.
-                    await _drain_one_backfill(
+                    await drain_one_backfill(
                         market_data=market_data,
                         repo=backfill_repo,
                         task_id=task.id,
@@ -324,7 +324,7 @@ async def refresh_active_stocks(config: SchedulerConfig) -> None:
         )
 
 
-async def _drain_one_backfill(
+async def drain_one_backfill(
     *,
     market_data: MarketDataPort,
     repo: SQLModelBackfillTaskRepository,

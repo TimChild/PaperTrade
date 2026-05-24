@@ -23,6 +23,7 @@ Authentication: Clerk admin user only — uses :data:`AdminUserDep` from
 by ``/admin/jobs`` and ``/admin/triggers``.
 """
 
+import asyncio
 from datetime import UTC, date, datetime
 from uuid import UUID, uuid4
 
@@ -48,7 +49,7 @@ from zebu.domain.value_objects.backfill_task_status import (
     BackfillTaskStatus,
 )
 from zebu.domain.value_objects.ticker import Ticker
-from zebu.infrastructure.database import SessionDep
+from zebu.infrastructure.database import SessionDep, async_session_maker
 
 router = APIRouter(prefix="/admin/data-coverage", tags=["admin-data-coverage"])
 
@@ -373,6 +374,13 @@ async def admin_data_coverage_backfill(
         task_id=str(persisted.id),
     )
 
+    _schedule_immediate_drain(
+        task_id=persisted.id,
+        ticker=ticker,
+        start_date=start_date,
+        end_date=end_date,
+    )
+
     return BackfillResponse(
         task_id=persisted.id,
         status=persisted.status,
@@ -380,3 +388,103 @@ async def admin_data_coverage_backfill(
         start_date=start_date.isoformat(),
         end_date=end_date.isoformat(),
     )
+
+
+# ---------------------------------------------------------------------------
+# Immediate-drain background helpers
+# ---------------------------------------------------------------------------
+#
+# Mirrors :func:`zebu.adapters.inbound.api.strategy_activations._schedule_prewarm`.
+# The scheduler's ``refresh_active_stocks`` cron only fires daily at
+# midnight UTC, which makes the "Catch up" UX feel broken — operators
+# click the button and watch a "queued" pill sit for hours. The L-1
+# repo + L-3 scheduler logic both treat a PENDING row as drainable from
+# any code path, so we just fire a background task that drains the
+# row right now (in addition to whatever the scheduler picks up later).
+#
+# Errors are swallowed — the row stays PENDING and the scheduler retries
+# at the next cron firing, which is the original semantic.
+
+
+async def _run_drain_background(
+    task_id: UUID,
+    ticker: Ticker,
+    start_date: date,
+    end_date: date,
+) -> None:
+    """Background task that drains a single PENDING ``BackfillTask`` now.
+
+    Opens a fresh ``async_session_maker`` because the request-scoped
+    session is closed once the response is sent. Errors are logged but
+    MUST NOT propagate — there's no caller listening.
+    """
+    try:
+        async with async_session_maker() as session:
+            # Lazy imports break a potential circular path: scheduler
+            # imports dependencies which (transitively) imports this
+            # module via ``__init__``-level router registration.
+            from zebu.adapters.inbound.api.dependencies import get_market_data
+            from zebu.infrastructure.scheduler import drain_one_backfill
+
+            market_data = await get_market_data(session)
+            repo = SQLModelBackfillTaskRepository(session)
+            await drain_one_backfill(
+                market_data=market_data,
+                repo=repo,
+                task_id=task_id,
+                ticker=ticker,
+                start_date=start_date,
+                end_date=end_date,
+            )
+            await session.commit()
+            logger.info(
+                "admin_data_coverage_backfill_drained",
+                ticker=ticker.symbol,
+                task_id=str(task_id),
+            )
+    except Exception as exc:  # noqa: BLE001 — background task; must not raise
+        logger.warning(
+            "admin_data_coverage_backfill_drain_failed",
+            ticker=ticker.symbol,
+            task_id=str(task_id),
+            error=str(exc)[:500],
+        )
+
+
+def _schedule_immediate_drain(
+    *,
+    task_id: UUID,
+    ticker: Ticker,
+    start_date: date,
+    end_date: date,
+) -> None:
+    """Fire a fire-and-forget drain task for a freshly-queued backfill.
+
+    Called from :func:`admin_data_coverage_backfill` after persistence.
+    The function never raises — any error is logged and discarded so a
+    misbehaving scheduler-spawn cannot fail the backfill request itself.
+    The row remains PENDING in that case and the scheduler's normal
+    refresh cycle picks it up on its next firing.
+    """
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(
+            _run_drain_background(
+                task_id=task_id,
+                ticker=ticker,
+                start_date=start_date,
+                end_date=end_date,
+            )
+        )
+        logger.info(
+            "admin_data_coverage_backfill_drain_scheduled",
+            ticker=ticker.symbol,
+            task_id=str(task_id),
+        )
+    except Exception as exc:  # noqa: BLE001 — never let scheduling block the response
+        logger.warning(
+            "admin_data_coverage_backfill_drain_schedule_failed",
+            ticker=ticker.symbol,
+            task_id=str(task_id),
+            error=str(exc)[:500],
+        )
