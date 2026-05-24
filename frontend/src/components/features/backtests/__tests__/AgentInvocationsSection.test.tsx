@@ -134,13 +134,13 @@ describe('AgentInvocationsSection', () => {
     expect(
       screen.getByTestId('agent-invocation-row-inv-42')
     ).toBeInTheDocument()
-    // `new Date('2024-06-15')` parses as UTC midnight; in any non-UTC
-    // tz the short-format render can fall on either side of midnight,
-    // so assert "Jun" rather than the exact day to keep the test
-    // timezone-stable across CI / local.
+    // `formatSimulatedDate` parses the YYYY-MM-DD wire value via the
+    // local-tz Date constructor so the rendered day matches the wire
+    // value in every viewer timezone. The fixture's simulated_date is
+    // '2024-06-15' → 'Jun 15'.
     expect(
       screen.getByTestId('agent-invocation-sim-date-inv-42')
-    ).toHaveTextContent(/Jun/)
+    ).toHaveTextContent('Jun 15')
     expect(
       screen.getByTestId('agent-invocation-latency-inv-42')
     ).toHaveTextContent('980ms')
@@ -225,9 +225,91 @@ describe('AgentInvocationsSection', () => {
     const button = screen.getByTestId('agent-invocations-load-more')
     expect(button).toBeInTheDocument()
     fireEvent.click(button)
-    // After clicking, the hook is invoked again with a bigger limit;
+    // After clicking, the hook is invoked again with a bigger offset;
     // we just need to verify the click doesn't throw.
     expect(useBacktestAgentInvocations).toHaveBeenCalled()
+  })
+
+  it('paginates via offset (not by growing the request limit)', () => {
+    vi.mocked(useBacktestAgentInvocations).mockReturnValue({
+      data: makePage([makeInvocation({ id: 'inv-1' })], {
+        has_more: true,
+        total: 200,
+      }),
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useBacktestAgentInvocations>)
+
+    renderWithProviders(
+      <AgentInvocationsSection backtestId="bt-1" agentInvocationMode="live" />
+    )
+
+    // Initial render: limit=PAGE_SIZE, offset=0.
+    const initialCall = vi.mocked(useBacktestAgentInvocations).mock.calls[0]
+    expect(initialCall[1]).toEqual({ limit: 50, offset: 0 })
+
+    // First Load-more press: offset advances to PAGE_SIZE; limit
+    // STAYS at PAGE_SIZE so we never exceed MAX_PAGE_LIMIT=100.
+    fireEvent.click(screen.getByTestId('agent-invocations-load-more'))
+    const secondCall = vi.mocked(useBacktestAgentInvocations).mock.calls[
+      vi.mocked(useBacktestAgentInvocations).mock.calls.length - 1
+    ]
+    expect(secondCall[1]).toEqual({ limit: 50, offset: 50 })
+  })
+
+  it('appends new pages onto the existing rendered rows', () => {
+    // First render: a single row.
+    const page1 = makePage([makeInvocation({ id: 'inv-1' })], {
+      has_more: true,
+      total: 3,
+    })
+    vi.mocked(useBacktestAgentInvocations).mockReturnValue({
+      data: page1,
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useBacktestAgentInvocations>)
+
+    const { rerender } = render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <AgentInvocationsSection
+            backtestId="bt-1"
+            agentInvocationMode="live"
+          />
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+
+    expect(screen.getByTestId('agent-invocation-row-inv-1')).toBeInTheDocument()
+
+    // Second page: mock returns a different row. The component must
+    // append, not replace.
+    vi.mocked(useBacktestAgentInvocations).mockReturnValue({
+      data: makePage([makeInvocation({ id: 'inv-2' })], {
+        has_more: false,
+        total: 3,
+      }),
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useBacktestAgentInvocations>)
+
+    // Trigger a Load-more click and a rerender to pick up the new
+    // mock return value.
+    fireEvent.click(screen.getByTestId('agent-invocations-load-more'))
+    rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <AgentInvocationsSection
+            backtestId="bt-1"
+            agentInvocationMode="live"
+          />
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+
+    // Both rows must be in the DOM — accumulation, not replacement.
+    expect(screen.getByTestId('agent-invocation-row-inv-1')).toBeInTheDocument()
+    expect(screen.getByTestId('agent-invocation-row-inv-2')).toBeInTheDocument()
   })
 
   it('does not render a Load more button when has_more is false', () => {

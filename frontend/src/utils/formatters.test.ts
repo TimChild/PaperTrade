@@ -6,6 +6,7 @@ import {
   formatDate,
   formatClockTime,
   formatRelativeTime,
+  formatSimulatedDate,
 } from '@/utils/formatters'
 
 describe('formatters', () => {
@@ -186,6 +187,34 @@ describe('formatters', () => {
       // shouldn't render as "-1m ago".
       const ts = new Date(NOW.getTime() + 5_000).toISOString()
       expect(formatRelativeTime(ts, NOW)).toBe('just now')
+    })
+  })
+
+  describe('formatSimulatedDate', () => {
+    it('renders the YYYY-MM-DD wire value as the same day in the short format', () => {
+      // The key bug the helper exists to avoid: `new Date('2024-06-15')`
+      // is UTC midnight, which in any tz west of UTC renders as 'Jun
+      // 14' via Intl. formatSimulatedDate must always render the
+      // calendar day that shipped over the wire — regardless of viewer
+      // timezone.
+      expect(formatSimulatedDate('2024-06-15', 'short')).toBe('Jun 15')
+      expect(formatSimulatedDate('2024-01-01', 'short')).toBe('Jan 1')
+      expect(formatSimulatedDate('2024-12-31', 'short')).toBe('Dec 31')
+    })
+
+    it('renders the long format with the year', () => {
+      expect(formatSimulatedDate('2024-06-15', 'long')).toBe('June 15, 2024')
+    })
+
+    it('accepts a full ISO datetime by trimming to the date portion', () => {
+      expect(formatSimulatedDate('2024-06-15T23:59:59Z', 'short')).toBe(
+        'Jun 15'
+      )
+    })
+
+    it('falls back to the raw input on garbage', () => {
+      expect(formatSimulatedDate('not-a-date', 'short')).toBe('not-a-date')
+      expect(formatSimulatedDate('2024-XX-15', 'short')).toBe('2024-XX-15')
     })
   })
 })
