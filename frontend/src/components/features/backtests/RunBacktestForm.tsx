@@ -114,9 +114,9 @@ export function RunBacktestForm({
       } else if (end > now) {
         newErrors.endDate = 'End date cannot be in the future'
       } else {
-        const diffMs = end.getTime() - start.getTime()
-        const diffYears = diffMs / (365 * 24 * 60 * 60 * 1000)
-        if (diffYears > 3) {
+        const threeYearsAfterStart = new Date(start)
+        threeYearsAfterStart.setFullYear(threeYearsAfterStart.getFullYear() + 3)
+        if (end > threeYearsAfterStart) {
           newErrors.endDate = 'Date range cannot exceed 3 years'
         }
       }

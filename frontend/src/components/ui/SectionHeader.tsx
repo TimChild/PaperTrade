@@ -43,7 +43,7 @@ export function SectionHeader({
   return (
     <header
       className={cn(
-        'mb-4 sm:mb-5',
+        'pt-4 sm:pt-5 mb-4 sm:mb-5',
         withRule && 'pb-3 border-b border-hairline',
         className
       )}

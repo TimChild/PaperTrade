@@ -708,4 +708,106 @@ describe('AdminDataCoverage', () => {
       )
     })
   })
+
+  // ---------------------------------------------------------------------------
+  // Catch-up button label per backfill state (fix: pending vs running)
+  // ---------------------------------------------------------------------------
+
+  it('shows "Queued…" on the Catch-up button when backfill_status is pending', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [
+            makeEntry({
+              ticker: 'AAPL',
+              backfill_status: makeBackfillStatus({ status: 'pending' }),
+            }),
+          ],
+        })
+      )
+    )
+
+    renderPage()
+
+    const button = await screen.findByTestId('coverage-catch-up-btn-AAPL')
+    expect(button).toHaveTextContent('Queued…')
+  })
+
+  it('shows "Catching up…" on the Catch-up button when backfill_status is running', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [
+            makeEntry({
+              ticker: 'AAPL',
+              backfill_status: makeBackfillStatus({ status: 'running' }),
+            }),
+          ],
+        })
+      )
+    )
+
+    renderPage()
+
+    const button = await screen.findByTestId('coverage-catch-up-btn-AAPL')
+    expect(button).toHaveTextContent('Catching up…')
+  })
+
+  it('shows "Catch up" on the button when there is no active backfill task', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [makeEntry({ ticker: 'AAPL', backfill_status: null })],
+        })
+      )
+    )
+
+    renderPage()
+
+    const button = await screen.findByTestId('coverage-catch-up-btn-AAPL')
+    expect(button).toHaveTextContent('Catch up')
+  })
+
+  it('shows "Catch up" on the button after a backfill task has succeeded', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [
+            makeEntry({
+              ticker: 'AAPL',
+              backfill_status: makeBackfillStatus({ status: 'succeeded' }),
+            }),
+          ],
+        })
+      )
+    )
+
+    renderPage()
+
+    const button = await screen.findByTestId('coverage-catch-up-btn-AAPL')
+    expect(button).toHaveTextContent('Catch up')
+  })
+
+  it('shows "Catch up" on the button after a backfill task has failed', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [
+            makeEntry({
+              ticker: 'AAPL',
+              backfill_status: makeBackfillStatus({
+                status: 'failed',
+                error_message: 'timeout',
+              }),
+            }),
+          ],
+        })
+      )
+    )
+
+    renderPage()
+
+    const button = await screen.findByTestId('coverage-catch-up-btn-AAPL')
+    expect(button).toHaveTextContent('Catch up')
+  })
 })

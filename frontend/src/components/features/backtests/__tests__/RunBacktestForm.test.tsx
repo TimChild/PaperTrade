@@ -82,6 +82,73 @@ beforeEach(() => {
   } as unknown as ReturnType<typeof useStrategies>)
 })
 
+// ---------------------------------------------------------------------------
+// Date validator boundary: exactly 3 years must be accepted; > 3 rejected.
+// ---------------------------------------------------------------------------
+describe('RunBacktestForm — date range validator', () => {
+  beforeEach(() => {
+    vi.mocked(useRunBacktest).mockReturnValue(
+      makeRunBacktestMock({}) as unknown as ReturnType<typeof useRunBacktest>
+    )
+  })
+
+  function fillAndSubmit(startDate: string, endDate: string): void {
+    fireEvent.change(screen.getByTestId('backtest-strategy-select'), {
+      target: { value: 'strategy-1' },
+    })
+    fireEvent.change(screen.getByTestId('backtest-name-input'), {
+      target: { value: 'Test run' },
+    })
+    fireEvent.change(screen.getByTestId('backtest-start-date-input'), {
+      target: { value: startDate },
+    })
+    fireEvent.change(screen.getByTestId('backtest-end-date-input'), {
+      target: { value: endDate },
+    })
+    fireEvent.submit(screen.getByTestId('run-backtest-form'))
+  }
+
+  it('allows a range of exactly 3 years (start and end on same month/day)', () => {
+    const mutate = vi.fn()
+    vi.mocked(useRunBacktest).mockReturnValue(
+      makeRunBacktestMock({ mutate }) as unknown as ReturnType<
+        typeof useRunBacktest
+      >
+    )
+
+    renderWithProviders(
+      <RunBacktestForm onSuccess={vi.fn()} onCancel={vi.fn()} />
+    )
+
+    // 2020-01-15 → 2023-01-15 is exactly 3 years (crosses leap year 2020).
+    // Both dates are safely in the past so the "future date" guard does not fire.
+    fillAndSubmit('2020-01-15', '2023-01-15')
+
+    // Should submit, not show the "cannot exceed 3 years" error.
+    expect(screen.queryByText(/cannot exceed 3 years/i)).not.toBeInTheDocument()
+    expect(mutate).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects a range of 3 years + 1 day', () => {
+    const mutate = vi.fn()
+    vi.mocked(useRunBacktest).mockReturnValue(
+      makeRunBacktestMock({ mutate }) as unknown as ReturnType<
+        typeof useRunBacktest
+      >
+    )
+
+    renderWithProviders(
+      <RunBacktestForm onSuccess={vi.fn()} onCancel={vi.fn()} />
+    )
+
+    // One day past the 3-year boundary; both dates safely in the past.
+    fillAndSubmit('2020-01-15', '2023-01-16')
+
+    expect(screen.getByText(/cannot exceed 3 years/i)).toBeInTheDocument()
+    expect(mutate).not.toHaveBeenCalled()
+  })
+})
+
 describe('RunBacktestForm — Phase J fetching affordance', () => {
   it('renders the loading banner when dataFetching is true', () => {
     vi.mocked(useRunBacktest).mockReturnValue(
