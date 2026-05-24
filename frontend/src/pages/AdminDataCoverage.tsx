@@ -246,7 +246,7 @@ export function AdminDataCoverage(): React.JSX.Element {
 
   return (
     <div data-testid="admin-data-coverage-page">
-      <header className="mb-6">
+      <header className="pt-4 sm:pt-5 mb-6">
         <Eyebrow>Admin · Operations</Eyebrow>
         <h1 className="mt-1.5 font-display text-display-md tracking-tight text-ink">
           Data coverage
