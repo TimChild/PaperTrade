@@ -79,7 +79,7 @@ class WatchlistManager:
                 )
             # Re-activate if currently inactive
             existing.is_active = True
-            existing.updated_at = datetime.now(UTC)
+            existing.updated_at = datetime.now(UTC).replace(tzinfo=None)
             await self.session.flush()
         else:
             # Create new watchlist entry
@@ -108,7 +108,7 @@ class WatchlistManager:
             update(TickerWatchlistModel)
             .where(TickerWatchlistModel.ticker == ticker.symbol)  # type: ignore[arg-type]  # SQLModel field comparison produces valid SQLAlchemy expression
             .where(TickerWatchlistModel.is_active == True)  # type: ignore[arg-type]  # noqa: E712  # SQLAlchemy requires == True for bool columns
-            .values(is_active=False, updated_at=datetime.now(UTC))
+            .values(is_active=False, updated_at=datetime.now(UTC).replace(tzinfo=None))
         )
         await self.session.exec(stmt)
         await self.session.flush()
@@ -133,7 +133,7 @@ class WatchlistManager:
             ...     price = await fetch_price(ticker)
             ...     await manager.update_refresh_metadata(ticker, ...)
         """
-        now = datetime.now(UTC)
+        now = datetime.now(UTC).replace(tzinfo=None)
 
         # Query for active tickers that need refresh
         query = (
@@ -189,7 +189,7 @@ class WatchlistManager:
             .values(
                 last_refresh_at=last_refresh,
                 next_refresh_at=next_refresh,
-                updated_at=datetime.now(UTC),
+                updated_at=datetime.now(UTC).replace(tzinfo=None),
             )
         )
         await self.session.exec(stmt)

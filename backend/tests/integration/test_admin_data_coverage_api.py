@@ -778,3 +778,61 @@ class TestBackfillImmediateDrain:
             assert "ZEBU_HISTORY_EPOCH" in str(exc)
         else:
             raise AssertionError("Expected RuntimeError for invalid epoch")
+
+
+# =============================================================================
+# Bug regression — backfill drain race (prod incident 2026-05-24)
+# =============================================================================
+
+
+@pytest.mark.asyncio
+class TestBackfillCommitBeforeDrain:
+    """Regression: the BackfillTask row must be committed before the background
+    drain's fresh session opens.
+
+    Before the fix, ``repo.create`` only flushed (not committed) and the
+    background task's ``session.get(BackfillTaskModel, task_id)`` raced the
+    FastAPI middleware's commit-at-exit, reliably returning ``None``.  This
+    left rows stuck in PENDING with ``mark_running failed: BackfillTask not
+    found`` log lines.
+
+    The test verifies the post-API-call invariant: a *separate* session (not
+    the one owned by the request) can read the persisted row immediately after
+    the HTTP response is returned.  That is only possible if an explicit
+    ``await session.commit()`` happened inside the handler before
+    ``_schedule_immediate_drain``.
+    """
+
+    async def test_row_visible_from_fresh_session_after_response(
+        self,
+        client: TestClient,
+        admin_headers: dict[str, str],
+        test_engine: AsyncEngine,
+        pinned_epoch: str,
+        no_immediate_drain: None,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """After POST /backfill returns 201 the task row is readable from a new
+        session — proving the handler committed before returning.
+
+        ``no_immediate_drain`` disables the background drain so the row stays
+        PENDING and the assertion is stable regardless of how fast the drain
+        would have run.
+        """
+        response = client.post(
+            "/api/v1/admin/data-coverage/backfill",
+            headers=admin_headers,
+            json={"ticker": "AAPL"},
+        )
+        assert response.status_code == 201, response.text
+        task_id = response.json()["task_id"]
+
+        # Open a *fresh* session (simulates what _run_drain_background does)
+        # and assert the row is already committed and visible.
+        row = await _fetch_backfill_task(test_engine, task_id)
+        assert row is not None, (
+            "BackfillTask row not visible from fresh session after API response — "
+            "handler did not commit before returning (regression of prod incident "
+            "2026-05-24)"
+        )
+        assert row.status == BackfillTaskStatus.PENDING.value
