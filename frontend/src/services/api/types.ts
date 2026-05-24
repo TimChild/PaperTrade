@@ -965,6 +965,13 @@ export interface TickerCoverageEntry {
   target_epoch: string
   is_active: boolean
   /**
+   * True iff the ticker has an active row in `ticker_watchlist`.
+   * Orthogonal to `is_active` (Task #220) — a recently-traded ticker
+   * can be active without being watchlisted, and a watchlisted ticker
+   * stays active even after the 30-day trade window lapses.
+   */
+  is_watchlisted: boolean
+  /**
    * Most-recent backfill task for this ticker, or `null` when no recent
    * task exists. Non-terminal tasks (pending/running) are always
    * surfaced; succeeded tasks surface only for ~60s after completion;
@@ -999,4 +1006,29 @@ export interface BackfillResponse {
   start_date: string
   /** Resolved end of the canonical catch-up range (today, UTC). */
   end_date: string
+}
+
+// ---------------------------------------------------------------------------
+// Admin: watchlist Pin/Unpin (Task #220)
+//
+// Mirrors the request/response models in
+// `backend/src/zebu/adapters/inbound/api/admin_watchlist.py`.
+// ---------------------------------------------------------------------------
+
+/**
+ * Request body for POST /admin/watchlist.
+ *
+ * The backend rejects any extra fields with 422 (Pydantic
+ * `extra=forbid`) — `priority` is server-fixed. Keep this shape lean
+ * until/unless the scheduler starts honouring user-supplied priority.
+ */
+export interface PinTickerRequest {
+  ticker: string
+}
+
+/** Response body of POST /admin/watchlist. */
+export interface PinTickerResponse {
+  ticker: string
+  /** Always true on a successful pin (echoed for the client to stamp). */
+  is_watchlisted: boolean
 }

@@ -123,6 +123,15 @@ class TickerCoverageEntry(BaseModel):
             "traded within the active-tickers window (default 30 days)."
         ),
     )
+    is_watchlisted: bool = Field(
+        description=(
+            "``True`` iff the ticker has an active row in "
+            "``ticker_watchlist``. Orthogonal to ``is_active`` — a "
+            "recently-traded ticker can be active without being "
+            "watchlisted, and a watchlisted ticker stays active even "
+            "after the 30-day trade window lapses (Task #220)."
+        ),
+    )
     backfill_status: BackfillStatusPayload | None = Field(
         default=None,
         description=(
@@ -234,6 +243,7 @@ async def admin_data_coverage(
             gap_days_count=row.gap_days_count,
             target_epoch=row.target_epoch.isoformat(),
             is_active=row.is_active,
+            is_watchlisted=row.is_watchlisted,
             backfill_status=(
                 BackfillStatusPayload(
                     task_id=row.backfill_status.task_id,

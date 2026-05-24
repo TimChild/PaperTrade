@@ -354,6 +354,7 @@ class TestGetWithSeededData:
                 "gap_days_count",
                 "target_epoch",
                 "is_active",
+                "is_watchlisted",
                 "backfill_status",
             }
 
@@ -387,6 +388,113 @@ class TestGetWithSeededData:
         # task_id and enqueued_at are both present strings.
         assert isinstance(row["backfill_status"]["task_id"], str)
         assert isinstance(row["backfill_status"]["enqueued_at"], str)
+
+    async def test_is_watchlisted_true_for_watchlist_row(
+        self,
+        client: TestClient,
+        admin_headers: dict[str, str],
+        test_engine: AsyncEngine,
+        pinned_epoch: str,
+    ) -> None:
+        """Task #220: active watchlist row → ``is_watchlisted=True``."""
+        await _seed_watchlist(test_engine, ticker="AAPL")
+
+        response = client.get(
+            "/api/v1/admin/data-coverage",
+            headers=admin_headers,
+        )
+        body = response.json()
+        row = next(r for r in body["tickers"] if r["ticker"] == "AAPL")
+        assert row["is_watchlisted"] is True
+        # The watchlist row also flips ``is_active`` on via the union —
+        # asserting both stay true demonstrates the orthogonality
+        # (they happen to coincide here; the next test pulls them apart).
+        assert row["is_active"] is True
+
+    async def test_is_watchlisted_false_for_recently_traded_only(
+        self,
+        client: TestClient,
+        admin_headers: dict[str, str],
+        test_engine: AsyncEngine,
+        pinned_epoch: str,
+        default_user_id: UUID,
+    ) -> None:
+        """Task #220: recently-traded ticker NOT in the watchlist is
+        ``is_active=True`` but ``is_watchlisted=False`` — orthogonal.
+
+        Demonstrates that ``is_active`` keeps its union semantics
+        (watchlist ∪ recently-traded) while ``is_watchlisted`` reflects
+        only the watchlist arm.
+        """
+        from zebu.adapters.outbound.database.models import (
+            PortfolioModel,
+            TransactionModel,
+        )
+
+        now = datetime.now(UTC)
+        async with AsyncSession(test_engine, expire_on_commit=False) as session:
+            portfolio_id = uuid4()
+            session.add(
+                PortfolioModel(
+                    id=portfolio_id,
+                    user_id=default_user_id,
+                    name="Test",
+                    portfolio_type="PAPER_TRADING",
+                    created_at=now,
+                    updated_at=now,
+                )
+            )
+            session.add(
+                TransactionModel(
+                    id=uuid4(),
+                    portfolio_id=portfolio_id,
+                    transaction_type="BUY",
+                    ticker="MSFT",
+                    quantity=Decimal("1"),
+                    price_per_share_amount=Decimal("380"),
+                    price_per_share_currency="USD",
+                    cash_change_amount=Decimal("-380"),
+                    cash_change_currency="USD",
+                    timestamp=now.replace(tzinfo=None),
+                )
+            )
+            await session.commit()
+
+        response = client.get(
+            "/api/v1/admin/data-coverage",
+            headers=admin_headers,
+        )
+        body = response.json()
+        row = next(r for r in body["tickers"] if r["ticker"] == "MSFT")
+        assert row["is_active"] is True
+        assert row["is_watchlisted"] is False
+
+    async def test_is_watchlisted_false_for_history_only_ticker(
+        self,
+        client: TestClient,
+        admin_headers: dict[str, str],
+        test_engine: AsyncEngine,
+        pinned_epoch: str,
+    ) -> None:
+        """Task #220: a ticker known only via ``price_history`` rows surfaces
+        ``is_watchlisted=False`` (it's neither in the watchlist nor
+        recently traded — the operator can prune it).
+        """
+        await _seed_bars(
+            test_engine,
+            ticker="NFLX",
+            days=[date(2025, 1, 6)],
+            created_at=datetime(2025, 1, 6, tzinfo=UTC),
+        )
+
+        response = client.get(
+            "/api/v1/admin/data-coverage",
+            headers=admin_headers,
+        )
+        body = response.json()
+        row = next(r for r in body["tickers"] if r["ticker"] == "NFLX")
+        assert row["is_watchlisted"] is False
+        assert row["is_active"] is False
 
 
 # =============================================================================

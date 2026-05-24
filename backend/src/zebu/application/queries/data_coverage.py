@@ -131,6 +131,12 @@ class TickerCoverage:
             date for the "catch up" backfill.
         is_active: ``True`` when the ticker is in the watchlist OR has
             been traded in the active-tickers window.
+        is_watchlisted: ``True`` iff the ticker has an active row in
+            ``ticker_watchlist``. Orthogonal to ``is_active`` — a
+            recently-traded ticker can be active without being
+            watchlisted, and a watchlisted ticker can lapse out of the
+            recently-traded window while staying active via the
+            watchlist arm of the union. (Task #220.)
         backfill_status: Most-recent task summary, or ``None`` when no
             task exists (or the most-recent one is SUCCEEDED outside
             the 60s surface window / FAILED outside the 24h window).
@@ -143,6 +149,7 @@ class TickerCoverage:
     gap_days_count: int
     target_epoch: date
     is_active: bool
+    is_watchlisted: bool
     backfill_status: BackfillStatusInfo | None
 
 
@@ -236,8 +243,17 @@ class DataCoverageQueryHandler:
             MarketCalendar.trading_days_between(query.target_epoch, today)
         )
 
-        # 1. Active-set: watchlist ∪ recently-traded.
-        active_tickers = await self._active_tickers(query.active_window_days, now)
+        # 1a. Watchlist set (separate from the union so we can stamp the
+        #     orthogonal ``is_watchlisted`` flag per row — Task #220).
+        watchlisted_tickers = await self._watchlisted_tickers()
+
+        # 1b. Recently-traded set (the other arm of the active-set union).
+        recently_traded_tickers = await self._recently_traded_tickers(
+            query.active_window_days, now
+        )
+
+        # 1c. Active-set: watchlist ∪ recently-traded.
+        active_tickers = watchlisted_tickers | recently_traded_tickers
 
         # 2. Aggregates per ticker across price_history (daily bars).
         aggregates = await self._coverage_aggregates()
@@ -271,6 +287,7 @@ class DataCoverageQueryHandler:
                         gap_days_count=gap_days_count,
                         target_epoch=query.target_epoch,
                         is_active=symbol in active_tickers,
+                        is_watchlisted=symbol in watchlisted_tickers,
                         backfill_status=backfill_status,
                     )
                 )
@@ -285,6 +302,7 @@ class DataCoverageQueryHandler:
                     gap_days_count=gap_days_count,
                     target_epoch=query.target_epoch,
                     is_active=symbol in active_tickers,
+                    is_watchlisted=symbol in watchlisted_tickers,
                     backfill_status=backfill_status,
                 )
             )
@@ -295,14 +313,29 @@ class DataCoverageQueryHandler:
     # Internals
     # ------------------------------------------------------------------
 
-    async def _active_tickers(self, window_days: int, now: datetime) -> set[str]:
-        """Set of "active" ticker symbols: watchlist ∪ recently-traded."""
+    async def _watchlisted_tickers(self) -> set[str]:
+        """Set of active watchlist ticker symbols.
+
+        Task #220 broke this out from ``_active_tickers`` so the per-row
+        ``is_watchlisted`` flag can be stamped without re-reading the
+        table. The union semantics for ``is_active`` are unchanged —
+        callers compose this set with :meth:`_recently_traded_tickers`.
+        """
         watchlist_stmt = select(TickerWatchlistModel.ticker).where(
             TickerWatchlistModel.is_active == True  # noqa: E712
         )
         result = await self._session.exec(watchlist_stmt)
-        symbols: set[str] = {row for row in result.all() if row}
+        return {row for row in result.all() if row}
 
+    async def _recently_traded_tickers(
+        self, window_days: int, now: datetime
+    ) -> set[str]:
+        """Set of ticker symbols traded within ``window_days``.
+
+        The other arm of the active-set union — composed with
+        :meth:`_watchlisted_tickers` to produce the steady-state
+        "active" flag used by the scheduler.
+        """
         cutoff = now.astimezone(UTC).replace(tzinfo=None) - timedelta(days=window_days)
         tx_stmt = (
             select(TransactionModel.ticker)
@@ -311,10 +344,7 @@ class DataCoverageQueryHandler:
             .distinct()
         )
         tx_result = await self._session.exec(tx_stmt)
-        for row in tx_result.all():
-            if row:
-                symbols.add(row)
-        return symbols
+        return {row for row in tx_result.all() if row}
 
     async def _coverage_aggregates(self) -> dict[str, _CoverageAggregate]:
         """Per-ticker MIN/MAX(timestamp) + MAX(created_at) for daily bars."""

@@ -1,5 +1,5 @@
 /**
- * Admin data-coverage page (Phase J / Task #212 Layer 4 + Task #215).
+ * Admin data-coverage page (Phase J / Task #212 Layer 4 + Task #215 + Task #220).
  *
  * Operator view of per-ticker price-history coverage.
  *
@@ -8,6 +8,12 @@
  * today]` and the page surfaces real `BackfillTask` state (pending /
  * running / succeeded / failed) so the operator sees progress on the
  * next 30 s poll.
+ *
+ * Task #220 add: a "Pin" column + Pin / Unpin action button alongside
+ * Catch up. Pin/Unpin edits `ticker_watchlist` so the operator can
+ * keep a ticker in the scheduler's refresh set after the 30-day trade
+ * window lapses. Pin is additive — it doesn't trigger a backfill and
+ * doesn't change scheduler semantics.
  *
  * Surface goals:
  *
@@ -19,9 +25,13 @@
  *   / "Caught up" / "Failed" pill driven by the backend's
  *   `backfill_status`. The Catch-up button disables while the task is
  *   non-terminal.
+ * - Watchlisted (pinned) tickers show a small "Pinned" pill in the new
+ *   Pin column; the operator can click Unpin to remove them.
  *
  * The Catch-up button is idempotent server-side — if the operator
- * clicks it twice we get the existing task back.
+ * clicks it twice we get the existing task back. Pin is similarly
+ * idempotent; Unpin returns 404 if the ticker isn't pinned (surfaced
+ * as a "not pinned" toast).
  */
 import toast from 'react-hot-toast'
 import { isAxiosError } from 'axios'
@@ -42,6 +52,8 @@ import {
   DATA_COVERAGE_POLL_INTERVAL_MS,
   useBackfillTicker,
   useDataCoverage,
+  usePinTicker,
+  useUnpinTicker,
 } from '@/hooks/useDataCoverage'
 import type {
   BackfillTaskStatus,
@@ -148,6 +160,8 @@ function isBackfillInFlight(entry: TickerCoverageEntry): boolean {
 export function AdminDataCoverage(): React.JSX.Element {
   const { data, isLoading, error } = useDataCoverage()
   const backfill = useBackfillTicker()
+  const pin = usePinTicker()
+  const unpin = useUnpinTicker()
   const now = new Date()
 
   const rows = data?.tickers ?? []
@@ -183,6 +197,51 @@ export function AdminDataCoverage(): React.JSX.Element {
         },
       }
     )
+  }
+
+  const handlePin = (entry: TickerCoverageEntry): void => {
+    pin.mutate(
+      { ticker: entry.ticker },
+      {
+        onSuccess: () => {
+          toast.success(`Pinned ${entry.ticker} to the watchlist.`)
+        },
+        onError: (err: Error) => {
+          if (isAxiosError(err) && err.response?.status === 403) {
+            toast.error('Admin privileges required.')
+            return
+          }
+          const message =
+            isAxiosError(err) && err.response?.data?.detail
+              ? String(err.response.data.detail)
+              : `Failed to pin ${entry.ticker}.`
+          toast.error(message)
+        },
+      }
+    )
+  }
+
+  const handleUnpin = (entry: TickerCoverageEntry): void => {
+    unpin.mutate(entry.ticker, {
+      onSuccess: () => {
+        toast.success(`Unpinned ${entry.ticker} from the watchlist.`)
+      },
+      onError: (err: Error) => {
+        if (isAxiosError(err) && err.response?.status === 403) {
+          toast.error('Admin privileges required.')
+          return
+        }
+        if (isAxiosError(err) && err.response?.status === 404) {
+          toast.error(`${entry.ticker} is not pinned.`)
+          return
+        }
+        const message =
+          isAxiosError(err) && err.response?.data?.detail
+            ? String(err.response.data.detail)
+            : `Failed to unpin ${entry.ticker}.`
+        toast.error(message)
+      },
+    })
   }
 
   return (
@@ -252,12 +311,16 @@ export function AdminDataCoverage(): React.JSX.Element {
               Gap days
             </DataHeaderCell>
             <DataHeaderCell>Status</DataHeaderCell>
+            <DataHeaderCell>Pin</DataHeaderCell>
             <DataHeaderCell align="right">Action</DataHeaderCell>
           </DataTableHead>
           <DataTableBody>
             {rows.map((row) => {
               const status = computeStatus(row, now)
               const inFlight = isBackfillInFlight(row)
+              const isPinMutating =
+                (pin.isPending && pin.variables?.ticker === row.ticker) ||
+                (unpin.isPending && unpin.variables === row.ticker)
               return (
                 <DataRow key={row.ticker} testId={`coverage-row-${row.ticker}`}>
                   <DataCell
@@ -307,20 +370,60 @@ export function AdminDataCoverage(): React.JSX.Element {
                       {status.label}
                     </span>
                   </DataCell>
+                  <DataCell>
+                    {row.is_watchlisted ? (
+                      <span
+                        className="inline-flex items-center bg-canvas-raised/60 text-ink px-2 py-1 rounded-editorial font-eyebrow"
+                        data-testid={`coverage-pinned-indicator-${row.ticker}`}
+                      >
+                        Pinned
+                      </span>
+                    ) : (
+                      <span
+                        className="text-ink-subtle"
+                        data-testid={`coverage-unpinned-indicator-${row.ticker}`}
+                      >
+                        —
+                      </span>
+                    )}
+                  </DataCell>
                   <DataCell align="right">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => handleCatchUp(row)}
-                      disabled={
-                        inFlight ||
-                        (backfill.isPending &&
-                          backfill.variables?.ticker === row.ticker)
-                      }
-                      data-testid={`coverage-catch-up-btn-${row.ticker}`}
-                    >
-                      {inFlight ? 'Catching up…' : 'Catch up'}
-                    </Button>
+                    <div className="flex items-center justify-end gap-2">
+                      {row.is_watchlisted ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleUnpin(row)}
+                          disabled={isPinMutating}
+                          data-testid={`coverage-unpin-btn-${row.ticker}`}
+                        >
+                          Unpin
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handlePin(row)}
+                          disabled={isPinMutating}
+                          data-testid={`coverage-pin-btn-${row.ticker}`}
+                        >
+                          Pin
+                        </Button>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleCatchUp(row)}
+                        disabled={
+                          inFlight ||
+                          (backfill.isPending &&
+                            backfill.variables?.ticker === row.ticker)
+                        }
+                        data-testid={`coverage-catch-up-btn-${row.ticker}`}
+                      >
+                        {inFlight ? 'Catching up…' : 'Catch up'}
+                      </Button>
+                    </div>
                   </DataCell>
                 </DataRow>
               )

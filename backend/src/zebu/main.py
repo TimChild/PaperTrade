@@ -13,6 +13,9 @@ from zebu.adapters.inbound.api.admin_data_coverage import (
 )
 from zebu.adapters.inbound.api.admin_jobs import router as admin_jobs_router
 from zebu.adapters.inbound.api.admin_triggers import router as admin_triggers_router
+from zebu.adapters.inbound.api.admin_watchlist import (
+    router as admin_watchlist_router,
+)
 from zebu.adapters.inbound.api.analytics import (
     admin_router as analytics_admin_router,
 )
@@ -187,6 +190,9 @@ app.include_router(admin_triggers_router, prefix="/api/v1")
 app.include_router(admin_jobs_router, prefix="/api/v1")
 # Phase J (Task #212 Layer 4) — admin data-coverage UI + backfill action.
 app.include_router(admin_data_coverage_router, prefix="/api/v1")
+# Task #220 — admin watchlist Pin/Unpin surface integrated into the
+# data-coverage page.
+app.include_router(admin_watchlist_router, prefix="/api/v1")
 
 
 @app.get("/health")
