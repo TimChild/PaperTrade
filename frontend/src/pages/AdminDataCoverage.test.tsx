@@ -48,6 +48,7 @@ function makeEntry(
     gap_days_count: 0,
     target_epoch: DEFAULT_EPOCH,
     is_active: true,
+    is_watchlisted: false,
     backfill_status: null,
     ...overrides,
   }
@@ -225,6 +226,7 @@ describe('AdminDataCoverage', () => {
               gap_days_count: 0,
               target_epoch: DEFAULT_EPOCH,
               is_active: true,
+              is_watchlisted: false,
               backfill_status: null,
             },
           ],
@@ -472,5 +474,238 @@ describe('AdminDataCoverage', () => {
     const errorBlock = await screen.findByTestId('admin-data-coverage-error')
     expect(errorBlock).toBeInTheDocument()
     expect(errorBlock).toHaveTextContent(/admin privileges required/i)
+  })
+
+  // ---------------------------------------------------------------------------
+  // Task #220 — Pin / Unpin watchlist column
+  // ---------------------------------------------------------------------------
+
+  it('renders the Pinned indicator + Unpin button for watchlisted rows', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [makeEntry({ ticker: 'AAPL', is_watchlisted: true })],
+        })
+      )
+    )
+
+    renderPage()
+
+    expect(
+      await screen.findByTestId('coverage-pinned-indicator-AAPL')
+    ).toHaveTextContent(/pinned/i)
+    expect(screen.getByTestId('coverage-unpin-btn-AAPL')).toBeInTheDocument()
+    expect(screen.queryByTestId('coverage-pin-btn-AAPL')).toBeNull()
+  })
+
+  it('renders the Pin button (no indicator) for unwatchlisted rows', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [makeEntry({ ticker: 'AAPL', is_watchlisted: false })],
+        })
+      )
+    )
+
+    renderPage()
+
+    expect(
+      await screen.findByTestId('coverage-pin-btn-AAPL')
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId('coverage-unpin-btn-AAPL')).toBeNull()
+    expect(
+      screen.getByTestId('coverage-unpinned-indicator-AAPL')
+    ).toBeInTheDocument()
+  })
+
+  it('clicking Pin POSTs { ticker } to /admin/watchlist', async () => {
+    const user = userEvent.setup()
+    let receivedBody: unknown = null
+
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [makeEntry({ ticker: 'AAPL', is_watchlisted: false })],
+        })
+      ),
+      http.post(`${API_BASE_URL}/admin/watchlist`, async ({ request }) => {
+        receivedBody = await request.json()
+        return HttpResponse.json(
+          { ticker: 'AAPL', is_watchlisted: true },
+          { status: 201 }
+        )
+      })
+    )
+
+    renderPage()
+
+    await user.click(await screen.findByTestId('coverage-pin-btn-AAPL'))
+
+    await waitFor(() => {
+      const body = receivedBody as Record<string, unknown> | null
+      expect(body).not.toBeNull()
+      expect(body?.ticker).toBe('AAPL')
+      // No `priority` or other extra fields — the contract is lean.
+      expect(body?.priority).toBeUndefined()
+    })
+  })
+
+  it('clicking Unpin DELETEs /admin/watchlist/{ticker}', async () => {
+    const user = userEvent.setup()
+    let deletedTicker: string | null = null
+
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [makeEntry({ ticker: 'AAPL', is_watchlisted: true })],
+        })
+      ),
+      http.delete(`${API_BASE_URL}/admin/watchlist/:ticker`, ({ params }) => {
+        deletedTicker = params.ticker as string
+        return new HttpResponse(null, { status: 204 })
+      })
+    )
+
+    renderPage()
+
+    await user.click(await screen.findByTestId('coverage-unpin-btn-AAPL'))
+
+    await waitFor(() => {
+      expect(deletedTicker).toBe('AAPL')
+    })
+  })
+
+  it('only disables the clicked row while its Pin mutation is in flight', async () => {
+    const user = userEvent.setup()
+
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [
+            makeEntry({ ticker: 'AAPL', is_watchlisted: false }),
+            makeEntry({ ticker: 'TSLA', is_watchlisted: false }),
+          ],
+        })
+      ),
+      // Hold the response open so the mutation stays in flight.
+      http.post(
+        `${API_BASE_URL}/admin/watchlist`,
+        async () =>
+          new Promise<Response>((resolve) => {
+            setTimeout(
+              () =>
+                resolve(
+                  HttpResponse.json(
+                    { ticker: 'AAPL', is_watchlisted: true },
+                    { status: 201 }
+                  )
+                ),
+              300
+            )
+          })
+      )
+    )
+
+    renderPage()
+
+    const aaplBtn = await screen.findByTestId('coverage-pin-btn-AAPL')
+    const tslaBtn = await screen.findByTestId('coverage-pin-btn-TSLA')
+
+    await user.click(aaplBtn)
+
+    // AAPL's Pin button is disabled while its mutation is in flight,
+    // but TSLA's stays enabled (regression guard for the shared-isPending
+    // bug — Task #220 follows the PR #296 pattern).
+    await waitFor(() => {
+      expect(aaplBtn).toBeDisabled()
+    })
+    expect(tslaBtn).not.toBeDisabled()
+  })
+
+  it('only disables the clicked row while its Unpin mutation is in flight', async () => {
+    const user = userEvent.setup()
+
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [
+            makeEntry({ ticker: 'AAPL', is_watchlisted: true }),
+            makeEntry({ ticker: 'TSLA', is_watchlisted: true }),
+          ],
+        })
+      ),
+      http.delete(
+        `${API_BASE_URL}/admin/watchlist/:ticker`,
+        async () =>
+          new Promise<Response>((resolve) => {
+            setTimeout(
+              () => resolve(new HttpResponse(null, { status: 204 })),
+              300
+            )
+          })
+      )
+    )
+
+    renderPage()
+
+    const aaplBtn = await screen.findByTestId('coverage-unpin-btn-AAPL')
+    const tslaBtn = await screen.findByTestId('coverage-unpin-btn-TSLA')
+
+    await user.click(aaplBtn)
+
+    await waitFor(() => {
+      expect(aaplBtn).toBeDisabled()
+    })
+    expect(tslaBtn).not.toBeDisabled()
+  })
+
+  it('toasts the failure when the Pin request errors', async () => {
+    const user = userEvent.setup()
+    const toast = (await import('react-hot-toast')).default
+
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [makeEntry({ ticker: 'AAPL', is_watchlisted: false })],
+        })
+      ),
+      http.post(`${API_BASE_URL}/admin/watchlist`, () =>
+        HttpResponse.json({ detail: 'boom' }, { status: 500 })
+      )
+    )
+
+    renderPage()
+
+    await user.click(await screen.findByTestId('coverage-pin-btn-AAPL'))
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalled()
+    })
+  })
+
+  it('toasts "not pinned" when Unpin returns 404', async () => {
+    const user = userEvent.setup()
+    const toast = (await import('react-hot-toast')).default
+
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [makeEntry({ ticker: 'AAPL', is_watchlisted: true })],
+        })
+      ),
+      http.delete(`${API_BASE_URL}/admin/watchlist/:ticker`, () =>
+        HttpResponse.json({ detail: 'not pinned' }, { status: 404 })
+      )
+    )
+
+    renderPage()
+
+    await user.click(await screen.findByTestId('coverage-unpin-btn-AAPL'))
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        expect.stringContaining('not pinned')
+      )
+    })
   })
 })

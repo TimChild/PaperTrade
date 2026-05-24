@@ -1,6 +1,7 @@
 /**
- * Tests for `useDataCoverage` + `useBackfillTicker`
- * (Phase J / Task #212 L4 + Task #215).
+ * Tests for `useDataCoverage` + `useBackfillTicker` + Task #220
+ * `usePinTicker` / `useUnpinTicker`
+ * (Phase J / Task #212 L4 + Task #215 + Task #220).
  *
  * Mocks at the API-client boundary (`@/services/api/admin`) so we exercise
  * the real query/mutation wiring — query keys, refetch interval,
@@ -14,17 +15,24 @@ import {
   dataCoverageQueryKeys,
   useBackfillTicker,
   useDataCoverage,
+  usePinTicker,
+  useUnpinTicker,
 } from '../useDataCoverage'
-import { dataCoverageApi } from '@/services/api/admin'
+import { dataCoverageApi, watchlistApi } from '@/services/api/admin'
 import type {
   BackfillResponse,
   DataCoverageResponse,
+  PinTickerResponse,
 } from '@/services/api/types'
 
 vi.mock('@/services/api/admin', () => ({
   dataCoverageApi: {
     list: vi.fn(),
     backfill: vi.fn(),
+  },
+  watchlistApi: {
+    add: vi.fn(),
+    remove: vi.fn(),
   },
 }))
 
@@ -38,6 +46,7 @@ const mockResponse: DataCoverageResponse = {
       gap_days_count: 0,
       target_epoch: '2015-01-01',
       is_active: true,
+      is_watchlisted: false,
       backfill_status: null,
     },
   ],
@@ -181,6 +190,82 @@ describe('useBackfillTicker', () => {
       const r = await result.current.mutateAsync({ ticker: 'AAPL' })
       expect(r.start_date).toBe('2015-01-01')
       expect(r.end_date).toBe('2025-01-10')
+    })
+  })
+})
+
+describe('usePinTicker', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  const pinResponse: PinTickerResponse = {
+    ticker: 'AAPL',
+    is_watchlisted: true,
+  }
+
+  it('calls watchlistApi.add with the ticker-only payload', async () => {
+    vi.mocked(watchlistApi.add).mockResolvedValue(pinResponse)
+    const { Wrapper } = createWrapper()
+
+    const { result } = renderHook(() => usePinTicker(), { wrapper: Wrapper })
+
+    await act(async () => {
+      const r = await result.current.mutateAsync({ ticker: 'AAPL' })
+      expect(r).toEqual(pinResponse)
+    })
+
+    expect(watchlistApi.add).toHaveBeenCalledWith({ ticker: 'AAPL' })
+  })
+
+  it('invalidates the data-coverage query on success', async () => {
+    vi.mocked(watchlistApi.add).mockResolvedValue(pinResponse)
+    const { Wrapper, client } = createWrapper()
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries')
+
+    const { result } = renderHook(() => usePinTicker(), { wrapper: Wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync({ ticker: 'AAPL' })
+    })
+
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: dataCoverageQueryKeys.all,
+    })
+  })
+})
+
+describe('useUnpinTicker', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls watchlistApi.remove with the bare ticker string', async () => {
+    vi.mocked(watchlistApi.remove).mockResolvedValue(undefined)
+    const { Wrapper } = createWrapper()
+
+    const { result } = renderHook(() => useUnpinTicker(), { wrapper: Wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync('AAPL')
+    })
+
+    expect(watchlistApi.remove).toHaveBeenCalledWith('AAPL')
+  })
+
+  it('invalidates the data-coverage query on success', async () => {
+    vi.mocked(watchlistApi.remove).mockResolvedValue(undefined)
+    const { Wrapper, client } = createWrapper()
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries')
+
+    const { result } = renderHook(() => useUnpinTicker(), { wrapper: Wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync('AAPL')
+    })
+
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: dataCoverageQueryKeys.all,
     })
   })
 })
