@@ -93,6 +93,19 @@ class PriceHistoryModel(SQLModel, table=True):
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(UTC).replace(tzinfo=None)
     )
+    # ``updated_at`` bumps on every upsert (insert OR update). Powers the
+    # data-coverage page's ``last_refresh`` field so an operator who
+    # clicks "Catch up" sees the timestamp move even when the underlying
+    # bars already existed and only got re-verified.
+    #
+    # Nullable at the schema level so the l002 migration adds it
+    # cleanly on SQLite (no ``batch_alter_table`` needed). The
+    # application populates it on every write path; the data-coverage
+    # query ``COALESCE``s to ``created_at`` defensively.
+    updated_at: datetime | None = Field(
+        default_factory=lambda: datetime.now(UTC).replace(tzinfo=None),
+        nullable=True,
+    )
 
     def to_price_point(self) -> PricePoint:
         """Convert database model to PricePoint DTO.

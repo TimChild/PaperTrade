@@ -63,11 +63,20 @@ async def _seed_daily_bars(
     days: list[date],
     created_at: datetime,
 ) -> None:
-    """Seed one daily ``price_history`` row per supplied date."""
+    """Seed one daily ``price_history`` row per supplied date.
+
+    Both ``created_at`` and ``updated_at`` are set to the supplied
+    ``created_at`` value — for a freshly-ingested row that has not yet
+    been re-upserted, the two timestamps are equal. The data-coverage
+    query reads ``last_refresh`` from ``updated_at`` (Task L-fix); tests
+    that want to model a re-upserted row should set ``updated_at``
+    explicitly after seeding.
+    """
     for d in days:
         bar_timestamp = datetime(d.year, d.month, d.day, tzinfo=UTC).replace(
             tzinfo=None
         )
+        seed_at_naive = created_at.replace(tzinfo=None)
         session.add(
             PriceHistoryModel(
                 ticker=ticker,
@@ -76,7 +85,8 @@ async def _seed_daily_bars(
                 timestamp=bar_timestamp,
                 source="test",
                 interval="1day",
-                created_at=created_at.replace(tzinfo=None),
+                created_at=seed_at_naive,
+                updated_at=seed_at_naive,
             )
         )
     await session.commit()
@@ -277,6 +287,84 @@ class TestCoverageAggregates:
         assert row.last_refresh.tzinfo is not None
         # And equal in UTC to the seeded ingest time.
         assert row.last_refresh.astimezone(UTC) == ingest_time
+
+    async def test_last_refresh_tracks_updated_at_on_re_upsert(
+        self, test_engine: AsyncEngine
+    ) -> None:
+        """Task L-fix: ``last_refresh`` follows ``updated_at``, not
+        ``created_at``. A re-upsert that bumps ``updated_at`` (and not
+        ``created_at``) shifts the displayed timestamp forward — fixes
+        the bug where a "Catch up" backfill on an already-covered
+        ticker shows a stale ``last_refresh`` cell.
+        """
+        async with AsyncSession(test_engine, expire_on_commit=False) as session:
+            original_ingest = datetime(2024, 1, 8, 12, 30, tzinfo=UTC)
+            await _seed_daily_bars(
+                session,
+                ticker="AAPL",
+                days=[date(2024, 1, 8)],
+                created_at=original_ingest,
+            )
+
+            # Simulate a re-upsert: only ``updated_at`` bumps, ``created_at``
+            # stays put. This matches the production upsert_price code path.
+            from sqlmodel import select as sqlmodel_select
+
+            recent_refresh = datetime(2024, 6, 15, 9, 0, tzinfo=UTC)
+            result_row = await session.exec(
+                sqlmodel_select(PriceHistoryModel).where(
+                    PriceHistoryModel.ticker == "AAPL"
+                )
+            )
+            existing = result_row.one()
+            existing.updated_at = recent_refresh.replace(tzinfo=None)
+            await session.commit()
+
+            handler = DataCoverageQueryHandler(session)
+            result = await handler.execute(_default_query())
+
+        row = result.tickers[0]
+        assert row.last_refresh is not None
+        assert row.last_refresh.astimezone(UTC) == recent_refresh
+        # And not the original created_at — the bug being fixed.
+        assert row.last_refresh.astimezone(UTC) != original_ingest
+
+    async def test_last_refresh_falls_back_to_created_at_when_updated_at_null(
+        self, test_engine: AsyncEngine
+    ) -> None:
+        """COALESCE defends against pre-l002 rows where ``updated_at``
+        might be null (e.g. mid-migration, or a test fixture that didn't
+        set it). Reading the row should still produce a meaningful
+        timestamp — falling back to ``created_at``.
+        """
+        async with AsyncSession(test_engine, expire_on_commit=False) as session:
+            original_ingest = datetime(2024, 1, 8, 12, 30, tzinfo=UTC)
+            # Seed a row, then null out updated_at to simulate a pre-l002
+            # state.
+            from sqlmodel import select as sqlmodel_select
+
+            await _seed_daily_bars(
+                session,
+                ticker="AAPL",
+                days=[date(2024, 1, 8)],
+                created_at=original_ingest,
+            )
+            result_row = await session.exec(
+                sqlmodel_select(PriceHistoryModel).where(
+                    PriceHistoryModel.ticker == "AAPL"
+                )
+            )
+            existing = result_row.one()
+            existing.updated_at = None
+            await session.commit()
+
+            handler = DataCoverageQueryHandler(session)
+            result = await handler.execute(_default_query())
+
+        row = result.tickers[0]
+        assert row.last_refresh is not None
+        # COALESCE picks created_at.
+        assert row.last_refresh.astimezone(UTC) == original_ingest
 
     async def test_multiple_bars_span_correct_range(
         self, test_engine: AsyncEngine

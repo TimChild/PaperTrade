@@ -97,6 +97,10 @@ class PriceRepository:
             existing.close_amount = price.close.amount if price.close else None
             existing.close_currency = price.close.currency if price.close else None
             existing.volume = price.volume
+            # Task L-fix: bump updated_at so the data-coverage page's
+            # ``last_refresh`` field tracks operator actions, not just
+            # the original insert time.
+            existing.updated_at = datetime.now(UTC).replace(tzinfo=None)
 
             logger.debug(
                 "Updated existing price",
