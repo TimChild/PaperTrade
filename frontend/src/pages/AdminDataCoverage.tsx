@@ -9,10 +9,10 @@
  * running / succeeded / failed) so the operator sees progress on the
  * next 30 s poll.
  *
- * Task #220 add: a "Pin" column + Pin / Unpin action button alongside
- * Catch up. Pin/Unpin edits `ticker_watchlist` so the operator can
+ * Task #220 add: a "Tracking" column + Track / Untrack action button alongside
+ * Catch up. Track/Untrack edits `ticker_watchlist` so the operator can
  * keep a ticker in the scheduler's refresh set after the 30-day trade
- * window lapses. Pin is additive — it doesn't trigger a backfill and
+ * window lapses. Track is additive — it doesn't trigger a backfill and
  * doesn't change scheduler semantics.
  *
  * Surface goals:
@@ -25,13 +25,13 @@
  *   / "Caught up" / "Failed" pill driven by the backend's
  *   `backfill_status`. The Catch-up button disables while the task is
  *   non-terminal.
- * - Watchlisted (pinned) tickers show a small "Pinned" pill in the new
- *   Pin column; the operator can click Unpin to remove them.
+ * - Watchlisted (tracked) tickers show a small "Tracked" pill in the new
+ *   Tracking column; the operator can click Untrack to remove them.
  *
  * The Catch-up button is idempotent server-side — if the operator
- * clicks it twice we get the existing task back. Pin is similarly
- * idempotent; Unpin returns 404 if the ticker isn't pinned (surfaced
- * as a "not pinned" toast).
+ * clicks it twice we get the existing task back. Track is similarly
+ * idempotent; Untrack returns 404 if the ticker isn't tracked (surfaced
+ * as a "not tracked" toast).
  */
 import toast from 'react-hot-toast'
 import { isAxiosError } from 'axios'
@@ -204,7 +204,7 @@ export function AdminDataCoverage(): React.JSX.Element {
       { ticker: entry.ticker },
       {
         onSuccess: () => {
-          toast.success(`Pinned ${entry.ticker} to the watchlist.`)
+          toast.success(`Tracking ${entry.ticker}.`)
         },
         onError: (err: Error) => {
           if (isAxiosError(err) && err.response?.status === 403) {
@@ -214,7 +214,7 @@ export function AdminDataCoverage(): React.JSX.Element {
           const message =
             isAxiosError(err) && err.response?.data?.detail
               ? String(err.response.data.detail)
-              : `Failed to pin ${entry.ticker}.`
+              : `Failed to track ${entry.ticker}.`
           toast.error(message)
         },
       }
@@ -224,7 +224,7 @@ export function AdminDataCoverage(): React.JSX.Element {
   const handleUnpin = (entry: TickerCoverageEntry): void => {
     unpin.mutate(entry.ticker, {
       onSuccess: () => {
-        toast.success(`Unpinned ${entry.ticker} from the watchlist.`)
+        toast.success(`Stopped tracking ${entry.ticker}.`)
       },
       onError: (err: Error) => {
         if (isAxiosError(err) && err.response?.status === 403) {
@@ -232,13 +232,13 @@ export function AdminDataCoverage(): React.JSX.Element {
           return
         }
         if (isAxiosError(err) && err.response?.status === 404) {
-          toast.error(`${entry.ticker} is not pinned.`)
+          toast.error(`${entry.ticker} is not tracked.`)
           return
         }
         const message =
           isAxiosError(err) && err.response?.data?.detail
             ? String(err.response.data.detail)
-            : `Failed to unpin ${entry.ticker}.`
+            : `Failed to stop tracking ${entry.ticker}.`
         toast.error(message)
       },
     })
@@ -311,7 +311,7 @@ export function AdminDataCoverage(): React.JSX.Element {
               Gap days
             </DataHeaderCell>
             <DataHeaderCell>Status</DataHeaderCell>
-            <DataHeaderCell>Pin</DataHeaderCell>
+            <DataHeaderCell>Tracking</DataHeaderCell>
             <DataHeaderCell align="right">Action</DataHeaderCell>
           </DataTableHead>
           <DataTableBody>
@@ -376,7 +376,7 @@ export function AdminDataCoverage(): React.JSX.Element {
                         className="inline-flex items-center bg-canvas-raised/60 text-ink px-2 py-1 rounded-editorial font-eyebrow"
                         data-testid={`coverage-pinned-indicator-${row.ticker}`}
                       >
-                        Pinned
+                        Tracked
                       </span>
                     ) : (
                       <span
@@ -397,7 +397,7 @@ export function AdminDataCoverage(): React.JSX.Element {
                           disabled={isPinMutating}
                           data-testid={`coverage-unpin-btn-${row.ticker}`}
                         >
-                          Unpin
+                          Untrack
                         </Button>
                       ) : (
                         <Button
@@ -407,7 +407,7 @@ export function AdminDataCoverage(): React.JSX.Element {
                           disabled={isPinMutating}
                           data-testid={`coverage-pin-btn-${row.ticker}`}
                         >
-                          Pin
+                          Track
                         </Button>
                       )}
                       <Button
