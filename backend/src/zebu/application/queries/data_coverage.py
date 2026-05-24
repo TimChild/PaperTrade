@@ -347,13 +347,27 @@ class DataCoverageQueryHandler:
         return {row for row in tx_result.all() if row}
 
     async def _coverage_aggregates(self) -> dict[str, _CoverageAggregate]:
-        """Per-ticker MIN/MAX(timestamp) + MAX(created_at) for daily bars."""
+        """Per-ticker MIN/MAX(timestamp) + MAX(updated_at) for daily bars.
+
+        ``last_refresh`` reads from ``updated_at`` (bumped on every upsert
+        — Task L-fix follow-up to Task #215) so an operator who clicks
+        "Catch up" sees the timestamp move even when the underlying
+        bars already existed and only got re-verified. ``COALESCE`` to
+        ``created_at`` defends against any pre-l002 row where
+        ``updated_at`` is null (the l002 migration backfills these, but
+        the COALESCE keeps the query correct mid-migration).
+        """
         stmt = (
             select(
                 PriceHistoryModel.ticker,
                 func.min(PriceHistoryModel.timestamp).label("first_bar"),
                 func.max(PriceHistoryModel.timestamp).label("last_bar"),
-                func.max(PriceHistoryModel.created_at).label("last_refresh"),
+                func.max(
+                    func.coalesce(
+                        PriceHistoryModel.updated_at,
+                        PriceHistoryModel.created_at,
+                    )
+                ).label("last_refresh"),
             )
             .where(PriceHistoryModel.interval == _DAILY_INTERVAL)
             .group_by(col(PriceHistoryModel.ticker))

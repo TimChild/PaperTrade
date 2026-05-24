@@ -77,6 +77,72 @@ class TestPriceRepositoryUpsert:
         assert result.price.amount == Decimal("151.00")
 
     @pytest.mark.asyncio
+    async def test_upsert_bumps_updated_at_on_existing_row(self, session):
+        """Task L-fix: updating an existing bar bumps ``updated_at`` so
+        the data-coverage page's ``last_refresh`` field tracks the
+        upsert, not the original insert. Without this, a successful
+        "Catch up" backfill that re-fetches a 20-year span (most of
+        which already exists) would leave the displayed timestamp stale.
+        """
+        from sqlmodel import select as sqlmodel_select
+
+        from zebu.adapters.outbound.models.price_history import PriceHistoryModel
+
+        repo = PriceRepository(session)
+        timestamp = datetime(2024, 6, 15, 16, 0, 0, tzinfo=UTC)
+        price = PricePoint(
+            ticker=Ticker("AAPL"),
+            price=Money(Decimal("150.00"), "USD"),
+            timestamp=timestamp,
+            source="alpha_vantage",
+            interval="real-time",
+        )
+        await repo.upsert_price(price)
+        await session.commit()
+
+        # Capture the original updated_at, then artificially backdate it
+        # so the bump is observable (otherwise the second upsert lands
+        # in the same microsecond and the assertion is non-deterministic).
+        result = await session.exec(
+            sqlmodel_select(PriceHistoryModel)
+            .where(PriceHistoryModel.ticker == "AAPL")
+            .where(PriceHistoryModel.timestamp == timestamp.replace(tzinfo=None))
+        )
+        row = result.one()
+        backdate = datetime(2020, 1, 1, 0, 0, 0)
+        row.updated_at = backdate
+        await session.commit()
+
+        # Act — re-upsert the same row with a tweaked price.
+        price2 = PricePoint(
+            ticker=Ticker("AAPL"),
+            price=Money(Decimal("151.00"), "USD"),
+            timestamp=timestamp,
+            source="alpha_vantage",
+            interval="real-time",
+        )
+        await repo.upsert_price(price2)
+        await session.commit()
+
+        # Assert — updated_at moved past the backdated marker;
+        # created_at stayed put (preserving the insert-time semantic).
+        result = await session.exec(
+            sqlmodel_select(PriceHistoryModel)
+            .where(PriceHistoryModel.ticker == "AAPL")
+            .where(PriceHistoryModel.timestamp == timestamp.replace(tzinfo=None))
+        )
+        bumped = result.one()
+        assert bumped.updated_at is not None
+        assert bumped.updated_at > backdate
+        # created_at MUST NOT move — the row was created at insert time,
+        # not at update time. Only updated_at carries the "last touched"
+        # semantic.
+        # (We can't compare to a specific value because the original
+        # insert happened in this test, but the assertion below is the
+        # interesting one: created_at < updated_at after the update.)
+        assert bumped.created_at < bumped.updated_at
+
+    @pytest.mark.asyncio
     async def test_upsert_with_ohlcv_data(self, session):
         """Test upserting price with OHLCV data."""
         # Arrange
