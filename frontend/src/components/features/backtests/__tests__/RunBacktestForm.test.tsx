@@ -1,6 +1,8 @@
 /**
- * Tests for the RunBacktestForm component, focused on the Phase J /
- * Task #212 Layer 3 "loading historical data" affordance.
+ * Tests for the RunBacktestForm component:
+ *
+ * - Phase J / Task #212 Layer 3 "loading historical data" affordance.
+ * - Phase L-4 (Task #220) agent invocation mode toggle.
  *
  * Renders the form with a mocked useRunBacktest hook that exposes the
  * ``dataFetching`` + ``fetchingTicker`` state introduced for the lazy-
@@ -9,7 +11,7 @@
 
 import type { ReactElement } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RunBacktestForm } from '../RunBacktestForm'
 import { useRunBacktest } from '@/hooks/useBacktests'
@@ -129,5 +131,127 @@ describe('RunBacktestForm — Phase J fetching affordance', () => {
     expect(
       screen.queryByTestId('backtest-fetching-banner')
     ).not.toBeInTheDocument()
+  })
+})
+
+describe('RunBacktestForm — Phase L-4 agent mode toggle', () => {
+  it('renders all three agent-mode options with captions', () => {
+    vi.mocked(useRunBacktest).mockReturnValue(
+      makeRunBacktestMock({}) as unknown as ReturnType<typeof useRunBacktest>
+    )
+
+    renderWithProviders(
+      <RunBacktestForm onSuccess={vi.fn()} onCancel={vi.fn()} />
+    )
+
+    expect(screen.getByTestId('agent-mode-fieldset')).toBeInTheDocument()
+    expect(screen.getByTestId('agent-mode-radio-none')).toBeInTheDocument()
+    expect(screen.getByTestId('agent-mode-radio-mock')).toBeInTheDocument()
+    expect(screen.getByTestId('agent-mode-radio-live')).toBeInTheDocument()
+  })
+
+  it('defaults to NONE selected', () => {
+    vi.mocked(useRunBacktest).mockReturnValue(
+      makeRunBacktestMock({}) as unknown as ReturnType<typeof useRunBacktest>
+    )
+
+    renderWithProviders(
+      <RunBacktestForm onSuccess={vi.fn()} onCancel={vi.fn()} />
+    )
+
+    const none = screen.getByTestId('agent-mode-radio-none') as HTMLInputElement
+    const mock = screen.getByTestId('agent-mode-radio-mock') as HTMLInputElement
+    const live = screen.getByTestId('agent-mode-radio-live') as HTMLInputElement
+
+    expect(none.checked).toBe(true)
+    expect(mock.checked).toBe(false)
+    expect(live.checked).toBe(false)
+  })
+
+  it('renders the cost warning chip on Live only', () => {
+    vi.mocked(useRunBacktest).mockReturnValue(
+      makeRunBacktestMock({}) as unknown as ReturnType<typeof useRunBacktest>
+    )
+
+    renderWithProviders(
+      <RunBacktestForm onSuccess={vi.fn()} onCancel={vi.fn()} />
+    )
+
+    const chip = screen.getByTestId('agent-mode-live-cost-chip')
+    expect(chip).toBeInTheDocument()
+    expect(chip).toHaveTextContent(/charges to your account/i)
+  })
+
+  it('submits with the selected agent_invocation_mode in the payload', () => {
+    const mutate = vi.fn()
+    vi.mocked(useRunBacktest).mockReturnValue(
+      makeRunBacktestMock({
+        mutate,
+      }) as unknown as ReturnType<typeof useRunBacktest>
+    )
+
+    renderWithProviders(
+      <RunBacktestForm onSuccess={vi.fn()} onCancel={vi.fn()} />
+    )
+
+    // Strategy is required for the submit to fire — pick one.
+    fireEvent.change(screen.getByTestId('backtest-strategy-select'), {
+      target: { value: 'strategy-1' },
+    })
+    fireEvent.change(screen.getByTestId('backtest-name-input'), {
+      target: { value: 'agent run' },
+    })
+    // Default date range is exactly 3 years which trips the
+    // "Date range cannot exceed 3 years" validator on the edge; set
+    // an explicit narrow range to keep the validator happy.
+    fireEvent.change(screen.getByTestId('backtest-start-date-input'), {
+      target: { value: '2024-01-01' },
+    })
+    fireEvent.change(screen.getByTestId('backtest-end-date-input'), {
+      target: { value: '2024-12-31' },
+    })
+
+    // Select MOCK.
+    fireEvent.click(screen.getByTestId('agent-mode-radio-mock'))
+
+    // fireEvent.submit on the form bypasses any quirks around clicking a
+    // submit button.
+    fireEvent.submit(screen.getByTestId('run-backtest-form'))
+
+    expect(mutate).toHaveBeenCalledTimes(1)
+    const payload = mutate.mock.calls[0][0] as { agent_invocation_mode: string }
+    expect(payload.agent_invocation_mode).toBe('mock')
+  })
+
+  it('submits with NONE in the payload when the operator does not pick a mode', () => {
+    const mutate = vi.fn()
+    vi.mocked(useRunBacktest).mockReturnValue(
+      makeRunBacktestMock({
+        mutate,
+      }) as unknown as ReturnType<typeof useRunBacktest>
+    )
+
+    renderWithProviders(
+      <RunBacktestForm onSuccess={vi.fn()} onCancel={vi.fn()} />
+    )
+
+    fireEvent.change(screen.getByTestId('backtest-strategy-select'), {
+      target: { value: 'strategy-1' },
+    })
+    fireEvent.change(screen.getByTestId('backtest-name-input'), {
+      target: { value: 'default-mode run' },
+    })
+    fireEvent.change(screen.getByTestId('backtest-start-date-input'), {
+      target: { value: '2024-01-01' },
+    })
+    fireEvent.change(screen.getByTestId('backtest-end-date-input'), {
+      target: { value: '2024-12-31' },
+    })
+
+    fireEvent.submit(screen.getByTestId('run-backtest-form'))
+
+    expect(mutate).toHaveBeenCalledTimes(1)
+    const payload = mutate.mock.calls[0][0] as { agent_invocation_mode: string }
+    expect(payload.agent_invocation_mode).toBe('none')
   })
 })

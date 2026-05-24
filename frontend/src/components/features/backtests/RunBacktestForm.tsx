@@ -11,7 +11,9 @@ import { Eyebrow } from '@/components/ui/Eyebrow'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { useRunBacktest } from '@/hooks/useBacktests'
 import { useStrategies } from '@/hooks/useStrategies'
+import { cn } from '@/lib/utils'
 import toast from 'react-hot-toast'
+import type { BacktestAgentInvocationMode } from '@/services/api/types'
 
 interface RunBacktestFormProps {
   onSuccess: () => void
@@ -20,6 +22,38 @@ interface RunBacktestFormProps {
 
 const SELECT_CLASSES =
   'flex h-10 w-full rounded-input border border-hairline bg-canvas-raised/40 px-3 py-2 text-body-sm text-ink focus-visible:outline-none focus-visible:border-amber focus-visible:ring-1 focus-visible:ring-amber/40 disabled:cursor-not-allowed disabled:opacity-50'
+
+interface AgentModeOption {
+  value: BacktestAgentInvocationMode
+  title: string
+  caption: string
+}
+
+/**
+ * Per-mode copy rendered under the agent-mode radio group. Phase L-4
+ * (Task #220). The caption text mirrors the operating-manual entry so
+ * the in-app and docs descriptions stay aligned.
+ */
+const AGENT_MODE_OPTIONS: AgentModeOption[] = [
+  {
+    value: 'none',
+    title: 'None',
+    caption:
+      'Run the strategy without any agent decisions. Existing behaviour — fastest and free.',
+  },
+  {
+    value: 'mock',
+    title: 'Mock',
+    caption:
+      'Evaluate triggers but the agent returns HOLD on every fire. Lets you preview which triggers would have fired without paying for LLM calls.',
+  },
+  {
+    value: 'live',
+    title: 'Live',
+    caption:
+      'Real Anthropic calls on every simulated trigger fire. The agent sees the strategy state and simulated price history up to the simulated date.',
+  },
+]
 
 export function RunBacktestForm({
   onSuccess,
@@ -41,6 +75,11 @@ export function RunBacktestForm({
     return now.toISOString().split('T')[0]
   })
   const [initialCash, setInitialCash] = useState('10000')
+  // Phase L-4 (Task #220) — per-run agent invocation mode. Defaults to
+  // NONE so the form's submit payload is identical to pre-L-4 unless
+  // the operator opts in.
+  const [agentMode, setAgentMode] =
+    useState<BacktestAgentInvocationMode>('none')
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   // today is the initial endDate value — used as max for date inputs
@@ -103,6 +142,7 @@ export function RunBacktestForm({
         start_date: startDate,
         end_date: endDate,
         initial_cash: parseFloat(initialCash),
+        agent_invocation_mode: agentMode,
       },
       {
         onSuccess: () => {
@@ -220,6 +260,35 @@ export function RunBacktestForm({
           )}
         </div>
 
+        {/* Phase L-4 (Task #220) — agent invocation mode toggle. The
+            three options route to the same backend pipeline; NONE
+            short-circuits the agent path so this defaults to a "free,
+            fast" backtest. MOCK and LIVE both write audit rows that the
+            result page renders inline. */}
+        <fieldset
+          className="space-y-3"
+          data-testid="agent-mode-fieldset"
+          aria-describedby="agent-mode-description"
+        >
+          <legend className="font-eyebrow text-ink-subtle">Agent mode</legend>
+          <p
+            id="agent-mode-description"
+            className="text-body-sm text-ink-muted"
+          >
+            How the backtest invokes the agent on simulated trigger fires.
+          </p>
+          <div className="space-y-2">
+            {AGENT_MODE_OPTIONS.map((option) => (
+              <AgentModeOptionRow
+                key={option.value}
+                option={option}
+                checked={agentMode === option.value}
+                onChange={() => setAgentMode(option.value)}
+              />
+            ))}
+          </div>
+        </fieldset>
+
         {/* Phase J / Task #212 Layer 3: loading-affordance shown while the
             backend is lazily fetching historical bars. ``dataFetching`` is
             distinct from ``isPending`` — ``isPending`` covers the actual
@@ -261,5 +330,65 @@ export function RunBacktestForm({
         </div>
       </form>
     </Panel>
+  )
+}
+
+interface AgentModeOptionRowProps {
+  option: AgentModeOption
+  checked: boolean
+  onChange: () => void
+}
+
+function AgentModeOptionRow({
+  option,
+  checked,
+  onChange,
+}: AgentModeOptionRowProps): React.JSX.Element {
+  const id = `agent-mode-${option.value}`
+  return (
+    <label
+      htmlFor={id}
+      data-testid={`agent-mode-option-${option.value}`}
+      className={cn(
+        'flex items-start gap-3 rounded-input border bg-canvas-raised/40 px-3 py-2.5 cursor-pointer transition-colors duration-quick ease-editorial',
+        checked
+          ? 'border-amber bg-amber/10'
+          : 'border-hairline hover:border-hairline-strong'
+      )}
+    >
+      <input
+        id={id}
+        type="radio"
+        name="agent_invocation_mode"
+        value={option.value}
+        checked={checked}
+        onChange={onChange}
+        data-testid={`agent-mode-radio-${option.value}`}
+        className="mt-1 h-4 w-4 border-hairline-strong bg-canvas-raised accent-amber"
+        aria-describedby={`${id}-caption`}
+      />
+      <div className="flex-1 space-y-1">
+        <div className="flex items-center gap-2">
+          <span className="font-display text-body-md text-ink">
+            {option.title}
+          </span>
+          {option.value === 'live' && (
+            <span
+              data-testid="agent-mode-live-cost-chip"
+              className="inline-flex items-center bg-amber-soft text-amber px-2 py-0.5 rounded-editorial font-eyebrow"
+              title="Live mode incurs real Anthropic API charges. Use Mock first to preview which triggers would fire."
+            >
+              Charges to your account
+            </span>
+          )}
+        </div>
+        <p
+          id={`${id}-caption`}
+          className="text-body-sm text-ink-muted leading-relaxed"
+        >
+          {option.caption}
+        </p>
+      </div>
+    </label>
   )
 }

@@ -1,12 +1,13 @@
 /**
  * Tests for AgentDecisionBadge.
  *
- * Editorial palette per the G-1 task spec:
+ * Editorial palette per the G-1 task spec, extended in L-4 to cover the
+ * backtest agent-invocation log:
  *
  *   BUY               → text-gain
  *   SELL              → text-loss
  *   HOLD              → text-ink-subtle
- *   MODIFY            → text-amber
+ *   MODIFY_STRATEGY   → text-amber  (legacy alias `MODIFY` accepted)
  *   NEEDS_HUMAN       → bg-amber-soft (pill)
  *   INVOCATION_FAILED → bg-loss-soft (pill)
  */
@@ -24,7 +25,16 @@ describe('AgentDecisionBadge', () => {
     { decision: 'BUY', label: 'Buy', classFragment: 'text-gain' },
     { decision: 'SELL', label: 'Sell', classFragment: 'text-loss' },
     { decision: 'HOLD', label: 'Hold', classFragment: 'text-ink-subtle' },
-    { decision: 'MODIFY', label: 'Modify', classFragment: 'text-amber' },
+    {
+      decision: 'MODIFY_STRATEGY',
+      label: 'Modify',
+      classFragment: 'text-amber',
+    },
+    {
+      decision: 'MODIFY',
+      label: 'Modify',
+      classFragment: 'text-amber',
+    },
     {
       decision: 'NEEDS_HUMAN',
       label: 'Needs human',

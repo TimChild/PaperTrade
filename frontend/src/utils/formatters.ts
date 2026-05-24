@@ -193,3 +193,69 @@ export function formatRelativeTime(
 
   return formatDate(dateString, 'short')
 }
+
+/**
+ * Format a calendar-date-only wire value (YYYY-MM-DD) as a short
+ * month-day label, free of timezone shift.
+ *
+ * Why this exists: `formatDate('2024-06-15', 'short')` constructs
+ * `new Date('2024-06-15')`, which JavaScript parses as UTC midnight.
+ * `Intl.DateTimeFormat` then formats in the local timezone, so in any
+ * tz west of UTC the rendered day is one earlier ('Jun 14' for
+ * US/Pacific). For wire values that represent a calendar day with no
+ * time component (e.g. `simulated_date` on a backtest agent
+ * invocation), we want the rendered label to match the date that
+ * shipped over the wire — regardless of the viewer's timezone.
+ *
+ * Implementation: parse the YYYY-MM-DD components directly and
+ * synthesise a `Date` in the *local* timezone via the `(year, month,
+ * day)` constructor, which never crosses midnight.
+ *
+ * Accepts the wider `'short' | 'long' | 'numeric'` format hint, all
+ * year-omitting variants of the corresponding `formatDate` styles.
+ */
+export function formatSimulatedDate(
+  isoDate: string,
+  format: 'short' | 'long' | 'numeric' = 'short'
+): string {
+  // Defensive: accept ISO-8601 datetime by trimming the time portion.
+  // The L-4 wire format is YYYY-MM-DD but a future API server change
+  // could surface YYYY-MM-DDTHH:MM:SS.
+  const parts = isoDate.slice(0, 10).split('-')
+  if (parts.length !== 3) {
+    return isoDate
+  }
+  const [yearStr, monthStr, dayStr] = parts
+  const year = Number(yearStr)
+  const month = Number(monthStr) // 1-based on wire
+  const day = Number(dayStr)
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day)
+  ) {
+    return isoDate
+  }
+  // `new Date(year, monthIndex, day)` is local-tz midnight on that
+  // local calendar day — no UTC parsing, no DST shift.
+  const date = new Date(year, month - 1, day)
+
+  if (format === 'short') {
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+    }).format(date)
+  }
+  if (format === 'numeric') {
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(date)
+  }
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(date)
+}

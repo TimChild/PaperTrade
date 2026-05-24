@@ -673,6 +673,44 @@ run_backtest(strategy_id=baseline_id, start=..., end=..., initial_cash=...)
 5. Note the activation_id in the finding so Tim can deactivate if needed.
 ```
 
+### 7.6 Backtests with agent decisions
+
+Phase L wires the agent invocation pipeline into the backtest executor. A backtest can now optionally evaluate any triggers attached to the strategy and, on a simulated fire, call the agent to decide whether to BUY / SELL / HOLD against the in-simulation state. This lets you preview agent judgement on historical data before paying for it in live execution.
+
+The `agent_invocation_mode` field on `POST /api/v1/backtests` (and the matching radio group on the run-backtest UI form) chooses one of three modes:
+
+- **NONE** — the existing pre-Phase-L pipeline. No triggers are evaluated; no agent is invoked. Fastest and free. The default.
+- **MOCK** — triggers are evaluated against simulated state, and on each fire the platform records a `BacktestAgentInvocation` row with `agent_decision = HOLD`. No Anthropic call happens; no money is spent. Lets you see which triggers would have fired during the window.
+- **LIVE** — real Anthropic calls on every simulated fire. Each call costs roughly the same as a live trigger fire (Haiku 4.5 default; configurable per backtest). The agent sees the strategy state and a strict subset of tools — see "The `BACKTEST_SAFE_TOOLS` whitelist" below.
+
+The completed run's result page renders an "Agent invocations" section below the performance chart. One row per simulated fire, ordered chronologically in simulation time, with the decision pill, rationale, latency, and an "executed" badge for decisions that actually mutated the simulated trade book.
+
+#### The `BACKTEST_SAFE_TOOLS` whitelist
+
+The L-2 wrapper restricts the agent to a tight subset of MCP tools that cannot see past the simulated date. The wrapper enforces this server-side; the agent's prompt also lists what's available so the model doesn't waste tool calls on tools it can't reach.
+
+The agent **can** see:
+
+- `get_price_history(ticker, start, end)` — capped at `end <= simulated_date`. The wrapper rewrites any request whose `end` exceeds the simulated date.
+- `get_portfolio_state(portfolio_id, as_of=simulated_date)` — reconstructs holdings from transactions up to the simulated date.
+- `list_exploration_tasks(status=DONE, claimed_before=simulated_date)` — historical findings only; tasks claimed after the simulated date are filtered out.
+
+The agent **cannot** see:
+
+- Real-time prices (`get_current_price`) — would leak future state.
+- Web search / news / earnings calendar lookups — same.
+- Any third-party MCP tools (Gmail, Drive, Brave Search, etc.) — backtests run inside the platform's own MCP surface only.
+
+A backtest agent that tries to call any non-whitelisted tool receives a `BacktestSafetyViolationError`; the corresponding invocation row is recorded with `agent_decision = INVOCATION_FAILED` and the violation reason in the rationale. The backtest continues — one bad fire does not abort the run.
+
+#### Non-determinism — what to expect
+
+The wrapper sets `temperature=0` by default to make LLM output as close to deterministic as the model permits. Even so, repeated runs of the same backtest in LIVE mode will produce slightly different rationale text and, occasionally, different decisions: LLM determinism is best-effort, not bit-stable.
+
+In practice this means LIVE-mode backtests describe a **distribution** of likely agent behaviour, not a single point estimate. When summarising a LIVE backtest, prefer aggregate metrics ("agent fired on N of 12 evaluable days, BUY:SELL:HOLD ratio 3:1:8") to row-by-row comparison with a previous run. MOCK-mode backtests are byte-stable — every fire records HOLD, so repeated MOCK runs of the same input produce identical audit logs.
+
+If you need a reproducible record of one particular run, the per-invocation `agent_invocation_id` carries the Anthropic message ID; the request can be replayed via the Anthropic console for debugging.
+
 ---
 
 ## 8. Updating this manual
