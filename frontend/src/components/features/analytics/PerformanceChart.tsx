@@ -21,12 +21,23 @@ import { Button } from '@/components/ui/button'
 
 interface PerformanceChartProps {
   portfolioId: string
+  /**
+   * When provided (backtest context), the chart will prepend a flat
+   * initial-cash segment from this date to the first real data point
+   * whenever the 'ALL' range is selected and the data starts later
+   * than the backtest itself.
+   */
+  backtestStartDate?: string
+  /** Initial cash value in USD (numeric). Paired with backtestStartDate. */
+  initialCash?: number
 }
 
 const TIME_RANGES: TimeRange[] = ['1W', '1M', '3M', '1Y', 'ALL']
 
 export function PerformanceChart({
   portfolioId,
+  backtestStartDate,
+  initialCash,
 }: PerformanceChartProps): React.JSX.Element {
   const [range, setRange] = useState<TimeRange>('1M')
   const { data, isLoading, error } = usePerformance(portfolioId, range)
@@ -70,10 +81,27 @@ export function PerformanceChart({
     )
   }
 
-  const chartData = data.data_points.map((point) => ({
+  const rawChartData = data.data_points.map((point) => ({
     date: point.date,
     value: point.total_value,
   }))
+
+  // For the ALL range in a backtest context, prepend a flat initial-cash
+  // segment from the backtest start date to the first real data point.
+  // This ensures the X-axis spans the full requested range rather than
+  // only the data-coverage period.
+  const chartData: Array<{ date: string; value: number }> = (() => {
+    if (
+      range === 'ALL' &&
+      backtestStartDate !== undefined &&
+      initialCash !== undefined &&
+      rawChartData.length > 0 &&
+      rawChartData[0].date > backtestStartDate
+    ) {
+      return [{ date: backtestStartDate, value: initialCash }, ...rawChartData]
+    }
+    return rawChartData
+  })()
 
   const startValue = data.metrics?.starting_value ?? chartData[0]?.value
 

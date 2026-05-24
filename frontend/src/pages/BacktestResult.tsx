@@ -143,7 +143,11 @@ export function BacktestResult(): React.JSX.Element {
           title="Portfolio value over time"
           size="sm"
         />
-        <PerformanceChart portfolioId={backtest.portfolio_id} />
+        <PerformanceChart
+          portfolioId={backtest.portfolio_id}
+          backtestStartDate={backtest.start_date}
+          initialCash={parseFloat(backtest.initial_cash)}
+        />
       </section>
 
       {/* Agent invocations — Phase L-4 (Task #220). Only rendered for

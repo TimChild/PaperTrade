@@ -98,7 +98,7 @@ export function ExplorationTasks(): React.JSX.Element {
   return (
     <PageFrame>
       <div
-        className="reveal"
+        className="pt-4 sm:pt-5 reveal"
         style={{ ['--reveal-delay' as string]: '0ms' }}
         data-testid="exploration-tasks-page"
       >
