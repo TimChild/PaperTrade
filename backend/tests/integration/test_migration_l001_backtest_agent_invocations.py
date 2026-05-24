@@ -113,7 +113,7 @@ class TestL001Migration:
         cfg = _alembic_cfg(db_path)
         os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
         try:
-            upgrade(cfg, "head")
+            upgrade(cfg, "l001_backtest_agent_invocations")
             downgrade(cfg, "-1")
         finally:
             os.environ.pop("DATABASE_URL", None)
@@ -133,9 +133,9 @@ class TestL001Migration:
         cfg = _alembic_cfg(db_path)
         os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
         try:
-            upgrade(cfg, "head")
+            upgrade(cfg, "l001_backtest_agent_invocations")
             downgrade(cfg, "-1")
-            upgrade(cfg, "head")
+            upgrade(cfg, "l001_backtest_agent_invocations")
         finally:
             os.environ.pop("DATABASE_URL", None)
 
