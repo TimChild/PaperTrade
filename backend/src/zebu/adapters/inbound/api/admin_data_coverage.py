@@ -373,6 +373,13 @@ async def admin_data_coverage_backfill(
         ) from exc
 
     persisted = await repo.create(task)
+    # Commit before spawning the background drain so the new row is visible
+    # to the fresh session opened by _run_drain_background.  Without this
+    # explicit commit the parent transaction is still open when the background
+    # task's session.get() fires, which races the FastAPI middleware's
+    # commit-at-exit and reliably returns None — leaving the task stuck in
+    # PENDING forever (prod incident 2026-05-24).
+    await session.commit()
 
     logger.info(
         "admin_data_coverage_backfill_created",

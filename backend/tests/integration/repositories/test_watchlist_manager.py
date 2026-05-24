@@ -7,7 +7,9 @@ to verify ticker tracking and refresh scheduling functionality.
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from sqlmodel import select
 
+from zebu.adapters.outbound.models.ticker_watchlist import TickerWatchlistModel
 from zebu.adapters.outbound.repositories.watchlist_manager import WatchlistManager
 from zebu.domain.value_objects.ticker import Ticker
 
@@ -85,6 +87,144 @@ class TestWatchlistManagerAdd:
         # Assert
         active = await manager.get_all_active_tickers()
         assert len(active) == 1
+
+
+class TestWatchlistTzNaive:
+    """Regression: created_at / updated_at must be tz-naive (TIMESTAMP WITHOUT TZ).
+
+    asyncpg refuses to bind a tz-aware datetime to a ``TIMESTAMP WITHOUT TIME
+    ZONE`` column.  These tests use SQLite (the test_engine fixture) which does
+    NOT enforce this at the driver level, but they verify the Python-side
+    invariant: every datetime we write has ``tzinfo is None`` so the same code
+    paths are safe on PostgreSQL.
+    """
+
+    @pytest.mark.asyncio
+    async def test_new_row_created_at_is_tz_naive(self, session) -> None:
+        """Default-factory for created_at produces tz-naive datetime."""
+        manager = WatchlistManager(session)
+        ticker = Ticker("TSLA")
+
+        await manager.add_ticker(ticker)
+        await session.commit()
+
+        stmt = select(TickerWatchlistModel).where(TickerWatchlistModel.ticker == "TSLA")
+        result = await session.exec(stmt)
+        row = result.one()
+
+        assert row.created_at.tzinfo is None, (
+            f"created_at must be tz-naive for asyncpg; got {row.created_at!r}"
+        )
+        assert row.updated_at.tzinfo is None, (
+            f"updated_at must be tz-naive for asyncpg; got {row.updated_at!r}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_add_ticker_update_path_updated_at_is_tz_naive(self, session) -> None:
+        """The UPDATE path (re-pin existing ticker) writes tz-naive updated_at."""
+        manager = WatchlistManager(session)
+        ticker = Ticker("TSLA")
+
+        # First add — creates the row.
+        await manager.add_ticker(ticker, priority=100)
+        await session.commit()
+
+        # Second add — hits the UPDATE branch (re-activate + possibly update priority).
+        await manager.add_ticker(ticker, priority=50)
+        await session.commit()
+
+        stmt = select(TickerWatchlistModel).where(TickerWatchlistModel.ticker == "TSLA")
+        result = await session.exec(stmt)
+        row = result.one()
+
+        assert row.updated_at.tzinfo is None, (
+            f"updated_at after UPDATE path must be tz-naive; got {row.updated_at!r}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_remove_ticker_updated_at_is_tz_naive(self, session) -> None:
+        """remove_ticker writes tz-naive updated_at via UPDATE statement."""
+        manager = WatchlistManager(session)
+        ticker = Ticker("TSLA")
+
+        await manager.add_ticker(ticker)
+        await session.commit()
+
+        await manager.remove_ticker(ticker)
+        await session.commit()
+
+        stmt = select(TickerWatchlistModel).where(TickerWatchlistModel.ticker == "TSLA")
+        result = await session.exec(stmt)
+        row = result.one()
+
+        assert row.updated_at.tzinfo is None, (
+            f"updated_at after remove must be tz-naive; got {row.updated_at!r}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_update_refresh_metadata_updated_at_is_tz_naive(
+        self, session
+    ) -> None:
+        """update_refresh_metadata writes tz-naive updated_at via UPDATE statement."""
+        manager = WatchlistManager(session)
+        ticker = Ticker("TSLA")
+
+        await manager.add_ticker(ticker)
+        await session.commit()
+
+        now = datetime.now(UTC).replace(tzinfo=None)
+        next_time = now + timedelta(minutes=5)
+        await manager.update_refresh_metadata(ticker, now, next_time)
+        await session.commit()
+
+        stmt = select(TickerWatchlistModel).where(TickerWatchlistModel.ticker == "TSLA")
+        result = await session.exec(stmt)
+        row = result.one()
+
+        assert row.updated_at.tzinfo is None, (
+            "updated_at after update_refresh_metadata must be tz-naive; "
+            f"got {row.updated_at!r}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_update_refresh_metadata_tz_aware_input_is_stripped(
+        self, session
+    ) -> None:
+        """Tz-aware datetimes from callers (e.g. scheduler) are stripped before
+        binding to last_refresh_at / next_refresh_at.
+
+        The scheduler passes ``datetime.now(UTC)`` (tz-aware) and the columns
+        are TIMESTAMP WITHOUT TIME ZONE — asyncpg raises DataError if the
+        tzinfo survives to the bind step.  This test asserts that
+        update_refresh_metadata normalises the inputs so the same call path
+        is safe on PostgreSQL.
+        """
+        manager = WatchlistManager(session)
+        ticker = Ticker("TSLA")
+
+        await manager.add_ticker(ticker)
+        await session.commit()
+
+        # Pass tz-aware datetimes — the same shape the scheduler sends.
+        now_aware = datetime.now(UTC)
+        next_aware = now_aware + timedelta(minutes=5)
+        await manager.update_refresh_metadata(ticker, now_aware, next_aware)
+        await session.commit()
+
+        stmt = select(TickerWatchlistModel).where(TickerWatchlistModel.ticker == "TSLA")
+        result = await session.exec(stmt)
+        row = result.one()
+
+        assert row.last_refresh_at is not None
+        assert row.last_refresh_at.tzinfo is None, (
+            "last_refresh_at must be tz-naive after tz-aware input; "
+            f"got {row.last_refresh_at!r}"
+        )
+        assert row.next_refresh_at is not None
+        assert row.next_refresh_at.tzinfo is None, (
+            "next_refresh_at must be tz-naive after tz-aware input; "
+            f"got {row.next_refresh_at!r}"
+        )
 
 
 class TestWatchlistManagerRemove:

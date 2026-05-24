@@ -1504,6 +1504,28 @@ class AlphaVantageAdapter:
             # Historical data - long TTL
             return 7 * 24 * 3600  # 7 days
 
+    @staticmethod
+    def _is_premium_refusal(message: str) -> bool:
+        """Return True when the AV ``Information``/``Note`` body is a
+        premium-feature gate rather than a transient rate-limit message.
+
+        AV uses the same JSON key for both situations.  The premium-refusal
+        payload (introduced when AV restricted ``outputsize=full`` to paid
+        tiers) is distinguished by ``"outputsize=full"`` alongside
+        ``"premium"``.
+
+        Prod-log example that returns True::
+
+            "The outputsize=full parameter value is a premium feature for
+            the TIME_SERIES_DAILY endpoint."
+
+        Rate-limit example that returns False::
+
+            "Our standard API rate limit is 25 requests per day."
+        """
+        lower = message.lower()
+        return "outputsize=full" in lower and "premium" in lower
+
     async def _fetch_daily_history_from_api(
         self,
         ticker: Ticker,
@@ -1511,12 +1533,31 @@ class AlphaVantageAdapter:
     ) -> list[PricePoint]:
         """Fetch daily historical price data from Alpha Vantage API.
 
-        Uses TIME_SERIES_DAILY endpoint. ``compact`` returns roughly the latest
-        100 trading days, while ``full`` returns the full available history.
-        Stores all fetched data in the price repository for future use.
+        Uses TIME_SERIES_DAILY endpoint.  ``compact`` returns roughly the
+        latest 100 trading days; ``full`` returns the full available history
+        (premium-only on free-tier AV keys since 2026).
+
+        Free-tier premium-refusal handling
+        ------------------------------------
+        When ``outputsize=full`` is requested and AV returns HTTP 200 with an
+        ``Information`` body containing "outputsize=full … premium feature",
+        this method:
+
+        1. Logs the refusal at WARNING level.
+        2. Retries the same ticker with ``outputsize=compact`` (always free).
+        3. Returns the compact result.
+
+        The caller (``get_price_history``) is responsible for checking whether
+        the compact data covers the originally requested range via
+        ``_raise_if_incomplete_coverage``.  For wide historical windows that
+        compact cannot satisfy, that helper raises
+        :class:`IncompleteHistoricalDataError` — which is NOT a subclass of
+        :class:`MarketDataUnavailableError` and therefore does NOT trigger the
+        stale-cache fallback, giving the Catch up flow an honest FAILED status.
 
         Args:
             ticker: Stock ticker to fetch historical data for
+            outputsize: ``"compact"`` (latest ~100 days) or ``"full"``.
 
         Returns:
             List of PricePoint objects with daily historical prices
@@ -1526,6 +1567,8 @@ class AlphaVantageAdapter:
             MarketDataUnavailableError: API error or network failure
             InvalidPriceDataError: Malformed API response
         """
+        import asyncio
+
         params = {
             "function": "TIME_SERIES_DAILY",
             "symbol": ticker.symbol,
@@ -1546,6 +1589,32 @@ class AlphaVantageAdapter:
                 # Check HTTP status
                 if response.status_code == 200:
                     response_data = response.json()
+
+                    # Detect premium-feature refusal before full parse.
+                    # Applies only when we asked for ``full`` — compact is
+                    # always free and should never see this refusal.
+                    if outputsize == "full":
+                        cap_message = response_data.get(
+                            "Information"
+                        ) or response_data.get("Note")
+                        if (
+                            cap_message
+                            and isinstance(cap_message, str)
+                            and self._is_premium_refusal(cap_message)
+                        ):
+                            logger.warning(
+                                "Alpha Vantage refused outputsize=full "
+                                "(premium feature); retrying with compact",
+                                ticker=ticker.symbol,
+                                av_message=cap_message[:300],
+                            )
+                            # Retry immediately with compact — this is a
+                            # policy rejection, not a transient error, so no
+                            # exponential backoff.
+                            return await self._fetch_daily_history_from_api(
+                                ticker, outputsize="compact"
+                            )
+
                     price_points = self._parse_daily_history_response(
                         ticker, response_data
                     )
@@ -1568,6 +1637,8 @@ class AlphaVantageAdapter:
                         f"API returned status {response.status_code}"
                     )
 
+            except TickerNotFoundError:
+                raise
             except httpx.TimeoutException as e:
                 last_error = MarketDataUnavailableError(f"Request timeout: {e}")
             except httpx.NetworkError as e:
@@ -1577,8 +1648,6 @@ class AlphaVantageAdapter:
 
             # Exponential backoff between retries (except on last attempt)
             if attempt < self.max_retries - 1:
-                import asyncio
-
                 await asyncio.sleep(2**attempt)  # 1s, 2s, 4s, etc.
 
         # All retries exhausted
