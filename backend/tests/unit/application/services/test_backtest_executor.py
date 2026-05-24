@@ -1371,3 +1371,562 @@ class TestBacktestExecutorAgentInvocation:
                 "LIVE row's rationale should be padded to non-empty when "
                 "the upstream port returned an empty rationale."
             )
+
+
+# --------------------------------------------------------------------------- #
+# Phase L-6 — per-backtest budget guardrails                                  #
+# --------------------------------------------------------------------------- #
+
+
+def _make_live_buy_port_with_tokens(
+    *,
+    input_tokens: int,
+    output_tokens: int,
+    model: str = "claude-haiku-4-5-20251001",
+):
+    """Build a :class:`StaticAgentInvocationPort` whose result reports given tokens."""
+    from zebu.application.ports.in_memory_agent_invocation_port import (
+        StaticAgentInvocationPort,
+        make_result,
+    )
+    from zebu.domain.value_objects.agent_decision import AgentDecision
+
+    return StaticAgentInvocationPort(
+        result=make_result(
+            decision=AgentDecision.BUY,
+            rationale="Buying the dip.",
+            payload={"ticker": "AAPL", "quantity": "1", "notes": "L-6 cost test"},
+            model=model,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )
+    )
+
+
+class TestBacktestExecutorBudgetGuardrails:
+    """Phase L-6 tests for per-backtest agent cost caps."""
+
+    async def test_no_cap_completes_without_marker_row(self) -> None:
+        """With ``agent_max_cost_usd=None`` no BUDGET_EXHAUSTED row is ever emitted."""
+        from zebu.domain.value_objects.backtest_agent_invocation_mode import (
+            BacktestAgentInvocationMode,
+        )
+
+        user_id = uuid4()
+        strategy_repo = InMemoryStrategyRepository()
+        backtest_run_repo = InMemoryBacktestRunRepository()
+        activation_repo = InMemoryStrategyActivationRepository()
+        trigger_repo = InMemoryTriggerRepository()
+        invocation_repo = InMemoryBacktestAgentInvocationRepository()
+        adapter = InMemoryMarketDataAdapter()
+
+        start = date(2024, 1, 2)
+        end = date(2024, 1, 12)
+        _seed_dropping_prices(adapter, "AAPL", start, end)
+
+        strategy = _make_dca_strategy(user_id)
+        await strategy_repo.save(strategy)
+        portfolio_id = uuid4()
+        activation = _make_active_activation(user_id, strategy.id, portfolio_id)
+        await activation_repo.save(activation)
+        trigger = _make_drawdown_trigger(user_id, activation.id, threshold_pct="3")
+        await trigger_repo.save(trigger)
+
+        # Result has tokens — would accumulate cost if cap were set.
+        port = _make_live_buy_port_with_tokens(
+            input_tokens=500_000, output_tokens=100_000
+        )
+        factory = InMemoryBacktestAgentInvocationFactory(live_port_factory=lambda: port)
+
+        executor = _build_executor(
+            strategy_repo=strategy_repo,
+            backtest_run_repo=backtest_run_repo,
+            activation_repo=activation_repo,
+            trigger_repo=trigger_repo,
+            backtest_agent_invocation_repo=invocation_repo,
+            agent_invocation_factory=factory,
+            market_data=adapter,
+        )
+
+        command = RunBacktestCommand(
+            user_id=user_id,
+            strategy_id=strategy.id,
+            backtest_name="No-cap",
+            start_date=start,
+            end_date=end,
+            initial_cash=Decimal("10000"),
+            agent_invocation_mode=BacktestAgentInvocationMode.LIVE,
+            agent_max_cost_usd=None,  # explicit
+        )
+
+        result = await executor.execute(command)
+
+        assert result.status == BacktestStatus.COMPLETED
+        rows = await invocation_repo.list_for_backtest_run(result.id)
+        # No row should carry the BUDGET_EXHAUSTED marker.
+        for row in rows:
+            payload = row.decision_payload or {}
+            assert payload.get("reason") != "BUDGET_EXHAUSTED"
+
+    async def test_cap_above_total_cost_no_marker_row(self) -> None:
+        """Cap larger than actual spend → no downgrade, no marker row."""
+        from zebu.domain.value_objects.backtest_agent_invocation_mode import (
+            BacktestAgentInvocationMode,
+        )
+
+        user_id = uuid4()
+        strategy_repo = InMemoryStrategyRepository()
+        backtest_run_repo = InMemoryBacktestRunRepository()
+        activation_repo = InMemoryStrategyActivationRepository()
+        trigger_repo = InMemoryTriggerRepository()
+        invocation_repo = InMemoryBacktestAgentInvocationRepository()
+        adapter = InMemoryMarketDataAdapter()
+
+        start = date(2024, 1, 2)
+        end = date(2024, 1, 12)
+        _seed_dropping_prices(adapter, "AAPL", start, end)
+
+        strategy = _make_dca_strategy(user_id)
+        await strategy_repo.save(strategy)
+        portfolio_id = uuid4()
+        activation = _make_active_activation(user_id, strategy.id, portfolio_id)
+        await activation_repo.save(activation)
+        trigger = _make_drawdown_trigger(user_id, activation.id, threshold_pct="3")
+        await trigger_repo.save(trigger)
+
+        # Tiny invocation cost — 1k input + 500 output @ Haiku ≈ $0.0028.
+        port = _make_live_buy_port_with_tokens(input_tokens=1000, output_tokens=500)
+        factory = InMemoryBacktestAgentInvocationFactory(live_port_factory=lambda: port)
+
+        executor = _build_executor(
+            strategy_repo=strategy_repo,
+            backtest_run_repo=backtest_run_repo,
+            activation_repo=activation_repo,
+            trigger_repo=trigger_repo,
+            backtest_agent_invocation_repo=invocation_repo,
+            agent_invocation_factory=factory,
+            market_data=adapter,
+        )
+
+        command = RunBacktestCommand(
+            user_id=user_id,
+            strategy_id=strategy.id,
+            backtest_name="Cap-above-cost",
+            start_date=start,
+            end_date=end,
+            initial_cash=Decimal("10000"),
+            agent_invocation_mode=BacktestAgentInvocationMode.LIVE,
+            agent_max_cost_usd=Decimal("100.00"),  # way above $0.0028/fire
+        )
+
+        result = await executor.execute(command)
+
+        assert result.status == BacktestStatus.COMPLETED
+        rows = await invocation_repo.list_for_backtest_run(result.id)
+        # No BUDGET_EXHAUSTED marker; every LIVE row should still be LIVE.
+        from zebu.domain.value_objects.backtest_agent_invocation_mode import (
+            BacktestAgentInvocationMode as _Mode,
+        )
+
+        for row in rows:
+            payload = row.decision_payload or {}
+            assert payload.get("reason") != "BUDGET_EXHAUSTED"
+        # At least one fire happened.
+        assert len(rows) >= 1
+        # All rows are LIVE — no downgrade.
+        assert all(r.invocation_mode is _Mode.LIVE for r in rows)
+
+    async def test_cap_below_first_invocation_triggers_marker_and_downgrade(
+        self,
+    ) -> None:
+        """Cap so small that first fire exhausts → marker + subsequent MOCK rows."""
+        from zebu.domain.value_objects.agent_decision import AgentDecision
+        from zebu.domain.value_objects.backtest_agent_invocation_mode import (
+            BacktestAgentInvocationMode,
+        )
+
+        user_id = uuid4()
+        strategy_repo = InMemoryStrategyRepository()
+        backtest_run_repo = InMemoryBacktestRunRepository()
+        activation_repo = InMemoryStrategyActivationRepository()
+        trigger_repo = InMemoryTriggerRepository()
+        invocation_repo = InMemoryBacktestAgentInvocationRepository()
+        adapter = InMemoryMarketDataAdapter()
+
+        start = date(2024, 1, 2)
+        # Need ~10 days w/ short cooldown so multiple fires occur.
+        end = date(2024, 1, 15)
+        _seed_dropping_prices(adapter, "AAPL", start, end)
+
+        strategy = _make_dca_strategy(user_id)
+        await strategy_repo.save(strategy)
+        portfolio_id = uuid4()
+        activation = _make_active_activation(user_id, strategy.id, portfolio_id)
+        await activation_repo.save(activation)
+        # 1-day cooldown so multiple fires possible.
+        trigger = _make_drawdown_trigger(
+            user_id,
+            activation.id,
+            threshold_pct="3",
+            cooldown_seconds=86400,
+        )
+        await trigger_repo.save(trigger)
+
+        # Big tokens → meaningful per-fire cost ($0.40 on first fire).
+        # Cap at $0.10 so the first fire alone exhausts it.
+        port = _make_live_buy_port_with_tokens(input_tokens=500_000, output_tokens=0)
+        factory = InMemoryBacktestAgentInvocationFactory(live_port_factory=lambda: port)
+
+        executor = _build_executor(
+            strategy_repo=strategy_repo,
+            backtest_run_repo=backtest_run_repo,
+            activation_repo=activation_repo,
+            trigger_repo=trigger_repo,
+            backtest_agent_invocation_repo=invocation_repo,
+            agent_invocation_factory=factory,
+            market_data=adapter,
+        )
+
+        command = RunBacktestCommand(
+            user_id=user_id,
+            strategy_id=strategy.id,
+            backtest_name="Cap-exhausts-first-fire",
+            start_date=start,
+            end_date=end,
+            initial_cash=Decimal("10000"),
+            agent_invocation_mode=BacktestAgentInvocationMode.LIVE,
+            agent_max_cost_usd=Decimal("0.10"),  # well below $0.40 per fire
+        )
+
+        result = await executor.execute(command)
+
+        # Run must complete successfully — budget exhaustion is NOT a failure.
+        assert result.status == BacktestStatus.COMPLETED
+
+        rows = await invocation_repo.list_for_backtest_run(result.id)
+        assert len(rows) >= 2, "Need at least 1 LIVE fire + 1 marker + 0+ MOCK fires"
+
+        # Exactly one BUDGET_EXHAUSTED marker.
+        marker_rows = [
+            r
+            for r in rows
+            if (r.decision_payload or {}).get("reason") == "BUDGET_EXHAUSTED"
+        ]
+        assert len(marker_rows) == 1, (
+            f"Expected exactly 1 BUDGET_EXHAUSTED marker, got {len(marker_rows)}"
+        )
+        marker = marker_rows[0]
+        assert marker.agent_decision is AgentDecision.HOLD
+        assert marker.decision_executed is False
+        # Marker carries the cap + the cumulative cost at exhaustion.
+        marker_payload = marker.decision_payload or {}
+        assert marker_payload.get("cap_usd") == 0.10
+        cumulative = marker_payload.get("cumulative_cost_usd")
+        assert isinstance(cumulative, float)
+        assert cumulative >= 0.10  # at or above the cap
+
+    async def test_post_exhaustion_subsequent_fires_are_mock(self) -> None:
+        """After the marker is emitted, subsequent rows are MOCK-mode."""
+        from zebu.domain.value_objects.agent_decision import AgentDecision
+        from zebu.domain.value_objects.backtest_agent_invocation_mode import (
+            BacktestAgentInvocationMode,
+        )
+
+        user_id = uuid4()
+        strategy_repo = InMemoryStrategyRepository()
+        backtest_run_repo = InMemoryBacktestRunRepository()
+        activation_repo = InMemoryStrategyActivationRepository()
+        trigger_repo = InMemoryTriggerRepository()
+        invocation_repo = InMemoryBacktestAgentInvocationRepository()
+        adapter = InMemoryMarketDataAdapter()
+
+        # Long window + short cooldown to guarantee multiple fires.
+        start = date(2024, 1, 2)
+        end = date(2024, 1, 20)
+        _seed_dropping_prices(adapter, "AAPL", start, end)
+
+        strategy = _make_dca_strategy(user_id)
+        await strategy_repo.save(strategy)
+        portfolio_id = uuid4()
+        activation = _make_active_activation(user_id, strategy.id, portfolio_id)
+        await activation_repo.save(activation)
+        trigger = _make_drawdown_trigger(
+            user_id, activation.id, threshold_pct="3", cooldown_seconds=86400
+        )
+        await trigger_repo.save(trigger)
+
+        # First fire crosses cap immediately.
+        port = _make_live_buy_port_with_tokens(input_tokens=1_000_000, output_tokens=0)
+        factory = InMemoryBacktestAgentInvocationFactory(live_port_factory=lambda: port)
+
+        executor = _build_executor(
+            strategy_repo=strategy_repo,
+            backtest_run_repo=backtest_run_repo,
+            activation_repo=activation_repo,
+            trigger_repo=trigger_repo,
+            backtest_agent_invocation_repo=invocation_repo,
+            agent_invocation_factory=factory,
+            market_data=adapter,
+        )
+
+        command = RunBacktestCommand(
+            user_id=user_id,
+            strategy_id=strategy.id,
+            backtest_name="Post-exhaustion-mock",
+            start_date=start,
+            end_date=end,
+            initial_cash=Decimal("10000"),
+            agent_invocation_mode=BacktestAgentInvocationMode.LIVE,
+            agent_max_cost_usd=Decimal("0.50"),  # exhausted on first $0.80 fire
+        )
+
+        result = await executor.execute(command)
+
+        assert result.status == BacktestStatus.COMPLETED
+        rows = sorted(
+            await invocation_repo.list_for_backtest_run(result.id),
+            key=lambda r: (r.simulated_date, r.created_at),
+        )
+        # First row: LIVE BUY (the fire that crossed the threshold).
+        # Second row: BUDGET_EXHAUSTED marker (LIVE, decision HOLD).
+        # Subsequent rows: MOCK (HOLD, empty model).
+        assert rows[0].invocation_mode is BacktestAgentInvocationMode.LIVE
+        assert rows[0].agent_decision is AgentDecision.BUY
+
+        marker = rows[1]
+        assert (marker.decision_payload or {}).get("reason") == "BUDGET_EXHAUSTED"
+
+        # All subsequent fires (rows[2:]) are MOCK.
+        for row in rows[2:]:
+            assert row.invocation_mode is BacktestAgentInvocationMode.MOCK, (
+                f"Row at {row.simulated_date} should be MOCK after budget "
+                f"exhaustion; got {row.invocation_mode}"
+            )
+            assert row.agent_decision is AgentDecision.HOLD
+            assert row.model == ""
+            assert row.rationale == ""
+
+    async def test_exhaustion_emits_exactly_one_marker_even_with_many_remaining_fires(
+        self,
+    ) -> None:
+        """Only one marker row per run regardless of how many fires would occur."""
+        from zebu.domain.value_objects.backtest_agent_invocation_mode import (
+            BacktestAgentInvocationMode,
+        )
+
+        user_id = uuid4()
+        strategy_repo = InMemoryStrategyRepository()
+        backtest_run_repo = InMemoryBacktestRunRepository()
+        activation_repo = InMemoryStrategyActivationRepository()
+        trigger_repo = InMemoryTriggerRepository()
+        invocation_repo = InMemoryBacktestAgentInvocationRepository()
+        adapter = InMemoryMarketDataAdapter()
+
+        start = date(2024, 1, 2)
+        end = date(2024, 1, 30)
+        _seed_dropping_prices(adapter, "AAPL", start, end)
+
+        strategy = _make_dca_strategy(user_id)
+        await strategy_repo.save(strategy)
+        portfolio_id = uuid4()
+        activation = _make_active_activation(user_id, strategy.id, portfolio_id)
+        await activation_repo.save(activation)
+        trigger = _make_drawdown_trigger(
+            user_id, activation.id, threshold_pct="3", cooldown_seconds=86400
+        )
+        await trigger_repo.save(trigger)
+
+        port = _make_live_buy_port_with_tokens(input_tokens=1_000_000, output_tokens=0)
+        factory = InMemoryBacktestAgentInvocationFactory(live_port_factory=lambda: port)
+
+        executor = _build_executor(
+            strategy_repo=strategy_repo,
+            backtest_run_repo=backtest_run_repo,
+            activation_repo=activation_repo,
+            trigger_repo=trigger_repo,
+            backtest_agent_invocation_repo=invocation_repo,
+            agent_invocation_factory=factory,
+            market_data=adapter,
+        )
+
+        command = RunBacktestCommand(
+            user_id=user_id,
+            strategy_id=strategy.id,
+            backtest_name="Single-marker-only",
+            start_date=start,
+            end_date=end,
+            initial_cash=Decimal("10000"),
+            agent_invocation_mode=BacktestAgentInvocationMode.LIVE,
+            agent_max_cost_usd=Decimal("0.50"),
+        )
+
+        result = await executor.execute(command)
+
+        assert result.status == BacktestStatus.COMPLETED
+        rows = await invocation_repo.list_for_backtest_run(result.id)
+        marker_rows = [
+            r
+            for r in rows
+            if (r.decision_payload or {}).get("reason") == "BUDGET_EXHAUSTED"
+        ]
+        assert len(marker_rows) == 1
+
+    async def test_mock_mode_with_cap_set_does_not_emit_marker(self) -> None:
+        """Cap is ignored in MOCK mode (MOCK incurs zero cost by definition)."""
+        from zebu.domain.value_objects.backtest_agent_invocation_mode import (
+            BacktestAgentInvocationMode,
+        )
+
+        user_id = uuid4()
+        strategy_repo = InMemoryStrategyRepository()
+        backtest_run_repo = InMemoryBacktestRunRepository()
+        activation_repo = InMemoryStrategyActivationRepository()
+        trigger_repo = InMemoryTriggerRepository()
+        invocation_repo = InMemoryBacktestAgentInvocationRepository()
+        adapter = InMemoryMarketDataAdapter()
+
+        start = date(2024, 1, 2)
+        end = date(2024, 1, 12)
+        _seed_dropping_prices(adapter, "AAPL", start, end)
+
+        strategy = _make_strategy(user_id)
+        await strategy_repo.save(strategy)
+        portfolio_id = uuid4()
+        activation = _make_active_activation(user_id, strategy.id, portfolio_id)
+        await activation_repo.save(activation)
+        trigger = _make_drawdown_trigger(user_id, activation.id, threshold_pct="3")
+        await trigger_repo.save(trigger)
+
+        executor = _build_executor(
+            strategy_repo=strategy_repo,
+            backtest_run_repo=backtest_run_repo,
+            activation_repo=activation_repo,
+            trigger_repo=trigger_repo,
+            backtest_agent_invocation_repo=invocation_repo,
+            market_data=adapter,
+        )
+
+        # Tiny cap, but MOCK mode is free → no exhaustion.
+        command = RunBacktestCommand(
+            user_id=user_id,
+            strategy_id=strategy.id,
+            backtest_name="Mock-cap-set",
+            start_date=start,
+            end_date=end,
+            initial_cash=Decimal("10000"),
+            agent_invocation_mode=BacktestAgentInvocationMode.MOCK,
+            agent_max_cost_usd=Decimal("0.01"),  # would exhaust LIVE instantly
+        )
+
+        result = await executor.execute(command)
+
+        assert result.status == BacktestStatus.COMPLETED
+        rows = await invocation_repo.list_for_backtest_run(result.id)
+        marker_rows = [
+            r
+            for r in rows
+            if (r.decision_payload or {}).get("reason") == "BUDGET_EXHAUSTED"
+        ]
+        assert marker_rows == [], (
+            "MOCK mode should never trigger budget exhaustion — MOCK is free."
+        )
+        # All rows are MOCK-mode.
+        assert all(r.invocation_mode is BacktestAgentInvocationMode.MOCK for r in rows)
+
+    async def test_invalid_cap_zero_rejected_at_command_construction(self) -> None:
+        """``agent_max_cost_usd=0`` raises :class:`InvalidBacktestCommandError`."""
+        from zebu.domain.exceptions import InvalidBacktestCommandError
+
+        with pytest.raises(InvalidBacktestCommandError):
+            RunBacktestCommand(
+                user_id=uuid4(),
+                strategy_id=uuid4(),
+                backtest_name="Bad-cap",
+                start_date=date(2024, 1, 2),
+                end_date=date(2024, 1, 12),
+                initial_cash=Decimal("10000"),
+                agent_max_cost_usd=Decimal("0"),
+            )
+
+    async def test_invalid_cap_negative_rejected_at_command_construction(self) -> None:
+        """``agent_max_cost_usd=-1`` raises :class:`InvalidBacktestCommandError`."""
+        from zebu.domain.exceptions import InvalidBacktestCommandError
+
+        with pytest.raises(InvalidBacktestCommandError):
+            RunBacktestCommand(
+                user_id=uuid4(),
+                strategy_id=uuid4(),
+                backtest_name="Bad-cap-neg",
+                start_date=date(2024, 1, 2),
+                end_date=date(2024, 1, 12),
+                initial_cash=Decimal("10000"),
+                agent_max_cost_usd=Decimal("-1.00"),
+            )
+
+    async def test_marker_row_carries_model_from_exhausting_fire(self) -> None:
+        """The marker row's model matches the model that crossed the cap."""
+        from zebu.domain.value_objects.backtest_agent_invocation_mode import (
+            BacktestAgentInvocationMode,
+        )
+
+        user_id = uuid4()
+        strategy_repo = InMemoryStrategyRepository()
+        backtest_run_repo = InMemoryBacktestRunRepository()
+        activation_repo = InMemoryStrategyActivationRepository()
+        trigger_repo = InMemoryTriggerRepository()
+        invocation_repo = InMemoryBacktestAgentInvocationRepository()
+        adapter = InMemoryMarketDataAdapter()
+
+        start = date(2024, 1, 2)
+        end = date(2024, 1, 12)
+        _seed_dropping_prices(adapter, "AAPL", start, end)
+
+        strategy = _make_dca_strategy(user_id)
+        await strategy_repo.save(strategy)
+        portfolio_id = uuid4()
+        activation = _make_active_activation(user_id, strategy.id, portfolio_id)
+        await activation_repo.save(activation)
+        trigger = _make_drawdown_trigger(user_id, activation.id, threshold_pct="3")
+        await trigger_repo.save(trigger)
+
+        sonnet_model = "claude-sonnet-4-5-20250929"
+        port = _make_live_buy_port_with_tokens(
+            input_tokens=1_000_000,
+            output_tokens=0,
+            model=sonnet_model,
+        )
+        factory = InMemoryBacktestAgentInvocationFactory(live_port_factory=lambda: port)
+
+        executor = _build_executor(
+            strategy_repo=strategy_repo,
+            backtest_run_repo=backtest_run_repo,
+            activation_repo=activation_repo,
+            trigger_repo=trigger_repo,
+            backtest_agent_invocation_repo=invocation_repo,
+            agent_invocation_factory=factory,
+            market_data=adapter,
+        )
+
+        command = RunBacktestCommand(
+            user_id=user_id,
+            strategy_id=strategy.id,
+            backtest_name="Marker-model",
+            start_date=start,
+            end_date=end,
+            initial_cash=Decimal("10000"),
+            agent_invocation_mode=BacktestAgentInvocationMode.LIVE,
+            agent_max_cost_usd=Decimal("1.00"),  # Sonnet 1M input = $3 — exhausted
+        )
+
+        result = await executor.execute(command)
+
+        assert result.status == BacktestStatus.COMPLETED
+        rows = await invocation_repo.list_for_backtest_run(result.id)
+        marker_rows = [
+            r
+            for r in rows
+            if (r.decision_payload or {}).get("reason") == "BUDGET_EXHAUSTED"
+        ]
+        assert len(marker_rows) == 1
+        # The marker's model should be the model that crossed the threshold.
+        assert marker_rows[0].model == sonnet_model

@@ -138,3 +138,112 @@ def test_get_backtest_returns_persisted_mode(
     )
     assert fetched.status_code == 200, fetched.text
     assert fetched.json()["agent_invocation_mode"] == "live"
+
+
+# ---------------------------------------------------------------------------
+# Phase L-6 — agent_max_cost_usd / agent_temperature on the request body
+# ---------------------------------------------------------------------------
+
+
+def test_post_backtest_accepts_agent_max_cost_usd_when_positive(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    """``agent_max_cost_usd`` is accepted as an optional Decimal field.
+
+    The L-6 cap is plumbed to the command but not echoed on the
+    response schema (per L-6's "no new column on backtest_runs"
+    decision — exhaustion lives in the audit table only). The HTTP-
+    layer test only proves the field is accepted by pydantic + the
+    command constructor; the runtime status of the backtest depends
+    on price-data seeding which is out of scope here.
+    """
+    strategy = _create_buy_and_hold_strategy(client, auth_headers)
+    # Sufficient that the request returns 201 — that means the field
+    # passed pydantic validation, the command was constructed, and the
+    # executor was invoked (whether it COMPLETED or FAILED depends on
+    # whether price data is available for the test date range).
+    body = _run_backtest(
+        client,
+        auth_headers,
+        strategy["id"],
+        extra_body={
+            "agent_invocation_mode": "mock",
+            "agent_max_cost_usd": "1.00",
+        },
+    )
+    # _run_backtest already asserts status_code == 201; the run's
+    # COMPLETED/FAILED status isn't the point of this test.
+    assert "id" in body
+
+
+def test_post_backtest_rejects_zero_agent_max_cost_usd(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    """``agent_max_cost_usd=0`` is rejected at the pydantic ``gt=0`` boundary."""
+    strategy = _create_buy_and_hold_strategy(client, auth_headers)
+    end = date.today() - timedelta(days=1)
+    start = end - timedelta(days=10)
+    response = client.post(
+        "/api/v1/backtests",
+        headers=auth_headers,
+        json={
+            "strategy_id": strategy["id"],
+            "backtest_name": "L6 Bad Cap",
+            "start_date": start.isoformat(),
+            "end_date": end.isoformat(),
+            "initial_cash": "10000.00",
+            "agent_invocation_mode": "mock",
+            "agent_max_cost_usd": "0",
+        },
+    )
+    assert response.status_code == 422, response.text
+
+
+def test_post_backtest_rejects_negative_agent_max_cost_usd(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    """Negative budget caps are rejected as well."""
+    strategy = _create_buy_and_hold_strategy(client, auth_headers)
+    end = date.today() - timedelta(days=1)
+    start = end - timedelta(days=10)
+    response = client.post(
+        "/api/v1/backtests",
+        headers=auth_headers,
+        json={
+            "strategy_id": strategy["id"],
+            "backtest_name": "L6 Negative Cap",
+            "start_date": start.isoformat(),
+            "end_date": end.isoformat(),
+            "initial_cash": "10000.00",
+            "agent_invocation_mode": "mock",
+            "agent_max_cost_usd": "-1.00",
+        },
+    )
+    assert response.status_code == 422, response.text
+
+
+def test_post_backtest_accepts_agent_temperature(
+    client: TestClient,
+    auth_headers: dict[str, str],
+) -> None:
+    """``agent_temperature`` is accepted as an optional float field.
+
+    Same scope as the cap test — the field flows through pydantic +
+    the command without rejection; runtime status is out of scope.
+    """
+    strategy = _create_buy_and_hold_strategy(client, auth_headers)
+    body = _run_backtest(
+        client,
+        auth_headers,
+        strategy["id"],
+        extra_body={
+            "agent_invocation_mode": "mock",
+            "agent_temperature": 0.5,
+        },
+    )
+    # The temperature flows through to the command + factory but is
+    # not echoed on the response (ignored by mock port).
+    assert "id" in body

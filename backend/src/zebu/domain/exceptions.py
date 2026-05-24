@@ -149,6 +149,20 @@ class InvalidBacktestAgentInvocationError(InvalidEntityError):
     pass
 
 
+class InvalidBacktestCommandError(DomainException):
+    """Raised when :class:`RunBacktestCommand` invariants are violated.
+
+    Phase L-6. Surfaces command-level validation problems that the
+    domain catches before the executor runs — currently a single rule
+    (``agent_max_cost_usd`` must be ``> 0`` when set). Kept distinct
+    from :class:`InvalidStrategyError` so the API surface can map
+    command validation failures to ``422`` without conflating them with
+    "strategy not found".
+    """
+
+    pass
+
+
 class AgentInvocationError(DomainException):
     """Raised when invoking an agent through :class:`AgentInvocationPort` fails.
 

@@ -419,6 +419,55 @@ Exit code `0` means the pipeline is healthy; `1` means at least one assertion fa
 
 The full operator procedure (when to run, what to verify, how to flip the production flag) is in [`docs/deployment/production-checklist.md`](../deployment/production-checklist.md#phase-f-7-enabling-zebutriggerfires_enabledtrue-in-production) under "Phase F-7: Enabling `ZEBU_TRIGGER_FIRES_ENABLED=true` in production".
 
+### 3.5.4 Cost guardrails for LIVE backtests (Phase L-6)
+
+**`run_backtest(..., agent_invocation_mode="live")` runs the real Anthropic adapter on every simulated trigger fire** — that's real money. By default there's no per-run cap; a misconfigured backtest could happily burn through dollars of LLM spend. Phase L-6 adds a per-run dollar budget cap so a runaway backtest can't consume unlimited Anthropic credits.
+
+#### How `agent_max_cost_usd` works
+
+When you call `run_backtest`, you can pass an optional `agent_max_cost_usd` (Decimal, in USD). The executor:
+
+1. Estimates the dollar cost of every LIVE invocation using a hardcoded per-model pricing table (Haiku-4.5: $0.80 / MTok input, $4.00 / MTok output — same rates Anthropic publishes).
+2. Maintains a per-run cumulative cost accumulator across every simulated fire.
+3. Once the accumulator **reaches or exceeds** the cap, downgrades all subsequent fires in the same run to MOCK — the simulated trigger continues to evaluate, but instead of calling Anthropic the executor returns a deterministic HOLD audit row.
+4. **The run still completes successfully** (status `COMPLETED`, not `FAILED`). The trade timeline stays consistent — MOCK invocations are HOLDs, so the post-exhaustion period behaves as "no agent intervention."
+5. The moment of exhaustion is recorded as a synthetic `BacktestAgentInvocation` row whose `decision_payload` contains `{"reason": "BUDGET_EXHAUSTED", "cumulative_cost_usd": <float>, "cap_usd": <float>}`. The UI / activity feed renders this as "Budget exhausted at $X" by matching on the marker.
+
+If `agent_max_cost_usd` is `None` (the default), no cap is enforced — same behaviour as the pre-L-6 L-3 baseline.
+
+#### Rough cost estimates per backtest scenario
+
+These are ballpark — actual cost varies with how many tool calls the agent issues per fire (deeper tool-use loops = more turns = more tokens).
+
+| Backtest shape | Expected cost (Haiku-4.5) |
+|---|---|
+| 1-year daily-fire backtest, one drawdown trigger that fires once | ~$0.50 |
+| 1-year daily-fire backtest, one trigger that fires ~weekly (~52 fires) | ~$1.00 - $2.00 |
+| 1-year daily-fire backtest, multiple triggers firing aggressively (~200 fires) | ~$3.00 - $6.00 |
+| 3-year multi-trigger sweep, deep tool-use loops | ~$10 - $20 |
+
+Rough rule of thumb: **set `agent_max_cost_usd` to ~2-3× your expected cost** so a slightly-deeper-than-expected tool loop doesn't burn budget unnecessarily. If you have no idea, start with `Decimal("2.00")` and adjust based on what the first run actually consumed (visible on each `BacktestAgentInvocation` row's `model` field — the L-6 estimator hardcodes pricing for every supported model).
+
+#### What happens when budget is exhausted
+
+The marker row carries the cumulative cost + the cap. After it lands, subsequent fires go through the deterministic mock port; their audit rows look identical to a normal MOCK-mode run (HOLD, `invocation_mode=MOCK`, empty model / rationale). The run completes; the BacktestRun row is `COMPLETED`. You can identify a budget-exhausted run by querying the audit table for the marker:
+
+```python
+rows = await invocation_repo.list_for_backtest_run(run_id)
+marker = next(
+    (r for r in rows
+     if (r.decision_payload or {}).get("reason") == "BUDGET_EXHAUSTED"),
+    None,
+)
+if marker:
+    # Budget was exhausted on `marker.simulated_date`
+    # at $`marker.decision_payload["cumulative_cost_usd"]`
+    # against a cap of $`marker.decision_payload["cap_usd"]`
+    ...
+```
+
+If you're an agent running backtests and you see `BUDGET_EXHAUSTED` rows, that's a sign the cap was too tight for the workload. **Don't auto-retry with a higher cap** — surface it back to Tim with the marker's cumulative cost so he can decide whether the workload's cost is acceptable.
+
 ### 3.6 If the task is truly out of scope
 
 `abandon_exploration_task` is **creator-only** — you can't use it as a claiming agent. If you've claimed something you can't do:

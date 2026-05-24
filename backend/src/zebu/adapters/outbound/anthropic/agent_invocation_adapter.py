@@ -311,7 +311,13 @@ class AnthropicAgentInvocationAdapter:
         start = time.perf_counter()
         try:
             if dispatch_tool_call is None:
-                message = await self._invoke_single_shot(
+                (
+                    message,
+                    input_tokens,
+                    output_tokens,
+                    cache_read_tokens,
+                    cache_creation_tokens,
+                ) = await self._invoke_single_shot(
                     system_blocks=system_blocks,
                     messages=messages,
                     tools=tool_blocks,
@@ -319,7 +325,13 @@ class AnthropicAgentInvocationAdapter:
                     agent_temperature=agent_temperature,
                 )
             else:
-                message = await self._invoke_tool_use_loop(
+                (
+                    message,
+                    input_tokens,
+                    output_tokens,
+                    cache_read_tokens,
+                    cache_creation_tokens,
+                ) = await self._invoke_tool_use_loop(
                     system_blocks=system_blocks,
                     messages=messages,
                     tools=tool_blocks,
@@ -337,7 +349,14 @@ class AnthropicAgentInvocationAdapter:
             ) from exc
 
         latency_ms = int((time.perf_counter() - start) * 1000)
-        return self._parse_response(message=message, latency_ms=latency_ms)
+        return self._parse_response(
+            message=message,
+            latency_ms=latency_ms,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cache_read_input_tokens=cache_read_tokens,
+            cache_creation_input_tokens=cache_creation_tokens,
+        )
 
     async def _invoke_single_shot(
         self,
@@ -347,21 +366,41 @@ class AnthropicAgentInvocationAdapter:
         tools: list[ToolParam],
         timeout_secs: float,
         agent_temperature: float | None,
-    ) -> Message:
+    ) -> tuple[Message, int, int, int, int]:
         """F-3 single-shot path: force ``record_decision`` via ``tool_choice``.
 
         The model has no opportunity to call read tools — it must
         terminate immediately by calling ``record_decision``. Identical
         in behaviour to the pre-L-2 implementation; preserved when no
         :data:`ToolDispatchCallback` is provided to :meth:`invoke`.
+
+        Returns the final :class:`Message` along with the input/output
+        token counts from the single round-trip. Token counts are read
+        from :attr:`Message.usage`; when the SDK / a test fake omits the
+        attribute we fall back to ``0`` rather than crashing — L-6's
+        cost accumulator treats 0 as "free", which is the right
+        behaviour for non-billable invocations.
         """
-        return await self._invoke_with_retry(
+        message = await self._invoke_with_retry(
             system_blocks=system_blocks,
             messages=messages,
             tools=tools,
             timeout_secs=timeout_secs,
             agent_temperature=agent_temperature,
             tool_choice={"type": "tool", "name": "record_decision"},
+        )
+        (
+            input_tokens,
+            output_tokens,
+            cache_read_tokens,
+            cache_creation_tokens,
+        ) = _extract_usage(message)
+        return (
+            message,
+            input_tokens,
+            output_tokens,
+            cache_read_tokens,
+            cache_creation_tokens,
         )
 
     async def _invoke_tool_use_loop(
@@ -373,7 +412,7 @@ class AnthropicAgentInvocationAdapter:
         timeout_secs: float,
         agent_temperature: float | None,
         dispatch_tool_call: ToolDispatchCallback,
-    ) -> Message:
+    ) -> tuple[Message, int, int, int, int]:
         """Phase L-2 multi-turn tool-use loop.
 
         Iterates the Messages API conversation until the model calls
@@ -396,6 +435,11 @@ class AnthropicAgentInvocationAdapter:
         callback propagates immediately — the wrapper's safety contract
         is "violation aborts the invocation".
 
+        Returns the terminator :class:`Message` along with the
+        cross-turn-accumulated input / output token totals (Phase L-6 —
+        the budget accumulator needs every turn's tokens, not just the
+        final turn's).
+
         Raises:
             AgentInvocationError: Loop exceeded
                 :attr:`_MAX_TOOL_USE_TURNS` without
@@ -404,6 +448,10 @@ class AnthropicAgentInvocationAdapter:
         """
         # Mutable copy: each turn appends an assistant + a user(tool_result).
         conversation: list[MessageParam] = list(messages)
+        input_tokens_total: int = 0
+        output_tokens_total: int = 0
+        cache_read_tokens_total: int = 0
+        cache_creation_tokens_total: int = 0
 
         for turn in range(_MAX_TOOL_USE_TURNS):
             message = await self._invoke_with_retry(
@@ -414,6 +462,13 @@ class AnthropicAgentInvocationAdapter:
                 agent_temperature=agent_temperature,
                 tool_choice={"type": "auto"},
             )
+            turn_in, turn_out, turn_cache_read, turn_cache_creation = _extract_usage(
+                message
+            )
+            input_tokens_total += turn_in
+            output_tokens_total += turn_out
+            cache_read_tokens_total += turn_cache_read
+            cache_creation_tokens_total += turn_cache_creation
 
             tool_uses: list[ToolUseBlock] = [
                 block for block in message.content if isinstance(block, ToolUseBlock)
@@ -422,7 +477,13 @@ class AnthropicAgentInvocationAdapter:
             # Terminator: the model called ``record_decision``. Return
             # immediately so :meth:`_parse_response` extracts it.
             if any(block.name == "record_decision" for block in tool_uses):
-                return message
+                return (
+                    message,
+                    input_tokens_total,
+                    output_tokens_total,
+                    cache_read_tokens_total,
+                    cache_creation_tokens_total,
+                )
 
             # No terminator AND no read-tool calls: the model returned
             # plain text. Surface as an invocation error — the parse
@@ -632,7 +693,14 @@ class AnthropicAgentInvocationAdapter:
         ) from last_exc
 
     def _parse_response(
-        self, *, message: Message, latency_ms: int
+        self,
+        *,
+        message: Message,
+        latency_ms: int,
+        input_tokens: int,
+        output_tokens: int,
+        cache_read_input_tokens: int = 0,
+        cache_creation_input_tokens: int = 0,
     ) -> AgentInvocationResult:
         """Coerce the Messages API response into :class:`AgentInvocationResult`.
 
@@ -641,6 +709,20 @@ class AnthropicAgentInvocationAdapter:
         :class:`ToolUseBlock` with ``name=record_decision``. We also
         capture any free-text the model emitted before the tool call
         as the rationale fallback.
+
+        Args:
+            message: Final SDK :class:`Message` (the terminator turn).
+            latency_ms: Total wall-clock latency of the invocation.
+            input_tokens: Cross-turn-accumulated input-token total
+                (Phase L-6). Surfaced verbatim on the result for the
+                L-6 budget accumulator.
+            output_tokens: Cross-turn-accumulated output-token total
+                (Phase L-6).
+            cache_read_input_tokens: Cross-turn-accumulated cache-read
+                input-token total. Billed at 0.1× the standard input rate.
+            cache_creation_input_tokens: Cross-turn-accumulated
+                cache-creation input-token total. Billed at 1.25× the
+                standard input rate.
 
         Raises:
             AgentResponseParseError: If no ``record_decision`` tool-use
@@ -715,6 +797,10 @@ class AnthropicAgentInvocationAdapter:
             invocation_id=invocation_id,
             latency_ms=latency_ms,
             model=self.model,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cache_read_input_tokens=cache_read_input_tokens,
+            cache_creation_input_tokens=cache_creation_input_tokens,
         )
 
     @staticmethod
@@ -786,6 +872,40 @@ def _stable_dumps(obj: object) -> str:
     Used in tests and structured logs where byte-stable output matters.
     """
     return json.dumps(obj, sort_keys=True, default=str)
+
+
+def _extract_usage(message: Message) -> tuple[int, int, int, int]:
+    """Extract per-message token counts from one SDK :class:`Message`.
+
+    Returns ``(input_tokens, output_tokens, cache_read_input_tokens,
+    cache_creation_input_tokens)``. The Anthropic SDK's
+    :class:`Message.usage` reports these as **separate fields** —
+    ``input_tokens`` covers fresh (non-cached) input only; cache reads
+    and cache writes are billed at different rates (0.1× and 1.25× of
+    the standard input rate). The L-6 cost estimator multiplies each
+    by its own rate, so we surface all four.
+
+    Falls back to ``(0, 0, 0, 0)`` on any attribute miss / TypeError so
+    a misbehaving test transport doesn't crash the invocation. The
+    accumulator treats 0 as "free", which is the right behaviour for
+    non-billable fakes.
+    """
+    usage = getattr(message, "usage", None)
+    if usage is None:
+        return 0, 0, 0, 0
+
+    def _read(name: str) -> int:
+        try:
+            return int(getattr(usage, name, 0) or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    return (
+        _read("input_tokens"),
+        _read("output_tokens"),
+        _read("cache_read_input_tokens"),
+        _read("cache_creation_input_tokens"),
+    )
 
 
 __all__ = [

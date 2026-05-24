@@ -48,6 +48,8 @@ def _build_message(
     free_text: str | None = None,
     msg_id: str = "msg_test_id_12345",
     include_tool_use: bool = True,
+    input_tokens: int | None = None,
+    output_tokens: int | None = None,
 ) -> Message:
     """Build a fake :class:`Message` mimicking an Anthropic response.
 
@@ -56,6 +58,12 @@ def _build_message(
     - One ``ToolUseBlock`` with ``name="record_decision"`` and ``input``
       containing the decision payload.
     - Optionally text blocks for the rationale fallback.
+
+    Phase L-6: ``input_tokens`` / ``output_tokens`` populate a
+    :attr:`Message.usage` mock so the adapter's :func:`_extract_usage`
+    helper sees real values. When ``None``, the usage attribute is left
+    unset and the adapter falls back to ``(0, 0)`` — exercises the
+    backwards-compat path.
     """
     content: list[ToolUseBlock | TextBlock] = []
     if free_text:
@@ -82,6 +90,11 @@ def _build_message(
     message.id = msg_id
     message.content = content
     message.stop_reason = "tool_use"
+    if input_tokens is not None or output_tokens is not None:
+        usage_mock = MagicMock()
+        usage_mock.input_tokens = input_tokens or 0
+        usage_mock.output_tokens = output_tokens or 0
+        message.usage = usage_mock
     return cast("Message", message)
 
 
@@ -662,3 +675,79 @@ class TestToolUseLoop:
             )
         assert "exceeded" in str(exc_info.value).lower()
         assert mock_create.call_count == 2
+
+
+# ---------------------------------------------------------------------------
+# Phase L-6 — token-usage extraction
+# ---------------------------------------------------------------------------
+
+
+class TestTokenUsageExtraction:
+    """The adapter surfaces token counts onto :class:`AgentInvocationResult`."""
+
+    async def test_single_shot_records_usage_from_terminator_message(self) -> None:
+        """One-shot invocation copies ``Message.usage`` onto the result."""
+        message = _build_message(
+            decision="HOLD",
+            input_tokens=1234,
+            output_tokens=567,
+        )
+        adapter, _mock_create = _build_adapter_with_mock(message=message)
+
+        result = await adapter.invoke(system_prompt="s", user_prompt="u")
+
+        assert result.input_tokens == 1234
+        assert result.output_tokens == 567
+
+    async def test_single_shot_with_missing_usage_falls_back_to_zero(self) -> None:
+        """When the SDK doesn't surface ``usage``, tokens default to 0."""
+        # _build_message with no input_tokens/output_tokens omits the
+        # ``usage`` attribute entirely.
+        message = _build_message(decision="HOLD")
+        adapter, _mock_create = _build_adapter_with_mock(message=message)
+
+        result = await adapter.invoke(system_prompt="s", user_prompt="u")
+
+        assert result.input_tokens == 0
+        assert result.output_tokens == 0
+
+    async def test_tool_use_loop_accumulates_usage_across_turns(self) -> None:
+        """Multi-turn loop sums input + output tokens across every turn."""
+        # First turn: tool_use (no record_decision yet) with some tokens.
+        turn1 = _build_tool_use_message(
+            tool_name="get_price_history",
+            tool_input={"ticker": "AAPL", "end": "2024-03-15"},
+        )
+        turn1_usage = MagicMock()
+        turn1_usage.input_tokens = 1000
+        turn1_usage.output_tokens = 200
+        turn1.usage = turn1_usage  # type: ignore[attr-defined]
+
+        # Second turn: record_decision (terminator) with more tokens.
+        turn2 = _build_message(
+            decision="HOLD",
+            input_tokens=1500,
+            output_tokens=300,
+        )
+
+        adapter, mock_create = _build_adapter_with_mock()
+        mock_create.side_effect = [turn1, turn2]
+
+        dispatch_calls: list[tuple[str, dict[str, object]]] = []
+
+        async def dispatch(name: str, inp: dict[str, object]) -> str:
+            dispatch_calls.append((name, dict(inp)))
+            return '{"price_points": []}'
+
+        result = await adapter.invoke(
+            system_prompt="s",
+            user_prompt="u",
+            dispatch_tool_call=dispatch,
+        )
+
+        # Tokens should accumulate: 1000 + 1500 = 2500 input; 200 + 300 = 500 output.
+        assert result.input_tokens == 2500
+        assert result.output_tokens == 500
+        # Sanity: the dispatch callback was invoked exactly once for turn1.
+        assert len(dispatch_calls) == 1
+        assert dispatch_calls[0][0] == "get_price_history"
