@@ -477,10 +477,10 @@ describe('AdminDataCoverage', () => {
   })
 
   // ---------------------------------------------------------------------------
-  // Task #220 — Pin / Unpin watchlist column
+  // Task #220 — Track / Untrack watchlist column
   // ---------------------------------------------------------------------------
 
-  it('renders the Pinned indicator + Unpin button for watchlisted rows', async () => {
+  it('renders the Tracked indicator + Untrack button for watchlisted rows', async () => {
     server.use(
       http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
         HttpResponse.json<DataCoverageResponse>({
@@ -493,12 +493,12 @@ describe('AdminDataCoverage', () => {
 
     expect(
       await screen.findByTestId('coverage-pinned-indicator-AAPL')
-    ).toHaveTextContent(/pinned/i)
+    ).toHaveTextContent(/tracked/i)
     expect(screen.getByTestId('coverage-unpin-btn-AAPL')).toBeInTheDocument()
     expect(screen.queryByTestId('coverage-pin-btn-AAPL')).toBeNull()
   })
 
-  it('renders the Pin button (no indicator) for unwatchlisted rows', async () => {
+  it('renders the Track button (no indicator) for unwatchlisted rows', async () => {
     server.use(
       http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
         HttpResponse.json<DataCoverageResponse>({
@@ -518,7 +518,7 @@ describe('AdminDataCoverage', () => {
     ).toBeInTheDocument()
   })
 
-  it('clicking Pin POSTs { ticker } to /admin/watchlist', async () => {
+  it('clicking Track POSTs { ticker } to /admin/watchlist', async () => {
     const user = userEvent.setup()
     let receivedBody: unknown = null
 
@@ -550,7 +550,7 @@ describe('AdminDataCoverage', () => {
     })
   })
 
-  it('clicking Unpin DELETEs /admin/watchlist/{ticker}', async () => {
+  it('clicking Untrack DELETEs /admin/watchlist/{ticker}', async () => {
     const user = userEvent.setup()
     let deletedTicker: string | null = null
 
@@ -575,7 +575,7 @@ describe('AdminDataCoverage', () => {
     })
   })
 
-  it('only disables the clicked row while its Pin mutation is in flight', async () => {
+  it('only disables the clicked row while its Track mutation is in flight', async () => {
     const user = userEvent.setup()
 
     server.use(
@@ -613,7 +613,7 @@ describe('AdminDataCoverage', () => {
 
     await user.click(aaplBtn)
 
-    // AAPL's Pin button is disabled while its mutation is in flight,
+    // AAPL's Track button is disabled while its mutation is in flight,
     // but TSLA's stays enabled (regression guard for the shared-isPending
     // bug — Task #220 follows the PR #296 pattern).
     await waitFor(() => {
@@ -622,7 +622,7 @@ describe('AdminDataCoverage', () => {
     expect(tslaBtn).not.toBeDisabled()
   })
 
-  it('only disables the clicked row while its Unpin mutation is in flight', async () => {
+  it('only disables the clicked row while its Untrack mutation is in flight', async () => {
     const user = userEvent.setup()
 
     server.use(
@@ -659,7 +659,7 @@ describe('AdminDataCoverage', () => {
     expect(tslaBtn).not.toBeDisabled()
   })
 
-  it('toasts the failure when the Pin request errors', async () => {
+  it('toasts the failure when the Track request errors', async () => {
     const user = userEvent.setup()
     const toast = (await import('react-hot-toast')).default
 
@@ -683,7 +683,7 @@ describe('AdminDataCoverage', () => {
     })
   })
 
-  it('toasts "not pinned" when Unpin returns 404', async () => {
+  it('toasts "not tracked" when Untrack returns 404', async () => {
     const user = userEvent.setup()
     const toast = (await import('react-hot-toast')).default
 
@@ -704,7 +704,7 @@ describe('AdminDataCoverage', () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
-        expect.stringContaining('not pinned')
+        expect.stringContaining('not tracked')
       )
     })
   })
