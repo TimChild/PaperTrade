@@ -109,7 +109,13 @@ class RunBacktestRequest(BaseModel):
     exactly as they did pre-Phase-L. Set to ``"mock"`` to exercise the
     agent-in-the-loop pipeline without paying for real Anthropic calls,
     or ``"live"`` for real invocations via the L-2 backtest-safe adapter
-    (not yet wired up in the executor — L-3).
+    (wired up in L-3).
+
+    The ``agent_max_cost_usd`` field (Phase L-6) is the optional per-run
+    USD budget cap on LIVE-mode agent spend. ``None`` (default) preserves
+    the L-3 behaviour — no cap. When set, must be strictly positive; the
+    executor halts LIVE invocations and downgrades to MOCK once the
+    accumulator reaches or exceeds the cap.
     """
 
     strategy_id: UUID
@@ -124,7 +130,29 @@ class RunBacktestRequest(BaseModel):
             "runs the existing no-agent pipeline; 'mock' evaluates "
             "simulated triggers with a deterministic no-op agent; 'live' "
             "calls the real Anthropic adapter via the L-2 backtest-safe "
-            "wrapper (executor wiring lands in L-3)."
+            "wrapper (executor wiring landed in L-3)."
+        ),
+    )
+    agent_temperature: float | None = Field(
+        default=None,
+        description=(
+            "Optional sampling temperature override for LIVE invocations. "
+            "When None, the L-2 backtest wrapper's default (0.0 — "
+            "deterministic-ish) is used. Ignored for 'mock' and 'none' "
+            "modes. Range is the Anthropic API's standard 0.0-1.0."
+        ),
+    )
+    agent_max_cost_usd: Decimal | None = Field(
+        default=None,
+        gt=0,
+        description=(
+            "Optional per-run USD budget cap on LIVE-mode agent spend "
+            "(Phase L-6). None means no cap (existing behaviour). When "
+            "set, must be > 0; the executor accumulates per-invocation "
+            "cost from the L-6 pricing table and downgrades subsequent "
+            "fires to MOCK once the cap is reached. A synthetic "
+            "BUDGET_EXHAUSTED audit row is logged at the moment of "
+            "exhaustion."
         ),
     )
 
@@ -360,6 +388,8 @@ async def run_backtest(
         initial_cash=request.initial_cash,
         api_key_id=api_key_id,
         agent_invocation_mode=request.agent_invocation_mode,
+        agent_temperature=request.agent_temperature,
+        agent_max_cost_usd=request.agent_max_cost_usd,
     )
 
     executor = _build_executor(session=session, market_data=market_data)

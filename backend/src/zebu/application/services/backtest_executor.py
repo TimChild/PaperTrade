@@ -70,6 +70,7 @@ from zebu.domain.services.strategies.protocol import TradingStrategy
 from zebu.domain.value_objects.activation_status import ActivationStatus
 from zebu.domain.value_objects.agent_decision import AgentDecision
 from zebu.domain.value_objects.allocation import Allocation
+from zebu.domain.value_objects.anthropic_pricing import estimate_cost_usd
 from zebu.domain.value_objects.backtest_agent_invocation_mode import (
     BacktestAgentInvocationMode,
 )
@@ -408,6 +409,18 @@ class BacktestExecutor:
         agent_invocations: list[BacktestAgentInvocation] = []
         simulated_last_fired_at: dict[UUID, datetime] = {}
 
+        # Phase L-6: per-run cost accumulator + effective-mode state.
+        # ``effective_mode`` mirrors ``command.agent_invocation_mode``
+        # unless / until the budget cap exhausts, at which point we
+        # downgrade subsequent fires in this run to MOCK so the run
+        # completes without further LLM spend. The exhaustion event is
+        # logged once as a marker row; subsequent rows are normal MOCK
+        # invocations.
+        budget_cap_usd = command.agent_max_cost_usd
+        cumulative_cost_usd: Decimal = Decimal("0")
+        effective_mode: BacktestAgentInvocationMode = agent_mode
+        budget_exhausted_marker_emitted: bool = False
+
         # ── Phase 2: Simulate ─────────────────────────────────────────────────
         builder = BacktestTransactionBuilder(
             portfolio_id=portfolio_id,
@@ -430,7 +443,7 @@ class BacktestExecutor:
             if triggers and agent_mode is not BacktestAgentInvocationMode.NONE:
                 simulated_now = _end_of_utc_day(current_date)
                 for trigger in triggers:
-                    fire_record = await self._maybe_fire_trigger(
+                    fire_result = await self._maybe_fire_trigger(
                         trigger=trigger,
                         simulated_date=current_date,
                         simulated_now=simulated_now,
@@ -441,10 +454,46 @@ class BacktestExecutor:
                         backtest_run_id=backtest_run.id,
                         portfolio_id=portfolio_id,
                         command=command,
+                        effective_mode=effective_mode,
                     )
-                    if fire_record is not None:
-                        agent_invocations.append(fire_record)
-                        simulated_last_fired_at[trigger.id] = simulated_now
+                    if fire_result is None:
+                        continue
+                    fire_record, fire_cost_usd = fire_result
+                    agent_invocations.append(fire_record)
+                    simulated_last_fired_at[trigger.id] = simulated_now
+                    cumulative_cost_usd += fire_cost_usd
+
+                    # ── Phase L-6: budget-cap evaluation ──────────────
+                    # Only LIVE-mode invocations incur cost; budget-cap
+                    # downgrade only fires once per run. The marker row
+                    # carries the actual cumulative + the cap so the UI
+                    # can render "Budget exhausted at $X / cap $Y".
+                    if (
+                        not budget_exhausted_marker_emitted
+                        and budget_cap_usd is not None
+                        and effective_mode is BacktestAgentInvocationMode.LIVE
+                        and cumulative_cost_usd >= budget_cap_usd
+                    ):
+                        logger.info(
+                            "Backtest budget exhausted — downgrading "
+                            "subsequent agent invocations to MOCK",
+                            extra={
+                                "backtest_run_id": str(backtest_run.id),
+                                "cumulative_cost_usd": str(cumulative_cost_usd),
+                                "cap_usd": str(budget_cap_usd),
+                            },
+                        )
+                        marker_row = _build_budget_exhausted_marker(
+                            backtest_run_id=backtest_run.id,
+                            trigger=trigger,
+                            simulated_date=current_date,
+                            cumulative_cost_usd=cumulative_cost_usd,
+                            cap_usd=budget_cap_usd,
+                            model=fire_record.model,
+                        )
+                        agent_invocations.append(marker_row)
+                        effective_mode = BacktestAgentInvocationMode.MOCK
+                        budget_exhausted_marker_emitted = True
 
             # ── Phase 2b: strategy signals ────────────────────────────────
             holdings_dec = {k.symbol: v.shares for k, v in builder.holdings.items()}
@@ -597,14 +646,29 @@ class BacktestExecutor:
         backtest_run_id: UUID,
         portfolio_id: UUID,
         command: RunBacktestCommand,
-    ) -> BacktestAgentInvocation | None:
+        effective_mode: BacktestAgentInvocationMode,
+    ) -> tuple[BacktestAgentInvocation, Decimal] | None:
         """Evaluate one trigger on one simulated day; on fire, dispatch the agent.
 
-        Returns the resulting audit-row entity when the trigger fired,
-        or ``None`` when it didn't (cooldown, expiry, evaluator said
+        Returns ``(audit_row, cost_usd)`` when the trigger fired, or
+        ``None`` when it didn't (cooldown, expiry, evaluator said
         no-fire, earnings-proximity skipped). Per the spec, fire
         attempts always produce an audit row — including invocation
         failures and safety violations.
+
+        ``cost_usd`` is the estimated USD cost of the invocation per
+        the Phase L-6 pricing table. It is ``Decimal("0")`` for MOCK
+        rows (no LLM call), for INVOCATION_FAILED rows (no successful
+        LLM call), and for any LIVE row whose underlying port reported
+        zero tokens (test fakes, transport before any tokens were
+        consumed).
+
+        ``effective_mode`` is the executor's runtime-effective mode for
+        this fire (Phase L-6). It mirrors ``command.agent_invocation_mode``
+        until the per-run budget cap exhausts, at which point it is
+        forced to MOCK for the remainder of the run. This parameter
+        decouples the day-loop's budget-tracking state from the
+        immutable command.
 
         Per-trigger / per-day errors are caught here and converted to
         ``INVOCATION_FAILED`` audit rows so one bad fire doesn't crash
@@ -642,13 +706,16 @@ class BacktestExecutor:
                     "simulated_date": simulated_date.isoformat(),
                 },
             )
-            return _build_invocation_failed_row(
-                backtest_run_id=backtest_run_id,
-                trigger=trigger,
-                simulated_date=simulated_date,
-                evaluation_data={},
-                mode=command.agent_invocation_mode,
-                reason=f"Trigger evaluator failed: {exc}",
+            return (
+                _build_invocation_failed_row(
+                    backtest_run_id=backtest_run_id,
+                    trigger=trigger,
+                    simulated_date=simulated_date,
+                    evaluation_data={},
+                    mode=effective_mode,
+                    reason=f"Trigger evaluator failed: {exc}",
+                ),
+                Decimal("0"),
             )
 
         if not fired or evaluation_data is None:
@@ -665,6 +732,7 @@ class BacktestExecutor:
             backtest_run_id=backtest_run_id,
             portfolio_id=portfolio_id,
             command=command,
+            effective_mode=effective_mode,
         )
 
     def _evaluate_simulated_trigger(
@@ -740,35 +808,43 @@ class BacktestExecutor:
         backtest_run_id: UUID,
         portfolio_id: UUID,
         command: RunBacktestCommand,
-    ) -> BacktestAgentInvocation:
+        effective_mode: BacktestAgentInvocationMode,
+    ) -> tuple[BacktestAgentInvocation, Decimal]:
         """Invoke the agent for one fired trigger and apply the decision.
 
-        Always returns an audit-row entity. The exact shape depends on
-        the mode and the agent's response:
+        Always returns ``(audit_row, cost_usd)``. The exact row shape
+        depends on the mode and the agent's response:
 
         * MOCK — every call goes through the mock port; every row is
-          MOCK-mode (``decision=HOLD``, no rationale, no model).
+          MOCK-mode (``decision=HOLD``, no rationale, no model). Cost
+          is ``Decimal("0")`` (mock port doesn't incur LLM spend).
         * LIVE — wrapper invokes the real adapter (or scripted test
           port). On success, builds a LIVE row with the agent's
-          rationale + decision + payload. On
+          rationale + decision + payload, and cost = the L-6 estimator
+          applied to the result's token counts. On
           :class:`BacktestSafetyViolationError` /
           :class:`AgentInvocationError`, builds an INVOCATION_FAILED
-          LIVE row.
+          LIVE row with cost ``Decimal("0")`` (the call failed before
+          any tokens were billable — defensive; if the failure was
+          mid-response some tokens may have been consumed but we don't
+          have access to them here).
 
         On BUY / SELL, the simulated builder is mutated. On
         MODIFY_STRATEGY (LIVE only — MOCK never emits it), the row is
         recorded but the strategy is NOT mutated (spec §"Design
         decisions" §3). HOLD / NEEDS_HUMAN are audit-only.
-        """
-        mode = command.agent_invocation_mode
 
+        ``effective_mode`` (Phase L-6) is the runtime-effective mode
+        for this fire; on budget exhaustion it differs from
+        ``command.agent_invocation_mode`` (forced to MOCK).
+        """
         # Build per-fire port. Production wires
         # :class:`AnthropicBacktestAgentInvocationFactory`; tests wire
         # the in-memory factory.
         try:
             port = self._agent_invocation_factory.for_simulated_date(
                 simulated_date=simulated_date,
-                mode=mode,
+                mode=effective_mode,
                 agent_temperature=command.agent_temperature,
             )
         except Exception as exc:
@@ -780,13 +856,16 @@ class BacktestExecutor:
                     "simulated_date": simulated_date.isoformat(),
                 },
             )
-            return _build_invocation_failed_row(
-                backtest_run_id=backtest_run_id,
-                trigger=trigger,
-                simulated_date=simulated_date,
-                evaluation_data=evaluation_data,
-                mode=mode,
-                reason=f"Agent invocation factory error: {exc}",
+            return (
+                _build_invocation_failed_row(
+                    backtest_run_id=backtest_run_id,
+                    trigger=trigger,
+                    simulated_date=simulated_date,
+                    evaluation_data=evaluation_data,
+                    mode=effective_mode,
+                    reason=f"Agent invocation factory error: {exc}",
+                ),
+                Decimal("0"),
             )
 
         # Build prompts — reuse the live builders so live and backtest
@@ -813,13 +892,16 @@ class BacktestExecutor:
                     "trigger_id": str(trigger.id),
                 },
             )
-            return _build_invocation_failed_row(
-                backtest_run_id=backtest_run_id,
-                trigger=trigger,
-                simulated_date=simulated_date,
-                evaluation_data=evaluation_data,
-                mode=mode,
-                reason=f"User-prompt construction failed: {exc}",
+            return (
+                _build_invocation_failed_row(
+                    backtest_run_id=backtest_run_id,
+                    trigger=trigger,
+                    simulated_date=simulated_date,
+                    evaluation_data=evaluation_data,
+                    mode=effective_mode,
+                    reason=f"User-prompt construction failed: {exc}",
+                ),
+                Decimal("0"),
             )
 
         # Invoke the agent. Both AgentInvocationError and its
@@ -843,13 +925,16 @@ class BacktestExecutor:
                     "exception_message": str(exc),
                 },
             )
-            return _build_invocation_failed_row(
-                backtest_run_id=backtest_run_id,
-                trigger=trigger,
-                simulated_date=simulated_date,
-                evaluation_data=evaluation_data,
-                mode=mode,
-                reason=f"{type(exc).__name__}: {exc}",
+            return (
+                _build_invocation_failed_row(
+                    backtest_run_id=backtest_run_id,
+                    trigger=trigger,
+                    simulated_date=simulated_date,
+                    evaluation_data=evaluation_data,
+                    mode=effective_mode,
+                    reason=f"{type(exc).__name__}: {exc}",
+                ),
+                Decimal("0"),
             )
         except Exception as exc:
             # Unexpected — catch-all so one bad fire can't crash the run.
@@ -860,30 +945,41 @@ class BacktestExecutor:
                     "trigger_id": str(trigger.id),
                 },
             )
-            return _build_invocation_failed_row(
-                backtest_run_id=backtest_run_id,
-                trigger=trigger,
-                simulated_date=simulated_date,
-                evaluation_data=evaluation_data,
-                mode=mode,
-                reason=f"Unexpected error: {exc}",
+            return (
+                _build_invocation_failed_row(
+                    backtest_run_id=backtest_run_id,
+                    trigger=trigger,
+                    simulated_date=simulated_date,
+                    evaluation_data=evaluation_data,
+                    mode=effective_mode,
+                    reason=f"Unexpected error: {exc}",
+                ),
+                Decimal("0"),
             )
 
         # Apply the decision to the simulated trade book. The function
         # returns the resulting audit-row entity (always — even on
         # downgrade-to-HOLD or rejection).
-        return _apply_simulated_decision(
+        row = _apply_simulated_decision(
             backtest_run_id=backtest_run_id,
             trigger=trigger,
             simulated_date=simulated_date,
             simulated_now=simulated_now,
             evaluation_data=evaluation_data,
-            mode=mode,
+            mode=effective_mode,
             result=result,
             builder=builder,
             price_map=price_map,
             strategy=strategy,
         )
+        # Phase L-6: estimate the dollar cost of this invocation. MOCK
+        # mode never incurs cost (the mock port returns empty model and
+        # zero tokens); LIVE mode pulls from the result's token counts.
+        cost_usd = _estimate_invocation_cost_usd(
+            mode=effective_mode,
+            result=result,
+        )
+        return row, cost_usd
 
     def _build_simulated_user_prompt(
         self,
@@ -1191,6 +1287,108 @@ def _truncate_rationale(value: str) -> str:
     if len(value) <= _RATIONALE_MAX_LENGTH:
         return value
     return value[:_RATIONALE_MAX_LENGTH]
+
+
+def _estimate_invocation_cost_usd(
+    *,
+    mode: BacktestAgentInvocationMode,
+    result: AgentInvocationResult,
+) -> Decimal:
+    """Estimate the USD cost of a successful agent invocation (Phase L-6).
+
+    MOCK mode is treated as free — the mock port returns ``model=""``
+    and zero tokens by construction. Returning early here is purely
+    defensive against a misbehaving fake that fills model + tokens; we
+    don't want a faulty fake to silently consume budget.
+
+    LIVE mode pulls the per-model rate from
+    :func:`estimate_cost_usd` (domain pricing table) and multiplies by
+    the token counts the adapter recorded. The estimator over-bills
+    cache-read input tokens slightly — see
+    ``backend/src/zebu/domain/value_objects/anthropic_pricing.py`` for
+    why we don't differentiate.
+
+    Args:
+        mode: The effective-mode at the time of the invocation. MOCK is
+            free; LIVE is billable.
+        result: The :class:`AgentInvocationResult` from the port.
+
+    Returns:
+        USD cost as :class:`Decimal`. ``>= 0``.
+    """
+    if mode is not BacktestAgentInvocationMode.LIVE:
+        return Decimal("0")
+    return estimate_cost_usd(
+        model=result.model,
+        input_tokens=result.input_tokens,
+        output_tokens=result.output_tokens,
+    )
+
+
+def _build_budget_exhausted_marker(
+    *,
+    backtest_run_id: UUID,
+    trigger: StrategyConditionTrigger,
+    simulated_date: date,
+    cumulative_cost_usd: Decimal,
+    cap_usd: Decimal,
+    model: str,
+) -> BacktestAgentInvocation:
+    """Build the synthetic BUDGET_EXHAUSTED marker row (Phase L-6).
+
+    Emitted once per run, at the moment the per-run dollar budget cap
+    is reached. The row carries the cumulative cost and the cap in its
+    ``decision_payload`` so the UI / activity feed can render "Budget
+    exhausted at $X — subsequent invocations downgraded to MOCK" by
+    matching on the ``reason="BUDGET_EXHAUSTED"`` marker.
+
+    The marker row is LIVE-mode because:
+
+    * It is the audit-row counterpart of the *real* LIVE invocation
+      whose cost crossed the threshold. Its model is the model that
+      crossed the threshold.
+    * The L-1 entity's MOCK-mode invariants require empty rationale +
+      empty model + no payload, which conflicts with this row's
+      diagnostic purpose. LIVE mode allows a non-empty rationale and a
+      structured payload, which is what we need.
+    * Subsequent fires in the same run go through the mock port and
+      land as ordinary MOCK rows — the transition is the marker's
+      semantic, the marker itself is the boundary row.
+
+    ``decision`` is ``HOLD`` and ``decision_executed=False`` so the
+    row never claims to have mutated the simulated trade book.
+    """
+    rationale = _truncate_rationale(
+        f"(BUDGET EXHAUSTED at ${cumulative_cost_usd} "
+        f"— remaining invocations downgraded to MOCK)"
+    )
+    # Model fallback — if the upstream row had no model (it shouldn't
+    # for LIVE, but the entity invariants reject ``model == ""`` for
+    # LIVE rows so we substitute a marker label rather than crashing
+    # the audit write).
+    marker_model = model if model else "(budget-exhausted marker)"
+    payload: dict[str, object] = {
+        "reason": "BUDGET_EXHAUSTED",
+        "cumulative_cost_usd": float(cumulative_cost_usd),
+        "cap_usd": float(cap_usd),
+    }
+    return BacktestAgentInvocation(
+        id=uuid4(),
+        backtest_run_id=backtest_run_id,
+        simulated_date=simulated_date,
+        trigger_id=trigger.id,
+        condition_evaluation_data={},
+        rationale=rationale,
+        latency_ms=0,
+        model=marker_model,
+        invocation_mode=BacktestAgentInvocationMode.LIVE,
+        created_at=datetime.now(UTC),
+        agent_decision=AgentDecision.HOLD,
+        decision_payload=payload,
+        decision_executed=False,
+        simulated_trade_id=None,
+        agent_invocation_id=None,
+    )
 
 
 def _apply_simulated_decision(

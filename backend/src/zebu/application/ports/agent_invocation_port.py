@@ -96,6 +96,16 @@ class AgentInvocationResult:
         model: The Anthropic model identifier used for this invocation
             (e.g. ``"claude-haiku-4-5-20251001"``). Persisted in
             structured logs for cost-attribution analysis.
+        input_tokens: Total input tokens consumed across the invocation
+            (Phase L-6). For single-shot calls this is the one and only
+            ``Message.usage.input_tokens``; for multi-turn tool-use loops
+            the adapter accumulates across every turn. Includes cache-read
+            input tokens — the cost estimator doesn't differentiate.
+            Defaults to ``0`` for adapters / fakes that don't surface
+            token counts (the L-6 cost estimator treats 0 as "free",
+            which is the right behaviour for non-billable fakes).
+        output_tokens: Total output tokens produced across the invocation
+            (Phase L-6). Same accumulation contract as ``input_tokens``.
     """
 
     decision: AgentDecision
@@ -104,6 +114,8 @@ class AgentInvocationResult:
     invocation_id: str | None
     latency_ms: int
     model: str
+    input_tokens: int = 0
+    output_tokens: int = 0
 
 
 class AgentInvocationPort(Protocol):

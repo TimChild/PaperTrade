@@ -241,6 +241,8 @@ def make_result(
     invocation_id: str = "msg_test_invocation",
     latency_ms: int = 250,
     model: str = "claude-haiku-4-5-20251001",
+    input_tokens: int = 0,
+    output_tokens: int = 0,
 ) -> AgentInvocationResult:
     """Convenience builder for scripted test results.
 
@@ -255,6 +257,11 @@ def make_result(
         invocation_id: Anthropic message ID.
         latency_ms: Round-trip latency.
         model: Model identifier.
+        input_tokens: Input tokens consumed (Phase L-6 — defaults to ``0``
+            for backwards-compat with existing tests that don't care
+            about cost accounting).
+        output_tokens: Output tokens produced (Phase L-6 — same
+            backwards-compat contract as ``input_tokens``).
 
     Returns:
         :class:`AgentInvocationResult` ready to plug into a static port.
@@ -268,6 +275,8 @@ def make_result(
         invocation_id=invocation_id,
         latency_ms=latency_ms,
         model=model,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
     )
 
 
