@@ -424,11 +424,11 @@ async def _run_drain_background(
             # imports dependencies which (transitively) imports this
             # module via ``__init__``-level router registration.
             from zebu.adapters.inbound.api.dependencies import get_market_data
-            from zebu.infrastructure.scheduler import _drain_one_backfill
+            from zebu.infrastructure.scheduler import drain_one_backfill
 
             market_data = await get_market_data(session)
             repo = SQLModelBackfillTaskRepository(session)
-            await _drain_one_backfill(
+            await drain_one_backfill(
                 market_data=market_data,
                 repo=repo,
                 task_id=task_id,
