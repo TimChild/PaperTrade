@@ -173,3 +173,54 @@ class TestEstimateCostUsd:
             output_tokens=10_000,
         )
         assert sonnet > haiku
+
+    def test_cache_read_input_tokens_billed_at_ten_percent_of_input_rate(
+        self,
+    ) -> None:
+        """1M cache-read tokens at Haiku = 0.1 × $0.80 = $0.08."""
+        cost = estimate_cost_usd(
+            model="claude-haiku-4-5-20251001",
+            input_tokens=0,
+            output_tokens=0,
+            cache_read_input_tokens=1_000_000,
+        )
+        assert cost == Decimal("0.080")
+
+    def test_cache_creation_input_tokens_billed_at_one_twenty_five_input_rate(
+        self,
+    ) -> None:
+        """1M cache-creation tokens at Haiku = 1.25 × $0.80 = $1.00."""
+        cost = estimate_cost_usd(
+            model="claude-haiku-4-5-20251001",
+            input_tokens=0,
+            output_tokens=0,
+            cache_creation_input_tokens=1_000_000,
+        )
+        assert cost == Decimal("1.000")
+
+    def test_full_token_breakdown_sums_all_buckets(self) -> None:
+        """All four buckets compose additively; regression for the
+        bug where cache-read/creation tokens were silently dropped from
+        the cost accumulator (would have under-billed by 5-25% on
+        cache-heavy workloads).
+        """
+        cost = estimate_cost_usd(
+            model="claude-haiku-4-5-20251001",
+            input_tokens=1_000_000,  # $0.80
+            output_tokens=1_000_000,  # $4.00
+            cache_read_input_tokens=1_000_000,  # $0.08
+            cache_creation_input_tokens=1_000_000,  # $1.00
+        )
+        # 0.80 + 4.00 + 0.08 + 1.00 = 5.88
+        assert cost == Decimal("5.880")
+
+    def test_negative_cache_tokens_clamped_to_zero(self) -> None:
+        """Defensive: negative cache-read / cache-creation are clamped."""
+        cost = estimate_cost_usd(
+            model="claude-haiku-4-5-20251001",
+            input_tokens=0,
+            output_tokens=0,
+            cache_read_input_tokens=-500_000,
+            cache_creation_input_tokens=-500_000,
+        )
+        assert cost == Decimal("0")

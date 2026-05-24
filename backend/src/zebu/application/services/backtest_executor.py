@@ -1303,10 +1303,11 @@ def _estimate_invocation_cost_usd(
 
     LIVE mode pulls the per-model rate from
     :func:`estimate_cost_usd` (domain pricing table) and multiplies by
-    the token counts the adapter recorded. The estimator over-bills
-    cache-read input tokens slightly — see
-    ``backend/src/zebu/domain/value_objects/anthropic_pricing.py`` for
-    why we don't differentiate.
+    every token bucket the adapter recorded — fresh input, output,
+    cache-read (0.1×), and cache-creation (1.25×). Phase F-3 enables
+    prompt caching on the system blocks, so cache-read tokens dominate
+    multi-turn invocations and must be counted to keep the budget cap
+    accurate.
 
     Args:
         mode: The effective-mode at the time of the invocation. MOCK is
@@ -1322,6 +1323,8 @@ def _estimate_invocation_cost_usd(
         model=result.model,
         input_tokens=result.input_tokens,
         output_tokens=result.output_tokens,
+        cache_read_input_tokens=result.cache_read_input_tokens,
+        cache_creation_input_tokens=result.cache_creation_input_tokens,
     )
 
 

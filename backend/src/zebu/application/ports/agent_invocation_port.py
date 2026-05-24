@@ -96,16 +96,26 @@ class AgentInvocationResult:
         model: The Anthropic model identifier used for this invocation
             (e.g. ``"claude-haiku-4-5-20251001"``). Persisted in
             structured logs for cost-attribution analysis.
-        input_tokens: Total input tokens consumed across the invocation
-            (Phase L-6). For single-shot calls this is the one and only
-            ``Message.usage.input_tokens``; for multi-turn tool-use loops
-            the adapter accumulates across every turn. Includes cache-read
-            input tokens — the cost estimator doesn't differentiate.
+        input_tokens: Fresh (non-cached) input tokens consumed across the
+            invocation (Phase L-6). Maps to ``Message.usage.input_tokens``
+            — which Anthropic's SDK reports *separately* from cache-read
+            and cache-creation tokens (see those fields below). For multi-
+            turn tool-use loops the adapter accumulates across every turn.
             Defaults to ``0`` for adapters / fakes that don't surface
             token counts (the L-6 cost estimator treats 0 as "free",
             which is the right behaviour for non-billable fakes).
         output_tokens: Total output tokens produced across the invocation
             (Phase L-6). Same accumulation contract as ``input_tokens``.
+        cache_read_input_tokens: Input tokens served from prompt cache
+            across the invocation. Anthropic bills these at 0.1× the
+            standard input rate. Lives on ``Message.usage.cache_read_input_tokens``
+            and is NOT counted in ``input_tokens`` — failing to surface
+            this here means under-billing on cache-heavy workloads like
+            Phase F-3's cached system prompt.
+        cache_creation_input_tokens: Input tokens written to the prompt
+            cache (cache fill) across the invocation. Anthropic bills
+            these at 1.25× the standard input rate. Same separation
+            contract as ``cache_read_input_tokens``.
     """
 
     decision: AgentDecision
@@ -116,6 +126,8 @@ class AgentInvocationResult:
     model: str
     input_tokens: int = 0
     output_tokens: int = 0
+    cache_read_input_tokens: int = 0
+    cache_creation_input_tokens: int = 0
 
 
 class AgentInvocationPort(Protocol):

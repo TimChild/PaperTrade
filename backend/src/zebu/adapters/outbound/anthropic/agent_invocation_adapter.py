@@ -311,7 +311,13 @@ class AnthropicAgentInvocationAdapter:
         start = time.perf_counter()
         try:
             if dispatch_tool_call is None:
-                message, input_tokens, output_tokens = await self._invoke_single_shot(
+                (
+                    message,
+                    input_tokens,
+                    output_tokens,
+                    cache_read_tokens,
+                    cache_creation_tokens,
+                ) = await self._invoke_single_shot(
                     system_blocks=system_blocks,
                     messages=messages,
                     tools=tool_blocks,
@@ -319,7 +325,13 @@ class AnthropicAgentInvocationAdapter:
                     agent_temperature=agent_temperature,
                 )
             else:
-                message, input_tokens, output_tokens = await self._invoke_tool_use_loop(
+                (
+                    message,
+                    input_tokens,
+                    output_tokens,
+                    cache_read_tokens,
+                    cache_creation_tokens,
+                ) = await self._invoke_tool_use_loop(
                     system_blocks=system_blocks,
                     messages=messages,
                     tools=tool_blocks,
@@ -342,6 +354,8 @@ class AnthropicAgentInvocationAdapter:
             latency_ms=latency_ms,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            cache_read_input_tokens=cache_read_tokens,
+            cache_creation_input_tokens=cache_creation_tokens,
         )
 
     async def _invoke_single_shot(
@@ -352,7 +366,7 @@ class AnthropicAgentInvocationAdapter:
         tools: list[ToolParam],
         timeout_secs: float,
         agent_temperature: float | None,
-    ) -> tuple[Message, int, int]:
+    ) -> tuple[Message, int, int, int, int]:
         """F-3 single-shot path: force ``record_decision`` via ``tool_choice``.
 
         The model has no opportunity to call read tools — it must
@@ -375,8 +389,19 @@ class AnthropicAgentInvocationAdapter:
             agent_temperature=agent_temperature,
             tool_choice={"type": "tool", "name": "record_decision"},
         )
-        input_tokens, output_tokens = _extract_usage(message)
-        return message, input_tokens, output_tokens
+        (
+            input_tokens,
+            output_tokens,
+            cache_read_tokens,
+            cache_creation_tokens,
+        ) = _extract_usage(message)
+        return (
+            message,
+            input_tokens,
+            output_tokens,
+            cache_read_tokens,
+            cache_creation_tokens,
+        )
 
     async def _invoke_tool_use_loop(
         self,
@@ -387,7 +412,7 @@ class AnthropicAgentInvocationAdapter:
         timeout_secs: float,
         agent_temperature: float | None,
         dispatch_tool_call: ToolDispatchCallback,
-    ) -> tuple[Message, int, int]:
+    ) -> tuple[Message, int, int, int, int]:
         """Phase L-2 multi-turn tool-use loop.
 
         Iterates the Messages API conversation until the model calls
@@ -425,6 +450,8 @@ class AnthropicAgentInvocationAdapter:
         conversation: list[MessageParam] = list(messages)
         input_tokens_total: int = 0
         output_tokens_total: int = 0
+        cache_read_tokens_total: int = 0
+        cache_creation_tokens_total: int = 0
 
         for turn in range(_MAX_TOOL_USE_TURNS):
             message = await self._invoke_with_retry(
@@ -435,9 +462,13 @@ class AnthropicAgentInvocationAdapter:
                 agent_temperature=agent_temperature,
                 tool_choice={"type": "auto"},
             )
-            turn_in, turn_out = _extract_usage(message)
+            turn_in, turn_out, turn_cache_read, turn_cache_creation = _extract_usage(
+                message
+            )
             input_tokens_total += turn_in
             output_tokens_total += turn_out
+            cache_read_tokens_total += turn_cache_read
+            cache_creation_tokens_total += turn_cache_creation
 
             tool_uses: list[ToolUseBlock] = [
                 block for block in message.content if isinstance(block, ToolUseBlock)
@@ -446,7 +477,13 @@ class AnthropicAgentInvocationAdapter:
             # Terminator: the model called ``record_decision``. Return
             # immediately so :meth:`_parse_response` extracts it.
             if any(block.name == "record_decision" for block in tool_uses):
-                return message, input_tokens_total, output_tokens_total
+                return (
+                    message,
+                    input_tokens_total,
+                    output_tokens_total,
+                    cache_read_tokens_total,
+                    cache_creation_tokens_total,
+                )
 
             # No terminator AND no read-tool calls: the model returned
             # plain text. Surface as an invocation error — the parse
@@ -662,6 +699,8 @@ class AnthropicAgentInvocationAdapter:
         latency_ms: int,
         input_tokens: int,
         output_tokens: int,
+        cache_read_input_tokens: int = 0,
+        cache_creation_input_tokens: int = 0,
     ) -> AgentInvocationResult:
         """Coerce the Messages API response into :class:`AgentInvocationResult`.
 
@@ -679,6 +718,11 @@ class AnthropicAgentInvocationAdapter:
                 L-6 budget accumulator.
             output_tokens: Cross-turn-accumulated output-token total
                 (Phase L-6).
+            cache_read_input_tokens: Cross-turn-accumulated cache-read
+                input-token total. Billed at 0.1× the standard input rate.
+            cache_creation_input_tokens: Cross-turn-accumulated
+                cache-creation input-token total. Billed at 1.25× the
+                standard input rate.
 
         Raises:
             AgentResponseParseError: If no ``record_decision`` tool-use
@@ -755,6 +799,8 @@ class AnthropicAgentInvocationAdapter:
             model=self.model,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            cache_read_input_tokens=cache_read_input_tokens,
+            cache_creation_input_tokens=cache_creation_input_tokens,
         )
 
     @staticmethod
@@ -828,33 +874,38 @@ def _stable_dumps(obj: object) -> str:
     return json.dumps(obj, sort_keys=True, default=str)
 
 
-def _extract_usage(message: Message) -> tuple[int, int]:
-    """Extract (input_tokens, output_tokens) from one SDK :class:`Message`.
+def _extract_usage(message: Message) -> tuple[int, int, int, int]:
+    """Extract per-message token counts from one SDK :class:`Message`.
 
-    The Anthropic SDK's :class:`Message.usage` carries the per-message
-    token counts. We surface ``input_tokens`` + ``output_tokens`` for the
-    L-6 cost accumulator; cache-read input tokens are NOT differentiated
-    here (the cost estimator over-bills cached input slightly, which
-    errs on the side of halting earlier — see
-    ``backend/src/zebu/domain/value_objects/anthropic_pricing.py``).
+    Returns ``(input_tokens, output_tokens, cache_read_input_tokens,
+    cache_creation_input_tokens)``. The Anthropic SDK's
+    :class:`Message.usage` reports these as **separate fields** —
+    ``input_tokens`` covers fresh (non-cached) input only; cache reads
+    and cache writes are billed at different rates (0.1× and 1.25× of
+    the standard input rate). The L-6 cost estimator multiplies each
+    by its own rate, so we surface all four.
 
-    Falls back to ``(0, 0)`` on any attribute miss / TypeError so a
-    misbehaving test transport doesn't crash the invocation. The
+    Falls back to ``(0, 0, 0, 0)`` on any attribute miss / TypeError so
+    a misbehaving test transport doesn't crash the invocation. The
     accumulator treats 0 as "free", which is the right behaviour for
     non-billable fakes.
     """
     usage = getattr(message, "usage", None)
     if usage is None:
-        return 0, 0
-    try:
-        input_tokens = int(getattr(usage, "input_tokens", 0) or 0)
-    except (TypeError, ValueError):
-        input_tokens = 0
-    try:
-        output_tokens = int(getattr(usage, "output_tokens", 0) or 0)
-    except (TypeError, ValueError):
-        output_tokens = 0
-    return input_tokens, output_tokens
+        return 0, 0, 0, 0
+
+    def _read(name: str) -> int:
+        try:
+            return int(getattr(usage, name, 0) or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    return (
+        _read("input_tokens"),
+        _read("output_tokens"),
+        _read("cache_read_input_tokens"),
+        _read("cache_creation_input_tokens"),
+    )
 
 
 __all__ = [

@@ -17,11 +17,14 @@ Anthropic's public pricing page at the time of implementation
   - Claude Opus 4: $15.00 / MTok input, $75.00 / MTok output
 
 Cache-read input tokens are billed at 0.1× the standard input rate (a
-public Anthropic convention); cache-write input tokens are billed at
-~1.25× (we conservatively bill them at 1×). For L-6's budget-guardrail
-purpose we don't differentiate — the adapter sums all input tokens
-together and we apply the standard input rate. The over-estimate is
-intentional (errs on the side of halting earlier rather than later).
+public Anthropic convention); cache-creation (cache-write) input tokens
+are billed at 1.25×. The Anthropic SDK reports them as **separate
+fields** on ``Message.usage`` (``cache_read_input_tokens`` /
+``cache_creation_input_tokens``) — they are NOT bundled into
+``input_tokens``. The cost estimator differentiates them and applies the
+correct multipliers; failing to do so under-bills cache-heavy workloads
+like Phase F-3's cached system prompt by 5-25%, which would let LIVE
+backtests blow through the operator's ``agent_max_cost_usd`` cap.
 
 When the executor encounters an unknown model identifier, it falls back
 to Haiku-4.5 pricing and logs a warning. This is defensive: a model
@@ -113,17 +116,27 @@ def get_pricing(model: str) -> ModelPricing:
     return fallback
 
 
+# Anthropic-published multipliers (relative to the standard input rate)
+# for cache-related input tokens. See module docstring.
+_CACHE_READ_MULTIPLIER: Decimal = Decimal("0.1")
+_CACHE_CREATION_MULTIPLIER: Decimal = Decimal("1.25")
+
+
 def estimate_cost_usd(
     *,
     model: str,
     input_tokens: int,
     output_tokens: int,
+    cache_read_input_tokens: int = 0,
+    cache_creation_input_tokens: int = 0,
 ) -> Decimal:
     """Estimate the USD cost of one agent invocation.
 
     Multiplies token counts by the per-token rate derived from the model's
-    :class:`ModelPricing`. Returns a :class:`Decimal` so the executor's
-    accumulator preserves cent-level precision across hundreds of fires.
+    :class:`ModelPricing`, applying Anthropic's published multipliers for
+    cache-read (0.1×) and cache-creation (1.25×) input tokens. Returns a
+    :class:`Decimal` so the executor's accumulator preserves cent-level
+    precision across hundreds of fires.
 
     Negative token counts are clamped to zero — they shouldn't occur in
     practice (Anthropic always returns non-negatives), but if a misbehaving
@@ -131,10 +144,14 @@ def estimate_cost_usd(
 
     Args:
         model: Model identifier (see :func:`get_pricing`).
-        input_tokens: Input tokens consumed by the invocation. Includes
-            both fresh-prompt and cache-read tokens; we don't differentiate
-            (over-estimates the cache-read fraction; see module docstring).
+        input_tokens: Fresh (non-cached) input tokens consumed by the
+            invocation. Maps to ``Message.usage.input_tokens``; does NOT
+            include cache-read or cache-creation tokens.
         output_tokens: Output tokens produced by the invocation.
+        cache_read_input_tokens: Input tokens served from prompt cache.
+            Billed at 0.1× the standard input rate.
+        cache_creation_input_tokens: Input tokens written to cache (cache
+            fill). Billed at 1.25× the standard input rate.
 
     Returns:
         Estimated cost in USD (Decimal). Always ``>= 0``.
@@ -144,9 +161,19 @@ def estimate_cost_usd(
     # defensive against a misbehaving transport / test fake.
     input_count = Decimal(max(0, input_tokens))
     output_count = Decimal(max(0, output_tokens))
+    cache_read_count = Decimal(max(0, cache_read_input_tokens))
+    cache_creation_count = Decimal(max(0, cache_creation_input_tokens))
     input_cost = (input_count / _MTOK) * pricing.input_per_mtok
     output_cost = (output_count / _MTOK) * pricing.output_per_mtok
-    return input_cost + output_cost
+    cache_read_cost = (
+        (cache_read_count / _MTOK) * pricing.input_per_mtok * _CACHE_READ_MULTIPLIER
+    )
+    cache_creation_cost = (
+        (cache_creation_count / _MTOK)
+        * pricing.input_per_mtok
+        * _CACHE_CREATION_MULTIPLIER
+    )
+    return input_cost + output_cost + cache_read_cost + cache_creation_cost
 
 
 __all__ = [
