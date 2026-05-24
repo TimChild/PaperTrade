@@ -186,6 +186,46 @@ class TestWatchlistTzNaive:
             f"got {row.updated_at!r}"
         )
 
+    @pytest.mark.asyncio
+    async def test_update_refresh_metadata_tz_aware_input_is_stripped(
+        self, session
+    ) -> None:
+        """Tz-aware datetimes from callers (e.g. scheduler) are stripped before
+        binding to last_refresh_at / next_refresh_at.
+
+        The scheduler passes ``datetime.now(UTC)`` (tz-aware) and the columns
+        are TIMESTAMP WITHOUT TIME ZONE — asyncpg raises DataError if the
+        tzinfo survives to the bind step.  This test asserts that
+        update_refresh_metadata normalises the inputs so the same call path
+        is safe on PostgreSQL.
+        """
+        manager = WatchlistManager(session)
+        ticker = Ticker("TSLA")
+
+        await manager.add_ticker(ticker)
+        await session.commit()
+
+        # Pass tz-aware datetimes — the same shape the scheduler sends.
+        now_aware = datetime.now(UTC)
+        next_aware = now_aware + timedelta(minutes=5)
+        await manager.update_refresh_metadata(ticker, now_aware, next_aware)
+        await session.commit()
+
+        stmt = select(TickerWatchlistModel).where(TickerWatchlistModel.ticker == "TSLA")
+        result = await session.exec(stmt)
+        row = result.one()
+
+        assert row.last_refresh_at is not None
+        assert row.last_refresh_at.tzinfo is None, (
+            "last_refresh_at must be tz-naive after tz-aware input; "
+            f"got {row.last_refresh_at!r}"
+        )
+        assert row.next_refresh_at is not None
+        assert row.next_refresh_at.tzinfo is None, (
+            "next_refresh_at must be tz-naive after tz-aware input; "
+            f"got {row.next_refresh_at!r}"
+        )
+
 
 class TestWatchlistManagerRemove:
     """Tests for remove_ticker method."""

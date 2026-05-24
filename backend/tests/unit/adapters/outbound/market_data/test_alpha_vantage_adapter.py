@@ -2008,3 +2008,372 @@ class TestIncompleteHistoricalCoverage:
         # find_existing collapsed the second insert
         pending = await backfill_repo.list_pending(limit=10)
         assert len(pending) == 1
+
+
+# ---------------------------------------------------------------------------
+# Premium-feature detection and compact-retry behaviour
+# ---------------------------------------------------------------------------
+
+# The actual prod-log payload AV returned when outputsize=full was refused.
+_AV_PREMIUM_REFUSAL_MESSAGE = (
+    "Thank you for using Alpha Vantage! The outputsize=full parameter value "
+    "is a premium feature for the TIME_SERIES_DAILY endpoint. You may "
+    "subscribe to any of the premium plans at https://www.alphavantage.co/"
+    "premium/ to instantly unlock all premium features"
+)
+
+_AV_RATE_LIMIT_MESSAGE = (
+    "Thank you for using Alpha Vantage! Our standard API rate limit is "
+    "25 requests per day. Please subscribe to any of the premium plans "
+    "to remove daily rate limits."
+)
+
+_AV_NOTE_PER_MINUTE_MESSAGE = (
+    "Thank you for using Alpha Vantage! Our standard API call frequency "
+    "is 5 calls per minute and 500 calls per day. Please visit "
+    "https://www.alphavantage.co/premium/ if you would like to target "
+    "a higher API call frequency."
+)
+
+
+class TestIsPremiumRefusal:
+    """Unit tests for the ``_is_premium_refusal`` static helper.
+
+    Verifies that the premium-gate payload is distinguished from the
+    transient rate-limit / daily-cap payloads, both of which arrive
+    via the same ``Information`` / ``Note`` JSON key.
+    """
+
+    def test_premium_refusal_message_detected(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+    ) -> None:
+        """The prod-log refusal body must be detected as a premium refusal."""
+        assert alpha_vantage_adapter._is_premium_refusal(_AV_PREMIUM_REFUSAL_MESSAGE)
+
+    def test_rate_limit_daily_cap_not_detected_as_premium(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+    ) -> None:
+        """Daily-cap message (no outputsize=full) must NOT trigger premium path."""
+        assert not alpha_vantage_adapter._is_premium_refusal(_AV_RATE_LIMIT_MESSAGE)
+
+    def test_rate_limit_per_minute_not_detected_as_premium(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+    ) -> None:
+        """Per-minute note (no outputsize=full) must NOT trigger premium path."""
+        assert not alpha_vantage_adapter._is_premium_refusal(
+            _AV_NOTE_PER_MINUTE_MESSAGE
+        )
+
+    def test_case_insensitive_match(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+    ) -> None:
+        """Detection must be case-insensitive."""
+        mixed_case = "OUTPUTSIZE=FULL parameter value is a PREMIUM feature"
+        assert alpha_vantage_adapter._is_premium_refusal(mixed_case)
+
+    def test_empty_string_not_detected(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+    ) -> None:
+        """Empty string must not raise and must return False."""
+        assert not alpha_vantage_adapter._is_premium_refusal("")
+
+    def test_premium_without_outputsize_not_detected(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+    ) -> None:
+        """'premium' alone (without 'outputsize=full') is not a refusal."""
+        assert not alpha_vantage_adapter._is_premium_refusal(
+            "subscribe to our premium plans"
+        )
+
+
+def _compact_api_response(dates: list[str]) -> dict[str, object]:
+    """Build a TIME_SERIES_DAILY response payload for the given list of dates."""
+    ts: dict[str, object] = {}
+    for d in dates:
+        ts[d] = {
+            "1. open": "150.00",
+            "2. high": "152.00",
+            "3. low": "148.00",
+            "4. close": "151.00",
+            "5. volume": "1000000",
+        }
+    return {"Meta Data": {"2. Symbol": "AAPL"}, "Time Series (Daily)": ts}
+
+
+class TestAvPremiumRefusalRetry:
+    """Adapter retries with compact when AV refuses outputsize=full.
+
+    Prod-log context (2026-05-24):
+        HTTP 200 with Information body:
+        "The outputsize=full parameter value is a premium feature for the
+        TIME_SERIES_DAILY endpoint…"
+        → adapter logged "returning partial cached data" and returned
+          stale cache silently — Catch up showed "Caught up" with only
+          ~100 days.
+
+    Desired behaviour after this fix:
+        1. Detect premium refusal.
+        2. Retry with compact (succeeds on free tier).
+        3. Let ``_raise_if_incomplete_coverage`` surface
+           IncompleteHistoricalDataError when the requested range
+           exceeds what compact can provide (~100 days).
+    """
+
+    @staticmethod
+    def _stub_remaining_tokens(rate_limiter: MagicMock) -> None:
+        rate_limiter.get_remaining_tokens = AsyncMock(
+            return_value={"minute": 5, "day": 500}
+        )
+
+    async def test_full_refusal_retries_with_compact(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_http_client: MagicMock,
+        mock_rate_limiter: MagicMock,
+    ) -> None:
+        """When outputsize=full is refused, adapter retries with compact.
+
+        The HTTP client is called twice: first with outputsize=full (returns
+        the premium-refusal Information body), then with outputsize=compact
+        (returns real price data).
+        """
+        self._stub_remaining_tokens(mock_rate_limiter)
+
+        # Dates within the last 100 trading days for the compact response.
+        compact_dates = [
+            "2026-05-01",
+            "2026-05-02",
+            "2026-05-05",
+        ]
+
+        refusal_response = MagicMock()
+        refusal_response.status_code = 200
+        refusal_response.json.return_value = {
+            "Information": _AV_PREMIUM_REFUSAL_MESSAGE
+        }
+
+        compact_response = MagicMock()
+        compact_response.status_code = 200
+        compact_response.json.return_value = _compact_api_response(compact_dates)
+
+        # First call → refusal; second call → compact data.
+        mock_http_client.get = AsyncMock(
+            side_effect=[refusal_response, compact_response]
+        )
+
+        result = await alpha_vantage_adapter._fetch_daily_history_from_api(
+            Ticker("AAPL"), outputsize="full"
+        )
+
+        # Compact data was returned.
+        assert len(result) == len(compact_dates)
+        assert result[0].source == "alpha_vantage"
+
+        # Two HTTP calls were made (full → compact).
+        assert mock_http_client.get.await_count == 2
+        first_call_params = mock_http_client.get.await_args_list[0].kwargs["params"]
+        assert first_call_params["outputsize"] == "full"
+        second_call_params = mock_http_client.get.await_args_list[1].kwargs["params"]
+        assert second_call_params["outputsize"] == "compact"
+
+    async def test_compact_request_not_retried_on_rate_limit(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_http_client: MagicMock,
+        mock_rate_limiter: MagicMock,
+    ) -> None:
+        """A compact request that returns a daily-cap body raises
+        MarketDataUnavailableError (not a premium-refusal, no retry).
+        """
+        self._stub_remaining_tokens(mock_rate_limiter)
+
+        # Rate-limit body — does NOT contain "outputsize=full", so
+        # _is_premium_refusal returns False.
+        response = MagicMock()
+        response.status_code = 200
+        response.json.return_value = {"Information": _AV_RATE_LIMIT_MESSAGE}
+
+        mock_http_client.get = AsyncMock(return_value=response)
+
+        with pytest.raises(MarketDataUnavailableError):
+            await alpha_vantage_adapter._fetch_daily_history_from_api(
+                Ticker("AAPL"), outputsize="compact"
+            )
+
+    async def test_long_range_request_raises_incomplete_after_compact_retry(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_http_client: MagicMock,
+        mock_price_cache: MagicMock,
+        mock_price_repository: MagicMock,
+        mock_rate_limiter: MagicMock,
+    ) -> None:
+        """Catch up requesting 11 years surfaces IncompleteHistoricalDataError.
+
+        Flow:
+          1. get_price_history called for 2015-01-01 → today (>100 days).
+          2. Cache + DB both miss.
+          3. _select_daily_history_outputsize returns "full".
+          4. AV refuses full → adapter retries with compact.
+          5. Compact returns only the last 3 days.
+          6. _raise_if_incomplete_coverage sees massive gap → raises
+             IncompleteHistoricalDataError.
+          7. That exception propagates out of get_price_history (it is NOT
+             a MarketDataUnavailableError, so the stale-cache fallback is
+             skipped).
+        """
+        from datetime import date as _d
+
+        self._stub_remaining_tokens(mock_rate_limiter)
+
+        ticker = Ticker("AAPL")
+        # 11-year backfill window — clearly > 100 days.
+        start = datetime(2015, 1, 2, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 5, 23, 23, 59, 59, tzinfo=UTC)
+
+        # No cache, no DB data.
+        mock_price_cache.get_history = AsyncMock(return_value=None)
+        mock_price_repository.get_price_history = AsyncMock(return_value=[])
+
+        refusal_response = MagicMock()
+        refusal_response.status_code = 200
+        refusal_response.json.return_value = {
+            "Information": _AV_PREMIUM_REFUSAL_MESSAGE
+        }
+
+        # Compact returns only 3 recent days — nowhere near 11 years.
+        compact_response = MagicMock()
+        compact_response.status_code = 200
+        compact_response.json.return_value = _compact_api_response(
+            ["2026-05-21", "2026-05-22", "2026-05-23"]
+        )
+
+        mock_http_client.get = AsyncMock(
+            side_effect=[refusal_response, compact_response]
+        )
+
+        with pytest.raises(IncompleteHistoricalDataError) as exc_info:
+            await alpha_vantage_adapter.get_price_history(ticker, start, end, "1day")
+
+        err = exc_info.value
+        assert err.ticker == ticker
+        # Requested range starts 2015-01-02, but data only starts 2026-05-21.
+        assert err.requested_range[0] == _d(2015, 1, 2)
+        assert err.missing_days_count > 0
+
+    async def test_91_day_request_succeeds_after_compact_retry(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_http_client: MagicMock,
+        mock_price_cache: MagicMock,
+        mock_price_repository: MagicMock,
+        mock_rate_limiter: MagicMock,
+    ) -> None:
+        """A ~91-day request (just over the compact threshold) that hits the
+        premium-refusal fallback succeeds when AV's compact response fully
+        covers the window.
+
+        ``_select_daily_history_outputsize`` returns ``"full"`` for ranges
+        > 90 days, so the first API call uses ``outputsize=full``.  AV
+        refuses with the premium payload.  The adapter retries with compact.
+        Compact returns data spanning the requested window, so
+        ``_raise_if_incomplete_coverage`` stays silent and the caller
+        receives the data.
+        """
+        self._stub_remaining_tokens(mock_rate_limiter)
+
+        ticker = Ticker("AAPL")
+        # 91-day window → _select_daily_history_outputsize returns "full".
+        start = datetime(2026, 2, 20, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 5, 22, 23, 59, 59, tzinfo=UTC)
+
+        mock_price_cache.get_history = AsyncMock(return_value=None)
+        mock_price_repository.get_price_history = AsyncMock(return_value=[])
+
+        refusal_response = MagicMock()
+        refusal_response.status_code = 200
+        refusal_response.json.return_value = {
+            "Information": _AV_PREMIUM_REFUSAL_MESSAGE
+        }
+
+        # Build a compact response that fully spans the requested range.
+        compact_response = MagicMock()
+        compact_response.status_code = 200
+        compact_response.json.return_value = _compact_api_response(
+            [
+                "2026-02-20",
+                "2026-03-15",
+                "2026-04-01",
+                "2026-04-15",
+                "2026-05-01",
+                "2026-05-15",
+                "2026-05-22",
+            ]
+        )
+
+        mock_http_client.get = AsyncMock(
+            side_effect=[refusal_response, compact_response]
+        )
+
+        result = await alpha_vantage_adapter.get_price_history(
+            ticker, start, end, "1day"
+        )
+
+        assert len(result) == 7
+        assert all(p.source == "alpha_vantage" for p in result)
+        # Two calls were made: full (refused) → compact (succeeded).
+        assert mock_http_client.get.await_count == 2
+
+    async def test_stale_cache_fallback_not_triggered_for_incomplete_data_error(
+        self,
+        alpha_vantage_adapter: AlphaVantageAdapter,
+        mock_http_client: MagicMock,
+        mock_price_cache: MagicMock,
+        mock_price_repository: MagicMock,
+        mock_rate_limiter: MagicMock,
+    ) -> None:
+        """IncompleteHistoricalDataError propagates through the stale-cache handler.
+
+        The except-MarketDataUnavailableError block in get_price_history must
+        NOT intercept IncompleteHistoricalDataError (they're sibling classes
+        under MarketDataError). This test verifies the error contract that
+        makes Catch up show FAILED instead of silently returning stale data.
+        """
+        self._stub_remaining_tokens(mock_rate_limiter)
+
+        ticker = Ticker("AAPL")
+        start = datetime(2015, 1, 2, 0, 0, 0, tzinfo=UTC)
+        end = datetime(2026, 5, 23, 23, 59, 59, tzinfo=UTC)
+
+        # Stale cached data exists in the cache — should NOT be returned.
+        stale_price = create_price_point(
+            ticker, datetime(2026, 1, 15, 21, 0, 0, tzinfo=UTC)
+        )
+        mock_price_cache.get_history = AsyncMock(return_value=[stale_price])
+        mock_price_repository.get_price_history = AsyncMock(return_value=[])
+
+        refusal_response = MagicMock()
+        refusal_response.status_code = 200
+        refusal_response.json.return_value = {
+            "Information": _AV_PREMIUM_REFUSAL_MESSAGE
+        }
+
+        compact_response = MagicMock()
+        compact_response.status_code = 200
+        compact_response.json.return_value = _compact_api_response(
+            ["2026-05-21", "2026-05-22", "2026-05-23"]
+        )
+
+        mock_http_client.get = AsyncMock(
+            side_effect=[refusal_response, compact_response]
+        )
+
+        # Must raise — NOT silently return stale_price.
+        with pytest.raises(IncompleteHistoricalDataError):
+            await alpha_vantage_adapter.get_price_history(ticker, start, end, "1day")

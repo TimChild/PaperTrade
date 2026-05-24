@@ -187,8 +187,8 @@ class WatchlistManager:
             .where(TickerWatchlistModel.ticker == ticker.symbol)  # type: ignore[arg-type]  # SQLModel field comparison produces valid SQLAlchemy expression
             .where(TickerWatchlistModel.is_active == True)  # type: ignore[arg-type]  # noqa: E712  # SQLAlchemy requires == True for bool columns
             .values(
-                last_refresh_at=last_refresh,
-                next_refresh_at=next_refresh,
+                last_refresh_at=last_refresh.replace(tzinfo=None),
+                next_refresh_at=next_refresh.replace(tzinfo=None),
                 updated_at=datetime.now(UTC).replace(tzinfo=None),
             )
         )

@@ -810,7 +810,6 @@ class TestBackfillCommitBeforeDrain:
         test_engine: AsyncEngine,
         pinned_epoch: str,
         no_immediate_drain: None,
-        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """After POST /backfill returns 201 the task row is readable from a new
         session — proving the handler committed before returning.
