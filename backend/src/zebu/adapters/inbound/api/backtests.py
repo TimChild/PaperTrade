@@ -77,6 +77,7 @@ from zebu.application.queries.get_portfolio_balance import (
 from zebu.application.services.backtest_executor import BacktestExecutor
 from zebu.application.services.historical_data_preparer import HistoricalDataPreparer
 from zebu.application.services.snapshot_job import SnapshotJobService
+from zebu.domain.entities.backtest_agent_invocation import BacktestAgentInvocation
 from zebu.domain.entities.backtest_run import BacktestRun
 from zebu.domain.exceptions import (
     AgentInvocationError,
@@ -175,6 +176,37 @@ class BacktestRunResponse(BaseModel):
     agent_invocation_mode: BacktestAgentInvocationMode
 
 
+class BacktestAgentInvocationResponse(BaseModel):
+    """Wire shape for a :class:`BacktestAgentInvocation` audit row.
+
+    Phase L-4 (Task #220). Returned by
+    ``GET /api/v1/backtests/{id}/agent-invocations``. Mirrors the
+    domain entity, decoding the enums to their wire strings and
+    rendering timestamps as ISO-8601 strings.
+
+    ``trigger_id`` is nullable because the parent trigger may have been
+    soft-deleted after the backtest ran (``ON DELETE SET NULL`` on the
+    FK). The UI renders the recovered-orphan state as
+    "trigger deleted".
+    """
+
+    id: UUID
+    backtest_run_id: UUID
+    simulated_date: str
+    trigger_id: UUID | None
+    invocation_mode: BacktestAgentInvocationMode
+    agent_decision: str | None
+    rationale: str
+    decision_payload: dict[str, object] | None
+    decision_executed: bool
+    simulated_trade_id: UUID | None
+    agent_invocation_id: str | None
+    latency_ms: int
+    model: str
+    condition_evaluation_data: dict[str, object]
+    created_at: str
+
+
 def _to_backtest_response(run: BacktestRun) -> BacktestRunResponse:
     return BacktestRunResponse(
         id=run.id,
@@ -200,6 +232,33 @@ def _to_backtest_response(run: BacktestRun) -> BacktestRunResponse:
         else None,
         total_trades=run.total_trades,
         agent_invocation_mode=run.agent_invocation_mode,
+    )
+
+
+def _to_agent_invocation_response(
+    inv: BacktestAgentInvocation,
+) -> BacktestAgentInvocationResponse:
+    """Convert a domain :class:`BacktestAgentInvocation` to its wire response."""
+    return BacktestAgentInvocationResponse(
+        id=inv.id,
+        backtest_run_id=inv.backtest_run_id,
+        simulated_date=inv.simulated_date.isoformat(),
+        trigger_id=inv.trigger_id,
+        invocation_mode=inv.invocation_mode,
+        agent_decision=(
+            inv.agent_decision.value if inv.agent_decision is not None else None
+        ),
+        rationale=inv.rationale,
+        decision_payload=(
+            dict(inv.decision_payload) if inv.decision_payload is not None else None
+        ),
+        decision_executed=inv.decision_executed,
+        simulated_trade_id=inv.simulated_trade_id,
+        agent_invocation_id=inv.agent_invocation_id,
+        latency_ms=inv.latency_ms,
+        model=inv.model,
+        condition_evaluation_data=dict(inv.condition_evaluation_data),
+        created_at=inv.created_at.isoformat(),
     )
 
 
@@ -533,3 +592,71 @@ async def delete_backtest(
     await snapshot_repo.delete_by_portfolio(run.portfolio_id)
     await portfolio_repo.delete(run.portfolio_id)
     await backtest_repo.delete(backtest_id)
+
+
+@router.get(
+    "/{backtest_id}/agent-invocations",
+    response_model=PaginatedResponse[BacktestAgentInvocationResponse],
+)
+async def list_agent_invocations_for_backtest(
+    backtest_id: UUID,
+    current_user: CurrentUserDep,
+    session: SessionDep,
+    limit: int = Query(
+        default=DEFAULT_PAGE_LIMIT,
+        ge=1,
+        le=MAX_PAGE_LIMIT,
+        description=(
+            "Maximum number of agent invocation records to return (1-100, default 20)."
+        ),
+    ),
+    offset: int = Query(
+        default=0,
+        ge=0,
+        description=(
+            "Number of agent invocation records to skip for pagination (default 0)."
+        ),
+    ),
+) -> PaginatedResponse[BacktestAgentInvocationResponse]:
+    """List the backtest's agent-invocation audit rows, chronologically.
+
+    Phase L-4 (Task #220) — read endpoint for the per-run invocation log
+    rendered on the backtest result page. Records are ordered
+    chronologically in simulation time (``simulated_date`` ascending,
+    then ``created_at`` ascending), matching the repository contract.
+
+    Owner-scoped: 403 when the caller doesn't own the backtest. The
+    invocation repository itself is owner-agnostic — the parent-run
+    ownership check is the boundary.
+
+    For ``NONE``-mode runs (which never write audit rows) the response
+    is a well-formed empty page (``total=0``); the UI uses the
+    parent-run ``agent_invocation_mode`` to decide whether to render
+    the section at all.
+    """
+    backtest_repo = SQLModelBacktestRunRepository(session)
+    invocation_repo = SQLModelBacktestAgentInvocationRepository(session)
+
+    run = await backtest_repo.get(backtest_id)
+    if run is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Backtest run not found: {backtest_id}",
+        )
+    if run.user_id != current_user:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to view this backtest's invocations",
+        )
+
+    invocations = await invocation_repo.list_for_backtest_run(
+        backtest_id, limit=limit, offset=offset
+    )
+    total = await invocation_repo.count_for_backtest_run(backtest_id)
+    items = [_to_agent_invocation_response(inv) for inv in invocations]
+    return build_paginated_response(
+        items=items,
+        total=total,
+        limit=limit,
+        offset=offset,
+    )

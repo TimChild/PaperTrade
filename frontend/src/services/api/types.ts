@@ -200,6 +200,23 @@ export interface CreateStrategyRequest {
 // Backtest types
 export type BacktestStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED'
 
+/**
+ * Per-run agent-invocation mode (Phase L-1, Task #217).
+ *
+ * Mirrors `BacktestAgentInvocationMode` in
+ * `backend/src/zebu/domain/value_objects/backtest_agent_invocation_mode.py`.
+ *
+ * - `none`  — Existing pre-Phase-L behavior. No simulated triggers,
+ *             no agent invocations, no audit rows. Default.
+ * - `mock`  — Evaluates simulated triggers but the platform's agent port
+ *             returns a deterministic no-op (HOLD). Exercises the
+ *             pipeline end-to-end without paying for real Anthropic calls.
+ * - `live`  — Real Anthropic calls via the L-2 backtest-safe wrapper.
+ *             Costs real money; the agent sees only the simulated-date-scoped
+ *             tool surface.
+ */
+export type BacktestAgentInvocationMode = 'none' | 'mock' | 'live'
+
 export interface BacktestRunResponse {
   id: string
   user_id: string
@@ -217,6 +234,12 @@ export interface BacktestRunResponse {
   max_drawdown_pct: string | null
   annualized_return_pct: string | null
   total_trades: number | null
+  /**
+   * Phase L-1 (Task #217). Reads as `"none"` for all pre-Phase-L
+   * backtest rows; older API servers may omit the field entirely, so
+   * downstream consumers must treat `undefined` as equivalent to `"none"`.
+   */
+  agent_invocation_mode?: BacktestAgentInvocationMode
 }
 
 export interface RunBacktestRequest {
@@ -225,6 +248,57 @@ export interface RunBacktestRequest {
   start_date: string // YYYY-MM-DD
   end_date: string
   initial_cash: number
+  /**
+   * Phase L-1 (Task #217). When omitted the backend defaults to
+   * `"none"` — existing callers continue to behave exactly as today.
+   */
+  agent_invocation_mode?: BacktestAgentInvocationMode
+}
+
+/**
+ * Wire shape for one `BacktestAgentInvocation` audit row (Phase L-4,
+ * Task #220). Returned by
+ * `GET /api/v1/backtests/{id}/agent-invocations`.
+ *
+ * Mirrors `BacktestAgentInvocationResponse` in
+ * `backend/src/zebu/adapters/inbound/api/backtests.py`.
+ *
+ * `trigger_id` is nullable to reflect the `ON DELETE SET NULL` FK —
+ * if the parent trigger was soft-deleted after the backtest ran, the
+ * audit row preserves the rationale but loses the back-reference. The
+ * UI renders that as "trigger deleted".
+ *
+ * `agent_decision` is a wire-string from the backend's `AgentDecision`
+ * StrEnum (see {@link AgentDecision}). `null` only for MOCK-mode rows
+ * where the adapter chose not to write a synthetic decision (the
+ * entity is permissive: it accepts either `null` or `HOLD`).
+ *
+ * `decision_payload` is the agent's raw decision payload (e.g.
+ * `{ticker, quantity, notes}` for BUY). Opaque to the UI for now —
+ * a future iteration may render a per-decision detail card.
+ */
+export interface BacktestAgentInvocationResponse {
+  id: string
+  backtest_run_id: string
+  simulated_date: string // YYYY-MM-DD
+  trigger_id: string | null
+  invocation_mode: BacktestAgentInvocationMode
+  agent_decision: AgentDecision | null
+  rationale: string
+  decision_payload: Record<string, unknown> | null
+  decision_executed: boolean
+  simulated_trade_id: string | null
+  agent_invocation_id: string | null
+  latency_ms: number
+  model: string
+  condition_evaluation_data: Record<string, unknown>
+  created_at: string // ISO 8601 UTC
+}
+
+/** Pagination params for the per-run invocation listing endpoint. */
+export interface ListBacktestAgentInvocationsParams {
+  limit?: number
+  offset?: number
 }
 
 // Strategy activation types
@@ -649,24 +723,35 @@ export type TriggerStatus =
 
 /**
  * Discrete outcomes the woken agent (or the executor's downgrade path) can
- * record on a `TriggerFireRecord`.
+ * record on a `TriggerFireRecord` or `BacktestAgentInvocation`.
  *
  * Mirrors `AgentDecision` in
- * `backend/src/zebu/domain/value_objects/agent_decision.py`.
+ * `backend/src/zebu/domain/value_objects/agent_decision.py`. The wire
+ * strings are the StrEnum's `.value`, so they match the Python literals
+ * exactly (`MODIFY_STRATEGY`, not `MODIFY`).
  *
- * - `BUY` / `SELL` — trade was executed (see `resulting_trade_id`).
+ * - `BUY` / `SELL` — trade was executed (see `resulting_trade_id` /
+ *   `simulated_trade_id`).
  * - `HOLD` — no action (the most common no-op outcome).
- * - `MODIFY` — strategy parameters were updated (`resulting_modify_payload`).
+ * - `MODIFY_STRATEGY` — agent proposed a parameter override. In live
+ *   triggers, the override may have been applied
+ *   (`resulting_modify_payload`); in backtests the row is recorded
+ *   but the strategy is not mutated (L-3 design).
  * - `NEEDS_HUMAN` — exploration task filed for follow-up
- *   (`resulting_exploration_task_id`).
+ *   (`resulting_exploration_task_id`); in backtests, no task is filed.
  * - `INVOCATION_FAILED` — system-recorded when the agent invocation errored;
- *   the fire is still in the audit log so the failure is visible.
+ *   the row is still in the audit log so the failure is visible.
+ *
+ * Older API servers occasionally surfaced the legacy `"MODIFY"` token;
+ * the union accepts both for forwards-compat. Consumer code should
+ * treat them as equivalent.
  */
 export type AgentDecision =
   | 'BUY'
   | 'SELL'
   | 'HOLD'
-  | 'MODIFY'
+  | 'MODIFY_STRATEGY'
+  | 'MODIFY' // legacy alias — older servers
   | 'NEEDS_HUMAN'
   | 'INVOCATION_FAILED'
 

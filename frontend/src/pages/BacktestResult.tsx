@@ -7,6 +7,7 @@
  *   - Hairline rule.
  *   - Performance metrics grid.
  *   - Performance chart, sectioned with its own SectionHeader.
+ *   - Agent invocations log (Phase L-4) — only when agent_invocation_mode != 'none'.
  *   - Failed-state error block uses the muted loss palette.
  */
 import { Link, useParams } from 'react-router-dom'
@@ -18,6 +19,7 @@ import {
   BacktestMetrics,
   BacktestStatusBadge,
 } from '@/components/features/backtests/BacktestMetrics'
+import { AgentInvocationsSection } from '@/components/features/backtests/AgentInvocationsSection'
 import { PerformanceChart } from '@/components/features/analytics/PerformanceChart'
 import { useBacktest } from '@/hooks/useBacktests'
 import { formatDate } from '@/utils/formatters'
@@ -143,6 +145,18 @@ export function BacktestResult(): React.JSX.Element {
         />
         <PerformanceChart portfolioId={backtest.portfolio_id} />
       </section>
+
+      {/* Agent invocations — Phase L-4 (Task #220). Only rendered for
+          runs with `agent_invocation_mode !== 'none'`. The section
+          renders its own loading / empty / error states. Older API
+          servers may omit the field; we treat undefined as `'none'`. */}
+      {backtest.agent_invocation_mode !== undefined &&
+        backtest.agent_invocation_mode !== 'none' && (
+          <AgentInvocationsSection
+            backtestId={backtest.id}
+            agentInvocationMode={backtest.agent_invocation_mode}
+          />
+        )}
     </PageFrame>
   )
 }

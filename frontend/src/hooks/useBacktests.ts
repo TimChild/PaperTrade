@@ -2,11 +2,19 @@
  * React Query hooks for backtests
  */
 import { useCallback, useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  type UseQueryResult,
+} from '@tanstack/react-query'
 import { AxiosError } from 'axios'
 import { backtestsApi } from '@/services/api/backtests'
 import type {
+  BacktestAgentInvocationResponse,
   BacktestRunResponse,
+  ListBacktestAgentInvocationsParams,
+  PaginatedResponse,
   RunBacktestRequest,
 } from '@/services/api/types'
 
@@ -24,6 +32,30 @@ export function useBacktest(id: string) {
     queryFn: () => backtestsApi.getById(id),
     staleTime: 30_000,
     enabled: Boolean(id),
+  })
+}
+
+/**
+ * Phase L-4 (Task #220) — paginated agent-invocation log for one
+ * backtest run. Backed by
+ * `GET /api/v1/backtests/{id}/agent-invocations`.
+ *
+ * Disabled until both `backtestId` and `enabled` resolve truthy so
+ * callers can gate the fetch on the parent run's `agent_invocation_mode`
+ * — a NONE-mode run has no rows to render and the result page skips
+ * the section entirely.
+ */
+export function useBacktestAgentInvocations(
+  backtestId: string,
+  params?: ListBacktestAgentInvocationsParams,
+  options?: { enabled?: boolean }
+): UseQueryResult<PaginatedResponse<BacktestAgentInvocationResponse>> {
+  const enabled = (options?.enabled ?? true) && Boolean(backtestId)
+  return useQuery<PaginatedResponse<BacktestAgentInvocationResponse>>({
+    queryKey: ['backtests', backtestId, 'agent-invocations', params],
+    queryFn: () => backtestsApi.listAgentInvocations(backtestId, params),
+    staleTime: 30_000,
+    enabled,
   })
 }
 

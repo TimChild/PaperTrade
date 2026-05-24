@@ -3,9 +3,11 @@
  */
 import { apiClient } from './client'
 import type {
+  BacktestAgentInvocationResponse,
   BacktestRunResponse,
-  RunBacktestRequest,
+  ListBacktestAgentInvocationsParams,
   PaginatedResponse,
+  RunBacktestRequest,
 } from './types'
 
 export interface ListBacktestsParams {
@@ -40,5 +42,24 @@ export const backtestsApi = {
 
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/backtests/${id}`)
+  },
+
+  /**
+   * List the agent-invocation audit rows for one backtest run (Phase
+   * L-4, Task #220). Chronological in simulation time. Backed by
+   * `GET /api/v1/backtests/{id}/agent-invocations`.
+   *
+   * Used by the result-page "Agent invocations" section. The UI calls
+   * this only when the parent run's `agent_invocation_mode` is not
+   * `"none"` — a NONE-mode run will always return an empty page.
+   */
+  listAgentInvocations: async (
+    backtestId: string,
+    params?: ListBacktestAgentInvocationsParams
+  ): Promise<PaginatedResponse<BacktestAgentInvocationResponse>> => {
+    const response = await apiClient.get<
+      PaginatedResponse<BacktestAgentInvocationResponse>
+    >(`/backtests/${backtestId}/agent-invocations`, { params })
+    return response.data
   },
 }
