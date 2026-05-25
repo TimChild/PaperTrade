@@ -7,7 +7,7 @@ tickers and finding stale tickers that need updates.
 
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import update
+from sqlalchemy import delete, update
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -112,6 +112,29 @@ class WatchlistManager:
         )
         await self.session.exec(stmt)
         await self.session.flush()
+
+    async def hard_delete_ticker(self, ticker: Ticker) -> int:
+        """Hard-delete all ``ticker_watchlist`` rows for ``ticker``.
+
+        Unlike :meth:`remove_ticker` (soft-delete via ``is_active=False``),
+        this method physically removes every row — active or inactive — for
+        the given symbol.  Used by the admin "delete ticker" endpoint
+        (Task #221) when the ticker is to be completely expunged.
+
+        Args:
+            ticker: The ticker whose watchlist rows to purge.
+
+        Returns:
+            Number of rows deleted (0 if the ticker was not in the
+            watchlist at all).
+        """
+        stmt = delete(TickerWatchlistModel).where(
+            TickerWatchlistModel.ticker == ticker.symbol  # type: ignore[arg-type]
+        )
+        result = await self.session.exec(stmt)  # type: ignore[arg-type]
+        row_count: int = result.rowcount  # type: ignore[attr-defined]
+        await self.session.flush()
+        return row_count
 
     async def get_stale_tickers(self, limit: int = 10) -> list[Ticker]:
         """Get tickers that need refresh (past next_refresh_at).

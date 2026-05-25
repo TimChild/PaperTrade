@@ -35,6 +35,8 @@ from zebu.adapters.inbound.api.dependencies import AdminUserDep, HistoryEpochDep
 from zebu.adapters.outbound.database.backfill_task_repository import (
     SQLModelBackfillTaskRepository,
 )
+from zebu.adapters.outbound.repositories.price_repository import PriceRepository
+from zebu.adapters.outbound.repositories.watchlist_manager import WatchlistManager
 from zebu.application.queries.data_coverage import (
     DataCoverageQuery,
     DataCoverageQueryHandler,
@@ -79,6 +81,13 @@ class BackfillStatusPayload(BaseModel):
     )
 
 
+class GapRangePayload(BaseModel):
+    """Inclusive date range with no daily-bar coverage (Task #221)."""
+
+    start: str = Field(description="ISO 8601 date of the first uncovered trading day.")
+    end: str = Field(description="ISO 8601 date of the last uncovered trading day.")
+
+
 class TickerCoverageEntry(BaseModel):
     """Per-ticker entry in the data-coverage response."""
 
@@ -109,6 +118,15 @@ class TickerCoverageEntry(BaseModel):
             "``[target_epoch, today_utc()]`` that have NO daily bar. "
             "Always ``>= 0``. Moves to 0 once a successful catch-up "
             "backfill has landed every expected trading day."
+        ),
+    )
+    gap_ranges: list[GapRangePayload] = Field(
+        description=(
+            "Contiguous ranges of uncovered trading days, ordered "
+            "chronologically. Uses trading-day adjacency — Friday and "
+            "Monday are adjacent even though they are 3 calendar days "
+            "apart, so a gap spanning a weekend is one entry, not two. "
+            "Empty list when ``gap_days_count == 0``."
         ),
     )
     target_epoch: str = Field(
@@ -241,6 +259,13 @@ async def admin_data_coverage(
             if row.last_refresh is not None
             else None,
             gap_days_count=row.gap_days_count,
+            gap_ranges=[
+                GapRangePayload(
+                    start=gr.start.isoformat(),
+                    end=gr.end.isoformat(),
+                )
+                for gr in row.gap_ranges
+            ],
             target_epoch=row.target_epoch.isoformat(),
             is_active=row.is_active,
             is_watchlisted=row.is_watchlisted,
@@ -405,6 +430,86 @@ async def admin_data_coverage_backfill(
         start_date=start_date.isoformat(),
         end_date=end_date.isoformat(),
     )
+
+
+@router.delete(
+    "/tickers/{ticker}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def admin_data_coverage_delete_ticker(
+    ticker: str,
+    admin_user_id: AdminUserDep,
+    session: SessionDep,
+) -> None:
+    """Hard-delete a ticker and all its associated data.
+
+    Cascade:
+
+    1. **``ticker_watchlist``** — every row for the symbol is physically
+       deleted (not soft-deleted). Unlike ``DELETE /admin/watchlist/{ticker}``,
+       this removes the row even when ``is_active=False``.
+    2. **``price_history``** — every row for the symbol, across all
+       intervals and sources.
+    3. **Non-terminal ``backfill_task`` rows** — marked ``FAILED`` with
+       reason "ticker deleted by admin" so the scheduler stops picking
+       them up.
+
+    Returns 204 on success. Returns 404 when the ticker is not present
+    anywhere (no watchlist row AND no price-history rows) — this is the
+    idempotency contract: a second DELETE on an already-removed ticker
+    yields 404 rather than a silent 204.
+
+    Auth: Clerk admin only.
+
+    Args:
+        ticker: Ticker symbol to purge (e.g. "AAPL").
+
+    Raises:
+        HTTPException 400: On invalid ticker format.
+        HTTPException 404: When the ticker has no rows in either table.
+    """
+    ticker_vo = Ticker(ticker)
+
+    watchlist_manager = WatchlistManager(session)
+    price_repo = PriceRepository(session)
+    backfill_repo = SQLModelBackfillTaskRepository(session)
+
+    # Check existence BEFORE deleting so we can return 404 on a no-op.
+    # We query both tables: a ticker that was unpinned from the watchlist
+    # (is_active=False row remains) still has a presence, as does a
+    # ticker that has price_history rows but was never watchlisted.
+    watchlist_rows = await watchlist_manager.hard_delete_ticker(ticker_vo)
+    price_rows = await price_repo.delete_all_for_ticker(ticker_vo)
+
+    if watchlist_rows == 0 and price_rows == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=(
+                f"Ticker {ticker_vo.symbol!r} has no data to delete "
+                "(not in watchlist and no price-history rows)."
+            ),
+        )
+
+    # Mark non-terminal backfill tasks failed so the scheduler stops
+    # picking them up. Terminal tasks (SUCCEEDED / FAILED) are left as-is
+    # — they form part of the audit history.
+    cancelled = await backfill_repo.cancel_non_terminal_for_ticker(
+        ticker_vo,
+        reason="ticker deleted by admin",
+    )
+
+    await session.commit()
+
+    logger.info(
+        "admin_data_coverage_ticker_deleted",
+        admin_user_id=str(admin_user_id),
+        ticker=ticker_vo.symbol,
+        watchlist_rows_deleted=watchlist_rows,
+        price_history_rows_deleted=price_rows,
+        backfill_tasks_cancelled=cancelled,
+    )
+
+    return None
 
 
 # ---------------------------------------------------------------------------

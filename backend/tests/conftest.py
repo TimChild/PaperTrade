@@ -120,6 +120,7 @@ def client(test_engine: AsyncEngine) -> TestClient:
     from zebu.adapters.inbound.api.dependencies import (
         get_auth_port,
         get_market_data,
+        get_ticker_validator,
     )
     from zebu.adapters.outbound.market_data.in_memory_adapter import (
         InMemoryMarketDataAdapter,
@@ -333,12 +334,25 @@ def client(test_engine: AsyncEngine) -> TestClient:
             hasher=_test_hasher,
         )
 
+    from zebu.adapters.inbound.api.dependencies import _AlwaysRecognisedValidator
+
+    def get_test_ticker_validator() -> _AlwaysRecognisedValidator:
+        """Always-pass ticker validator for tests.
+
+        Integration tests that want to exercise the rejection path should
+        override this dependency directly via ``app.dependency_overrides``.
+        The real AV validator is not called in tests — it requires a paid
+        API key and makes real HTTP calls.
+        """
+        return _AlwaysRecognisedValidator()
+
     # Override dependencies
     app.dependency_overrides[get_session] = get_test_session
     app.dependency_overrides[get_market_data] = get_test_market_data
     app.dependency_overrides[get_auth_port] = get_test_auth_port
     app.dependency_overrides[get_api_key_repository] = get_test_api_key_repository
     app.dependency_overrides[get_api_key_auth_adapter] = get_test_api_key_auth_adapter
+    app.dependency_overrides[get_ticker_validator] = get_test_ticker_validator
 
     with TestClient(app) as test_client:
         yield test_client

@@ -40,8 +40,11 @@ from zebu.adapters.outbound.models.ticker_watchlist import TickerWatchlistModel
 from zebu.application.queries.data_coverage import (
     DataCoverageQuery,
     DataCoverageQueryHandler,
+    GapRange,
+    _collapse_gap_ranges,
 )
 from zebu.domain.value_objects.backfill_task_status import BackfillTaskStatus
+from zebu.infrastructure.market_calendar import MarketCalendar
 
 # Anchor: 2024-01-15 is a Monday. We use this as the canonical "now"
 # in tests so the expected-trading-days math is deterministic across
@@ -850,3 +853,224 @@ class TestQueryValidation:
                 assert "active_window_days" in str(exc)
             else:
                 raise AssertionError("Expected ValueError for window=0")
+
+
+# =============================================================================
+# Task #221 — GapRange collapse (pure unit tests for _collapse_gap_ranges)
+# =============================================================================
+
+
+def _trading_days(start: date, end: date) -> list[date]:
+    """Helper: sorted trading days in [start, end]."""
+    return MarketCalendar.trading_days_between(start, end)
+
+
+class TestCollapseGapRangesPure:
+    """Pure unit tests for ``_collapse_gap_ranges`` — no DB required."""
+
+    def test_no_gaps_when_all_covered(self) -> None:
+        """All trading days covered → empty gap_ranges."""
+        days = _trading_days(date(2024, 1, 2), date(2024, 1, 5))
+        covered = frozenset(days)
+        result = _collapse_gap_ranges(days, covered)
+        assert result == ()
+
+    def test_all_gaps_when_nothing_covered(self) -> None:
+        """No coverage → one range spanning the entire window."""
+        days = _trading_days(date(2024, 1, 2), date(2024, 1, 5))
+        result = _collapse_gap_ranges(days, frozenset())
+        assert len(result) == 1
+        assert result[0] == GapRange(start=date(2024, 1, 2), end=date(2024, 1, 5))
+
+    def test_single_day_gap(self) -> None:
+        """A single missing day produces a one-day GapRange."""
+        # Jan 2, 3, 4, 5 — skip Jan 3 (Wed).
+        days = _trading_days(date(2024, 1, 2), date(2024, 1, 5))
+        covered = frozenset([date(2024, 1, 2), date(2024, 1, 4), date(2024, 1, 5)])
+        result = _collapse_gap_ranges(days, covered)
+        assert result == (GapRange(start=date(2024, 1, 3), end=date(2024, 1, 3)),)
+
+    def test_contiguous_multi_day_gap_is_one_range(self) -> None:
+        """Several consecutive missing trading days → single GapRange."""
+        # Jan 2 (Mon) through Jan 12 (Fri). Skip Jan 3, 4, 5 (Tue–Thu).
+        days = _trading_days(date(2024, 1, 2), date(2024, 1, 12))
+        covered = frozenset(
+            [
+                date(2024, 1, 2),  # Mon
+                date(2024, 1, 8),  # Mon
+                date(2024, 1, 9),
+                date(2024, 1, 10),
+                date(2024, 1, 11),
+                date(2024, 1, 12),
+            ]
+        )
+        result = _collapse_gap_ranges(days, covered)
+        # Gap: Jan 3, 4, 5 → one range.
+        assert result == (GapRange(start=date(2024, 1, 3), end=date(2024, 1, 5)),)
+
+    def test_weekend_does_not_break_contiguity(self) -> None:
+        """Friday + Monday gap is ONE range — weekends are not trading days.
+
+        This is the key trading-day-adjacency requirement from Task #221.
+        A gap that spans a weekend must not be split into two ranges.
+        """
+        # Use a range that crosses a Fri→Mon boundary with both days missing.
+        # 2024-01-05 (Fri) and 2024-01-08 (Mon) are both uncovered.
+        # The weekend (Sat/Sun Jan 6-7) is not in the trading-day list so
+        # Fri and Mon are "adjacent" in trading-day terms.
+        days = _trading_days(date(2024, 1, 5), date(2024, 1, 8))
+        covered = frozenset()  # nothing covered
+        result = _collapse_gap_ranges(days, covered)
+        assert len(result) == 1
+        assert result[0] == GapRange(start=date(2024, 1, 5), end=date(2024, 1, 8))
+
+    def test_holiday_does_not_break_contiguity(self) -> None:
+        """A gap spanning MLK Day 2024 (Jan 15) is one range.
+
+        MLK Day is a market holiday; Jan 12 (Fri) and Jan 16 (Tue) are
+        adjacent trading days in the calendar. A gap covering both should
+        be a single GapRange.
+        """
+        # Jan 12 (Fri) through Jan 16 (Tue). MLK Day is Jan 15.
+        # Trading days in range: Jan 12, Jan 16.
+        days = _trading_days(date(2024, 1, 12), date(2024, 1, 16))
+        covered = frozenset()
+        result = _collapse_gap_ranges(days, covered)
+        assert len(result) == 1
+        assert result[0] == GapRange(start=date(2024, 1, 12), end=date(2024, 1, 16))
+
+    def test_multiple_disjoint_gaps(self) -> None:
+        """Two separate gap runs produce two GapRanges."""
+        # Jan 2–5 window; cover Jan 2 and Jan 4, leaving Jan 3 and Jan 5 missing.
+        days = _trading_days(date(2024, 1, 2), date(2024, 1, 5))
+        covered = frozenset([date(2024, 1, 2), date(2024, 1, 4)])
+        result = _collapse_gap_ranges(days, covered)
+        assert len(result) == 2
+        assert result[0] == GapRange(start=date(2024, 1, 3), end=date(2024, 1, 3))
+        assert result[1] == GapRange(start=date(2024, 1, 5), end=date(2024, 1, 5))
+
+    def test_head_gap(self) -> None:
+        """Gap at the head of the window (before any coverage)."""
+        days = _trading_days(date(2024, 1, 2), date(2024, 1, 5))
+        # Only Jan 5 covered.
+        covered = frozenset([date(2024, 1, 5)])
+        result = _collapse_gap_ranges(days, covered)
+        assert result == (GapRange(start=date(2024, 1, 2), end=date(2024, 1, 4)),)
+
+    def test_tail_gap(self) -> None:
+        """Gap at the tail of the window (after coverage ends)."""
+        days = _trading_days(date(2024, 1, 2), date(2024, 1, 5))
+        # Only Jan 2 covered.
+        covered = frozenset([date(2024, 1, 2)])
+        result = _collapse_gap_ranges(days, covered)
+        assert result == (GapRange(start=date(2024, 1, 3), end=date(2024, 1, 5)),)
+
+    def test_empty_trading_days(self) -> None:
+        """Empty sorted_trading_days → empty result regardless of covered."""
+        result = _collapse_gap_ranges([], frozenset([date(2024, 1, 2)]))
+        assert result == ()
+
+
+class TestGapRangesIntegration:
+    """Handler-level integration: gap_ranges populated on TickerCoverage rows."""
+
+    async def test_zero_gaps_yields_empty_gap_ranges(
+        self, test_engine: AsyncEngine
+    ) -> None:
+        """Full coverage → gap_ranges is empty tuple."""
+        async with AsyncSession(test_engine, expire_on_commit=False) as session:
+            covered = [
+                date(2024, 1, 2),
+                date(2024, 1, 3),
+                date(2024, 1, 4),
+                date(2024, 1, 5),
+                date(2024, 1, 8),
+                date(2024, 1, 9),
+                date(2024, 1, 10),
+                date(2024, 1, 11),
+                date(2024, 1, 12),
+            ]
+            await _seed_daily_bars(
+                session,
+                ticker="AAPL",
+                days=covered,
+                created_at=datetime(2024, 1, 12, tzinfo=UTC),
+            )
+            handler = DataCoverageQueryHandler(session)
+            result = await handler.execute(_default_query())
+
+        row = next(r for r in result.tickers if r.ticker.symbol == "AAPL")
+        assert row.gap_ranges == ()
+        assert row.gap_days_count == 0
+
+    async def test_full_gap_yields_one_range_spanning_window(
+        self, test_engine: AsyncEngine
+    ) -> None:
+        """No coverage → single GapRange covering the full window."""
+        async with AsyncSession(test_engine, expire_on_commit=False) as session:
+            await _add_watchlist(session, ticker="AAPL")
+            handler = DataCoverageQueryHandler(session)
+            result = await handler.execute(_default_query())
+
+        row = next(r for r in result.tickers if r.ticker.symbol == "AAPL")
+        assert len(row.gap_ranges) == 1
+        gr = row.gap_ranges[0]
+        # The window is [2024-01-01 .. 2024-01-15]; first trading day is
+        # Jan 2 (New Year's Day observed), last is Jan 12 (MLK Day = Jan 15
+        # so Jan 12 is last before the holiday).
+        assert gr.start == date(2024, 1, 2)
+        assert gr.end == date(2024, 1, 12)
+
+    async def test_interior_hole_yields_correct_single_day_range(
+        self, test_engine: AsyncEngine
+    ) -> None:
+        """One missing interior day → gap_ranges has one one-day entry."""
+        async with AsyncSession(test_engine, expire_on_commit=False) as session:
+            covered = [
+                date(2024, 1, 2),
+                date(2024, 1, 3),
+                date(2024, 1, 4),
+                date(2024, 1, 5),
+                date(2024, 1, 8),
+                date(2024, 1, 9),
+                # 2024-01-10 missing
+                date(2024, 1, 11),
+                date(2024, 1, 12),
+            ]
+            await _seed_daily_bars(
+                session,
+                ticker="AAPL",
+                days=covered,
+                created_at=datetime(2024, 1, 12, tzinfo=UTC),
+            )
+            handler = DataCoverageQueryHandler(session)
+            result = await handler.execute(_default_query())
+
+        row = next(r for r in result.tickers if r.ticker.symbol == "AAPL")
+        assert len(row.gap_ranges) == 1
+        assert row.gap_ranges[0] == GapRange(
+            start=date(2024, 1, 10), end=date(2024, 1, 10)
+        )
+
+    async def test_weekend_spanning_gap_is_single_range(
+        self, test_engine: AsyncEngine
+    ) -> None:
+        """Fri–Mon missing gap across a weekend is ONE GapRange (trading adjacency)."""
+        # Use a narrow window [Jan 5, Jan 8] — Fri and Mon.
+        query = DataCoverageQuery(
+            target_epoch=date(2024, 1, 5),
+            now=datetime(2024, 1, 8, 14, tzinfo=UTC),
+        )
+        async with AsyncSession(test_engine, expire_on_commit=False) as session:
+            # Seed a watchlist entry only — no price bars.
+            await _add_watchlist(session, ticker="AAPL")
+            handler = DataCoverageQueryHandler(session)
+            result = await handler.execute(query)
+
+        row = next(r for r in result.tickers if r.ticker.symbol == "AAPL")
+        # The window [Jan 5 .. Jan 8] has two trading days (Fri + Mon).
+        # Both are uncovered → one range from Jan 5 to Jan 8.
+        assert len(row.gap_ranges) == 1
+        assert row.gap_ranges[0] == GapRange(
+            start=date(2024, 1, 5), end=date(2024, 1, 8)
+        )

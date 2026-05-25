@@ -95,6 +95,22 @@ _RECENT_TASKS_WINDOW_HOURS: int = 48
 
 
 @dataclass(frozen=True)
+class GapRange:
+    """Inclusive trading-day range with no daily-bar coverage.
+
+    Both ``start`` and ``end`` are trading days (weekdays that are not
+    market holidays). The range may span multiple calendar days — for
+    example a ``GapRange(start=date(2024, 1, 5), end=date(2024, 1, 8))``
+    covers Friday 2024-01-05 and Monday 2024-01-08 as a single contiguous
+    range because those are adjacent trading days (Saturday and Sunday are
+    not trading days and therefore do not break the contiguity).
+    """
+
+    start: date
+    end: date
+
+
+@dataclass(frozen=True)
 class BackfillStatusInfo:
     """Most-recent backfill task surfaced for a ticker.
 
@@ -147,6 +163,7 @@ class TickerCoverage:
     coverage_end: date | None
     last_refresh: datetime | None
     gap_days_count: int
+    gap_ranges: tuple[GapRange, ...]
     target_epoch: date
     is_active: bool
     is_watchlisted: bool
@@ -271,11 +288,16 @@ class DataCoverageQueryHandler:
         #    off the watchlist) so the operator can prune coverage.
         all_tickers: set[str] = set(active_tickers) | set(aggregates.keys())
 
+        # Pre-compute the sorted trading-day sequence once so we can do
+        # O(n) gap-range collapse per ticker rather than re-sorting each time.
+        sorted_trading_days: list[date] = sorted(expected_trading_days)
+
         rows: list[TickerCoverage] = []
         for symbol in sorted(all_tickers):
             agg = aggregates.get(symbol)
             covered = covered_days.get(symbol, frozenset())
             gap_days_count = _count_missing_days(expected_trading_days, covered)
+            gap_ranges = _collapse_gap_ranges(sorted_trading_days, covered)
             backfill_status = backfill_status_by_ticker.get(symbol)
             if agg is None:
                 rows.append(
@@ -285,6 +307,7 @@ class DataCoverageQueryHandler:
                         coverage_end=None,
                         last_refresh=None,
                         gap_days_count=gap_days_count,
+                        gap_ranges=gap_ranges,
                         target_epoch=query.target_epoch,
                         is_active=symbol in active_tickers,
                         is_watchlisted=symbol in watchlisted_tickers,
@@ -300,6 +323,7 @@ class DataCoverageQueryHandler:
                     coverage_end=agg.last_bar_date,
                     last_refresh=_ensure_aware(agg.last_refresh),
                     gap_days_count=gap_days_count,
+                    gap_ranges=gap_ranges,
                     target_epoch=query.target_epoch,
                     is_active=symbol in active_tickers,
                     is_watchlisted=symbol in watchlisted_tickers,
@@ -541,6 +565,58 @@ def _count_missing_days(
     return len(expected - covered)
 
 
+def _collapse_gap_ranges(
+    sorted_trading_days: list[date],
+    covered: frozenset[date],
+) -> tuple[GapRange, ...]:
+    """Collapse uncovered trading days into contiguous :class:`GapRange` objects.
+
+    Uses **trading-day adjacency** rather than calendar-day adjacency:
+    two consecutive elements in ``sorted_trading_days`` are considered
+    adjacent regardless of how many calendar days lie between them
+    (e.g. Friday and Monday are always adjacent). This means a gap
+    that spans a weekend or a holiday is represented as a single
+    :class:`GapRange` rather than two separate ones.
+
+    The algorithm is a single linear scan over ``sorted_trading_days``
+    that accumulates the current run of uncovered days and emits a
+    :class:`GapRange` when the run breaks (either because a covered day
+    is found, or because the sequence ends).
+
+    Args:
+        sorted_trading_days: All expected trading days in the query
+            window, sorted chronologically. Must not contain duplicates.
+        covered: Set of dates that have at least one daily bar.
+
+    Returns:
+        Tuple of :class:`GapRange` objects ordered chronologically.
+        Empty tuple when ``gap_days_count == 0`` (all days covered) or
+        when ``sorted_trading_days`` is empty.
+    """
+    ranges: list[GapRange] = []
+    run_start: date | None = None
+    run_end: date | None = None
+
+    for day in sorted_trading_days:
+        if day in covered:
+            # Close any open run.
+            if run_start is not None and run_end is not None:
+                ranges.append(GapRange(start=run_start, end=run_end))
+                run_start = None
+                run_end = None
+        else:
+            # Extend (or start) the current gap run.
+            if run_start is None:
+                run_start = day
+            run_end = day
+
+    # Flush a trailing run.
+    if run_start is not None and run_end is not None:
+        ranges.append(GapRange(start=run_start, end=run_end))
+
+    return tuple(ranges)
+
+
 def _should_surface(
     *,
     status: BackfillTaskStatus,
@@ -580,5 +656,6 @@ __all__ = [
     "DataCoverageQuery",
     "DataCoverageQueryHandler",
     "DataCoverageResult",
+    "GapRange",
     "TickerCoverage",
 ]
