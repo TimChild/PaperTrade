@@ -812,4 +812,136 @@ describe('AdminDataCoverage', () => {
     const button = await screen.findByTestId('coverage-catch-up-btn-AAPL')
     expect(button).toHaveTextContent('Catch up')
   })
+
+  // ---------------------------------------------------------------------------
+  // Task #222 — Delete column + confirm modal
+  // ---------------------------------------------------------------------------
+
+  it('renders a Delete button for each row', async () => {
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [makeEntry({ ticker: 'AAPL' })],
+        })
+      )
+    )
+
+    renderPage()
+
+    expect(
+      await screen.findByTestId('coverage-delete-btn-AAPL')
+    ).toBeInTheDocument()
+  })
+
+  it('opens the confirm dialog when Delete is clicked', async () => {
+    const user = userEvent.setup()
+
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [makeEntry({ ticker: 'AAPL' })],
+        })
+      )
+    )
+
+    renderPage()
+
+    await user.click(await screen.findByTestId('coverage-delete-btn-AAPL'))
+
+    // ConfirmDialog renders a role=dialog with accessible name containing the ticker.
+    expect(
+      await screen.findByRole('dialog', { name: /delete aapl/i })
+    ).toBeInTheDocument()
+  })
+
+  it('closes the confirm dialog when Cancel is clicked without deleting', async () => {
+    const user = userEvent.setup()
+    let deleteCallCount = 0
+
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [makeEntry({ ticker: 'AAPL' })],
+        })
+      ),
+      http.delete(`${API_BASE_URL}/admin/data-coverage/tickers/:ticker`, () => {
+        deleteCallCount++
+        return new HttpResponse(null, { status: 204 })
+      })
+    )
+
+    renderPage()
+
+    await user.click(await screen.findByTestId('coverage-delete-btn-AAPL'))
+    expect(
+      await screen.findByRole('dialog', { name: /delete aapl/i })
+    ).toBeInTheDocument()
+
+    // Click the cancel button — dialog should close, no DELETE fired.
+    await user.click(screen.getByRole('button', { name: /cancel/i }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(deleteCallCount).toBe(0)
+  })
+
+  it('DELETEs /admin/data-coverage/tickers/{ticker} when confirm is clicked', async () => {
+    const user = userEvent.setup()
+    let deletedTicker: string | null = null
+
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [makeEntry({ ticker: 'AAPL' })],
+        })
+      ),
+      http.delete(
+        `${API_BASE_URL}/admin/data-coverage/tickers/:ticker`,
+        ({ params }) => {
+          deletedTicker = params.ticker as string
+          return new HttpResponse(null, { status: 204 })
+        }
+      )
+    )
+
+    renderPage()
+
+    await user.click(await screen.findByTestId('coverage-delete-btn-AAPL'))
+    await screen.findByRole('dialog', { name: /delete aapl/i })
+
+    // Click the confirm button (label matches the dialog's confirmLabel).
+    await user.click(screen.getByRole('button', { name: /^delete aapl$/i }))
+
+    await waitFor(() => {
+      expect(deletedTicker).toBe('AAPL')
+    })
+  })
+
+  it('toasts success and closes the dialog after a successful delete', async () => {
+    const user = userEvent.setup()
+    const toast = (await import('react-hot-toast')).default
+
+    server.use(
+      http.get(`${API_BASE_URL}/admin/data-coverage`, () =>
+        HttpResponse.json<DataCoverageResponse>({
+          tickers: [makeEntry({ ticker: 'AAPL' })],
+        })
+      ),
+      http.delete(
+        `${API_BASE_URL}/admin/data-coverage/tickers/:ticker`,
+        () => new HttpResponse(null, { status: 204 })
+      )
+    )
+
+    renderPage()
+
+    await user.click(await screen.findByTestId('coverage-delete-btn-AAPL'))
+    await screen.findByRole('dialog', { name: /delete aapl/i })
+    await user.click(screen.getByRole('button', { name: /^delete aapl$/i }))
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith(
+        expect.stringContaining('AAPL')
+      )
+    })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
 })

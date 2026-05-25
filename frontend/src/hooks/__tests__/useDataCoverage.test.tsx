@@ -15,6 +15,7 @@ import {
   dataCoverageQueryKeys,
   useBackfillTicker,
   useDataCoverage,
+  useDeleteTicker,
   usePinTicker,
   useUnpinTicker,
 } from '../useDataCoverage'
@@ -29,6 +30,7 @@ vi.mock('@/services/api/admin', () => ({
   dataCoverageApi: {
     list: vi.fn(),
     backfill: vi.fn(),
+    deleteTicker: vi.fn(),
   },
   watchlistApi: {
     add: vi.fn(),
@@ -260,6 +262,41 @@ describe('useUnpinTicker', () => {
     const invalidateSpy = vi.spyOn(client, 'invalidateQueries')
 
     const { result } = renderHook(() => useUnpinTicker(), { wrapper: Wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync('AAPL')
+    })
+
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: dataCoverageQueryKeys.all,
+    })
+  })
+})
+
+describe('useDeleteTicker', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls dataCoverageApi.deleteTicker with the bare ticker string', async () => {
+    vi.mocked(dataCoverageApi.deleteTicker).mockResolvedValue(undefined)
+    const { Wrapper } = createWrapper()
+
+    const { result } = renderHook(() => useDeleteTicker(), { wrapper: Wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync('AAPL')
+    })
+
+    expect(dataCoverageApi.deleteTicker).toHaveBeenCalledWith('AAPL')
+  })
+
+  it('invalidates the data-coverage query on success', async () => {
+    vi.mocked(dataCoverageApi.deleteTicker).mockResolvedValue(undefined)
+    const { Wrapper, client } = createWrapper()
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries')
+
+    const { result } = renderHook(() => useDeleteTicker(), { wrapper: Wrapper })
 
     await act(async () => {
       await result.current.mutateAsync('AAPL')
