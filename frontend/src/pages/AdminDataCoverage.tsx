@@ -15,6 +15,14 @@
  * window lapses. Track is additive — it doesn't trigger a backfill and
  * doesn't change scheduler semantics.
  *
+ * Task #222 add:
+ * - `CoverageGapBar` SVG mini-viz per row (inline gap visualisation).
+ * - Delete column: "Delete" button → confirm modal → hard-delete via
+ *   `DELETE /admin/data-coverage/tickers/{ticker}`.
+ * - Improved pin-error toast: surfaces the 422 `detail` field verbatim
+ *   so operators can distinguish "invalid format" from "AV doesn't know
+ *   this symbol".
+ *
  * Surface goals:
  *
  * - "Healthy" tickers — coverage current and contiguous — fade so the
@@ -27,16 +35,20 @@
  *   non-terminal.
  * - Watchlisted (tracked) tickers show a small "Tracked" pill in the new
  *   Tracking column; the operator can click Untrack to remove them.
+ * - Each row now includes an inline coverage gap mini-viz and a Delete
+ *   button that opens a confirmation modal before hard-deleting.
  *
  * The Catch-up button is idempotent server-side — if the operator
  * clicks it twice we get the existing task back. Track is similarly
  * idempotent; Untrack returns 404 if the ticker isn't tracked (surfaced
  * as a "not tracked" toast).
  */
+import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { isAxiosError } from 'axios'
 import { Button } from '@/components/ui/button'
 import { Caption } from '@/components/ui/Caption'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import {
   DataCell,
   DataHeaderCell,
@@ -48,10 +60,12 @@ import {
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Eyebrow } from '@/components/ui/Eyebrow'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { CoverageGapBar } from '@/components/features/admin/CoverageGapBar'
 import {
   DATA_COVERAGE_POLL_INTERVAL_MS,
   useBackfillTicker,
   useDataCoverage,
+  useDeleteTicker,
   usePinTicker,
   useUnpinTicker,
 } from '@/hooks/useDataCoverage'
@@ -162,7 +176,11 @@ export function AdminDataCoverage(): React.JSX.Element {
   const backfill = useBackfillTicker()
   const pin = usePinTicker()
   const unpin = useUnpinTicker()
+  const deleteTicker = useDeleteTicker()
   const now = new Date()
+
+  /** Ticker symbol currently staged for deletion, or null when dialog is closed. */
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
 
   const rows = data?.tickers ?? []
   // Every row carries the same target_epoch — read it from the first row
@@ -211,6 +229,10 @@ export function AdminDataCoverage(): React.JSX.Element {
             toast.error('Admin privileges required.')
             return
           }
+          // Surface 422 detail verbatim (Task #222) so the operator can
+          // distinguish "invalid ticker format" from "AV doesn't know
+          // this symbol" — this is the primary error path for the new
+          // ticker-validation gate added in Task #221.
           const message =
             isAxiosError(err) && err.response?.data?.detail
               ? String(err.response.data.detail)
@@ -243,6 +265,51 @@ export function AdminDataCoverage(): React.JSX.Element {
       },
     })
   }
+
+  /** Open the delete confirm dialog for the given ticker. */
+  const handleDeleteOpen = (ticker: string): void => {
+    setDeleteTarget(ticker)
+  }
+
+  /** Close the confirm dialog without deleting. */
+  const handleDeleteCancel = (): void => {
+    setDeleteTarget(null)
+  }
+
+  /**
+   * Execute the deletion.
+   *
+   * - 204: invalidate query (handled by mutation hook), close modal, toast success.
+   * - 404: toast "not found", close modal.
+   * - Other: toast the error detail, leave modal open so operator can retry.
+   */
+  const handleDeleteConfirm = (): void => {
+    if (deleteTarget === null) return
+
+    const ticker = deleteTarget
+    deleteTicker.mutate(ticker, {
+      onSuccess: () => {
+        setDeleteTarget(null)
+        toast.success(`${ticker} deleted.`)
+      },
+      onError: (err: Error) => {
+        if (isAxiosError(err) && err.response?.status === 404) {
+          setDeleteTarget(null)
+          toast.error(`Ticker ${ticker} not found.`)
+          return
+        }
+        // Leave modal open on other errors so the operator can retry.
+        const message =
+          isAxiosError(err) && err.response?.data?.detail
+            ? String(err.response.data.detail)
+            : `Failed to delete ${ticker}.`
+        toast.error(message)
+      },
+    })
+  }
+
+  const isDeleteInFlight =
+    deleteTicker.isPending && deleteTicker.variables === deleteTarget
 
   return (
     <div data-testid="admin-data-coverage-page">
@@ -306,6 +373,7 @@ export function AdminDataCoverage(): React.JSX.Element {
           <DataTableHead>
             <DataHeaderCell>Ticker</DataHeaderCell>
             <DataHeaderCell hideOnMobile>Coverage range</DataHeaderCell>
+            <DataHeaderCell hideOnMobile>Coverage</DataHeaderCell>
             <DataHeaderCell>Last refresh</DataHeaderCell>
             <DataHeaderCell align="right" hideOnMobile>
               Gap days
@@ -313,6 +381,7 @@ export function AdminDataCoverage(): React.JSX.Element {
             <DataHeaderCell>Status</DataHeaderCell>
             <DataHeaderCell>Tracking</DataHeaderCell>
             <DataHeaderCell align="right">Action</DataHeaderCell>
+            <DataHeaderCell align="right">Delete</DataHeaderCell>
           </DataTableHead>
           <DataTableBody>
             {rows.map((row) => {
@@ -321,6 +390,8 @@ export function AdminDataCoverage(): React.JSX.Element {
               const isPinMutating =
                 (pin.isPending && pin.variables?.ticker === row.ticker) ||
                 (unpin.isPending && unpin.variables === row.ticker)
+              const isRowDeleting =
+                deleteTicker.isPending && deleteTicker.variables === row.ticker
               return (
                 <DataRow key={row.ticker} testId={`coverage-row-${row.ticker}`}>
                   <DataCell
@@ -337,6 +408,13 @@ export function AdminDataCoverage(): React.JSX.Element {
                     ) : (
                       <span className="text-ink-subtle">—</span>
                     )}
+                  </DataCell>
+                  <DataCell hideOnMobile>
+                    <CoverageGapBar
+                      coverageStart={row.coverage_start}
+                      coverageEnd={row.coverage_end}
+                      gapRanges={row.gap_ranges ?? []}
+                    />
                   </DataCell>
                   <DataCell tone="muted">
                     {row.last_refresh ? (
@@ -429,12 +507,38 @@ export function AdminDataCoverage(): React.JSX.Element {
                       </Button>
                     </div>
                   </DataCell>
+                  <DataCell align="right">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleDeleteOpen(row.ticker)}
+                      disabled={isRowDeleting}
+                      className="text-loss hover:text-loss hover:border-loss"
+                      data-testid={`coverage-delete-btn-${row.ticker}`}
+                    >
+                      Delete
+                    </Button>
+                  </DataCell>
                 </DataRow>
               )
             })}
           </DataTableBody>
         </DataTable>
       )}
+
+      {/* Delete confirmation modal — rendered outside the table so it sits
+          atop the page rather than being clipped by any overflow-hidden
+          container on the table rows. */}
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        title={`Delete ${deleteTarget ?? ''}?`}
+        message={`This removes the watchlist entry and all stored price history for ${deleteTarget ?? 'this ticker'}. This action cannot be undone.`}
+        confirmLabel={`Delete ${deleteTarget ?? ''}`}
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+        variant="danger"
+        isLoading={isDeleteInFlight}
+      />
     </div>
   )
 }

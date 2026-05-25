@@ -44,6 +44,7 @@ const mockResponse: DataCoverageResponse = {
       coverage_end: '2025-01-10',
       last_refresh: '2025-01-10T00:00:00Z',
       gap_days_count: 0,
+      gap_ranges: [],
       target_epoch: '2015-01-01',
       is_active: true,
       is_watchlisted: false,

@@ -946,6 +946,23 @@ export interface BackfillStatusInfo {
   error_message: string | null
 }
 
+/**
+ * Inclusive date range of uncovered trading days (Task #221).
+ *
+ * Mirrors `GapRangePayload` in
+ * `backend/src/zebu/adapters/inbound/api/admin_data_coverage.py`.
+ *
+ * Uses trading-day adjacency: Friday and Monday are adjacent because
+ * weekends are not trading days, so a gap spanning a weekend is one
+ * range entry, not two.
+ */
+export interface GapRange {
+  /** ISO 8601 date of the first uncovered trading day. */
+  start: string
+  /** ISO 8601 date of the last uncovered trading day. */
+  end: string
+}
+
 /** Per-ticker data-coverage entry returned by GET /admin/data-coverage. */
 export interface TickerCoverageEntry {
   ticker: string
@@ -961,6 +978,11 @@ export interface TickerCoverageEntry {
    * expected trading day.
    */
   gap_days_count: number
+  /**
+   * Contiguous ranges of uncovered trading days, ordered chronologically
+   * (Task #221). Empty list when `gap_days_count === 0`.
+   */
+  gap_ranges: GapRange[]
   /** ISO 8601 date of the configured `ZEBU_HISTORY_EPOCH`. */
   target_epoch: string
   is_active: boolean
