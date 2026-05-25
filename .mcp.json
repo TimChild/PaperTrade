@@ -1,0 +1,9 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schemas/mcp.json",
+  "mcpServers": {
+    "alphavantage": {
+      "command": "uvx",
+      "args": ["--from", "marketdata-mcp-server", "marketdata-mcp", "${ALPHA_VANTAGE_API_KEY}"]
+    }
+  }
+}
