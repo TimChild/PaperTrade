@@ -474,10 +474,13 @@ async def admin_data_coverage_delete_ticker(
     price_repo = PriceRepository(session)
     backfill_repo = SQLModelBackfillTaskRepository(session)
 
-    # Check existence BEFORE deleting so we can return 404 on a no-op.
-    # We query both tables: a ticker that was unpinned from the watchlist
-    # (is_active=False row remains) still has a presence, as does a
-    # ticker that has price_history rows but was never watchlisted.
+    # Attempt the deletes and use the returned rowcounts to distinguish
+    # "ticker existed and was deleted" from "ticker was never present".
+    # Both hard_delete_ticker and delete_all_for_ticker return the number
+    # of rows they removed; zero from both means there was nothing to delete.
+    # We check both tables: a ticker that was unpinned from the watchlist
+    # (is_active=False row remains) still has a presence, as does a ticker
+    # that has price_history rows but was never watchlisted.
     watchlist_rows = await watchlist_manager.hard_delete_ticker(ticker_vo)
     price_rows = await price_repo.delete_all_for_ticker(ticker_vo)
 

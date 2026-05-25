@@ -346,7 +346,7 @@ class TestHardDeleteTicker:
         )
         assert r2.status_code == 404
 
-    def test_requires_admin_auth(self, client: TestClient) -> None:
+    async def test_requires_admin_auth(self, client: TestClient) -> None:
         """Unauthenticated request is rejected."""
         response = client.delete("/api/v1/admin/data-coverage/tickers/AAPL")
         assert response.status_code in (401, 403)

@@ -108,6 +108,15 @@ class AlphaVantageTickerValidator:
             raise MarketDataUnavailableError(
                 f"Network error validating ticker {ticker.symbol}: {exc}"
             ) from exc
+        except httpx.TransportError as exc:
+            # Catches ProtocolError (e.g. RemoteProtocolError on malformed
+            # responses) and ProxyError, which are siblings of NetworkError
+            # under TransportError but are not caught by the three clauses
+            # above.  All of these mean "we couldn't reach AV reliably" —
+            # raise so the caller surfaces a 500, not an unhandled exception.
+            raise MarketDataUnavailableError(
+                f"Transport error validating ticker {ticker.symbol}: {exc}"
+            ) from exc
 
         data: dict[str, object] = response.json()
 
