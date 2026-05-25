@@ -2,8 +2,11 @@
   "$schema": "https://modelcontextprotocol.io/schemas/mcp.json",
   "mcpServers": {
     "alphavantage": {
-      "command": "uvx",
-      "args": ["--from", "marketdata-mcp-server", "marketdata-mcp", "${ALPHA_VANTAGE_API_KEY}"]
+      "command": "bash",
+      "args": [
+        "-c",
+        "set -a; [ -f .env ] && . ./.env; set +a; exec uvx --from marketdata-mcp-server marketdata-mcp \"$ALPHA_VANTAGE_API_KEY\""
+      ]
     }
   }
 }
