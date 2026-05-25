@@ -29,8 +29,9 @@ import structlog
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
 
-from zebu.adapters.inbound.api.dependencies import AdminUserDep
+from zebu.adapters.inbound.api.dependencies import AdminUserDep, TickerValidatorDep
 from zebu.adapters.outbound.repositories.watchlist_manager import WatchlistManager
+from zebu.application.exceptions import MarketDataUnavailableError
 from zebu.domain.value_objects.ticker import Ticker
 from zebu.infrastructure.database import SessionDep
 
@@ -93,6 +94,7 @@ async def admin_watchlist_pin(
     payload: PinTickerRequest,
     admin_user_id: AdminUserDep,
     session: SessionDep,
+    validator: TickerValidatorDep,
 ) -> PinTickerResponse:
     """Pin a ticker to the watchlist.
 
@@ -102,6 +104,12 @@ async def admin_watchlist_pin(
     ``WatchlistManager.add_ticker`` already handles the "row exists,
     flip ``is_active`` back on" path, so we just call it and trust the
     invariant.
+
+    Before persisting, the ticker is validated against the market-data
+    provider (``GLOBAL_QUOTE`` on Alpha Vantage).  Unrecognised symbols
+    return 422; provider failures (rate-limit, network) return 500 so
+    the operator gets a clear signal to retry rather than inferring
+    their ticker was rejected.
 
     Auth: Clerk admin only.
 
@@ -113,10 +121,39 @@ async def admin_watchlist_pin(
         HTTPException 400: On ticker validation errors (the domain
             raises :class:`InvalidTickerError`, mapped via the
             registered exception handler).
+        HTTPException 422: When the ticker is not recognised by the
+            market-data provider (empty ``Global Quote`` from AV).
+        HTTPException 500: When the market-data provider is temporarily
+            unreachable (rate-limit hit, network error) and we cannot
+            confirm whether the ticker is valid.
     """
     # Normalise through the value object so invalid input surfaces as
     # the standard InvalidTickerError -> 400 via the registered handler.
     ticker = Ticker(payload.ticker)
+
+    try:
+        recognised = await validator.is_recognised(ticker)
+    except MarketDataUnavailableError as exc:
+        # Provider is temporarily unreachable — we cannot validate. Raise
+        # 500 rather than 422 so the operator can distinguish "provider
+        # down" from "ticker doesn't exist".
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=(
+                f"Could not validate ticker {ticker.symbol!r}: "
+                f"market-data provider is temporarily unavailable. "
+                f"Details: {exc}"
+            ),
+        ) from exc
+
+    if not recognised:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"Ticker {ticker.symbol!r} is not recognised by the "
+                "market-data provider."
+            ),
+        )
 
     manager = WatchlistManager(session)
     await manager.add_ticker(ticker, priority=_PINNED_PRIORITY)

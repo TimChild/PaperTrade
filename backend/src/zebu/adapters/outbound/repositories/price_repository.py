@@ -8,6 +8,7 @@ layer in the tiered market data architecture.
 from datetime import UTC, datetime, timedelta
 
 import structlog
+from sqlalchemy import delete
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -281,6 +282,31 @@ class PriceRepository:
 
         # Convert to PricePoints
         return [model.to_price_point() for model in models]
+
+    async def delete_all_for_ticker(self, ticker: Ticker) -> int:
+        """Hard-delete every ``price_history`` row for ``ticker``.
+
+        Deletes across all intervals and sources — this is the "ticker
+        was bogus, clean up completely" escape hatch exposed by the
+        admin hard-delete endpoint (Task #221).
+
+        Args:
+            ticker: The ticker whose price-history rows to purge.
+
+        Returns:
+            Number of rows deleted (0 if no rows existed).
+        """
+        stmt = delete(PriceHistoryModel).where(
+            PriceHistoryModel.ticker == ticker.symbol  # type: ignore[arg-type]
+        )
+        result = await self.session.exec(stmt)  # type: ignore[arg-type]
+        row_count: int = result.rowcount  # type: ignore[attr-defined]
+        logger.info(
+            "price_history_deleted_for_ticker",
+            ticker=ticker.symbol,
+            rows_deleted=row_count,
+        )
+        return row_count
 
     async def get_all_tickers(self) -> list[Ticker]:
         """Get list of tickers we have data for.

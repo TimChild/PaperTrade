@@ -352,6 +352,7 @@ class TestGetWithSeededData:
                 "coverage_end",
                 "last_refresh",
                 "gap_days_count",
+                "gap_ranges",  # Task #221 addition
                 "target_epoch",
                 "is_active",
                 "is_watchlisted",

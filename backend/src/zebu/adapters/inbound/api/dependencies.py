@@ -6,7 +6,7 @@ Provides factory functions for repositories and other dependencies used by API r
 import logging
 import os
 from collections.abc import Awaitable, Callable
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 from typing import Annotated
 from uuid import UUID
 
@@ -38,6 +38,9 @@ from zebu.adapters.outbound.database.transaction_repository import (
 from zebu.adapters.outbound.market_data.alpha_vantage_adapter import (
     AlphaVantageAdapter,
 )
+from zebu.adapters.outbound.market_data.av_ticker_validator import (
+    AlphaVantageTickerValidator,
+)
 from zebu.adapters.outbound.market_data.deterministic_mock_adapter import (
     DeterministicMockMarketDataAdapter,
 )
@@ -49,9 +52,11 @@ from zebu.application.ports.inbound_rate_limiter_port import (
     InboundRateLimiterPort,
 )
 from zebu.application.ports.market_data_port import MarketDataPort
+from zebu.application.ports.ticker_validator import TickerValidatorPort
 from zebu.application.services.snapshot_job import SnapshotJobService
 from zebu.domain.exceptions import InvalidTokenError
 from zebu.domain.value_objects.api_key_scope import ApiKeyScope
+from zebu.domain.value_objects.ticker import Ticker
 from zebu.infrastructure.cache.price_cache import PriceCache
 from zebu.infrastructure.database import SessionDep
 from zebu.infrastructure.inbound_rate_limiter import InMemoryInboundRateLimiter
@@ -145,6 +150,61 @@ def get_history_epoch() -> date:
         raise RuntimeError(
             f"ZEBU_HISTORY_EPOCH must be an ISO 8601 date (YYYY-MM-DD); got {raw!r}"
         ) from exc
+
+
+def get_effective_history_epoch() -> date:
+    """Apply the lookback clamp on top of ``ZEBU_HISTORY_EPOCH``.
+
+    When ``ZEBU_HISTORY_MAX_LOOKBACK_DAYS`` is set to a positive integer
+    *N*, the effective epoch becomes::
+
+        max(ZEBU_HISTORY_EPOCH, today - N)
+
+    Unset / empty / ``0`` / negative → no clamp; the raw
+    ``ZEBU_HISTORY_EPOCH`` value is returned as-is.
+
+    **Why this exists:** Alpha Vantage's free-tier rolling window is
+    approximately 100 trading days.  Setting ``ZEBU_HISTORY_MAX_LOOKBACK_DAYS=100``
+    on a free-tier deployment keeps ``gap_days_count`` honest — it
+    reflects what is actually *fetchable* rather than the aspirational
+    epoch (2015-01-01 produces ~2800 "gap" days that AV can never fill
+    on a free key, making the metric useless).
+
+    Trade-off (documented for operators): clamping hides the true
+    historical gap.  When upgrading to AV premium, unset
+    ``ZEBU_HISTORY_MAX_LOOKBACK_DAYS`` to restore the full-depth view
+    and run a manual "catch up" backfill.
+
+    Returns:
+        Effective epoch date: the later of ``ZEBU_HISTORY_EPOCH`` and
+        ``today - ZEBU_HISTORY_MAX_LOOKBACK_DAYS``.  Falls back to
+        :data:`_DEFAULT_HISTORY_EPOCH` when neither env var is set.
+
+    Raises:
+        RuntimeError: If ``ZEBU_HISTORY_EPOCH`` or
+            ``ZEBU_HISTORY_MAX_LOOKBACK_DAYS`` is set to an invalid value.
+    """
+    base_epoch = get_history_epoch()
+
+    raw_lookback = os.getenv("ZEBU_HISTORY_MAX_LOOKBACK_DAYS")
+    if raw_lookback is None or raw_lookback.strip() == "":
+        return base_epoch
+
+    try:
+        lookback_days = int(raw_lookback.strip())
+    except ValueError as exc:
+        raise RuntimeError(
+            "ZEBU_HISTORY_MAX_LOOKBACK_DAYS must be a positive integer; "
+            f"got {raw_lookback!r}"
+        ) from exc
+
+    if lookback_days <= 0:
+        # Treat non-positive as "no clamp" for forward-compatibility.
+        return base_epoch
+
+    today = datetime.now(UTC).date()
+    clamped = today - timedelta(days=lookback_days)
+    return max(base_epoch, clamped)
 
 
 def get_portfolio_repository(
@@ -681,6 +741,65 @@ async def get_market_data(session: SessionDep) -> MarketDataPort:
     )
 
 
+async def get_ticker_validator() -> TickerValidatorPort:
+    """Provide a :class:`TickerValidatorPort` implementation.
+
+    Routes to the real :class:`AlphaVantageTickerValidator` when
+    ``MARKET_DATA_PROVIDER=alpha_vantage`` (the default), or to a
+    no-op stub when ``mock``/``in_memory`` is set (so integration tests
+    that don't want to mock HTTP still pass).
+
+    The HTTP client singleton is shared with
+    :func:`get_market_data` so we don't open duplicate connections.
+
+    Returns:
+        A :class:`TickerValidatorPort` appropriate for the current env.
+
+    Raises:
+        RuntimeError: If ``MARKET_DATA_PROVIDER`` is not a recognised value.
+    """
+    provider = os.getenv("MARKET_DATA_PROVIDER", "alpha_vantage").strip().lower()
+
+    if provider in {"mock", "in_memory"}:
+        # Return a pass-through stub in test/mock environments.
+        # Integration tests that need to exercise the validation path
+        # should override this dependency directly via
+        # ``app.dependency_overrides``.
+        return _AlwaysRecognisedValidator()
+
+    if provider != "alpha_vantage":
+        raise RuntimeError(
+            f"Unsupported MARKET_DATA_PROVIDER='{provider}'. "
+            "Valid values: 'alpha_vantage' (default), 'mock', 'in_memory'."
+        )
+
+    global _http_client
+    alpha_vantage_api_key = os.getenv("ALPHA_VANTAGE_API_KEY", "")
+    if not alpha_vantage_api_key or alpha_vantage_api_key == "your_api_key_here":
+        alpha_vantage_api_key = "demo"
+
+    if _http_client is None:
+        _http_client = httpx.AsyncClient(timeout=5.0)
+
+    return AlphaVantageTickerValidator(
+        http_client=_http_client,
+        api_key=alpha_vantage_api_key,
+    )
+
+
+class _AlwaysRecognisedValidator:
+    """No-op validator for mock/in-memory environments.
+
+    Returns ``True`` for every ticker so the pin flow is unblocked in
+    tests and local-fake stacks that don't wire up a real AV key.
+    Override via ``app.dependency_overrides[get_ticker_validator]`` in
+    integration tests that need to exercise the rejection path.
+    """
+
+    async def is_recognised(self, ticker: Ticker) -> bool:  # noqa: ARG002
+        return True
+
+
 async def get_snapshot_job(
     session: SessionDep,
 ) -> SnapshotJobService:
@@ -812,4 +931,9 @@ MarketDataDep = Annotated[MarketDataPort, Depends(get_market_data)]
 BacktestRateLimiterDep = Annotated[
     InboundRateLimiterPort, Depends(get_backtest_rate_limiter)
 ]
-HistoryEpochDep = Annotated[date, Depends(get_history_epoch)]
+# HistoryEpochDep wires to get_effective_history_epoch so both the
+# coverage query and the backfill endpoint use the same (potentially
+# clamped) epoch.  Any future consumer that adds HistoryEpochDep will
+# automatically pick up the ZEBU_HISTORY_MAX_LOOKBACK_DAYS clamp.
+HistoryEpochDep = Annotated[date, Depends(get_effective_history_epoch)]
+TickerValidatorDep = Annotated[TickerValidatorPort, Depends(get_ticker_validator)]

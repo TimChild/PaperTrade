@@ -149,6 +149,59 @@ class SQLModelBackfillTaskRepository(BackfillTaskRepositoryPort):
         await self._session.flush()
         return updated
 
+    async def cancel_non_terminal_for_ticker(
+        self,
+        ticker: Ticker,
+        *,
+        reason: str,
+    ) -> int:
+        """Mark every non-terminal task for ``ticker`` as FAILED.
+
+        Used by the admin hard-delete endpoint (Task #221) so the
+        scheduler stops touching tasks for a ticker that has been
+        completely removed from the DB.
+
+        The update is applied in-place without going through the
+        domain entity's state machine because the entity's
+        ``mark_failed`` guard rejects non-RUNNING tasks. At the
+        hard-delete site, the precise prior state is irrelevant — the
+        ticker is gone regardless, so we write the terminal state
+        directly and flush.
+
+        Args:
+            ticker: The ticker whose non-terminal tasks to cancel.
+            reason: Error-message string (truncated to 500 chars).
+
+        Returns:
+            Number of rows updated (0 when no non-terminal tasks exist).
+        """
+        now_naive = datetime.now(UTC).replace(tzinfo=None)
+        truncated_reason = reason[:_ERROR_MESSAGE_MAX_LENGTH]
+
+        non_terminal_statuses = [
+            BackfillTaskStatus.PENDING.value,
+            BackfillTaskStatus.RUNNING.value,
+        ]
+
+        stmt = (
+            select(BackfillTaskModel)
+            .where(BackfillTaskModel.ticker == ticker.symbol)
+            .where(col(BackfillTaskModel.status).in_(non_terminal_statuses))
+        )
+        result = await self._session.exec(stmt)
+        tasks = result.all()
+
+        for task_model in tasks:
+            task_model.status = BackfillTaskStatus.FAILED.value
+            task_model.finished_at = now_naive
+            task_model.error_message = truncated_reason
+            self._session.add(task_model)
+
+        if tasks:
+            await self._session.flush()
+
+        return len(tasks)
+
     async def list_pending(self, *, limit: int) -> list[BackfillTask]:
         """Return up to ``limit`` PENDING tasks, oldest-first."""
         if limit <= 0:
