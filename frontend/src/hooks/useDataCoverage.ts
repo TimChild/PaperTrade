@@ -124,3 +124,25 @@ export function useUnpinTicker(): UseMutationResult<void, Error, string> {
     },
   })
 }
+
+/**
+ * Hard-delete a ticker and all its associated data (Task #222).
+ *
+ * Invalidates the coverage query on success so the row disappears
+ * from the table on the next render.
+ *
+ * The mutation payload is the bare ticker symbol — the per-row
+ * disabled-state pattern `mutation.variables === row.ticker` works
+ * without an object wrapper (same as `useUnpinTicker`).
+ */
+export function useDeleteTicker(): UseMutationResult<void, Error, string> {
+  const queryClient = useQueryClient()
+  return useMutation<void, Error, string>({
+    mutationFn: (ticker) => dataCoverageApi.deleteTicker(ticker),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: dataCoverageQueryKeys.all,
+      })
+    },
+  })
+}

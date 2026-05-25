@@ -3,10 +3,11 @@
  *
  * Exposes:
  *
- * - `GET  /admin/data-coverage`           — per-ticker price-history coverage
- * - `POST /admin/data-coverage/backfill`  — operator-driven backfill
- * - `POST /admin/watchlist`               — pin ticker (Task #220)
- * - `DELETE /admin/watchlist/{ticker}`    — unpin ticker (Task #220)
+ * - `GET    /admin/data-coverage`                  — per-ticker price-history coverage
+ * - `POST   /admin/data-coverage/backfill`         — operator-driven backfill
+ * - `DELETE /admin/data-coverage/tickers/{ticker}` — hard-delete ticker (Task #222)
+ * - `POST   /admin/watchlist`                      — pin ticker (Task #220)
+ * - `DELETE /admin/watchlist/{ticker}`             — unpin ticker (Task #220)
  *
  * Auth: admin Clerk Bearer JWT only. Non-admin callers get 403; the
  * caller is expected to gate page rendering on the user's admin status
@@ -56,6 +57,19 @@ export const dataCoverageApi = {
       body
     )
     return response.data
+  },
+
+  /**
+   * Hard-delete a ticker and all its associated data (Task #222).
+   *
+   * Cascade: watchlist rows + price_history rows + non-terminal
+   * backfill tasks (marked FAILED). Returns 204 on success.
+   *
+   * A 404 means the ticker has no rows in either table — the second
+   * DELETE on an already-removed ticker yields 404, not silent 204.
+   */
+  deleteTicker: async (ticker: string): Promise<void> => {
+    await apiClient.delete(`/admin/data-coverage/tickers/${ticker}`)
   },
 }
 
